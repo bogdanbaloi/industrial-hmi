@@ -1,0 +1,212 @@
+name: Industrial HMI - CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  # ============================================
+  # BUILD & TEST
+  # ============================================
+  build-ubuntu:
+    name: Build & Test (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better git operations
+    
+    - name: 🔧 Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          libgtkmm-4.0-dev \
+          libsqlite3-dev \
+          clang-tidy \
+          cppcheck
+    
+    - name: 📊 Configure CMake
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_CXX_COMPILER=g++ \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    
+    - name: 🏗️ Build
+      run: cmake --build build --config ${{env.BUILD_TYPE}}
+    
+    - name: 🧪 Run Tests (if available)
+      run: |
+        cd build
+        # If you add CTest tests later:
+        # ctest --output-on-failure
+        echo "✅ Tests placeholder (add CTest later)"
+    
+    - name: 📦 Package Artifacts
+      run: |
+        cd build
+        tar -czf industrial-hmi-ubuntu.tar.gz industrial-hmi ui/*.ui ui/*.css
+    
+    - name: 📤 Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: industrial-hmi-ubuntu-${{ github.sha }}
+        path: build/industrial-hmi-ubuntu.tar.gz
+        retention-days: 30
+
+  # ============================================
+  # CODE QUALITY CHECKS
+  # ============================================
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Install Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-tidy \
+          cppcheck \
+          libgtkmm-4.0-dev \
+          libsqlite3-dev
+    
+    - name: 📊 Configure for Analysis
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    
+    - name: 🔍 Run clang-tidy
+      run: |
+        # Run on source files
+        find src -name '*.cpp' -exec \
+          clang-tidy {} \
+          -p build \
+          --config-file=.clang-tidy \
+          --warnings-as-errors='' \
+        \;
+      continue-on-error: true  # Don't fail build, just report
+    
+    - name: 🔍 Run cppcheck
+      run: |
+        cppcheck \
+          --enable=all \
+          --suppress=missingIncludeSystem \
+          --suppress=unusedFunction \
+          --inline-suppr \
+          --error-exitcode=0 \
+          src/
+      continue-on-error: true
+
+  # ============================================
+  # DOCUMENTATION
+  # ============================================
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 📚 Verify Documentation
+      run: |
+        echo "✅ Checking documentation files..."
+        test -f README.md || exit 1
+        test -f PORTFOLIO_SUMMARY.md || exit 1
+        test -f tests/README_TESTING.md || exit 1
+        echo "✅ All documentation present"
+    
+    - name: 📊 Generate Project Stats
+      run: |
+        echo "## 📊 Project Statistics" > stats.md
+        echo "" >> stats.md
+        echo "- **Total Commits**: $(git rev-list --count HEAD)" >> stats.md
+        echo "- **C++ Files**: $(find src -name '*.cpp' -o -name '*.h' | wc -l)" >> stats.md
+        echo "- **Lines of Code**: $(find src -name '*.cpp' -o -name '*.h' -exec cat {} \; | wc -l)" >> stats.md
+        echo "- **Build Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> stats.md
+        cat stats.md
+    
+    - name: 📤 Upload Stats
+      uses: actions/upload-artifact@v4
+      with:
+        name: project-stats
+        path: stats.md
+
+  # ============================================
+  # RELEASE (on tags)
+  # ============================================
+  release:
+    name: Create Release
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-ubuntu, code-quality]
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev
+    
+    - name: 🏗️ Build Release
+      run: |
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
+    
+    - name: 📦 Create Release Package
+      run: |
+        cd build
+        tar -czf industrial-hmi-${{ github.ref_name }}.tar.gz \
+          industrial-hmi ui/*.ui ui/*.css
+    
+    - name: 🚀 Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: build/industrial-hmi-${{ github.ref_name }}.tar.gz
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # SUMMARY
+  # ============================================
+  summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-24.04
+    needs: [build-ubuntu, code-quality, documentation]
+    if: always()
+    
+    steps:
+    - name: 📋 Generate Summary
+      run: |
+        echo "## 🎯 CI/CD Pipeline Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Build & Test | ${{ needs.build-ubuntu.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Code Quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,568 @@
+/*
+ * Adwaita Dark/Light Theme with Design Tokens
+ * Industrial HMI - Professional GTK4 Styling
+ * 
+ * Design System:
+ * - Design tokens for consistency
+ * - Dark mode (default for industrial)
+ * - Light mode support
+ * - Adwaita color palette
+ */
+
+/* ============================================
+   DESIGN TOKENS - DARK MODE (Default)
+   ============================================ */
+
+@define-color theme_name "dark";
+
+/* Color Palette - Adwaita Dark */
+@define-color window_bg_color #242424;
+@define-color window_fg_color #ffffff;
+@define-color view_bg_color #1e1e1e;
+@define-color view_fg_color #ffffff;
+@define-color headerbar_bg_color #303030;
+@define-color headerbar_fg_color #ffffff;
+@define-color card_bg_color #2a2a2a;
+@define-color card_fg_color #ffffff;
+@define-color dialog_bg_color #383838;
+@define-color dialog_fg_color #ffffff;
+@define-color popover_bg_color #383838;
+@define-color popover_fg_color #ffffff;
+
+/* Accent Colors - Adwaita Blue */
+@define-color accent_bg_color #3584e4;
+@define-color accent_fg_color #ffffff;
+@define-color accent_color #3584e4;
+
+/* State Colors */
+@define-color success_bg_color #26a269;
+@define-color success_fg_color #ffffff;
+@define-color success_color #26a269;
+
+@define-color warning_bg_color #e5a50a;
+@define-color warning_fg_color #ffffff;
+@define-color warning_color #e5a50a;
+
+@define-color error_bg_color #c01c28;
+@define-color error_fg_color #ffffff;
+@define-color error_color #c01c28;
+
+@define-color destructive_bg_color #c01c28;
+@define-color destructive_fg_color #ffffff;
+@define-color destructive_color #c01c28;
+
+/* Sidebar Colors - Industrial Dark Gradient */
+@define-color sidebar_bg_start #1a2332;
+@define-color sidebar_bg_end #0f1419;
+@define-color sidebar_fg_color #e0e0e0;
+@define-color sidebar_border_color #2d3748;
+
+/* Text Colors */
+@define-color text_primary #ffffff;
+@define-color text_secondary #b0b0b0;
+@define-color text_disabled #666666;
+@define-color text_placeholder #808080;
+
+/* Border Colors */
+@define-color border_color #404040;
+@define-color border_subtle #2a2a2a;
+@define-color border_strong #606060;
+
+/* Surface Colors */
+@define-color surface_base #242424;
+@define-color surface_raised #2a2a2a;
+@define-color surface_overlay #303030;
+@define-color surface_sunken #1e1e1e;
+
+/* Interactive States */
+@define-color hover_bg_color rgba(255, 255, 255, 0.08);
+@define-color active_bg_color rgba(255, 255, 255, 0.12);
+@define-color selected_bg_color #3584e4;
+@define-color selected_fg_color #ffffff;
+
+/* Spacing Tokens */
+@define-color spacing_xs 4px;
+@define-color spacing_sm 8px;
+@define-color spacing_md 12px;
+@define-color spacing_lg 16px;
+@define-color spacing_xl 24px;
+@define-color spacing_2xl 32px;
+
+/* Border Radius */
+@define-color radius_sm 4px;
+@define-color radius_md 6px;
+@define-color radius_lg 8px;
+@define-color radius_xl 12px;
+@define-color radius_round 9999px;
+
+/* Shadows */
+@define-color shadow_sm 0 1px 2px rgba(0, 0, 0, 0.3);
+@define-color shadow_md 0 2px 8px rgba(0, 0, 0, 0.4);
+@define-color shadow_lg 0 8px 16px rgba(0, 0, 0, 0.5);
+@define-color shadow_xl 0 16px 32px rgba(0, 0, 0, 0.6);
+
+/* Typography */
+@define-color font_family -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+@define-color font_size_xs 11px;
+@define-color font_size_sm 12px;
+@define-color font_size_base 14px;
+@define-color font_size_lg 16px;
+@define-color font_size_xl 20px;
+@define-color font_size_2xl 24px;
+@define-color font_size_3xl 32px;
+
+@define-color font_weight_normal 400;
+@define-color font_weight_medium 500;
+@define-color font_weight_semibold 600;
+@define-color font_weight_bold 700;
+
+/* ============================================
+   LIGHT MODE DESIGN TOKENS
+   ============================================ */
+
+@define-color light_window_bg_color #fafafa;
+@define-color light_window_fg_color #000000;
+@define-color light_view_bg_color #ffffff;
+@define-color light_view_fg_color #000000;
+@define-color light_headerbar_bg_color #f6f5f4;
+@define-color light_headerbar_fg_color #000000;
+@define-color light_card_bg_color #ffffff;
+@define-color light_card_fg_color #000000;
+@define-color light_dialog_bg_color #fafafa;
+@define-color light_dialog_fg_color #000000;
+
+@define-color light_sidebar_bg_start #e8eaed;
+@define-color light_sidebar_bg_end #f8f9fa;
+@define-color light_sidebar_fg_color #202124;
+@define-color light_sidebar_border_color #dadce0;
+
+@define-color light_text_primary #000000;
+@define-color light_text_secondary #5f6368;
+@define-color light_text_disabled #9aa0a6;
+
+@define-color light_border_color #d0d0d0;
+@define-color light_surface_base #fafafa;
+@define-color light_surface_raised #ffffff;
+
+@define-color light_hover_bg_color rgba(0, 0, 0, 0.05);
+@define-color light_active_bg_color rgba(0, 0, 0, 0.08);
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+
+* {
+    /* Use design tokens */
+    font-family: @font_family;
+    font-size: @font_size_base;
+}
+
+window {
+    background-color: @window_bg_color;
+    color: @window_fg_color;
+}
+
+/* ============================================
+   SIDEBAR STYLES
+   ============================================ */
+
+.sidebar {
+    background: linear-gradient(180deg, 
+        @sidebar_bg_start 0%, 
+        @sidebar_bg_end 100%);
+    border-right: 1px solid @sidebar_border_color;
+    padding: @spacing_lg;
+}
+
+.sidebar-title {
+    font-size: @font_size_2xl;
+    font-weight: @font_weight_bold;
+    color: @sidebar_fg_color;
+    margin-bottom: @spacing_xl;
+}
+
+.sidebar-section {
+    margin-bottom: @spacing_2xl;
+}
+
+.sidebar-section-title {
+    font-size: @font_size_sm;
+    font-weight: @font_weight_semibold;
+    color: @text_secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: @spacing_sm;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+button {
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+    border: 1px solid @border_color;
+    border-radius: @radius_md;
+    padding: @spacing_sm @spacing_lg;
+    font-weight: @font_weight_medium;
+    transition: all 150ms ease;
+}
+
+button:hover {
+    background-color: @hover_bg_color;
+    border-color: @border_strong;
+    box-shadow: @shadow_sm;
+}
+
+button:active {
+    background-color: @active_bg_color;
+    box-shadow: none;
+}
+
+button.suggested-action {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+    border-color: @accent_bg_color;
+}
+
+button.suggested-action:hover {
+    background-color: shade(@accent_bg_color, 1.1);
+    box-shadow: @shadow_md;
+}
+
+button.destructive-action {
+    background-color: @destructive_bg_color;
+    color: @destructive_fg_color;
+    border-color: @destructive_bg_color;
+}
+
+button.destructive-action:hover {
+    background-color: shade(@destructive_bg_color, 1.1);
+}
+
+/* ============================================
+   CARDS & CONTAINERS
+   ============================================ */
+
+.card {
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+    border: 1px solid @border_subtle;
+    border-radius: @radius_lg;
+    padding: @spacing_lg;
+    box-shadow: @shadow_sm;
+}
+
+.card-title {
+    font-size: @font_size_lg;
+    font-weight: @font_weight_semibold;
+    margin-bottom: @spacing_md;
+}
+
+.card-content {
+    color: @text_secondary;
+    line-height: 1.5;
+}
+
+/* ============================================
+   EQUIPMENT CARDS (Dashboard)
+   ============================================ */
+
+.equipment-card {
+    background-color: @card_bg_color;
+    border: 1px solid @border_color;
+    border-radius: @radius_lg;
+    padding: @spacing_lg;
+    margin: @spacing_md;
+    transition: all 200ms ease;
+}
+
+.equipment-card:hover {
+    border-color: @accent_color;
+    box-shadow: @shadow_md;
+    transform: translateY(-2px);
+}
+
+.equipment-card.active {
+    border-color: @success_color;
+    border-width: 2px;
+}
+
+.equipment-card.warning {
+    border-color: @warning_color;
+    border-width: 2px;
+}
+
+.equipment-card.error {
+    border-color: @error_color;
+    border-width: 2px;
+}
+
+.equipment-title {
+    font-size: @font_size_lg;
+    font-weight: @font_weight_bold;
+    color: @text_primary;
+    margin-bottom: @spacing_sm;
+}
+
+.equipment-subtitle {
+    font-size: @font_size_sm;
+    color: @text_secondary;
+    margin-bottom: @spacing_md;
+}
+
+.equipment-metric {
+    font-size: @font_size_xl;
+    font-weight: @font_weight_semibold;
+    color: @accent_color;
+}
+
+.equipment-metric-label {
+    font-size: @font_size_xs;
+    color: @text_secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   STATUS INDICATORS
+   ============================================ */
+
+.status-active {
+    color: @success_color;
+}
+
+.status-warning {
+    color: @warning_color;
+}
+
+.status-error {
+    color: @error_color;
+}
+
+.status-inactive {
+    color: @text_disabled;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px @spacing_sm;
+    border-radius: @radius_round;
+    font-size: @font_size_xs;
+    font-weight: @font_weight_medium;
+    text-transform: uppercase;
+}
+
+.status-badge.active {
+    background-color: alpha(@success_color, 0.2);
+    color: @success_color;
+}
+
+.status-badge.warning {
+    background-color: alpha(@warning_color, 0.2);
+    color: @warning_color;
+}
+
+.status-badge.error {
+    background-color: alpha(@error_color, 0.2);
+    color: @error_color;
+}
+
+/* ============================================
+   ENTRIES & INPUTS
+   ============================================ */
+
+entry {
+    background-color: @view_bg_color;
+    color: @view_fg_color;
+    border: 1px solid @border_color;
+    border-radius: @radius_md;
+    padding: @spacing_sm @spacing_md;
+}
+
+entry:focus {
+    border-color: @accent_color;
+    box-shadow: 0 0 0 2px alpha(@accent_color, 0.2);
+}
+
+entry::placeholder {
+    color: @text_placeholder;
+}
+
+/* ============================================
+   TREEVIEW (Tables)
+   ============================================ */
+
+treeview {
+    background-color: @view_bg_color;
+    color: @view_fg_color;
+}
+
+treeview header button {
+    background-color: @headerbar_bg_color;
+    color: @headerbar_fg_color;
+    border: none;
+    border-bottom: 1px solid @border_color;
+    font-weight: @font_weight_semibold;
+    padding: @spacing_md;
+}
+
+treeview:selected {
+    background-color: @selected_bg_color;
+    color: @selected_fg_color;
+}
+
+treeview row:hover {
+    background-color: @hover_bg_color;
+}
+
+/* ============================================
+   DIALOGS
+   ============================================ */
+
+dialog {
+    background-color: @dialog_bg_color;
+    color: @dialog_fg_color;
+    border-radius: @radius_xl;
+    box-shadow: @shadow_xl;
+}
+
+dialog headerbar {
+    background-color: @headerbar_bg_color;
+    border-bottom: 1px solid @border_color;
+}
+
+/* ============================================
+   POPOVERS
+   ============================================ */
+
+popover {
+    background-color: @popover_bg_color;
+    color: @popover_fg_color;
+    border: 1px solid @border_color;
+    border-radius: @radius_lg;
+    box-shadow: @shadow_lg;
+    padding: @spacing_md;
+}
+
+/* ============================================
+   SCROLLBARS
+   ============================================ */
+
+scrollbar {
+    background-color: transparent;
+}
+
+scrollbar slider {
+    background-color: alpha(@text_secondary, 0.3);
+    border-radius: @radius_round;
+    min-width: 8px;
+    min-height: 8px;
+}
+
+scrollbar slider:hover {
+    background-color: alpha(@text_secondary, 0.5);
+}
+
+/* ============================================
+   LIGHT MODE OVERRIDES
+   Use .light-mode class on window
+   ============================================ */
+
+window.light-mode {
+    background-color: @light_window_bg_color;
+    color: @light_window_fg_color;
+}
+
+window.light-mode .sidebar {
+    background: linear-gradient(180deg, 
+        @light_sidebar_bg_start 0%, 
+        @light_sidebar_bg_end 100%);
+    border-right-color: @light_sidebar_border_color;
+}
+
+window.light-mode .sidebar-title,
+window.light-mode .sidebar-section-title {
+    color: @light_text_primary;
+}
+
+window.light-mode button {
+    background-color: @light_card_bg_color;
+    color: @light_card_fg_color;
+    border-color: @light_border_color;
+}
+
+window.light-mode button:hover {
+    background-color: @light_hover_bg_color;
+}
+
+window.light-mode .card,
+window.light-mode .equipment-card {
+    background-color: @light_card_bg_color;
+    color: @light_card_fg_color;
+    border-color: @light_border_color;
+}
+
+window.light-mode entry {
+    background-color: @light_view_bg_color;
+    color: @light_view_fg_color;
+    border-color: @light_border_color;
+}
+
+window.light-mode treeview {
+    background-color: @light_view_bg_color;
+    color: @light_view_fg_color;
+}
+
+window.light-mode .equipment-metric {
+    color: @accent_color;
+}
+
+window.light-mode .equipment-subtitle,
+window.light-mode .card-content {
+    color: @light_text_secondary;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.text-xs { font-size: @font_size_xs; }
+.text-sm { font-size: @font_size_sm; }
+.text-base { font-size: @font_size_base; }
+.text-lg { font-size: @font_size_lg; }
+.text-xl { font-size: @font_size_xl; }
+.text-2xl { font-size: @font_size_2xl; }
+.text-3xl { font-size: @font_size_3xl; }
+
+.font-normal { font-weight: @font_weight_normal; }
+.font-medium { font-weight: @font_weight_medium; }
+.font-semibold { font-weight: @font_weight_semibold; }
+.font-bold { font-weight: @font_weight_bold; }
+
+.text-primary { color: @text_primary; }
+.text-secondary { color: @text_secondary; }
+.text-disabled { color: @text_disabled; }
+
+.m-xs { margin: @spacing_xs; }
+.m-sm { margin: @spacing_sm; }
+.m-md { margin: @spacing_md; }
+.m-lg { margin: @spacing_lg; }
+.m-xl { margin: @spacing_xl; }
+
+.p-xs { padding: @spacing_xs; }
+.p-sm { padding: @spacing_sm; }
+.p-md { padding: @spacing_md; }
+.p-lg { padding: @spacing_lg; }
+.p-xl { padding: @spacing_xl; }
+
+.rounded-sm { border-radius: @radius_sm; }
+.rounded-md { border-radius: @radius_md; }
+.rounded-lg { border-radius: @radius_lg; }
+.rounded-xl { border-radius: @radius_xl; }
+.rounded-full { border-radius: @radius_round; }
+
+.shadow-sm { box-shadow: @shadow_sm; }
+.shadow-md { box-shadow: @shadow_md; }
+.shadow-lg { box-shadow: @shadow_lg; }
+.shadow-xl { box-shadow: @shadow_xl; }

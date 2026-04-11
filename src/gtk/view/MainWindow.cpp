@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "src/gtk/view/DialogManager.h"
+#include "src/gtk/view/ThemeManager.h"
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/presenter/DashboardPresenter.h"
@@ -12,7 +13,10 @@ MainWindow::MainWindow() {
     // Load UI layout from .ui file
     loadUI();
     
-    // Apply custom styling
+    // Initialize theme system (Adwaita Dark/Light with Design Tokens)
+    view::ThemeManager::instance().initialize(this);
+    
+    // Apply custom styling (legacy sidebar CSS - being replaced by adwaita-theme.css)
     loadSidebarCSS();
     
     // Setup keyboard shortcuts (F11, ESC)
@@ -35,6 +39,9 @@ MainWindow::MainWindow() {
     std::cout << "MVP Architecture Demonstration\n";
     std::cout << "- Dashboard: Equipment monitoring and control\n";
     std::cout << "- Products: Database integration with CRUD operations\n";
+    std::cout << "\n🎨 Theme: Adwaita " 
+              << (view::ThemeManager::instance().isDarkMode() ? "Dark" : "Light") 
+              << " (Design Tokens)\n";
     std::cout << "\nControls:\n";
     std::cout << "- Sidebar: Click Fullscreen/Windowed buttons\n";
     std::cout << "- F11: Toggle fullscreen/windowed mode\n";
@@ -43,6 +50,7 @@ MainWindow::MainWindow() {
     std::cout << "- [+ Add New Product]: Create new products\n";
     std::cout << "- [View Details]: Double-click or button\n";
     std::cout << "- [Delete]: Soft delete with confirmation\n";
+    std::cout << "- [Edit]: Update existing products\n";
 }
 
 MainWindow::~MainWindow() {
