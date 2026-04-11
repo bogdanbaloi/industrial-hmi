@@ -169,9 +169,9 @@ void ProductsPage::buildProductsList() {
     gestureClick->signal_pressed().connect([this](int, double, double) {
         auto selection = treeView_->get_selection();
         if (selection->count_selected_rows() > 0) {
-            auto menu = Gtk::PopoverMenu::create();
-            // Would add menu items here for View/Delete
-            // For now, use toolbar buttons
+            // Context menu would be created here
+            // For now, use toolbar buttons instead
+            // auto menu = Gtk::make_managed<Gtk::PopoverMenu>();
         }
     });
     treeView_->add_controller(gestureClick);

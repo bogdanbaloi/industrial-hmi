@@ -98,37 +98,58 @@ public:
         impl_->log(LogLevel::DEBUG, msg, loc);
     }
     
+    // Public API - source_location captured automatically
     template<typename... Args>
-    void info(std::format_string<Args...> fmt, Args&&... args,
-             const std::source_location& loc = std::source_location::current()) {
+    void info(std::format_string<Args...> fmt, Args&&... args) {
+        info_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+    }
+    
+    template<typename... Args>
+    void warn(std::format_string<Args...> fmt, Args&&... args) {
+        warn_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+    }
+    
+    template<typename... Args>
+    void error(std::format_string<Args...> fmt, Args&&... args) {
+        error_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+    }
+    
+    template<typename... Args>
+    void critical(std::format_string<Args...> fmt, Args&&... args) {
+        critical_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+    }
+
+private:
+    // Implementation - source_location as first parameter
+    template<typename... Args>
+    void info_impl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::INFO)) return;
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::INFO, msg, loc);
     }
     
     template<typename... Args>
-    void warn(std::format_string<Args...> fmt, Args&&... args,
-             const std::source_location& loc = std::source_location::current()) {
+    void warn_impl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::WARN)) return;
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::WARN, msg, loc);
     }
     
     template<typename... Args>
-    void error(std::format_string<Args...> fmt, Args&&... args,
-              const std::source_location& loc = std::source_location::current()) {
+    void error_impl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::ERROR)) return;
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::ERROR, msg, loc);
     }
     
     template<typename... Args>
-    void critical(std::format_string<Args...> fmt, Args&&... args,
-                 const std::source_location& loc = std::source_location::current()) {
+    void critical_impl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::CRITICAL)) return;
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::CRITICAL, msg, loc);
     }
+
+public:
     
 private:
     std::unique_ptr<LoggerBase> impl_;

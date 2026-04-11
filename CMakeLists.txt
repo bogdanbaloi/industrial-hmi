@@ -8,8 +8,15 @@ project(industrial-hmi
 # Platform Detection
 # ============================================================================
 if(WIN32)
-    message(STATUS "🪟 Building for Windows")
-    set(PLATFORM_WINDOWS TRUE)
+    # Detect MSYS2/MinGW environment (use pkg-config like Linux)
+    if(CMAKE_CXX_COMPILER MATCHES "msys64|clang64|mingw64|ucrt64")
+        message(STATUS "🪟 Building for Windows (MSYS2/Clang64)")
+        set(PLATFORM_LINUX TRUE)  # Use pkg-config path
+        set(PLATFORM_MSYS2 TRUE)
+    else()
+        message(STATUS "🪟 Building for Windows")
+        set(PLATFORM_WINDOWS TRUE)
+    endif()
 elseif(UNIX AND NOT APPLE)
     message(STATUS "🐧 Building for Linux")
     set(PLATFORM_LINUX TRUE)
@@ -107,11 +114,12 @@ endif()
 # Find Dependencies (Cross-Platform)
 # ============================================================================
 
-# On Windows, use vcpkg for dependencies
-# Set: -DCMAKE_TOOLCHAIN_FILE=[vcpkg]/scripts/buildsystems/vcpkg.cmake
-if(WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    message(WARNING "⚠️  For Windows builds, use vcpkg toolchain file:")
+# On Windows with vcpkg, set toolchain file
+# MSYS2 users: dependencies via pacman (pkg-config)
+if(PLATFORM_WINDOWS AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    message(WARNING "⚠️  For Windows MSVC builds, use vcpkg toolchain file:")
     message(WARNING "    cmake -DCMAKE_TOOLCHAIN_FILE=[vcpkg]/scripts/buildsystems/vcpkg.cmake ..")
+    message(WARNING "    OR use MSYS2 with: pacman -S mingw-w64-clang-x86_64-gtk4 gtkmm-4.0")
 endif()
 
 # GTK4 (cross-platform via pkg-config or vcpkg)
@@ -129,6 +137,19 @@ endif()
 
 # Boost (header-only signals2)
 find_package(Boost REQUIRED)
+
+# MSYS2 Boost doesn't create component targets
+# Use Boost::boost (headers) for header-only libraries
+if(TARGET Boost::signals2)
+    set(BOOST_TARGET Boost::signals2)
+elseif(TARGET Boost::boost)
+    set(BOOST_TARGET Boost::boost)
+elseif(TARGET Boost::headers)
+    set(BOOST_TARGET Boost::headers)
+else()
+    # Fallback: use include directories only
+    set(BOOST_TARGET Boost::Boost)
+endif()
 
 # Threads (cross-platform)
 find_package(Threads REQUIRED)
@@ -194,7 +215,7 @@ target_sources(objectsPresenter
 target_link_libraries(objectsPresenter
     PUBLIC
         objectsModel
-        Boost::signals2
+        ${BOOST_TARGET}
         Threads::Threads
 )
 

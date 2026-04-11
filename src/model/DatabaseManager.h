@@ -56,7 +56,7 @@ public:
             if (logger_) {
                 logger_->error("Failed to open database: {}", sqlite3_errmsg(db_));
             }
-            return core::Err(core::DatabaseError::ConnectionFailed);
+            return core::Result<void, core::DatabaseError>(core::Err, core::DatabaseError::ConnectionFailed);
         }
         
         createTables();
@@ -66,7 +66,7 @@ public:
             logger_->info("Database initialized successfully");
         }
         
-        return core::Ok;
+        return core::Result<void, core::DatabaseError>();
     }
     
     /// Get all active products (not deleted)

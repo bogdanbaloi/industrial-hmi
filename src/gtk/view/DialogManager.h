@@ -41,7 +41,6 @@ public:
     DialogManager& operator=(DialogManager&&) = default;
     
     ~DialogManager() = default;
-    ~DialogManager() = default;
     
     /// Dialog types for consistent styling
     enum class Type {

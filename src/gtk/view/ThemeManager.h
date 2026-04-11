@@ -90,7 +90,7 @@ private:
                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
             );
         } catch (const Glib::Error& e) {
-            g_warning("Failed to load theme CSS: %s", e.what().c_str());
+            g_warning("Failed to load theme CSS: %s", e.what());
         }
     }
     

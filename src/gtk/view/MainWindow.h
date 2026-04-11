@@ -14,6 +14,11 @@ namespace app {
         class ProductsPage;
         class DialogManager;
     }
+    
+    namespace core {
+        class Logger;
+        class ExceptionHandler;
+    }
 }
 
 /// Main application window with sidebar controls

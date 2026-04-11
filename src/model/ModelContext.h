@@ -6,7 +6,7 @@
 #include <memory>
 #include <functional>
 #include <atomic>
-#include "src/core/Logger.h"
+#include "src/core/LoggerBase.h"
 #include "src/core/ErrorHandling.h"
 
 namespace app::model {

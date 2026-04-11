@@ -60,6 +60,45 @@
       }
     },
     {
+      "name": "windows-msys2-debug",
+      "displayName": "Windows MSYS2 Debug (Clang64)",
+      "description": "Debug build for MSYS2 Clang64 environment",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_MAKE_PROGRAM": "ninja",
+        "ENABLE_SANITIZERS": "OFF",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-msys2-release",
+      "displayName": "Windows MSYS2 Release (Clang64)",
+      "description": "Release build for MSYS2 Clang64 environment",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_MAKE_PROGRAM": "ninja",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
       "name": "linux-release",
       "displayName": "Linux Release",
       "description": "Linux release build",
@@ -103,6 +142,18 @@
       "name": "linux-release",
       "displayName": "Linux Release",
       "configurePreset": "linux-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-msys2-debug",
+      "displayName": "Windows MSYS2 Debug",
+      "configurePreset": "windows-msys2-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-msys2-release",
+      "displayName": "Windows MSYS2 Release",
+      "configurePreset": "windows-msys2-release",
       "configuration": "Release"
     }
   ],
