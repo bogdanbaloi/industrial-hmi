@@ -1,0 +1,40 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle (light green) -->
+  <circle cx="100" cy="100" r="85" fill="#E8F5E9" stroke="#4CAF50" stroke-width="2"/>
+  
+  <!-- Outer gauge ring -->
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#E0E0E0" stroke-width="12"/>
+  
+  <!-- Gauge fill (85% green arc) -->
+  <circle cx="100" cy="100" r="70" fill="none" 
+          stroke="#4CAF50" stroke-width="12"
+          stroke-dasharray="370 440"
+          stroke-dashoffset="0"
+          transform="rotate(-90 100 100)"/>
+  
+  <!-- Inner circle -->
+  <circle cx="100" cy="100" r="55" fill="white" stroke="#4CAF50" stroke-width="2"/>
+  
+  <!-- Percentage text -->
+  <text x="100" y="95" text-anchor="middle" 
+        font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#2E7D32">
+    85%
+  </text>
+  
+  <!-- Label text -->
+  <text x="100" y="115" text-anchor="middle" 
+        font-family="Arial, sans-serif" font-size="12" fill="#757575">
+    READY
+  </text>
+  
+  <!-- Status indicator dots (top) -->
+  <circle cx="100" cy="20" r="6" fill="#4CAF50"/>
+  <circle cx="85" cy="25" r="4" fill="#4CAF50" opacity="0.6"/>
+  <circle cx="115" cy="25" r="4" fill="#4CAF50" opacity="0.6"/>
+  
+  <!-- Technical grid lines (subtle) -->
+  <line x1="100" y1="30" x2="100" y2="50" stroke="#BDBDBD" stroke-width="1" opacity="0.3"/>
+  <line x1="100" y1="150" x2="100" y2="170" stroke="#BDBDBD" stroke-width="1" opacity="0.3"/>
+  <line x1="30" y1="100" x2="50" y2="100" stroke="#BDBDBD" stroke-width="1" opacity="0.3"/>
+  <line x1="150" y1="100" x2="170" y2="100" stroke="#BDBDBD" stroke-width="1" opacity="0.3"/>
+</svg>

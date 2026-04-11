@@ -1,0 +1,53 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle (light red) -->
+  <circle cx="100" cy="100" r="85" fill="#FFEBEE" stroke="#F44336" stroke-width="2"/>
+  
+  <!-- Outer gauge ring -->
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#E0E0E0" stroke-width="12"/>
+  
+  <!-- Gauge fill (12% red arc - low/error) -->
+  <circle cx="100" cy="100" r="70" fill="none" 
+          stroke="#F44336" stroke-width="12"
+          stroke-dasharray="53 440"
+          stroke-dashoffset="0"
+          transform="rotate(-90 100 100)"/>
+  
+  <!-- Inner circle -->
+  <circle cx="100" cy="100" r="55" fill="white" stroke="#F44336" stroke-width="2"/>
+  
+  <!-- Warning triangle inside -->
+  <path d="M 100 75 L 85 105 L 115 105 Z" fill="none" stroke="#F44336" stroke-width="2"/>
+  <circle cx="100" cy="100" r="3" fill="#F44336"/>
+  <line x1="100" y1="85" x2="100" y2="95" stroke="#F44336" stroke-width="2"/>
+  
+  <!-- Label text -->
+  <text x="100" y="130" text-anchor="middle" 
+        font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#C62828">
+    ERROR
+  </text>
+  
+  <!-- Status indicator dots (top) - error pattern -->
+  <circle cx="100" cy="20" r="6" fill="#F44336"/>
+  <circle cx="85" cy="25" r="4" fill="#F44336"/>
+  <circle cx="115" cy="25" r="4" fill="#F44336"/>
+  
+  <!-- Error cross marks (corners) -->
+  <g transform="translate(40, 40)">
+    <line x1="-5" y1="-5" x2="5" y2="5" stroke="#F44336" stroke-width="2" opacity="0.3"/>
+    <line x1="-5" y1="5" x2="5" y2="-5" stroke="#F44336" stroke-width="2" opacity="0.3"/>
+  </g>
+  <g transform="translate(160, 40)">
+    <line x1="-5" y1="-5" x2="5" y2="5" stroke="#F44336" stroke-width="2" opacity="0.3"/>
+    <line x1="-5" y1="5" x2="5" y2="-5" stroke="#F44336" stroke-width="2" opacity="0.3"/>
+  </g>
+  
+  <!-- Supply bar (bottom) - low -->
+  <rect x="50" y="165" width="100" height="4" fill="#E0E0E0" rx="2"/>
+  <rect x="50" y="165" width="12" height="4" fill="#F44336" rx="2"/>
+  
+  <!-- Text label -->
+  <text x="100" y="180" text-anchor="middle" 
+        font-family="Arial, sans-serif" font-size="10" fill="#757575">
+    Low Supply
+  </text>
+</svg>

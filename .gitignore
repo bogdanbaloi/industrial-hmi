@@ -1,0 +1,28 @@
+# Build directories
+build/
+cmake-build-*/
+*.o
+*.so
+*.a
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Generated files
+*.autosave
+*.user
+*.orig
+
+# Compiled binaries
+industrial-hmi
+*.exe
+
+# Dependencies
+compile_commands.json
+
+# Logs
+*.log
