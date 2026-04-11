@@ -31,6 +31,17 @@ public:
         bool atHome{true};
     };
     
+    /// Quality checkpoint simulation
+    struct QualityCheckpoint {
+        uint32_t checkpointId{0};
+        std::string name;
+        int status{0};  // 0=passing, 1=warning, 2=critical
+        int unitsInspected{0};
+        int defectsFound{0};
+        float passRate{100.0f};
+        std::string lastDefect;
+    };
+    
     /// Work unit simulation
     struct WorkUnit {
         std::string workUnitId;
@@ -56,6 +67,7 @@ public:
     // Subscribe to state changes
     using EquipmentCallback = std::function<void(const EquipmentStatus&)>;
     using ActuatorCallback = std::function<void(const ActuatorStatus&)>;
+    using QualityCheckpointCallback = std::function<void(const QualityCheckpoint&)>;
     using WorkUnitCallback = std::function<void(const WorkUnit&)>;
     using StateCallback = std::function<void(SystemState)>;
     
@@ -67,6 +79,11 @@ public:
     void onActuatorStatusChanged(ActuatorCallback cb) {
         std::lock_guard<std::mutex> lock(mutex_);
         actuatorCallbacks_.push_back(cb);
+    }
+    
+    void onQualityCheckpointChanged(QualityCheckpointCallback cb) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        qualityCallbacks_.push_back(cb);
     }
     
     void onWorkUnitChanged(WorkUnitCallback cb) {
@@ -126,6 +143,11 @@ public:
         actuatorStatuses_[0] = {0, 1, 150, 200, true, false};  // Working
         actuatorStatuses_[1] = {1, 0, 0, 0, true, true};  // Idle at home
         
+        // Quality checkpoints
+        qualityCheckpoints_[0] = {0, "Visual Inspection", 0, 645, 12, 98.1f, "Surface scratch detected"};
+        qualityCheckpoints_[1] = {1, "Dimensional Check", 0, 645, 28, 95.7f, "Tolerance exceeded +0.02mm"};
+        qualityCheckpoints_[2] = {2, "Functional Test", 1, 645, 45, 93.0f, "Response time slow"};
+        
         // Work unit
         currentWorkUnit_ = {
             "WU-2024-001234",
@@ -143,6 +165,9 @@ public:
         }
         for (const auto& [id, status] : actuatorStatuses_) {
             notifyActuatorChange(id);
+        }
+        for (const auto& [id, checkpoint] : qualityCheckpoints_) {
+            notifyQualityChange(id);
         }
         notifyWorkUnitChange();
         notifyStateChange();
@@ -165,6 +190,15 @@ private:
         if (actuatorStatuses_.count(actuatorId)) {
             for (auto& cb : actuatorCallbacks_) {
                 cb(actuatorStatuses_[actuatorId]);
+            }
+        }
+    }
+    
+    void notifyQualityChange(uint32_t checkpointId) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (qualityCheckpoints_.count(checkpointId)) {
+            for (auto& cb : qualityCallbacks_) {
+                cb(qualityCheckpoints_[checkpointId]);
             }
         }
     }
@@ -197,11 +231,13 @@ private:
     
     std::map<uint32_t, EquipmentStatus> equipmentStatuses_;
     std::map<uint32_t, ActuatorStatus> actuatorStatuses_;
+    std::map<uint32_t, QualityCheckpoint> qualityCheckpoints_;
     WorkUnit currentWorkUnit_;
     SystemState currentState_{SystemState::IDLE};
     
     std::vector<EquipmentCallback> equipmentCallbacks_;
     std::vector<ActuatorCallback> actuatorCallbacks_;
+    std::vector<QualityCheckpointCallback> qualityCallbacks_;
     std::vector<WorkUnitCallback> workUnitCallbacks_;
     std::vector<StateCallback> stateCallbacks_;
     

@@ -40,9 +40,12 @@ set(PRESENTER_SOURCES
     src/presenter/BasePresenter.cpp
     src/presenter/DashboardPresenter.h
     src/presenter/DashboardPresenter.cpp
+    src/presenter/ProductsPresenter.h
+    src/presenter/ProductsPresenter.cpp
     src/presenter/ViewObserver.h
     src/presenter/modelview/EquipmentCardViewModel.h
     src/presenter/modelview/ActuatorCardViewModel.h
+    src/presenter/modelview/QualityCheckpointViewModel.h
     src/presenter/modelview/ControlPanelViewModel.h
     src/presenter/modelview/WorkUnitViewModel.h
     src/presenter/modelview/PlaceholderViewModels.h
@@ -51,10 +54,13 @@ set(PRESENTER_SOURCES
 set(VIEW_SOURCES
     src/gtk/view/pages/DashboardPage.h
     src/gtk/view/pages/DashboardPage.cpp
+    src/gtk/view/pages/ProductsPage.h
+    src/gtk/view/pages/ProductsPage.cpp
 )
 
 set(MODEL_SOURCES
     src/model/SimulatedModel.h
+    src/model/DatabaseManager.h
 )
 
 # Main executable

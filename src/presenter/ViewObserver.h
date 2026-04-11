@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/presenter/modelview/ActuatorCardViewModel.h"
+#include "src/presenter/modelview/QualityCheckpointViewModel.h"
 #include "src/presenter/modelview/ControlPanelViewModel.h"
 #include "src/presenter/modelview/WorkUnitViewModel.h"
 #include "src/presenter/modelview/EquipmentCardViewModel.h"
@@ -83,6 +84,10 @@ public:
     /// @param viewModel Actuator status data (position, mode, alerts, auto mode)
     /// @note Can be called up to 10 times per second during active production
     virtual void onActuatorCardChanged(const presenter::ActuatorCardViewModel& /*viewModel*/) {}
+    
+    /// Called when quality checkpoint status changes
+    /// @param viewModel Quality checkpoint data (pass rate, defects, inspection stats)
+    virtual void onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& /*viewModel*/) {}
 
     /// Called when header status bar should update (connectivity indicators)
     /// @param viewModel Network status, DB connectivity, system health

@@ -18,6 +18,10 @@ void DashboardPresenter::initialize() {
         handleActuatorStatusUpdate(status.actuatorId, status.status);
     });
     
+    model.onQualityCheckpointChanged([this](const model::SimulatedModel::QualityCheckpoint& checkpoint) {
+        handleQualityCheckpointUpdate(checkpoint.checkpointId, checkpoint.status);
+    });
+    
     model.onWorkUnitChanged([this](const model::SimulatedModel::WorkUnit& wu) {
         handleNewWorkUnit(wu.workUnitId);
     });
@@ -67,6 +71,11 @@ void DashboardPresenter::handleEquipmentStatusUpdate(uint32_t equipmentId, int s
 void DashboardPresenter::handleActuatorStatusUpdate(uint32_t actuatorId, int status) {
     auto vm = buildActuatorVM(actuatorId, status);
     notifyActuatorCardChanged(vm);
+}
+
+void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, int status) {
+    auto vm = buildQualityCheckpointVM(checkpointId, status);
+    notifyQualityCheckpointChanged(vm);
 }
 
 void DashboardPresenter::handleSystemStateChanged(int newState) {
@@ -154,6 +163,47 @@ presenter::ActuatorCardViewModel DashboardPresenter::buildActuatorVM(uint32_t ac
     return vm;
 }
 
+presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpointVM(uint32_t checkpointId, int status) {
+    presenter::QualityCheckpointViewModel vm;
+    vm.checkpointId = checkpointId;
+    
+    // Get data from model
+    auto& model = model::SimulatedModel::instance();
+    // Simplified - in real app would query model properly
+    
+    switch (checkpointId) {
+        case 0:
+            vm.checkpointName = "Visual Inspection";
+            vm.unitsInspected = 645;
+            vm.defectsFound = 12;
+            vm.passRate = 98.1f;
+            vm.targetPassRate = 95.0f;
+            vm.lastDefect = "Surface scratch detected";
+            vm.status = presenter::QualityCheckpointStatus::Passing;
+            break;
+        case 1:
+            vm.checkpointName = "Dimensional Check";
+            vm.unitsInspected = 645;
+            vm.defectsFound = 28;
+            vm.passRate = 95.7f;
+            vm.targetPassRate = 95.0f;
+            vm.lastDefect = "Tolerance exceeded +0.02mm";
+            vm.status = presenter::QualityCheckpointStatus::Passing;
+            break;
+        case 2:
+            vm.checkpointName = "Functional Test";
+            vm.unitsInspected = 645;
+            vm.defectsFound = 45;
+            vm.passRate = 93.0f;
+            vm.targetPassRate = 95.0f;
+            vm.lastDefect = "Response time slow";
+            vm.status = presenter::QualityCheckpointStatus::Warning;
+            break;
+    }
+    
+    return vm;
+}
+
 presenter::ControlPanelViewModel DashboardPresenter::buildControlPanelVM() {
     auto& model = model::SimulatedModel::instance();
     auto state = model.getState();
@@ -212,6 +262,12 @@ void DashboardPresenter::notifyEquipmentCardChanged(const presenter::EquipmentCa
 void DashboardPresenter::notifyActuatorCardChanged(const presenter::ActuatorCardViewModel& vm) {
     notifyAll([&vm](ViewObserver* obs) {
         obs->onActuatorCardChanged(vm);
+    });
+}
+
+void DashboardPresenter::notifyQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) {
+    notifyAll([&vm](ViewObserver* obs) {
+        obs->onQualityCheckpointChanged(vm);
     });
 }
 

@@ -4,6 +4,7 @@
 #include "src/presenter/modelview/WorkUnitViewModel.h"
 #include "src/presenter/modelview/EquipmentCardViewModel.h"
 #include "src/presenter/modelview/ActuatorCardViewModel.h"
+#include "src/presenter/modelview/QualityCheckpointViewModel.h"
 #include "src/presenter/modelview/ControlPanelViewModel.h"
 #include "src/presenter/modelview/PlaceholderViewModels.h"
 
@@ -79,6 +80,11 @@ private:
     /// @param status Raw hardware status data
     void handleActuatorStatusUpdate(uint32_t actuatorId, /* raw status type */ int status);
     
+    /// Called when quality checkpoint status changes
+    /// @param checkpointId Quality checkpoint identifier
+    /// @param status Raw quality status data
+    void handleQualityCheckpointUpdate(uint32_t checkpointId, int status);
+    
     /// Called when system state changes
     /// @param newState New state from state machine
     void handleSystemStateChanged(/* State enum */ int newState);
@@ -106,6 +112,12 @@ private:
     /// @return Display-ready ViewModel
     presenter::ActuatorCardViewModel buildActuatorVM(uint32_t actuatorId, int status);
     
+    /// Build quality checkpoint ViewModel from quality data
+    /// @param checkpointId Quality checkpoint identifier
+    /// @param status Quality status
+    /// @return Display-ready ViewModel
+    presenter::QualityCheckpointViewModel buildQualityCheckpointVM(uint32_t checkpointId, int status);
+    
     /// Build control panel ViewModel from current system state
     /// @return Display-ready ViewModel with button states
     presenter::ControlPanelViewModel buildControlPanelVM();
@@ -125,6 +137,9 @@ private:
     
     /// Notify observers of actuator status change
     void notifyActuatorCardChanged(const presenter::ActuatorCardViewModel& vm);
+    
+    /// Notify observers of quality checkpoint change
+    void notifyQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm);
     
     /// Notify observers of control panel state change
     void notifyControlPanelChanged(const presenter::ControlPanelViewModel& vm);
