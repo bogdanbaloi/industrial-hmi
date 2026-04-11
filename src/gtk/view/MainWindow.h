@@ -59,8 +59,8 @@ private:
     Gtk::Box* productsContainer_ = nullptr;
     
     // Services (injected into pages)
-    std::unique_ptr<core::Logger> logger_;
-    std::unique_ptr<core::ExceptionHandler> exceptionHandler_;
+    std::unique_ptr<app::core::Logger> logger_;
+    std::unique_ptr<app::core::ExceptionHandler> exceptionHandler_;
     std::unique_ptr<app::view::DialogManager> dialogManager_;
     
     // MVP components - Dashboard

@@ -10,18 +10,18 @@ project(industrial-hmi
 if(WIN32)
     # Detect MSYS2/MinGW environment (use pkg-config like Linux)
     if(CMAKE_CXX_COMPILER MATCHES "msys64|clang64|mingw64|ucrt64")
-        message(STATUS "🪟 Building for Windows (MSYS2/Clang64)")
+        message(STATUS "Building for Windows (MSYS2/Clang64)")
         set(PLATFORM_LINUX TRUE)  # Use pkg-config path
         set(PLATFORM_MSYS2 TRUE)
     else()
-        message(STATUS "🪟 Building for Windows")
+        message(STATUS "Building for Windows")
         set(PLATFORM_WINDOWS TRUE)
     endif()
 elseif(UNIX AND NOT APPLE)
-    message(STATUS "🐧 Building for Linux")
+    message(STATUS "Building for Linux")
     set(PLATFORM_LINUX TRUE)
 elseif(APPLE)
-    message(STATUS "🍎 Building for macOS")
+    message(STATUS "Building for macOS")
     set(PLATFORM_MACOS TRUE)
 endif()
 
@@ -117,7 +117,7 @@ endif()
 # On Windows with vcpkg, set toolchain file
 # MSYS2 users: dependencies via pacman (pkg-config)
 if(PLATFORM_WINDOWS AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    message(WARNING "⚠️  For Windows MSVC builds, use vcpkg toolchain file:")
+    message(WARNING "For Windows MSVC builds, use vcpkg toolchain file:")
     message(WARNING "    cmake -DCMAKE_TOOLCHAIN_FILE=[vcpkg]/scripts/buildsystems/vcpkg.cmake ..")
     message(WARNING "    OR use MSYS2 with: pacman -S mingw-w64-clang-x86_64-gtk4 gtkmm-4.0")
 endif()
@@ -169,6 +169,20 @@ target_sources(objectsModel
             src/model/SimulatedModel.h
             src/model/DatabaseManager.h
             src/model/ModelContext.h
+)
+target_link_libraries(objectsModel
+    PUBLIC
+        ${GTKMM_LIBRARIES}
+        ${SQLITE_LIBRARIES}
+)
+target_include_directories(objectsModel
+    PUBLIC
+        ${GTKMM_INCLUDE_DIRS}
+        ${SQLITE_INCLUDE_DIRS}
+)
+target_compile_options(objectsModel
+    PUBLIC
+        ${GTKMM_CFLAGS_OTHER}
 )
 
 # Config Layer - JSON configuration management
@@ -293,21 +307,21 @@ add_custom_target(CopyAssets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
         ${CMAKE_BINARY_DIR}/assets
-    COMMENT "📂 Copying assets to build directory"
+    COMMENT "Copying assets to build directory"
 )
 
 add_custom_target(CopyConfig ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/config
         ${CMAKE_BINARY_DIR}/config
-    COMMENT "📂 Copying config files to build directory"
+    COMMENT "Copying config files to build directory"
 )
 
 add_custom_target(CopyUIFiles ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/ui
         ${CMAKE_BINARY_DIR}/ui
-    COMMENT "📂 Copying UI files to build directory"
+    COMMENT "Copying UI files to build directory"
 )
 
 add_dependencies(industrial-hmi CopyAssets CopyConfig CopyUIFiles)
@@ -380,17 +394,17 @@ else()
 endif()
 message(STATUS "")
 message(STATUS "Object Libraries:")
-message(STATUS "  ✓ objectsModel      - Data layer (SimulatedModel, DatabaseManager)")
-message(STATUS "  ✓ objectsPresenter  - Presenter layer (MVP orchestration)")
-message(STATUS "  ✓ objectsView       - View layer (GTK4 pages)")
+message(STATUS "  objectsModel      - Data layer (SimulatedModel, DatabaseManager)")
+message(STATUS "  objectsPresenter  - Presenter layer (MVP orchestration)")
+message(STATUS "  objectsView       - View layer (GTK4 pages)")
 message(STATUS "")
 if(WIN32)
-    message(STATUS "🪟 Windows Build:")
+    message(STATUS "Windows Build:")
     message(STATUS "  - Use vcpkg for dependencies")
     message(STATUS "  - GUI application (no console)")
     message(STATUS "  - CPack: NSIS installer + ZIP")
 elseif(PLATFORM_LINUX)
-    message(STATUS "🐧 Linux Build:")
+    message(STATUS "Linux Build:")
     message(STATUS "  - pkg-config for dependencies")
     message(STATUS "  - CPack: DEB + RPM packages")
 endif()

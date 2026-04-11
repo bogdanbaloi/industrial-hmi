@@ -248,7 +248,7 @@ void ProductsPage::updateProductsList(const presenter::ProductsViewModel& vm) {
         if (product.status == "Active") {
             statusIcon = "● ";  // Green dot
         } else if (product.status == "Low Stock") {
-            statusIcon = "⚠ ";  // Warning
+            statusIcon = "! ";  // Warning
         } else {
             statusIcon = "○ ";  // Gray dot
         }

@@ -15,17 +15,17 @@
 
 MainWindow::MainWindow() {
     // Initialize logging system (DEPENDENCY INJECTION!)
-    logger_ = std::make_unique<core::Logger>(
-        core::createProductionLogger("logs/app.log")
+    logger_ = std::make_unique<app::core::Logger>(
+        app::core::createProductionLogger("logs/app.log")
     );
     logger_->info("=== Industrial HMI Application Starting ===");
     
     // Initialize exception handler with logger (DI)
-    exceptionHandler_ = std::make_unique<core::StandardExceptionHandler>(*logger_);
+    exceptionHandler_ = std::make_unique<app::core::StandardExceptionHandler>(*logger_);
     logger_->debug("Exception handler initialized");
     
     // Initialize configuration from JSON
-    auto& config = config::ConfigManager::instance();
+    auto& config = app::config::ConfigManager::instance();
     config.initialize("config/app-config.json");
     logger_->info("Configuration loaded");
     
@@ -34,13 +34,13 @@ MainWindow::MainWindow() {
     
     // Set window icon
     set_icon_name(config.getWindowIconName());
-    logger_->debug("Window icon set: {}", config.getWindowIconName());
+    // logger_->debug("Window icon set: {}", config.getWindowIconName());
     
     // Load UI layout from .ui file
     loadUI();
     
     // Initialize theme system (Adwaita Dark/Light with Design Tokens)
-    view::ThemeManager::instance().initialize(this);
+    app::view::ThemeManager::instance().initialize(this);
     
     // Apply custom styling (legacy sidebar CSS - being replaced by adwaita-theme.css)
     loadSidebarCSS();
@@ -52,7 +52,7 @@ MainWindow::MainWindow() {
     connectSignals();
     
     // Create DialogManager (injected into pages)
-    dialogManager_ = std::make_unique<view::DialogManager>(this);
+    dialogManager_ = std::make_unique<app::view::DialogManager>(this);
     
     // Initialize MVP pages
     initializePages();
@@ -65,8 +65,8 @@ MainWindow::MainWindow() {
     std::cout << "MVP Architecture Demonstration\n";
     std::cout << "- Dashboard: Equipment monitoring and control\n";
     std::cout << "- Products: Database integration with CRUD operations\n";
-    std::cout << "\n🎨 Theme: Adwaita " 
-              << (view::ThemeManager::instance().isDarkMode() ? "Dark" : "Light") 
+    std::cout << "\nTheme: Adwaita "
+              << (app::view::ThemeManager::instance().isDarkMode() ? "Dark" : "Light") 
               << " (Design Tokens)\n";
     std::cout << "\nControls:\n";
     std::cout << "- Sidebar: Click Fullscreen/Windowed buttons\n";
@@ -194,11 +194,11 @@ void MainWindow::onDisplayModeChanged() {
 
 void MainWindow::onThemeChanged() {
     if (radioDark_ && radioDark_->get_active()) {
-        view::ThemeManager::instance().setTheme(view::ThemeManager::Theme::DARK);
-        std::cout << "🌙 Switched to Dark Mode\n";
+        app::view::ThemeManager::instance().setTheme(app::view::ThemeManager::Theme::DARK);
+        std::cout << "Switched to Dark Mode\n";
     } else if (radioLight_ && radioLight_->get_active()) {
-        view::ThemeManager::instance().setTheme(view::ThemeManager::Theme::LIGHT);
-        std::cout << "☀️  Switched to Light Mode\n";
+        app::view::ThemeManager::instance().setTheme(app::view::ThemeManager::Theme::LIGHT);
+        std::cout << "Switched to Light Mode\n";
     }
 }
 

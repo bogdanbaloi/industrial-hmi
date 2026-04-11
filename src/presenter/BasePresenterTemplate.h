@@ -21,7 +21,7 @@ namespace app {
 ///        virtual ~DashboardView() = default;
 ///        virtual void onSomeEvent() = 0;  // Pure virtual
 ///    };
-///    static_assert(ViewInterfaceConcept<DashboardView>);  // ✅ Compiles
+///    static_assert(ViewInterfaceConcept<DashboardView>);  // Compiles
 ///    ```
 template<typename T>
 concept ViewInterfaceConcept = 

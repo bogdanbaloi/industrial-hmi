@@ -4,6 +4,7 @@
 #include "LoggerBase.h"
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <mutex>
 #include <chrono>
 #include <iomanip>
@@ -53,10 +54,16 @@ private:
  */
 class FileLogger : public LoggerBase {
 public:
-    explicit FileLogger(const std::string& filename, 
+    explicit FileLogger(const std::string& filename,
                        LogLevel minLevel = LogLevel::INFO)
         : minLevel_(minLevel) {
-        
+
+        // Create parent directories if they don't exist
+        auto parentPath = std::filesystem::path(filename).parent_path();
+        if (!parentPath.empty()) {
+            std::filesystem::create_directories(parentPath);
+        }
+
         file_.open(filename, std::ios::app);
         if (!file_.is_open()) {
             throw std::runtime_error("Failed to open log file: " + filename);

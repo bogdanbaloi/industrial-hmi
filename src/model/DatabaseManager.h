@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <functional>
 #include <sqlite3.h>
 #include "src/core/Result.h"
 #include "src/core/ErrorHandling.h"
@@ -66,7 +67,7 @@ public:
             logger_->info("Database initialized successfully");
         }
         
-        return core::Result<void, core::DatabaseError>();
+        return core::Result<void, core::DatabaseError>(core::Ok);
     }
     
     /// Get all active products (not deleted)

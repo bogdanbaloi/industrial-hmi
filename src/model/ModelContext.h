@@ -53,8 +53,7 @@ public:
     bool post(Handler&& handler) {
         // Backpressure: Prevent queue overflow
         if (pendingOperations_ >= MAX_PENDING_OPERATIONS) {
-            core::Logger::warn("I/O queue full ({} pending), rejecting operation", 
-                              pendingOperations_.load());
+            // core::Logger::warn("I/O queue full ({} pending), rejecting operation", pendingOperations_.load());
             return false;
         }
         
@@ -62,10 +61,8 @@ public:
         
         boost::asio::post(ioContext_, [this, h = std::forward<Handler>(handler)]() {
             // Exception guard: Catch all exceptions in I/O thread
-            core::ExceptionHandler::safeExecute([&h]() {
-                h();
-            }, "ModelContext I/O operation");
-            
+            // core::ExceptionHandler::safeExecute([&h]() { h(); }, "ModelContext I/O operation");
+            h();
             --pendingOperations_;
         });
         
@@ -77,8 +74,7 @@ public:
      * Note: jthread automatically joins on destruction (RAII)
      */
     void stop() {
-        core::Logger::info("Stopping I/O context ({} pending operations)", 
-                          pendingOperations_.load());
+        // core::Logger::info("Stopping I/O context ({} pending operations)", pendingOperations_.load());
         ioContext_.stop();
         // jthread automatically joins here
     }
@@ -112,20 +108,20 @@ private:
     ModelContext() 
         : work_(boost::asio::make_work_guard(ioContext_))
         , ioThread_([this]() { 
-            core::Logger::info("I/O thread started");
+            // core::Logger::info("I/O thread started");
             
             // Exception-safe I/O loop
             while (!ioContext_.stopped()) {
                 try {
                     ioContext_.run();
                 } catch (const std::exception& e) {
-                    core::Logger::error("Exception in I/O thread: {}", e.what());
+                    // core::Logger::error("Exception in I/O thread: {}", e.what());
                     // Don't exit - restart context and continue
                     if (ioContext_.stopped()) {
                         ioContext_.restart();
                     }
                 } catch (...) {
-                    core::Logger::critical("Unknown exception in I/O thread!");
+                    // core::Logger::critical("Unknown exception in I/O thread!");
                     // Emergency recovery
                     if (ioContext_.stopped()) {
                         ioContext_.restart();
@@ -133,7 +129,7 @@ private:
                 }
             }
             
-            core::Logger::info("I/O thread stopped");
+            // core::Logger::info("I/O thread stopped");
         }) 
     {
         // I/O thread is now running and waiting for work
