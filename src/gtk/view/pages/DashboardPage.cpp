@@ -68,12 +68,13 @@ void DashboardPage::onStatusZoneChanged(const presenter::StatusZoneViewModel& vm
 
 void DashboardPage::onError(const std::string& errorMessage) {
     // Show error dialog (marshaled to GTK thread)
-    Glib::signal_idle().connect_once([this, errorMessage]() {
-        auto dialog = Gtk::MessageDialog(*this, errorMessage, false, 
+    Glib::signal_idle().connect_once([errorMessage]() {
+        auto dialog = Gtk::MessageDialog(errorMessage, false, 
                                          Gtk::MessageType::ERROR, 
-                                         Gtk::ButtonsType::OK);
+                                         Gtk::ButtonsType::OK, true);
         dialog.set_title("Error");
-        dialog.run();
+        dialog.set_modal(true);
+        dialog.present();
     });
 }
 
@@ -203,9 +204,9 @@ void DashboardPage::buildEquipmentSection() {
         headerBox->append(*stationLabel);
         
         // Status dot (colored circle)
-        card.statusImage = Gtk::make_managed<Gtk::Label>("●");
-        card.statusImage->add_css_class("status-dot");
-        headerBox->append(*card.statusImage);
+        card.statusDot = Gtk::make_managed<Gtk::Label>("●");
+        card.statusDot->add_css_class("status-dot");
+        headerBox->append(*card.statusDot);
         
         card.cardBox->append(*headerBox);
         
@@ -227,7 +228,7 @@ void DashboardPage::buildEquipmentSection() {
         card.enabledSwitch->signal_state_set().connect([this, equipmentId = card.equipmentId](bool state) {
             onEquipmentSwitchToggled(equipmentId, state);
             return false;
-        });
+        }, false);
         card.cardBox->append(*card.enabledSwitch);
         
         // Add to grid (2 columns)
@@ -274,6 +275,13 @@ void DashboardPage::buildQualitySection() {
         
         card.cardBox->append(*headerBox);
         
+        // Quality gauge visual indicator
+        card.gaugeImage = Gtk::make_managed<Gtk::Image>();
+        card.gaugeImage->set_size_request(60, 60);
+        card.gaugeImage->set_margin_top(8);
+        card.gaugeImage->set_margin_bottom(8);
+        card.cardBox->append(*card.gaugeImage);
+        
         // Pass rate - large and prominent
         card.passRateLabel = Gtk::make_managed<Gtk::Label>("---%");
         card.passRateLabel->add_css_class("pass-rate-large");
@@ -295,48 +303,6 @@ void DashboardPage::buildQualitySection() {
     }
     
     append(*box);
-}
-    auto* frame = Gtk::make_managed<Gtk::Frame>("Automated Actuators");
-    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 15);
-    box->set_margin(15);
-    box->set_homogeneous(true);
-    
-    // Create 2 actuator cards
-    for (uint32_t i = 0; i < 2; ++i) {
-        ActuatorCard card;
-        card.actuatorId = i;
-        
-        // Card container
-        card.cardBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 10);
-        card.cardBox->add_css_class("actuator-card");
-        
-        // Status image
-        card.statusImage = Gtk::make_managed<Gtk::Image>();
-        card.statusImage->set_size_request(80, 80);
-        card.cardBox->append(*card.statusImage);
-        
-        // Status operation
-        card.statusLabel = Gtk::make_managed<Gtk::Label>("Offline");
-        card.statusLabel->add_css_class("status-operation");
-        card.cardBox->append(*card.statusLabel);
-        
-        // Mode operation (Auto/Manual)
-        card.modeOperation = Gtk::make_managed<Gtk::Label>("Manual Mode");
-        card.modeOperation->add_css_class("mode-operation");
-        card.cardBox->append(*card.modeOperation);
-        
-        // Alert operation
-        card.alertOperation = Gtk::make_managed<Gtk::Label>("");
-        card.alertOperation->add_css_class("alert-operation");
-        card.alertOperation->set_wrap(true);
-        card.cardBox->append(*card.alertOperation);
-        
-        box->append(*card.cardBox);
-        actuatorCards_.push_back(card);
-    }
-    
-    frame->set_child(*box);
-    append(*frame);
 }
 
 void DashboardPage::buildControlPanelSection() {
@@ -475,46 +441,49 @@ void DashboardPage::updateEquipmentCard(const presenter::EquipmentCardViewModel&
     
     auto& card = *it;
     
-    // Determine image path based on status
-    std::string imagePath;
+    // Update status dot color based on status
+    std::string dotColor;
     switch (vm.status) {
         case presenter::EquipmentCardStatus::Online:
-            imagePath = "assets/img/equipment/equipment-online.svg";
+            dotColor = "equipment-online";
             break;
         case presenter::EquipmentCardStatus::Processing:
-            imagePath = "assets/img/equipment/equipment-processing.svg";
+            dotColor = "equipment-processing";
             break;
         case presenter::EquipmentCardStatus::Error:
-            imagePath = "assets/img/equipment/equipment-error.svg";
+            dotColor = "equipment-error";
             break;
         case presenter::EquipmentCardStatus::Offline:
-            imagePath = "assets/img/equipment/equipment-offline.svg";
+            dotColor = "equipment-offline";
             break;
         default:
-            imagePath = "assets/img/equipment/equipment-offline.svg";
+            dotColor = "equipment-offline";
             break;
     }
     
-    // Update status image
-    card.statusImage->set_from_file(imagePath);
+    // Remove old status classes and add new one
+    card.statusDot->remove_css_class("equipment-online");
+    card.statusDot->remove_css_class("equipment-processing");
+    card.statusDot->remove_css_class("equipment-error");
+    card.statusDot->remove_css_class("equipment-offline");
+    card.statusDot->add_css_class(dotColor);
     
-    // Update status operation
+    // Update status text
     std::string statusText;
     switch (vm.status) {
-        case presenter::EquipmentCardStatus::Online: statusText = "Online"; break;
-        case presenter::EquipmentCardStatus::Processing: statusText = "Processing"; break;
-        case presenter::EquipmentCardStatus::Error: statusText = "Error"; break;
-        case presenter::EquipmentCardStatus::Offline: statusText = "Offline"; break;
-        default: statusText = "Unknown"; break;
+        case presenter::EquipmentCardStatus::Online: statusText = "ONLINE"; break;
+        case presenter::EquipmentCardStatus::Processing: statusText = "PROCESSING"; break;
+        case presenter::EquipmentCardStatus::Error: statusText = "ERROR"; break;
+        case presenter::EquipmentCardStatus::Offline: statusText = "OFFLINE"; break;
+        default: statusText = "UNKNOWN"; break;
     }
     card.statusLabel->set_text(statusText);
     
     // Update consumables
     card.consumablesLabel->set_text(vm.consumables);
     
-    // Update switch (block signal to avoid loop)
+    // Update switch
     card.enabledSwitch->set_active(vm.enabled);
-    card.enabledSwitch->set_sensitive(!vm.forceDisabled);  // Disable if system forces it
 }
 
 void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewModel& vm) {
@@ -544,6 +513,23 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     card.statusDot->remove_css_class("quality-warning");
     card.statusDot->remove_css_class("quality-critical");
     card.statusDot->add_css_class(dotColor);
+    
+    // Update gauge image based on status
+    std::string gaugePath;
+    switch (vm.status) {
+        case presenter::QualityCheckpointStatus::Passing:
+            gaugePath = "assets/img/quality-gauge-pass.svg";
+            break;
+        case presenter::QualityCheckpointStatus::Warning:
+            gaugePath = "assets/img/quality-gauge-warning.svg";
+            break;
+        case presenter::QualityCheckpointStatus::Critical:
+            gaugePath = "assets/img/quality-gauge-critical.svg";
+            break;
+    }
+    
+    // Load SVG directly (GTK4 compatible)
+    card.gaugeImage->set_from_file(gaugePath);
     
     // Update pass rate - large and prominent
     char passRateText[32];
@@ -776,6 +762,23 @@ void DashboardPage::applyStyles() {
         
         .quality-critical {
             color: #F44336;
+        }
+        
+        /* Equipment status dots colors */
+        .equipment-online {
+            color: #4CAF50;  /* Green */
+        }
+        
+        .equipment-processing {
+            color: #2196F3;  /* Blue */
+        }
+        
+        .equipment-error {
+            color: #F44336;  /* Red */
+        }
+        
+        .equipment-offline {
+            color: #9E9E9E;  /* Gray */
         }
         
         /* ===== CONTROL BUTTONS ===== */

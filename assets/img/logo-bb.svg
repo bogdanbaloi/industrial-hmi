@@ -1,0 +1,22 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern Monogram BB Logo -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2196F3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1976D2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background square with rounded corners -->
+  <rect x="8" y="8" width="112" height="112" rx="16" fill="url(#bgGradient)"/>
+  
+  <!-- First B - Bold geometric -->
+  <path d="M 32 36 L 32 92 L 52 92 C 58 92 62 88 62 82 C 62 78 60 75 57 74 C 60 73 62 70 62 66 C 62 60 58 56 52 56 L 40 56 L 40 36 Z M 40 64 L 50 64 C 53 64 54 65 54 68 C 54 71 53 72 50 72 L 40 72 Z M 40 80 L 51 80 C 54 80 55 81 55 84 C 55 87 54 88 51 88 L 40 88 Z" fill="white"/>
+  
+  <!-- Second B - Offset and lighter -->
+  <path d="M 68 36 L 68 92 L 88 92 C 94 92 98 88 98 82 C 98 78 96 75 93 74 C 96 73 98 70 98 66 C 98 60 94 56 88 56 L 76 56 L 76 36 Z M 76 64 L 86 64 C 89 64 90 65 90 68 C 90 71 89 72 86 72 L 76 72 Z M 76 80 L 87 80 C 90 80 91 81 91 84 C 91 87 90 88 87 88 L 76 88 Z" fill="white" opacity="0.95"/>
+  
+  <!-- Subtle grid lines for industrial feel -->
+  <line x1="64" y1="20" x2="64" y2="108" stroke="white" stroke-width="0.5" opacity="0.2"/>
+  <line x1="20" y1="64" x2="108" y2="64" stroke="white" stroke-width="0.5" opacity="0.2"/>
+</svg>

@@ -52,7 +52,7 @@ private:
     struct EquipmentCard {
         uint32_t equipmentId{0};
         Gtk::Box* cardBox{nullptr};
-        Gtk::Label* statusImage{nullptr};  // Status dot (colored ●)
+        Gtk::Label* statusDot{nullptr};  // Status dot (colored ●)
         Gtk::Label* statusLabel{nullptr};
         Gtk::Label* consumablesLabel{nullptr};
         Gtk::Switch* enabledSwitch{nullptr};
@@ -65,6 +65,7 @@ private:
         Gtk::Box* cardBox{nullptr};
         Gtk::Label* nameLabel{nullptr};
         Gtk::Label* statusDot{nullptr};  // Colored ● for pass/warning/critical
+        Gtk::Image* gaugeImage{nullptr}; // Visual gauge indicator
         Gtk::Label* passRateLabel{nullptr};
         Gtk::Label* statsLabel{nullptr};
         Gtk::Label* lastDefectLabel{nullptr};

@@ -85,8 +85,6 @@ void DashboardPresenter::handleSystemStateChanged(int newState) {
 
 // ViewModel builders
 presenter::WorkUnitViewModel DashboardPresenter::buildWorkUnitVM(const std::string& workUnitId) {
-    auto& model = model::SimulatedModel::instance();
-    
     presenter::WorkUnitViewModel vm;
     vm.workUnitId = workUnitId;
     vm.productId = "PROD-STD-001";
@@ -168,7 +166,6 @@ presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpoint
     vm.checkpointId = checkpointId;
     
     // Get data from model
-    auto& model = model::SimulatedModel::instance();
     // Simplified - in real app would query model properly
     
     switch (checkpointId) {

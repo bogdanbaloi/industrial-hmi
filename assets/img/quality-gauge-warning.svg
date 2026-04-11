@@ -1,0 +1,25 @@
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Quality Checkpoint Gauge - Warning (Orange) -->
+  <defs>
+    <linearGradient id="warnGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFA726;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF9800;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle (gray track) -->
+  <circle cx="40" cy="40" r="30" fill="none" stroke="#E0E0E0" stroke-width="8"/>
+  
+  <!-- Progress arc (95% fill - warning zone) -->
+  <circle cx="40" cy="40" r="30" fill="none" 
+          stroke="url(#warnGradient)" 
+          stroke-width="8"
+          stroke-dasharray="179 200"
+          stroke-dashoffset="-50"
+          stroke-linecap="round"
+          transform="rotate(-90 40 40)"/>
+  
+  <!-- Center warning indicator -->
+  <circle cx="40" cy="40" r="4" fill="#FF9800"/>
+  <path d="M 40 30 L 35 50 L 45 50 Z" fill="#FF9800" opacity="0.3"/>
+</svg>

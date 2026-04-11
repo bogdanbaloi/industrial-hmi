@@ -187,7 +187,7 @@ void ProductsPage::showProductDetail(const presenter::ViewProductDialogViewModel
                          "Status: " + (vm.isVerified ? "Active" : "Inactive");
     
     dialog.set_secondary_text(message);
-    dialog.run();
+    dialog.present();
 }
 
 void ProductsPage::applyStyles() {

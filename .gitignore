@@ -5,8 +5,7 @@ cmake-build-*/
 *.so
 *.a
 
-# IDE files
-.vscode/
+# IDE files (allow .vscode/ - it's project configuration)
 .idea/
 *.swp
 *.swo

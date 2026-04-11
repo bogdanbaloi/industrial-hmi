@@ -124,18 +124,35 @@ protected:
     ///    ```cpp
     ///    void notifyOrderInfoChanged(const OrderInfoViewModel& vm) {
     ///        notifyAll(&ViewObserver::onOrderInfoChanged, vm);
+    ///        // OR with lambda:
+    ///        notifyAll([&vm](ViewObserver* obs) {
+    ///            obs->onOrderInfoChanged(vm);
+    ///        });
     ///    }
     ///    ```
     ///
     /// @thread_safety Thread-safe via observersMutex_
+    
+    // Overload 1: Pointer-to-member function
     template<typename MethodPtr, typename... Args>
     void notifyAll(MethodPtr method, Args&&... args) {
         std::lock_guard<std::mutex> lock(observersMutex_);
         
         for (auto* observer : observers_) {
             if (observer) {
-                // Call observer->method(args...)
                 (observer->*method)(std::forward<Args>(args)...);
+            }
+        }
+    }
+    
+    // Overload 2: Callable (lambda, function object, etc.)
+    template<typename Callable>
+    void notifyAll(Callable&& func) {
+        std::lock_guard<std::mutex> lock(observersMutex_);
+        
+        for (auto* observer : observers_) {
+            if (observer) {
+                func(observer);
             }
         }
     }
