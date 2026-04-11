@@ -12,6 +12,7 @@ namespace app {
     namespace view {
         class DashboardPage;
         class ProductsPage;
+        class DialogManager;
     }
 }
 
@@ -48,6 +49,9 @@ private:
     Gtk::CheckButton* radioWindowed_ = nullptr;
     Gtk::Box* dashboardContainer_ = nullptr;
     Gtk::Box* productsContainer_ = nullptr;
+    
+    // Services (injected into pages)
+    std::unique_ptr<app::view::DialogManager> dialogManager_;
     
     // MVP components - Dashboard
     std::shared_ptr<app::DashboardPresenter> dashboardPresenter_;

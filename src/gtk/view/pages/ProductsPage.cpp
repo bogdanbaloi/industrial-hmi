@@ -1,9 +1,11 @@
 #include "ProductsPage.h"
+#include "src/gtk/view/DialogManager.h"
 
 namespace app::view {
 
-ProductsPage::ProductsPage()
-    : Gtk::Box(Gtk::Orientation::VERTICAL) {
+ProductsPage::ProductsPage(DialogManager& dialogManager)
+    : Gtk::Box(Gtk::Orientation::VERTICAL)
+    , dialogManager_(dialogManager) {
     buildUI();
     applyStyles();
 }
@@ -59,6 +61,14 @@ void ProductsPage::buildToolbar() {
     title->set_xalign(0.0);
     toolbar->append(*title);
     
+    // Add Product button
+    addButton_ = Gtk::make_managed<Gtk::Button>("+ Add New Product");
+    addButton_->add_css_class("toolbar-button");
+    addButton_->signal_clicked().connect(
+        sigc::mem_fun(*this, &ProductsPage::onAddProductClicked)
+    );
+    toolbar->append(*addButton_);
+    
     // Refresh button
     refreshButton_ = Gtk::make_managed<Gtk::Button>("Refresh");
     refreshButton_->add_css_class("toolbar-button");
@@ -90,11 +100,13 @@ void ProductsPage::buildSearchBar() {
 }
 
 void ProductsPage::buildProductsList() {
-    // Create ListStore
+    // Create ListStore with new columns
     columns_.add(columns_.id);
-    columns_.add(columns_.productId);
-    columns_.add(columns_.description);
+    columns_.add(columns_.productCode);
+    columns_.add(columns_.name);
     columns_.add(columns_.status);
+    columns_.add(columns_.stock);
+    columns_.add(columns_.qualityRate);
     
     listStore_ = Gtk::ListStore::create(columns_);
     
@@ -104,13 +116,30 @@ void ProductsPage::buildProductsList() {
     treeView_->set_vexpand(true);
     
     // Add columns
-    treeView_->append_column("ID", columns_.productId);
-    treeView_->append_column("Description", columns_.description);
+    treeView_->append_column("Product Code", columns_.productCode);
+    treeView_->append_column("Name", columns_.name);
     treeView_->append_column("Status", columns_.status);
+    treeView_->append_column("Stock", columns_.stock);
+    
+    // Quality column with custom formatting
+    auto* qualityRenderer = Gtk::make_managed<Gtk::CellRendererText>();
+    auto* qualityColumn = Gtk::make_managed<Gtk::TreeViewColumn>("Quality %", *qualityRenderer);
+    qualityColumn->set_cell_data_func(*qualityRenderer, 
+        [this](Gtk::CellRenderer* renderer, const Gtk::TreeModel::const_iterator& iter) {
+            auto* textRenderer = dynamic_cast<Gtk::CellRendererText*>(renderer);
+            if (textRenderer) {
+                float quality = (*iter)[columns_.qualityRate];
+                char buffer[16];
+                snprintf(buffer, sizeof(buffer), "%.1f%%", quality);
+                textRenderer->property_text() = buffer;
+            }
+        }
+    );
+    treeView_->append_column(*qualityColumn);
     
     // Configure columns
     auto* col1 = treeView_->get_column(0);
-    col1->set_fixed_width(150);
+    col1->set_fixed_width(120);
     col1->set_resizable(true);
     
     auto* col2 = treeView_->get_column(1);
@@ -118,13 +147,34 @@ void ProductsPage::buildProductsList() {
     col2->set_resizable(true);
     
     auto* col3 = treeView_->get_column(2);
-    col3->set_fixed_width(100);
+    col3->set_fixed_width(120);
     col3->set_resizable(true);
     
-    // Row activation (double-click)
+    auto* col4 = treeView_->get_column(3);
+    col4->set_fixed_width(80);
+    col4->set_resizable(true);
+    
+    auto* col5 = treeView_->get_column(4);
+    col5->set_fixed_width(100);
+    col5->set_resizable(true);
+    
+    // Row activation (double-click to view details)
     treeView_->signal_row_activated().connect([this](const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*) {
         onProductSelected(path);
     });
+    
+    // Create context menu for right-click actions
+    auto gestureClick = Gtk::GestureClick::create();
+    gestureClick->set_button(3);  // Right mouse button
+    gestureClick->signal_pressed().connect([this](int, double, double) {
+        auto selection = treeView_->get_selection();
+        if (selection->count_selected_rows() > 0) {
+            auto menu = Gtk::PopoverMenu::create();
+            // Would add menu items here for View/Delete
+            // For now, use toolbar buttons
+        }
+    });
+    treeView_->add_controller(gestureClick);
     
     // ScrolledWindow
     scrolledWindow_ = Gtk::make_managed<Gtk::ScrolledWindow>();
@@ -132,7 +182,30 @@ void ProductsPage::buildProductsList() {
     scrolledWindow_->set_policy(Gtk::PolicyType::AUTOMATIC, Gtk::PolicyType::AUTOMATIC);
     scrolledWindow_->set_vexpand(true);
     
+    // Action buttons below table
+    auto* actionBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
+    actionBox->set_margin_top(10);
+    
+    auto* viewButton = Gtk::make_managed<Gtk::Button>("View Details");
+    viewButton->signal_clicked().connect(
+        sigc::mem_fun(*this, &ProductsPage::onViewProductClicked)
+    );
+    actionBox->append(*viewButton);
+    
+    auto* editButton = Gtk::make_managed<Gtk::Button>("Edit");
+    editButton->signal_clicked().connect(
+        sigc::mem_fun(*this, &ProductsPage::onEditProductClicked)
+    );
+    actionBox->append(*editButton);
+    
+    auto* deleteButton = Gtk::make_managed<Gtk::Button>("Delete");
+    deleteButton->signal_clicked().connect(
+        sigc::mem_fun(*this, &ProductsPage::onDeleteProductClicked)
+    );
+    actionBox->append(*deleteButton);
+    
     append(*scrolledWindow_);
+    append(*actionBox);
 }
 
 // Event Handlers
@@ -167,9 +240,22 @@ void ProductsPage::updateProductsList(const presenter::ProductsViewModel& vm) {
     for (const auto& product : vm.products) {
         auto row = *(listStore_->append());
         row[columns_.id] = product.id;
-        row[columns_.productId] = product.productId;
-        row[columns_.description] = product.description;
-        row[columns_.status] = product.isVerified ? "Active" : "Inactive";
+        row[columns_.productCode] = product.productCode;
+        row[columns_.name] = product.name;
+        
+        // Add visual indicators to status
+        std::string statusIcon;
+        if (product.status == "Active") {
+            statusIcon = "● ";  // Green dot
+        } else if (product.status == "Low Stock") {
+            statusIcon = "⚠ ";  // Warning
+        } else {
+            statusIcon = "○ ";  // Gray dot
+        }
+        row[columns_.status] = statusIcon + product.status;
+        
+        row[columns_.stock] = product.stock;
+        row[columns_.qualityRate] = product.qualityRate;
     }
 }
 
@@ -188,6 +274,251 @@ void ProductsPage::showProductDetail(const presenter::ViewProductDialogViewModel
     
     dialog.set_secondary_text(message);
     dialog.present();
+}
+
+void ProductsPage::onAddProductClicked() {
+    showAddProductDialog();
+}
+
+void ProductsPage::onViewProductClicked() {
+    int productId = getSelectedProductId();
+    if (productId != -1 && presenter_) {
+        presenter_->viewProduct(productId);
+    }
+}
+
+void ProductsPage::onDeleteProductClicked() {
+    int productId = getSelectedProductId();
+    if (productId != -1 && presenter_) {
+        auto product = presenter_->getProduct(productId);
+        if (product.id != -1) {
+            showDeleteConfirmDialog(productId, product.name);
+        }
+    }
+}
+
+void ProductsPage::onEditProductClicked() {
+    int productId = getSelectedProductId();
+    if (productId != -1 && presenter_) {
+        auto product = presenter_->getProduct(productId);
+        if (product.id != -1) {
+            showEditProductDialog(product);
+        }
+    }
+}
+
+int ProductsPage::getSelectedProductId() {
+    auto selection = treeView_->get_selection();
+    auto iter = selection->get_selected();
+    if (iter) {
+        return (*iter)[columns_.id];
+    }
+    return -1;
+}
+
+void ProductsPage::showAddProductDialog() {
+    auto* dialog = new Gtk::Dialog("Add New Product", *dynamic_cast<Gtk::Window*>(get_root()));
+    dialog->set_default_size(400, 350);
+    dialog->set_modal(true);
+    
+    auto* grid = Gtk::make_managed<Gtk::Grid>();
+    grid->set_row_spacing(12);
+    grid->set_column_spacing(12);
+    grid->set_margin(20);
+    
+    // Product Code
+    auto* codeLabel = Gtk::make_managed<Gtk::Label>("Product Code:");
+    codeLabel->set_xalign(0);
+    auto* codeEntry = Gtk::make_managed<Gtk::Entry>();
+    codeEntry->set_placeholder_text("PROD-007");
+    codeEntry->set_hexpand(true);
+    grid->attach(*codeLabel, 0, 0);
+    grid->attach(*codeEntry, 1, 0);
+    
+    // Name
+    auto* nameLabel = Gtk::make_managed<Gtk::Label>("Name:");
+    nameLabel->set_xalign(0);
+    auto* nameEntry = Gtk::make_managed<Gtk::Entry>();
+    nameEntry->set_placeholder_text("Product G");
+    nameEntry->set_hexpand(true);
+    grid->attach(*nameLabel, 0, 1);
+    grid->attach(*nameEntry, 1, 1);
+    
+    // Status dropdown
+    auto* statusLabel = Gtk::make_managed<Gtk::Label>("Status:");
+    statusLabel->set_xalign(0);
+    auto* statusCombo = Gtk::make_managed<Gtk::ComboBoxText>();
+    statusCombo->append("Active");
+    statusCombo->append("Inactive");
+    statusCombo->append("Low Stock");
+    statusCombo->set_active(0);
+    grid->attach(*statusLabel, 0, 2);
+    grid->attach(*statusCombo, 1, 2);
+    
+    // Stock
+    auto* stockLabel = Gtk::make_managed<Gtk::Label>("Stock (units):");
+    stockLabel->set_xalign(0);
+    auto* stockSpin = Gtk::make_managed<Gtk::SpinButton>();
+    stockSpin->set_range(0, 10000);
+    stockSpin->set_increments(10, 100);
+    stockSpin->set_value(100);
+    stockSpin->set_hexpand(true);
+    grid->attach(*stockLabel, 0, 3);
+    grid->attach(*stockSpin, 1, 3);
+    
+    // Quality Rate
+    auto* qualityLabel = Gtk::make_managed<Gtk::Label>("Quality (%):");
+    qualityLabel->set_xalign(0);
+    auto* qualitySpin = Gtk::make_managed<Gtk::SpinButton>();
+    qualitySpin->set_range(0.0, 100.0);
+    qualitySpin->set_digits(1);
+    qualitySpin->set_increments(0.1, 1.0);
+    qualitySpin->set_value(95.0);
+    qualitySpin->set_hexpand(true);
+    grid->attach(*qualityLabel, 0, 4);
+    grid->attach(*qualitySpin, 1, 4);
+    
+    dialog->get_content_area()->append(*grid);
+    
+    dialog->add_button("Cancel", Gtk::ResponseType::CANCEL);
+    dialog->add_button("Save", Gtk::ResponseType::OK);
+    
+    dialog->signal_response().connect([this, dialog, codeEntry, nameEntry, 
+                                       statusCombo, stockSpin, qualitySpin]
+                                      (int response) {
+        if (response == Gtk::ResponseType::OK) {
+            std::string code = codeEntry->get_text();
+            std::string name = nameEntry->get_text();
+            std::string status = statusCombo->get_active_text();
+            int stock = stockSpin->get_value_as_int();
+            float quality = qualitySpin->get_value();
+            
+            if (!code.empty() && !name.empty() && presenter_) {
+                bool success = presenter_->addProduct(code, name, status, stock, quality);
+                if (!success) {
+                    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+                    dialogManager_.showError("Error", 
+                               "Failed to add product. Product code may already exist.",
+                               parent);
+                }
+            }
+        }
+        dialog->close();
+    });
+    
+    dialog->present();
+}
+
+void ProductsPage::showDeleteConfirmDialog(int productId, const std::string& productName) {
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    
+    dialogManager_.showConfirmAsync(
+        "Confirm Delete",
+        "Delete \"" + productName + "\"?\n\n" +
+        "This will mark the product as inactive (soft delete).\n" +
+        "The product will no longer appear in the list.",
+        [this, productId](bool confirmed) {
+            if (confirmed && presenter_) {
+                presenter_->deleteProduct(productId);
+            }
+        },
+        parent
+    );
+}
+
+void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& product) {
+    auto* dialog = new Gtk::Dialog("Edit Product", *dynamic_cast<Gtk::Window*>(get_root()));
+    dialog->set_default_size(400, 350);
+    dialog->set_modal(true);
+    
+    auto* grid = Gtk::make_managed<Gtk::Grid>();
+    grid->set_row_spacing(12);
+    grid->set_column_spacing(12);
+    grid->set_margin(20);
+    
+    // Product Code (read-only display)
+    auto* codeLabel = Gtk::make_managed<Gtk::Label>("Product Code:");
+    codeLabel->set_xalign(0);
+    auto* codeDisplay = Gtk::make_managed<Gtk::Label>(product.productCode);
+    codeDisplay->set_xalign(0);
+    codeDisplay->add_css_class("dim-label");
+    grid->attach(*codeLabel, 0, 0);
+    grid->attach(*codeDisplay, 1, 0);
+    
+    // Name (editable)
+    auto* nameLabel = Gtk::make_managed<Gtk::Label>("Name:");
+    nameLabel->set_xalign(0);
+    auto* nameEntry = Gtk::make_managed<Gtk::Entry>();
+    nameEntry->set_text(product.name);
+    nameEntry->set_hexpand(true);
+    grid->attach(*nameLabel, 0, 1);
+    grid->attach(*nameEntry, 1, 1);
+    
+    // Status dropdown
+    auto* statusLabel = Gtk::make_managed<Gtk::Label>("Status:");
+    statusLabel->set_xalign(0);
+    auto* statusCombo = Gtk::make_managed<Gtk::ComboBoxText>();
+    statusCombo->append("Active");
+    statusCombo->append("Inactive");
+    statusCombo->append("Low Stock");
+    // Set current status
+    if (product.status == "Active") statusCombo->set_active(0);
+    else if (product.status == "Inactive") statusCombo->set_active(1);
+    else if (product.status == "Low Stock") statusCombo->set_active(2);
+    grid->attach(*statusLabel, 0, 2);
+    grid->attach(*statusCombo, 1, 2);
+    
+    // Stock
+    auto* stockLabel = Gtk::make_managed<Gtk::Label>("Stock (units):");
+    stockLabel->set_xalign(0);
+    auto* stockSpin = Gtk::make_managed<Gtk::SpinButton>();
+    stockSpin->set_range(0, 10000);
+    stockSpin->set_increments(10, 100);
+    stockSpin->set_value(product.stock);
+    stockSpin->set_hexpand(true);
+    grid->attach(*stockLabel, 0, 3);
+    grid->attach(*stockSpin, 1, 3);
+    
+    // Quality Rate
+    auto* qualityLabel = Gtk::make_managed<Gtk::Label>("Quality (%):");
+    qualityLabel->set_xalign(0);
+    auto* qualitySpin = Gtk::make_managed<Gtk::SpinButton>();
+    qualitySpin->set_range(0.0, 100.0);
+    qualitySpin->set_digits(1);
+    qualitySpin->set_increments(0.1, 1.0);
+    qualitySpin->set_value(product.qualityRate);
+    qualitySpin->set_hexpand(true);
+    grid->attach(*qualityLabel, 0, 4);
+    grid->attach(*qualitySpin, 1, 4);
+    
+    dialog->get_content_area()->append(*grid);
+    
+    dialog->add_button("Cancel", Gtk::ResponseType::CANCEL);
+    dialog->add_button("Update", Gtk::ResponseType::OK);
+    
+    dialog->signal_response().connect([this, dialog, product, nameEntry, 
+                                       statusCombo, stockSpin, qualitySpin]
+                                      (int response) {
+        if (response == Gtk::ResponseType::OK) {
+            std::string name = nameEntry->get_text();
+            std::string status = statusCombo->get_active_text();
+            int stock = stockSpin->get_value_as_int();
+            float quality = qualitySpin->get_value();
+            
+            if (!name.empty() && presenter_) {
+                bool success = presenter_->updateProduct(product.id, name, status, stock, quality);
+                if (!success) {
+                    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+                    dialogManager_.showError("Error", 
+                               "Failed to update product.",
+                               parent);
+                }
+            }
+        }
+        dialog->close();
+    });
+    
+    dialog->present();
 }
 
 void ProductsPage::applyStyles() {

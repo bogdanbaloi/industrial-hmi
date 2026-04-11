@@ -2,6 +2,7 @@
 
 #include "BasePresenter.h"
 #include "src/presenter/modelview/PlaceholderViewModels.h"
+#include "src/model/DatabaseManager.h"
 #include <string>
 
 namespace app {
@@ -31,6 +32,20 @@ public:
     
     /// View product details
     void viewProduct(int productId);
+    
+    /// Add new product to database
+    bool addProduct(const std::string& productCode, const std::string& name,
+                    const std::string& status, int stock, float qualityRate);
+    
+    /// Update existing product
+    bool updateProduct(int productId, const std::string& name,
+                      const std::string& status, int stock, float qualityRate);
+    
+    /// Delete product (soft delete)
+    bool deleteProduct(int productId);
+    
+    /// Get single product (for dialogs)
+    model::DatabaseManager::Product getProduct(int productId);
 
 private:
     /// Build ProductsViewModel from database results

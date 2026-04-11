@@ -61,10 +61,12 @@ struct ResetProductDialogViewModel {
 
 struct ProductsViewModel {
     struct ProductItem {
-        uint32_t id;
-        std::string productId;
-        std::string description;
-        bool isVerified;
+        int id;
+        std::string productCode;    // PROD-001, PROD-002
+        std::string name;            // Product A, Product B
+        std::string status;          // Active, Inactive, Low Stock
+        int stock;                   // 850, 320, 45
+        float qualityRate;           // 98.1, 95.7, 93.0
     };
     std::vector<ProductItem> products;
 };

@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "src/gtk/view/DialogManager.h"
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/presenter/DashboardPresenter.h"
@@ -20,6 +21,9 @@ MainWindow::MainWindow() {
     // Connect sidebar controls to handlers
     connectSignals();
     
+    // Create DialogManager (injected into pages)
+    dialogManager_ = std::make_unique<view::DialogManager>(this);
+    
     // Initialize MVP pages
     initializePages();
     
@@ -30,11 +34,15 @@ MainWindow::MainWindow() {
     std::cout << "Industrial HMI Application Started\n";
     std::cout << "MVP Architecture Demonstration\n";
     std::cout << "- Dashboard: Equipment monitoring and control\n";
-    std::cout << "- Products: Database integration with search\n";
+    std::cout << "- Products: Database integration with CRUD operations\n";
     std::cout << "\nControls:\n";
     std::cout << "- Sidebar: Click Fullscreen/Windowed buttons\n";
     std::cout << "- F11: Toggle fullscreen/windowed mode\n";
     std::cout << "- ESC: Exit fullscreen\n";
+    std::cout << "\nProducts Page:\n";
+    std::cout << "- [+ Add New Product]: Create new products\n";
+    std::cout << "- [View Details]: Double-click or button\n";
+    std::cout << "- [Delete]: Soft delete with confirmation\n";
 }
 
 MainWindow::~MainWindow() {
@@ -56,6 +64,17 @@ void MainWindow::loadUI() {
     radioWindowed_ = builder->get_widget<Gtk::CheckButton>("radio_windowed");
     dashboardContainer_ = builder->get_widget<Gtk::Box>("dashboard_container");
     productsContainer_ = builder->get_widget<Gtk::Box>("products_container");
+    
+    // Exit Fullscreen button
+    auto* exitFullscreenBtn = builder->get_widget<Gtk::Button>("exit_fullscreen_button");
+    if (exitFullscreenBtn) {
+        exitFullscreenBtn->signal_clicked().connect([this]() {
+            unfullscreen();
+            if (radioWindowed_) {
+                radioWindowed_->set_active(true);
+            }
+        });
+    }
 }
 
 void MainWindow::loadSidebarCSS() {
@@ -95,9 +114,9 @@ void MainWindow::initializePages() {
         std::cerr << "Failed to initialize database!\n";
     }
     
-    // Create Dashboard page (MVP pattern)
+    // Create Dashboard page (MVP pattern with Dependency Injection)
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
-    dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>();
+    dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
     dashboardPage_->initialize(dashboardPresenter_);
     dashboardPresenter_->initialize();
     
@@ -105,9 +124,9 @@ void MainWindow::initializePages() {
         dashboardContainer_->append(*dashboardPage_);
     }
     
-    // Create Products page (MVP pattern)
+    // Create Products page (MVP pattern with Dependency Injection)
     productsPresenter_ = std::make_shared<app::ProductsPresenter>();
-    productsPage_ = Gtk::make_managed<app::view::ProductsPage>();
+    productsPage_ = Gtk::make_managed<app::view::ProductsPage>(*dialogManager_);
     productsPage_->initialize(productsPresenter_);
     productsPresenter_->initialize();
     

@@ -133,26 +133,25 @@ public:
     
     // Initialize with demo data
     void initializeDemoData() {
-        // Equipment statuses
-        equipmentStatuses_[0] = {0, 1, 85, "Ready"};  // Online
-        equipmentStatuses_[1] = {1, 2, 60, "Working"};  // Processing
-        equipmentStatuses_[2] = {2, 3, 12, "Low supply"};  // Error
-        equipmentStatuses_[3] = {3, 0, 0, "Not connected"};  // Offline
+        // Equipment statuses (3 lines: A-LINE, B-LINE, C-LINE)
+        equipmentStatuses_[0] = {0, 2, 85, "85K tablets/hr"};  // A-LINE (Processing)
+        equipmentStatuses_[1] = {1, 1, 95, "Film coating"};     // B-LINE (Online)
+        equipmentStatuses_[2] = {2, 0, 0, "Standby"};           // C-LINE (Offline)
         
         // Actuator statuses
         actuatorStatuses_[0] = {0, 1, 150, 200, true, false};  // Working
         actuatorStatuses_[1] = {1, 0, 0, 0, true, true};  // Idle at home
         
-        // Quality checkpoints
-        qualityCheckpoints_[0] = {0, "Visual Inspection", 0, 645, 12, 98.1f, "Surface scratch detected"};
-        qualityCheckpoints_[1] = {1, "Dimensional Check", 0, 645, 28, 95.7f, "Tolerance exceeded +0.02mm"};
-        qualityCheckpoints_[2] = {2, "Functional Test", 1, 645, 45, 93.0f, "Response time slow"};
+        // Quality checkpoints (3 checks)
+        qualityCheckpoints_[0] = {0, "Weight Check", 0, 645, 12, 98.1f, "Underweight"};
+        qualityCheckpoints_[1] = {1, "Hardness Test", 0, 645, 28, 95.7f, "Soft tablet (65N)"};
+        qualityCheckpoints_[2] = {2, "Final Inspection", 1, 645, 45, 93.0f, "Coating uneven"};
         
-        // Work unit
+        // Work unit (Pharma batch)
         currentWorkUnit_ = {
             "WU-2024-001234",
-            "PROD-STD-001",
-            "Standard Production Item - Type A",
+            "TAB-200",
+            "Batch WU-2024-001234 | TAB-200",
             3,
             5
         };

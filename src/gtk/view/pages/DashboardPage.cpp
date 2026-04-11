@@ -1,9 +1,11 @@
 #include "DashboardPage.h"
+#include "src/gtk/view/DialogManager.h"
 
 namespace app::view {
 
-DashboardPage::DashboardPage()
-    : Gtk::Box(Gtk::Orientation::VERTICAL) {
+DashboardPage::DashboardPage(DialogManager& dialogManager)
+    : Gtk::Box(Gtk::Orientation::VERTICAL)
+    , dialogManager_(dialogManager) {
     buildUI();
     applyStyles();
 }
@@ -187,8 +189,8 @@ void DashboardPage::buildEquipmentSection() {
     grid->set_row_spacing(20);
     grid->set_column_spacing(20);
     
-    // Create 4 equipment cards (2x2 grid)
-    for (uint32_t i = 0; i < 4; ++i) {
+    // Create 3 equipment cards (A-LINE, B-LINE, C-LINE)
+    for (uint32_t i = 0; i < 3; ++i) {
         EquipmentCard card;
         card.equipmentId = i + 1;
         
@@ -197,9 +199,10 @@ void DashboardPage::buildEquipmentSection() {
         card.cardBox->set_size_request(280, 200);
         card.cardBox->add_css_class("equipment-card");
         
-        // Header: Station # with status dot
+        // Header: A-LINE, B-LINE, C-LINE with status dot
+        const std::array<std::string, 4> lineNames = {"A-LINE", "B-LINE", "C-LINE", "D-LINE"};
         auto* headerBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 8);
-        auto* stationLabel = Gtk::make_managed<Gtk::Label>("Station " + std::to_string(i + 1));
+        auto* stationLabel = Gtk::make_managed<Gtk::Label>(lineNames[i]);
         stationLabel->add_css_class("card-title");
         headerBox->append(*stationLabel);
         
@@ -389,15 +392,36 @@ void DashboardPage::onStopButtonClicked() {
 }
 
 void DashboardPage::onResetButtonClicked() {
-    if (presenter_) {
-        presenter_->onResetRestartClicked();
-    }
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    
+    dialogManager_.showConfirmAsync(
+        "Confirm Reset",
+        "Reset the system?\n\n"
+        "This will stop all operations and return equipment to initial state.",
+        [this](bool confirmed) {
+            if (confirmed && presenter_) {
+                presenter_->onResetRestartClicked();
+            }
+        },
+        parent
+    );
 }
 
 void DashboardPage::onCalibrationButtonClicked() {
-    if (presenter_) {
-        presenter_->onCalibrationClicked();
-    }
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    
+    dialogManager_.showConfirmAsync(
+        "Confirm Calibration",
+        "Start calibration procedure?\n\n"
+        "All equipment will be moved to home position.\n"
+        "This may take several minutes.",
+        [this](bool confirmed) {
+            if (confirmed && presenter_) {
+                presenter_->onCalibrationClicked();
+            }
+        },
+        parent
+    );
 }
 
 void DashboardPage::onEquipmentSwitchToggled(uint32_t equipmentId, bool enabled) {

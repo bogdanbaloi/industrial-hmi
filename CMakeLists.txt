@@ -72,6 +72,7 @@ add_library(objectsView OBJECT)
 target_sources(objectsView
     PRIVATE
         src/gtk/view/MainWindow.cpp
+        src/gtk/view/DialogManager.cpp
         src/gtk/view/pages/DashboardPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
     PRIVATE
@@ -79,6 +80,7 @@ target_sources(objectsView
         TYPE HEADERS
         FILES
             src/gtk/view/MainWindow.h
+            src/gtk/view/DialogManager.h
             src/gtk/view/pages/DashboardPage.h
             src/gtk/view/pages/ProductsPage.h
 )

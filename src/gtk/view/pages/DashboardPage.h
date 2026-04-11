@@ -7,6 +7,9 @@
 
 namespace app::view {
 
+// Forward declaration
+class DialogManager;
+
 /// Main dashboard page - implements ViewObserver to receive Presenter updates
 ///
 /// @design This is a pure View class in MVP architecture:
@@ -14,15 +17,19 @@ namespace app::view {
 ///         - Implements ViewObserver interface to receive updates
 ///         - Renders ViewModels into GTK widgets
 ///         - Forwards user actions to Presenter
+///         - Uses DialogManager for error/confirmation dialogs (DI)
 ///
-/// @pattern Observer Pattern:
-///          DashboardPage observes DashboardPresenter via ViewObserver interface
+/// @pattern Observer Pattern + Dependency Injection:
+///          - DashboardPage observes DashboardPresenter via ViewObserver
+///          - DialogManager injected via constructor
 ///
 /// @thread_safety All ViewObserver callbacks arrive on Presenter thread.
 ///                Must use Glib::signal_idle() to update GTK widgets safely.
 class DashboardPage : public Gtk::Box, public ViewObserver {
 public:
-    DashboardPage();
+    /// Constructor with dependency injection
+    /// @param dialogManager Reference to DialogManager (injected)
+    explicit DashboardPage(DialogManager& dialogManager);
     ~DashboardPage() override;
 
     /// Initialize the page - sets up presenter connection
@@ -87,6 +94,9 @@ private:
         Gtk::Label* messageLabel{nullptr};
     } statusZoneWidgets_;
 
+    /// Injected dependencies
+    DialogManager& dialogManager_;
+    
     /// Presenter reference
     std::shared_ptr<DashboardPresenter> presenter_;
 

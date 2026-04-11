@@ -31,7 +31,7 @@ presenter::ProductsViewModel ProductsPresenter::buildProductsViewModel() {
     auto& db = model::DatabaseManager::instance();
     std::vector<model::DatabaseManager::Product> dbProducts;
     
-    // Get products from database
+    // Get products from database (excludes soft-deleted)
     if (currentSearchQuery_.empty()) {
         dbProducts = db.getAllProducts();
     } else {
@@ -42,9 +42,11 @@ presenter::ProductsViewModel ProductsPresenter::buildProductsViewModel() {
     for (const auto& dbProd : dbProducts) {
         presenter::ProductsViewModel::ProductItem item;
         item.id = dbProd.id;
-        item.productId = dbProd.productId;
-        item.description = dbProd.name;
-        item.isVerified = dbProd.isActive;
+        item.productCode = dbProd.productCode;
+        item.name = dbProd.name;
+        item.status = dbProd.status;
+        item.stock = dbProd.stock;
+        item.qualityRate = dbProd.qualityRate;
         
         vm.products.push_back(item);
     }
@@ -58,12 +60,70 @@ presenter::ViewProductDialogViewModel ProductsPresenter::buildProductDetailViewM
     auto& db = model::DatabaseManager::instance();
     auto product = db.getProduct(productId);
     
-    vm.productId = product.productId;
-    vm.description = product.name + "\n\n" + product.description;
-    vm.createdDate = product.createdDate;
-    vm.isVerified = product.isActive;
+    if (product.id == -1) {
+        // Product not found
+        vm.productId = "NOT FOUND";
+        vm.description = "Product not found or deleted";
+        vm.createdDate = "";
+        vm.isVerified = false;
+        return vm;
+    }
+    
+    vm.productId = product.productCode;
+    vm.description = product.name + "\n" +
+                     "Status: " + product.status + "\n" +
+                     "Stock: " + std::to_string(product.stock) + " units\n" +
+                     "Quality: " + std::to_string(product.qualityRate) + "%";
+    vm.createdDate = product.createdAt;
+    vm.isVerified = (product.status == "Active");
     
     return vm;
+}
+
+bool ProductsPresenter::addProduct(const std::string& productCode, const std::string& name,
+                                   const std::string& status, int stock, float qualityRate) {
+    auto& db = model::DatabaseManager::instance();
+    
+    bool success = db.addProduct(productCode, name, status, stock, qualityRate);
+    
+    if (success) {
+        // Reload products list to show new product
+        loadProducts();
+    }
+    
+    return success;
+}
+
+bool ProductsPresenter::deleteProduct(int productId) {
+    auto& db = model::DatabaseManager::instance();
+    
+    bool success = db.deleteProduct(productId);
+    
+    if (success) {
+        // Reload products list (deleted product won't appear)
+        loadProducts();
+    }
+    
+    return success;
+}
+
+bool ProductsPresenter::updateProduct(int productId, const std::string& name,
+                                     const std::string& status, int stock, float qualityRate) {
+    auto& db = model::DatabaseManager::instance();
+    
+    bool success = db.updateProduct(productId, name, status, stock, qualityRate);
+    
+    if (success) {
+        // Reload products list to show updated data
+        loadProducts();
+    }
+    
+    return success;
+}
+
+model::DatabaseManager::Product ProductsPresenter::getProduct(int productId) {
+    auto& db = model::DatabaseManager::instance();
+    return db.getProduct(productId);
 }
 
 void ProductsPresenter::notifyProductsLoaded(const presenter::ProductsViewModel& vm) {

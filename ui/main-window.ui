@@ -2,16 +2,10 @@
 <interface>
   <requires lib="gtk" version="4.0"/>
   
-  <!-- Main Application Window -->
-  <object class="GtkApplicationWindow" id="main_window">
-    <property name="title">Industrial HMI - MVP Architecture Demo</property>
-    <property name="default-width">1920</property>
-    <property name="default-height">1080</property>
-    
-    <child>
-      <object class="GtkBox" id="root_container">
-        <property name="orientation">horizontal</property>
-        <property name="spacing">0</property>
+  <!-- Root Container Layout (no window - created in C++) -->
+  <object class="GtkBox" id="root_container">
+    <property name="orientation">horizontal</property>
+    <property name="spacing">0</property>
         
         <!-- LEFT SIDEBAR - Control Panel -->
         <child>
@@ -33,7 +27,7 @@
                 
                 <child>
                   <object class="GtkLabel" id="app_title">
-                    <property name="label">🏭 Industrial HMI</property>
+                    <property name="label">[BB] Industrial HMI</property>
                     <property name="css-classes">sidebar-title</property>
                     <property name="xalign">0</property>
                   </object>
@@ -55,6 +49,17 @@
                 <property name="orientation">horizontal</property>
                 <property name="margin-start">12</property>
                 <property name="margin-end">12</property>
+              </object>
+            </child>
+            
+            <!-- Exit Fullscreen Button -->
+            <child>
+              <object class="GtkButton" id="exit_fullscreen_button">
+                <property name="label">Exit Fullscreen</property>
+                <property name="margin-top">16</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+                <property name="css-classes">sidebar-option</property>
               </object>
             </child>
             
@@ -82,7 +87,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="radio_fullscreen">
-                        <property name="label">🖥️  Fullscreen</property>
+                        <property name="label">Fullscreen</property>
                         <property name="active">true</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -90,7 +95,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="radio_windowed">
-                        <property name="label">🪟  Windowed</property>
+                        <property name="label">Windowed</property>
                         <property name="group">radio_fullscreen</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -134,7 +139,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="check_auto_refresh">
-                        <property name="label">⚡  Auto Refresh</property>
+                        <property name="label">Auto Refresh</property>
                         <property name="active">true</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -142,7 +147,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="check_show_logs">
-                        <property name="label">📋  Show Logs</property>
+                        <property name="label">Show Logs</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
                     </child>
@@ -222,6 +227,4 @@
           </object>
         </child>
       </object>
-    </child>
-  </object>
 </interface>
