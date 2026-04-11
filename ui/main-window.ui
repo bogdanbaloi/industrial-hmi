@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  
+  <!-- Main Application Window -->
+  <object class="GtkApplicationWindow" id="main_window">
+    <property name="title">Industrial HMI - MVP Architecture Demo</property>
+    <property name="default-width">1920</property>
+    <property name="default-height">1080</property>
+    
+    <child>
+      <object class="GtkBox" id="root_container">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">0</property>
+        
+        <!-- LEFT SIDEBAR - Control Panel -->
+        <child>
+          <object class="GtkBox" id="sidebar">
+            <property name="orientation">vertical</property>
+            <property name="width-request">200</property>
+            <property name="css-classes">sidebar</property>
+            
+            <!-- Logo/Branding Area -->
+            <child>
+              <object class="GtkBox" id="sidebar_header">
+                <property name="orientation">vertical</property>
+                <property name="spacing">8</property>
+                <property name="margin-top">24</property>
+                <property name="margin-bottom">24</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+                <property name="css-classes">sidebar-header</property>
+                
+                <child>
+                  <object class="GtkLabel" id="app_title">
+                    <property name="label">🏭 Industrial HMI</property>
+                    <property name="css-classes">sidebar-title</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+                
+                <child>
+                  <object class="GtkLabel" id="app_subtitle">
+                    <property name="label">MVP Architecture</property>
+                    <property name="css-classes">sidebar-subtitle</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Separator -->
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">horizontal</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+              </object>
+            </child>
+            
+            <!-- Display Mode Section -->
+            <child>
+              <object class="GtkBox" id="display_section">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-top">20</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+                
+                <child>
+                  <object class="GtkLabel" id="display_label">
+                    <property name="label">DISPLAY MODE</property>
+                    <property name="css-classes">section-header</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+                
+                <child>
+                  <object class="GtkBox" id="display_controls">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+                    
+                    <child>
+                      <object class="GtkCheckButton" id="radio_fullscreen">
+                        <property name="label">🖥️  Fullscreen</property>
+                        <property name="active">true</property>
+                        <property name="css-classes">sidebar-option</property>
+                      </object>
+                    </child>
+                    
+                    <child>
+                      <object class="GtkCheckButton" id="radio_windowed">
+                        <property name="label">🪟  Windowed</property>
+                        <property name="group">radio_fullscreen</property>
+                        <property name="css-classes">sidebar-option</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Separator -->
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">horizontal</property>
+                <property name="margin-top">20</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+              </object>
+            </child>
+            
+            <!-- System Options Section -->
+            <child>
+              <object class="GtkBox" id="system_section">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-top">20</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+                
+                <child>
+                  <object class="GtkLabel" id="system_label">
+                    <property name="label">SYSTEM</property>
+                    <property name="css-classes">section-header</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+                
+                <child>
+                  <object class="GtkBox" id="system_controls">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+                    
+                    <child>
+                      <object class="GtkCheckButton" id="check_auto_refresh">
+                        <property name="label">⚡  Auto Refresh</property>
+                        <property name="active">true</property>
+                        <property name="css-classes">sidebar-option</property>
+                      </object>
+                    </child>
+                    
+                    <child>
+                      <object class="GtkCheckButton" id="check_show_logs">
+                        <property name="label">📋  Show Logs</property>
+                        <property name="css-classes">sidebar-option</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Spacer to push footer to bottom -->
+            <child>
+              <object class="GtkBox">
+                <property name="vexpand">true</property>
+              </object>
+            </child>
+            
+            <!-- Footer - Version Info -->
+            <child>
+              <object class="GtkBox" id="sidebar_footer">
+                <property name="orientation">vertical</property>
+                <property name="spacing">4</property>
+                <property name="margin-bottom">20</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+                
+                <child>
+                  <object class="GtkLabel" id="version_label">
+                    <property name="label">Version 1.0.0</property>
+                    <property name="css-classes">sidebar-version</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+                
+                <child>
+                  <object class="GtkLabel" id="author_label">
+                    <property name="label">Portfolio Demo</property>
+                    <property name="css-classes">sidebar-author</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        
+        <!-- RIGHT CONTENT AREA - Main Application -->
+        <child>
+          <object class="GtkNotebook" id="main_notebook">
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            <property name="tab-pos">top</property>
+            
+            <!-- Dashboard Page -->
+            <child>
+              <object class="GtkNotebookPage">
+                <property name="tab-label">Dashboard</property>
+                <property name="child">
+                  <object class="GtkBox" id="dashboard_container">
+                    <property name="orientation">vertical</property>
+                    <!-- Dashboard content will be added programmatically -->
+                  </object>
+                </property>
+              </object>
+            </child>
+            
+            <!-- Products Database Page -->
+            <child>
+              <object class="GtkNotebookPage">
+                <property name="tab-label">Products Database</property>
+                <property name="child">
+                  <object class="GtkBox" id="products_container">
+                    <property name="orientation">vertical</property>
+                    <!-- Products content will be added programmatically -->
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

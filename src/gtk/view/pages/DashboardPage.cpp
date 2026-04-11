@@ -276,7 +276,7 @@ void DashboardPage::buildQualitySection() {
         card.cardBox->append(*headerBox);
         
         // Quality gauge visual indicator
-        card.gaugeImage = Gtk::make_managed<Gtk::Image>();
+        card.gaugeImage = Gtk::make_managed<Gtk::Picture>();
         card.gaugeImage->set_size_request(60, 60);
         card.gaugeImage->set_margin_top(8);
         card.gaugeImage->set_margin_bottom(8);
@@ -528,8 +528,8 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
             break;
     }
     
-    // Load SVG directly (GTK4 compatible)
-    card.gaugeImage->set_from_file(gaugePath);
+    // Load SVG using Gtk::Picture (GTK4 native SVG support)
+    card.gaugeImage->set_filename(gaugePath);
     
     // Update pass rate - large and prominent
     char passRateText[32];

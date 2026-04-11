@@ -1,0 +1,61 @@
+/* Sidebar Styling - Industrial HMI Theme */
+
+/* Sidebar Container */
+.sidebar {
+    background: linear-gradient(180deg, #263238 0%, #37474F 100%);
+    border-right: 1px solid #455A64;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #FFFFFF;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-subtitle {
+    font-size: 11px;
+    font-weight: 500;
+    color: #90CAF9;
+    letter-spacing: 0.5px;
+}
+
+/* Section Headers */
+.section-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: #78909C;
+    letter-spacing: 1.2px;
+}
+
+/* Sidebar Options (Radio/Check buttons) */
+.sidebar-option {
+    font-size: 13px;
+    color: #CFD8DC;
+}
+
+.sidebar-option:hover {
+    color: #FFFFFF;
+}
+
+.sidebar-option:checked {
+    color: #64B5F6;
+    font-weight: 600;
+}
+
+/* Footer */
+.sidebar-version {
+    font-size: 11px;
+    font-weight: 600;
+    color: #546E7A;
+}
+
+.sidebar-author {
+    font-size: 10px;
+    color: #546E7A;
+}

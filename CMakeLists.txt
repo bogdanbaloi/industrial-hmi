@@ -126,7 +126,14 @@ add_custom_target(CopyAssets ALL
     COMMENT "Copying assets to build directory"
 )
 
-add_dependencies(industrial-hmi CopyAssets)
+add_custom_target(CopyUIFiles ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/ui
+        ${CMAKE_BINARY_DIR}/ui
+    COMMENT "Copying UI files to build directory"
+)
+
+add_dependencies(industrial-hmi CopyAssets CopyUIFiles)
 
 # ============================================================================
 # Installation Rules
@@ -137,6 +144,10 @@ install(TARGETS industrial-hmi
 )
 
 install(DIRECTORY assets
+    DESTINATION share/industrial-hmi
+)
+
+install(DIRECTORY ui
     DESTINATION share/industrial-hmi
 )
 

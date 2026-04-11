@@ -65,7 +65,7 @@ private:
         Gtk::Box* cardBox{nullptr};
         Gtk::Label* nameLabel{nullptr};
         Gtk::Label* statusDot{nullptr};  // Colored ● for pass/warning/critical
-        Gtk::Image* gaugeImage{nullptr}; // Visual gauge indicator
+        Gtk::Picture* gaugeImage{nullptr}; // Visual gauge indicator (SVG support)
         Gtk::Label* passRateLabel{nullptr};
         Gtk::Label* statsLabel{nullptr};
         Gtk::Label* lastDefectLabel{nullptr};
