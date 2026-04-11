@@ -45,10 +45,10 @@ void DashboardPage::onEquipmentCardChanged(const presenter::EquipmentCardViewMod
     });
 }
 
-void DashboardPage::onActuatorCardChanged(const presenter::ActuatorCardViewModel& vm) {
+void DashboardPage::onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) {
     // Marshal to GTK main thread
     Glib::signal_idle().connect_once([this, vm]() {
-        updateActuatorCard(vm);
+        updateQualityCard(vm);
     });
 }
 
@@ -82,111 +82,220 @@ void DashboardPage::onError(const std::string& errorMessage) {
 // ============================================================================
 
 void DashboardPage::buildUI() {
-    // Set generous spacing and margins for airy design
-    set_spacing(40);  // Vertical spacing between sections
+    // Modern Industrial Clean design for 1920x1080
+    set_spacing(40);  // Airy vertical spacing between major sections
     set_margin_start(60);
     set_margin_end(60);
     set_margin_top(40);
     set_margin_bottom(40);
     
+    // Section order: Status → Work Unit → Equipment → Quality → Controls
     buildStatusZone();
     buildWorkUnitSection();
-    buildEquipmentCardsSection();
-    buildActuatorCardsSection();
+    buildEquipmentSection();
+    buildQualitySection();
     buildControlPanelSection();
 }
 
 void DashboardPage::buildWorkUnitSection() {
-    auto* frame = Gtk::make_managed<Gtk::Frame>("Current Work Unit");
-    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 10);
-    box->set_margin(15);
+    // Section header
+    auto* header = Gtk::make_managed<Gtk::Label>("WORK UNIT");
+    header->set_xalign(0.0);
+    header->add_css_class("section-header");
+    append(*header);
     
-    // Work unit ID
-    auto* idBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
-    idBox->append(*Gtk::make_managed<Gtk::Label>("ID:"));
-    workUnitWidgets_.workUnitIdOperation = Gtk::make_managed<Gtk::Label>("-");
-    workUnitWidgets_.workUnitIdOperation->set_selectable(true);
-    idBox->append(*workUnitWidgets_.workUnitIdOperation);
-    box->append(*idBox);
+    // Main card frame
+    auto* frame = Gtk::make_managed<Gtk::Frame>();
+    frame->set_margin_top(15);
+    frame->set_margin_bottom(30);
+    frame->add_css_class("work-unit-card");
+    
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 15);
+    box->set_margin(25);
+    
+    // First row: Work Unit ID • Product ID
+    auto* idsRow = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 30);
+    
+    // Work Unit ID
+    auto* wuBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
+    auto* wuLabel = Gtk::make_managed<Gtk::Label>("Work Unit:");
+    wuLabel->add_css_class("field-label");
+    workUnitWidgets_.workUnitIdLabel = Gtk::make_managed<Gtk::Label>("-");
+    workUnitWidgets_.workUnitIdLabel->add_css_class("field-value-large");
+    workUnitWidgets_.workUnitIdLabel->set_selectable(true);
+    wuBox->append(*wuLabel);
+    wuBox->append(*workUnitWidgets_.workUnitIdLabel);
+    idsRow->append(*wuBox);
+    
+    // Separator
+    auto* sep = Gtk::make_managed<Gtk::Label>("•");
+    sep->add_css_class("separator-dot");
+    idsRow->append(*sep);
     
     // Product ID
-    auto* productBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
-    productBox->append(*Gtk::make_managed<Gtk::Label>("Product:"));
-    workUnitWidgets_.productIdOperation = Gtk::make_managed<Gtk::Label>("-");
-    productBox->append(*workUnitWidgets_.productIdOperation);
-    box->append(*productBox);
+    auto* prodBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
+    auto* prodLabel = Gtk::make_managed<Gtk::Label>("Product:");
+    prodLabel->add_css_class("field-label");
+    workUnitWidgets_.productIdLabel = Gtk::make_managed<Gtk::Label>("-");
+    workUnitWidgets_.productIdLabel->add_css_class("field-value");
+    prodBox->append(*prodLabel);
+    prodBox->append(*workUnitWidgets_.productIdLabel);
+    idsRow->append(*prodBox);
+    
+    box->append(*idsRow);
     
     // Product description
-    workUnitWidgets_.productDescOperation = Gtk::make_managed<Gtk::Label>("");
-    workUnitWidgets_.productDescOperation->set_wrap(true);
-    workUnitWidgets_.productDescOperation->set_xalign(0.0);
-    box->append(*workUnitWidgets_.productDescOperation);
+    workUnitWidgets_.productDescLabel = Gtk::make_managed<Gtk::Label>("");
+    workUnitWidgets_.productDescLabel->set_wrap(true);
+    workUnitWidgets_.productDescLabel->set_xalign(0.0);
+    workUnitWidgets_.productDescLabel->add_css_class("description-text");
+    box->append(*workUnitWidgets_.productDescLabel);
     
-    // Progress bar
+    // Progress section
+    auto* progressBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 8);
+    progressBox->set_margin_top(15);
+    
     workUnitWidgets_.progressBar = Gtk::make_managed<Gtk::ProgressBar>();
     workUnitWidgets_.progressBar->set_show_text(true);
-    box->append(*workUnitWidgets_.progressBar);
+    workUnitWidgets_.progressBar->set_size_request(-1, 28);
+    workUnitWidgets_.progressBar->add_css_class("progress-bar-large");
+    progressBox->append(*workUnitWidgets_.progressBar);
     
-    // Status operation
-    workUnitWidgets_.statusOperation = Gtk::make_managed<Gtk::Label>("Ready");
-    box->append(*workUnitWidgets_.statusOperation);
+    workUnitWidgets_.statusLabel = Gtk::make_managed<Gtk::Label>("Ready");
+    workUnitWidgets_.statusLabel->add_css_class("status-message");
+    workUnitWidgets_.statusLabel->set_xalign(0.0);
+    progressBox->append(*workUnitWidgets_.statusLabel);
+    
+    box->append(*progressBox);
     
     frame->set_child(*box);
     append(*frame);
 }
 
-void DashboardPage::buildEquipmentCardsSection() {
-    auto* frame = Gtk::make_managed<Gtk::Frame>("Equipment Status");
-    auto* grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_margin(15);
-    grid->set_row_spacing(15);
-    grid->set_column_spacing(15);
+void DashboardPage::buildEquipmentSection() {
+    // Section header
+    auto* header = Gtk::make_managed<Gtk::Label>("EQUIPMENT STATIONS");
+    header->set_xalign(0.0);
+    header->add_css_class("section-header");
+    append(*header);
     
-    // Create placeholder cards (will be populated by Presenter)
+    // Cards container
+    auto* grid = Gtk::make_managed<Gtk::Grid>();
+    grid->set_margin_top(15);
+    grid->set_margin_bottom(30);
+    grid->set_row_spacing(20);
+    grid->set_column_spacing(20);
+    
+    // Create 4 equipment cards (2x2 grid)
     for (uint32_t i = 0; i < 4; ++i) {
         EquipmentCard card;
         card.equipmentId = i + 1;
         
         // Card container
-        card.cardBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 10);
-        card.cardBox->set_size_request(200, -1);
+        card.cardBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 12);
+        card.cardBox->set_size_request(280, 200);
         card.cardBox->add_css_class("equipment-card");
         
-        // Status image
-        card.statusImage = Gtk::make_managed<Gtk::Image>();
-        card.statusImage->set_size_request(64, 64);
-        card.cardBox->append(*card.statusImage);
+        // Header: Station # with status dot
+        auto* headerBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 8);
+        auto* stationLabel = Gtk::make_managed<Gtk::Label>("Station " + std::to_string(i + 1));
+        stationLabel->add_css_class("card-title");
+        headerBox->append(*stationLabel);
         
-        // Status operation
-        card.statusOperation = Gtk::make_managed<Gtk::Label>("Offline");
-        card.statusOperation->add_css_class("status-operation");
-        card.cardBox->append(*card.statusOperation);
+        // Status dot (colored circle)
+        card.statusImage = Gtk::make_managed<Gtk::Label>("●");
+        card.statusImage->add_css_class("status-dot");
+        headerBox->append(*card.statusImage);
         
-        // Consumables operation
-        card.consumablesOperation = Gtk::make_managed<Gtk::Label>("-");
-        card.consumablesOperation->set_wrap(true);
-        card.cardBox->append(*card.consumablesOperation);
+        card.cardBox->append(*headerBox);
         
-        // Enable/disable switch
+        // Status text (ONLINE/OFFLINE/ERROR/PROCESSING)
+        card.statusLabel = Gtk::make_managed<Gtk::Label>("OFFLINE");
+        card.statusLabel->add_css_class("equipment-status");
+        card.cardBox->append(*card.statusLabel);
+        
+        // Consumables/supply info
+        card.consumablesLabel = Gtk::make_managed<Gtk::Label>("-");
+        card.consumablesLabel->set_wrap(true);
+        card.consumablesLabel->add_css_class("equipment-info");
+        card.cardBox->append(*card.consumablesLabel);
+        
+        // Enable switch
         card.enabledSwitch = Gtk::make_managed<Gtk::Switch>();
         card.enabledSwitch->set_halign(Gtk::Align::CENTER);
+        card.enabledSwitch->set_margin_top(10);
         card.enabledSwitch->signal_state_set().connect([this, equipmentId = card.equipmentId](bool state) {
             onEquipmentSwitchToggled(equipmentId, state);
-            return false;  // Propagate signal
+            return false;
         });
         card.cardBox->append(*card.enabledSwitch);
         
-        // Add to grid
+        // Add to grid (2 columns)
         grid->attach(*card.cardBox, i % 2, i / 2);
         
         equipmentCards_.push_back(card);
     }
     
-    frame->set_child(*grid);
-    append(*frame);
+    append(*grid);
 }
 
-void DashboardPage::buildActuatorCardsSection() {
+void DashboardPage::buildQualitySection() {
+    // Section header
+    auto* header = Gtk::make_managed<Gtk::Label>("QUALITY CHECKPOINTS");
+    header->set_xalign(0.0);
+    header->add_css_class("section-header");
+    append(*header);
+    
+    // Cards container - 3 quality checkpoints in a row
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 20);
+    box->set_margin_top(15);
+    box->set_margin_bottom(30);
+    box->set_homogeneous(true);
+    
+    // Create 3 quality checkpoint cards
+    for (uint32_t i = 0; i < 3; ++i) {
+        QualityCard card;
+        card.checkpointId = i;
+        
+        // Card container
+        card.cardBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 10);
+        card.cardBox->set_size_request(350, 180);
+        card.cardBox->add_css_class("quality-card");
+        
+        // Checkpoint name with status dot
+        auto* headerBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 8);
+        card.nameLabel = Gtk::make_managed<Gtk::Label>("Checkpoint " + std::to_string(i + 1));
+        card.nameLabel->add_css_class("card-title");
+        headerBox->append(*card.nameLabel);
+        
+        card.statusDot = Gtk::make_managed<Gtk::Label>("●");
+        card.statusDot->add_css_class("status-dot");
+        headerBox->append(*card.statusDot);
+        
+        card.cardBox->append(*headerBox);
+        
+        // Pass rate - large and prominent
+        card.passRateLabel = Gtk::make_managed<Gtk::Label>("---%");
+        card.passRateLabel->add_css_class("pass-rate-large");
+        card.cardBox->append(*card.passRateLabel);
+        
+        // Stats: Inspected / Defects
+        card.statsLabel = Gtk::make_managed<Gtk::Label>("0 inspected • 0 defects");
+        card.statsLabel->add_css_class("quality-stats");
+        card.cardBox->append(*card.statsLabel);
+        
+        // Last defect info
+        card.lastDefectLabel = Gtk::make_managed<Gtk::Label>("-");
+        card.lastDefectLabel->set_wrap(true);
+        card.lastDefectLabel->add_css_class("defect-info");
+        card.cardBox->append(*card.lastDefectLabel);
+        
+        box->append(*card.cardBox);
+        qualityCards_.push_back(card);
+    }
+    
+    append(*box);
+}
     auto* frame = Gtk::make_managed<Gtk::Frame>("Automated Actuators");
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 15);
     box->set_margin(15);
@@ -207,9 +316,9 @@ void DashboardPage::buildActuatorCardsSection() {
         card.cardBox->append(*card.statusImage);
         
         // Status operation
-        card.statusOperation = Gtk::make_managed<Gtk::Label>("Offline");
-        card.statusOperation->add_css_class("status-operation");
-        card.cardBox->append(*card.statusOperation);
+        card.statusLabel = Gtk::make_managed<Gtk::Label>("Offline");
+        card.statusLabel->add_css_class("status-operation");
+        card.cardBox->append(*card.statusLabel);
         
         // Mode operation (Auto/Manual)
         card.modeOperation = Gtk::make_managed<Gtk::Label>("Manual Mode");
@@ -289,10 +398,10 @@ void DashboardPage::buildStatusZone() {
     statusZoneWidgets_.bannerBox->add_css_class("status-banner");
     statusZoneWidgets_.bannerBox->set_visible(false);  // Hidden by default
     
-    statusZoneWidgets_.messageOperation = Gtk::make_managed<Gtk::Label>("");
-    statusZoneWidgets_.messageOperation->set_wrap(true);
-    statusZoneWidgets_.messageOperation->set_xalign(0.0);
-    statusZoneWidgets_.bannerBox->append(*statusZoneWidgets_.messageOperation);
+    statusZoneWidgets_.messageLabel = Gtk::make_managed<Gtk::Label>("");
+    statusZoneWidgets_.messageLabel->set_wrap(true);
+    statusZoneWidgets_.messageLabel->set_xalign(0.0);
+    statusZoneWidgets_.bannerBox->append(*statusZoneWidgets_.messageLabel);
     
     append(*statusZoneWidgets_.bannerBox);
 }
@@ -336,9 +445,9 @@ void DashboardPage::onEquipmentSwitchToggled(uint32_t equipmentId, bool enabled)
 // ============================================================================
 
 void DashboardPage::updateWorkUnitWidgets(const presenter::WorkUnitViewModel& vm) {
-    workUnitWidgets_.workUnitIdOperation->set_text(vm.workUnitId);
-    workUnitWidgets_.productIdOperation->set_text(vm.productId);
-    workUnitWidgets_.productDescOperation->set_text(vm.productDescription);
+    workUnitWidgets_.workUnitIdLabel->set_text(vm.workUnitId);
+    workUnitWidgets_.productIdLabel->set_text(vm.productId);
+    workUnitWidgets_.productDescLabel->set_text(vm.productDescription);
     
     workUnitWidgets_.progressBar->set_fraction(vm.progress);
     workUnitWidgets_.progressBar->set_text(
@@ -346,13 +455,13 @@ void DashboardPage::updateWorkUnitWidgets(const presenter::WorkUnitViewModel& vm
         std::to_string(vm.totalOperations) + " operations"
     );
     
-    workUnitWidgets_.statusOperation->set_text(vm.statusMessage);
+    workUnitWidgets_.statusLabel->set_text(vm.statusMessage);
     
     // Update styling based on error state
     if (vm.hasErrors) {
-        workUnitWidgets_.statusOperation->add_css_class("error-status");
+        workUnitWidgets_.statusLabel->add_css_class("error-status");
     } else {
-        workUnitWidgets_.statusOperation->remove_css_class("error-status");
+        workUnitWidgets_.statusLabel->remove_css_class("error-status");
     }
 }
 
@@ -398,53 +507,60 @@ void DashboardPage::updateEquipmentCard(const presenter::EquipmentCardViewModel&
         case presenter::EquipmentCardStatus::Offline: statusText = "Offline"; break;
         default: statusText = "Unknown"; break;
     }
-    card.statusOperation->set_text(statusText);
+    card.statusLabel->set_text(statusText);
     
     // Update consumables
-    card.consumablesOperation->set_text(vm.consumables);
+    card.consumablesLabel->set_text(vm.consumables);
     
     // Update switch (block signal to avoid loop)
     card.enabledSwitch->set_active(vm.enabled);
     card.enabledSwitch->set_sensitive(!vm.forceDisabled);  // Disable if system forces it
 }
 
-void DashboardPage::updateActuatorCard(const presenter::ActuatorCardViewModel& vm) {
-    if (vm.actuatorId >= actuatorCards_.size()) return;
+void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewModel& vm) {
+    if (vm.checkpointId >= qualityCards_.size()) return;
     
-    auto& card = actuatorCards_[vm.actuatorId];
+    auto& card = qualityCards_[vm.checkpointId];
     
-    // Determine image path based on status
-    std::string imagePath;
+    // Update checkpoint name
+    card.nameLabel->set_text(vm.checkpointName);
+    
+    // Update status dot color based on status
+    std::string dotColor;
     switch (vm.status) {
-        case presenter::ActuatorCardStatus::Working:
-            imagePath = "assets/img/actuators/actuator-working.svg";
+        case presenter::QualityCheckpointStatus::Passing:
+            dotColor = "quality-passing";
             break;
-        case presenter::ActuatorCardStatus::Idle:
-            imagePath = "assets/img/actuators/actuator-idle.svg";
+        case presenter::QualityCheckpointStatus::Warning:
+            dotColor = "quality-warning";
             break;
-        case presenter::ActuatorCardStatus::Error:
-            imagePath = "assets/img/actuators/actuator-error.svg";
-            break;
-        default:
-            imagePath = "assets/img/actuators/actuator-idle.svg";
+        case presenter::QualityCheckpointStatus::Critical:
+            dotColor = "quality-critical";
             break;
     }
     
-    // Update status image
-    card.statusImage->set_from_file(imagePath);
+    // Remove old status classes and add new one
+    card.statusDot->remove_css_class("quality-passing");
+    card.statusDot->remove_css_class("quality-warning");
+    card.statusDot->remove_css_class("quality-critical");
+    card.statusDot->add_css_class(dotColor);
     
-    // Update status operation
-    card.statusOperation->set_text(vm.statusMessage);
+    // Update pass rate - large and prominent
+    char passRateText[32];
+    snprintf(passRateText, sizeof(passRateText), "%.1f%%", vm.passRate);
+    card.passRateLabel->set_text(passRateText);
     
-    // Update mode
-    card.modeOperation->set_text(vm.autoMode ? "Auto Mode" : "Manual Mode");
+    // Update stats - inspected • defects
+    char statsText[128];
+    snprintf(statsText, sizeof(statsText), "%d inspected • %d defects", 
+             vm.unitsInspected, vm.defectsFound);
+    card.statsLabel->set_text(statsText);
     
-    // Update alert
-    if (vm.hasAlert) {
-        card.alertOperation->set_text("⚠ " + vm.alertMessage);
-        card.alertOperation->set_visible(true);
+    // Update last defect info
+    if (!vm.lastDefect.empty()) {
+        card.lastDefectLabel->set_text("Last: " + vm.lastDefect);
     } else {
-        card.alertOperation->set_visible(false);
+        card.lastDefectLabel->set_text("No defects detected");
     }
 }
 
@@ -483,7 +599,7 @@ void DashboardPage::updateStatusZone(const presenter::StatusZoneViewModel& vm) {
     }
     
     statusZoneWidgets_.bannerBox->set_visible(true);
-    statusZoneWidgets_.messageOperation->set_text(vm.message);
+    statusZoneWidgets_.messageLabel->set_text(vm.message);
     
     // Apply CSS class based on severity
     statusZoneWidgets_.bannerBox->remove_css_class("severity-info");
@@ -512,98 +628,213 @@ void DashboardPage::updateStatusZone(const presenter::StatusZoneViewModel& vm) {
 void DashboardPage::applyStyles() {
     cssProvider_ = Gtk::CssProvider::create();
     
-    // Modern, airy design optimized for 1920x1080
+    // Modern Industrial Clean design - optimized for 1920x1080
     cssProvider_->load_from_data(R"(
-        /* Typography - Clear hierarchy */
-        .section-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #263238;
-            padding: 12px 20px;
+        /* ===== SECTION HEADERS ===== */
+        .section-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: #90A4AE;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+        
+        /* ===== WORK UNIT CARD ===== */
+        .work-unit-card {
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         
         .field-label {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
-            color: #546E7A;
-            min-width: 120px;
+            color: #78909C;
         }
         
         .field-value {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
+            color: #37474F;
+        }
+        
+        .field-value-large {
+            font-size: 17px;
+            font-weight: 700;
             color: #263238;
+        }
+        
+        .separator-dot {
+            font-size: 18px;
+            color: #CFD8DC;
+            font-weight: 400;
         }
         
         .description-text {
             font-size: 14px;
+            color: #607D8B;
+            line-height: 1.5;
+        }
+        
+        .progress-bar-large progressbar {
+            min-height: 28px;
+            border-radius: 6px;
+            background: #ECEFF1;
+        }
+        
+        .progress-bar-large progressbar progress {
+            background: linear-gradient(90deg, #42A5F5, #1E88E5);
+            border-radius: 6px;
+        }
+        
+        .status-message {
+            font-size: 14px;
             color: #546E7A;
-            line-height: 1.6;
-        }
-        
-        .status-text {
-            font-size: 15px;
             font-weight: 500;
-            color: #37474F;
         }
         
-        /* Equipment Cards - Generous spacing */
+        /* ===== EQUIPMENT CARDS ===== */
         .equipment-card {
-            border: 2px solid #E0E0E0;
+            border: 2px solid #ECEFF1;
             border-radius: 12px;
-            padding: 25px;
+            padding: 20px;
             background: white;
-            min-width: 280px;
-            min-height: 340px;
+            transition: all 0.2s;
         }
         
         .equipment-card:hover {
-            border-color: #2196F3;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-color: #90CAF9;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
         }
         
-        /* Actuator Cards - Larger, more prominent */
-        .actuator-card {
-            border: 2px solid #2196F3;
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #455A64;
+        }
+        
+        .status-dot {
+            font-size: 16px;
+            margin-left: auto;
+        }
+        
+        .equipment-status {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-top: 12px;
+        }
+        
+        .equipment-info {
+            font-size: 13px;
+            color: #78909C;
+            margin-top: 8px;
+        }
+        
+        /* ===== QUALITY CARDS ===== */
+        .quality-card {
+            border: 2px solid #E8F5E9;
             border-radius: 12px;
-            padding: 30px;
+            padding: 20px;
             background: #FAFAFA;
-            min-width: 400px;
-            min-height: 380px;
+            transition: all 0.2s;
         }
         
-        /* Control Buttons - Bigger, clearer */
+        .quality-card:hover {
+            border-color: #81C784;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+        }
+        
+        .pass-rate-large {
+            font-size: 36px;
+            font-weight: 700;
+            color: #2E7D32;
+            margin: 12px 0;
+        }
+        
+        .quality-stats {
+            font-size: 13px;
+            color: #546E7A;
+            font-weight: 500;
+        }
+        
+        .defect-info {
+            font-size: 12px;
+            color: #78909C;
+            margin-top: 8px;
+        }
+        
+        /* Quality status dots colors */
+        .quality-passing {
+            color: #4CAF50;
+        }
+        
+        .quality-warning {
+            color: #FF9800;
+        }
+        
+        .quality-critical {
+            color: #F44336;
+        }
+        
+        /* ===== CONTROL BUTTONS ===== */
         .control-button {
             font-weight: 600;
-            font-size: 16px;
+            font-size: 15px;
             min-width: 140px;
-            min-height: 60px;
+            min-height: 56px;
             border-radius: 8px;
-            margin: 0 8px;
+            margin: 0 6px;
+            transition: all 0.2s;
         }
         
         .start-button {
             background: #4CAF50;
             color: white;
+            border: none;
         }
         
         .start-button:hover {
             background: #66BB6A;
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
         }
         
         .stop-button {
             background: #F44336;
             color: white;
+            border: none;
         }
         
         .stop-button:hover {
             background: #EF5350;
+            box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
         }
         
-        /* Status Banner - Prominent but not overwhelming */
+        .reset-button {
+            background: #FF9800;
+            color: white;
+            border: none;
+        }
+        
+        .reset-button:hover {
+            background: #FFA726;
+        }
+        
+        .calibration-button {
+            background: #2196F3;
+            color: white;
+            border: none;
+        }
+        
+        .calibration-button:hover {
+            background: #42A5F5;
+        }
+        
+        /* ===== STATUS BANNER ===== */
         .status-banner {
             border-radius: 8px;
-            padding: 16px 24px;
+            padding: 14px 20px;
             margin-bottom: 20px;
         }
         
@@ -625,37 +856,15 @@ void DashboardPage::applyStyles() {
             color: #C62828;
         }
         
-        /* Active Indicator - Clear visual feedback */
+        /* ===== ACTIVE INDICATOR ===== */
         .active-indicator {
-            font-size: 20px;
-            font-weight: 700;
-            padding: 12px 24px;
-            background: #F5F5F5;
-            border-radius: 8px;
-            margin-right: 20px;
-        }
-        
-        /* Frame headers - Modern section dividers */
-        .section-header {
-            background: linear-gradient(to right, #FAFAFA, white);
-            border-bottom: 2px solid #E0E0E0;
-        }
-        
-        /* Progress bars - Thicker, more visible */
-        progressbar {
-            min-height: 32px;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 10px 20px;
+            background: #ECEFF1;
             border-radius: 6px;
+            color: #37474F;
         }
-        
-        progressbar progress {
-            background: linear-gradient(to right, #42A5F5, #2196F3);
-            border-radius: 6px;
-        }
-        
-        /* Spacing utilities */
-        .spacer-small { margin: 10px; }
-        .spacer-medium { margin: 20px; }
-        .spacer-large { margin: 40px; }
     )");
     
     // Apply to display

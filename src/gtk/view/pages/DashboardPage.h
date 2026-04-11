@@ -31,7 +31,7 @@ public:
     // ViewObserver interface implementation
     void onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) override;
     void onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) override;
-    void onActuatorCardChanged(const presenter::ActuatorCardViewModel& vm) override;
+    void onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) override;
     void onControlPanelChanged(const presenter::ControlPanelViewModel& vm) override;
     void onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) override;
     void onError(const std::string& errorMessage) override;
@@ -41,34 +41,35 @@ private:
     
     /// Work unit information section
     struct WorkUnitWidgets {
-        Gtk::Label* workUnitIdOperation{nullptr};
-        Gtk::Label* productIdOperation{nullptr};
-        Gtk::Label* productDescOperation{nullptr};
+        Gtk::Label* workUnitIdLabel{nullptr};
+        Gtk::Label* productIdLabel{nullptr};
+        Gtk::Label* productDescLabel{nullptr};
         Gtk::ProgressBar* progressBar{nullptr};
-        Gtk::Label* statusOperation{nullptr};
+        Gtk::Label* statusLabel{nullptr};
     } workUnitWidgets_;
 
-    /// Equipment status cards (e.g., equipment, stations)
+    /// Equipment status cards
     struct EquipmentCard {
         uint32_t equipmentId{0};
         Gtk::Box* cardBox{nullptr};
-        Gtk::Image* statusImage{nullptr};
-        Gtk::Label* statusOperation{nullptr};
-        Gtk::Label* consumablesOperation{nullptr};
+        Gtk::Label* statusImage{nullptr};  // Status dot (colored ●)
+        Gtk::Label* statusLabel{nullptr};
+        Gtk::Label* consumablesLabel{nullptr};
         Gtk::Switch* enabledSwitch{nullptr};
     };
     std::vector<EquipmentCard> equipmentCards_;
 
-    /// Actuator status cards (e.g., actuator, automated positioning)
-    struct ActuatorCard {
-        uint32_t actuatorId{0};
+    /// Quality checkpoint cards
+    struct QualityCard {
+        uint32_t checkpointId{0};
         Gtk::Box* cardBox{nullptr};
-        Gtk::Image* statusImage{nullptr};
-        Gtk::Label* statusOperation{nullptr};
-        Gtk::Label* alertOperation{nullptr};
-        Gtk::Label* modeOperation{nullptr};  // Auto/Manual
+        Gtk::Label* nameLabel{nullptr};
+        Gtk::Label* statusDot{nullptr};  // Colored ● for pass/warning/critical
+        Gtk::Label* passRateLabel{nullptr};
+        Gtk::Label* statsLabel{nullptr};
+        Gtk::Label* lastDefectLabel{nullptr};
     };
-    std::vector<ActuatorCard> actuatorCards_;
+    std::vector<QualityCard> qualityCards_;
 
     /// Control panel buttons
     struct ControlPanelWidgets {
@@ -82,7 +83,7 @@ private:
     /// Status zone (error banner at top)
     struct StatusZoneWidgets {
         Gtk::Box* bannerBox{nullptr};
-        Gtk::Label* messageOperation{nullptr};
+        Gtk::Label* messageLabel{nullptr};
     } statusZoneWidgets_;
 
     /// Presenter reference
@@ -91,8 +92,8 @@ private:
     // UI construction methods
     void buildUI();
     void buildWorkUnitSection();
-    void buildEquipmentCardsSection();
-    void buildActuatorCardsSection();
+    void buildEquipmentSection();
+    void buildQualitySection();
     void buildControlPanelSection();
     void buildStatusZone();
 
@@ -106,7 +107,7 @@ private:
     // Helper methods for updating UI safely
     void updateWorkUnitWidgets(const presenter::WorkUnitViewModel& vm);
     void updateEquipmentCard(const presenter::EquipmentCardViewModel& vm);
-    void updateActuatorCard(const presenter::ActuatorCardViewModel& vm);
+    void updateQualityCard(const presenter::QualityCheckpointViewModel& vm);
     void updateControlPanel(const presenter::ControlPanelViewModel& vm);
     void updateStatusZone(const presenter::StatusZoneViewModel& vm);
 
