@@ -8,18 +8,33 @@
 #include "src/model/SimulatedModel.h"
 #include "src/model/DatabaseManager.h"
 #include "src/config/ConfigManager.h"
+#include "src/core/LoggerBase.h"
+#include "src/core/LoggerImpl.h"
+#include "src/core/ExceptionHandler.h"
 #include <iostream>
 
 MainWindow::MainWindow() {
+    // Initialize logging system (DEPENDENCY INJECTION!)
+    logger_ = std::make_unique<core::Logger>(
+        core::createProductionLogger("logs/app.log")
+    );
+    logger_->info("=== Industrial HMI Application Starting ===");
+    
+    // Initialize exception handler with logger (DI)
+    exceptionHandler_ = std::make_unique<core::StandardExceptionHandler>(*logger_);
+    logger_->debug("Exception handler initialized");
+    
     // Initialize configuration from JSON
     auto& config = config::ConfigManager::instance();
     config.initialize("config/app-config.json");
+    logger_->info("Configuration loaded");
     
     // Set window title from config
     set_title(config.getWindowTitle());
     
     // Set window icon
     set_icon_name(config.getWindowIconName());
+    logger_->debug("Window icon set: {}", config.getWindowIconName());
     
     // Load UI layout from .ui file
     loadUI();

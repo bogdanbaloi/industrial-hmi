@@ -4,13 +4,19 @@
 #include <vector>
 #include <memory>
 #include <sqlite3.h>
+#include "src/core/Result.h"
+#include "src/core/ErrorHandling.h"
+#include "src/core/LoggerBase.h"
 
 namespace app::model {
 
-/// Simple database manager for demo purposes
+/// Modern database manager with Result<T, E> error handling
 /// 
-/// Demonstrates database integration patterns without exposing
-/// proprietary business logic or actual production schema.
+/// Features:
+/// - Result<T, DatabaseError> instead of bool
+/// - Typed errors (ConnectionFailed, UniqueViolation, etc.)
+/// - Logging integration
+/// - Exception-safe
 class DatabaseManager {
 public:
     struct Product {
@@ -37,17 +43,30 @@ public:
         return inst;
     }
     
+    /// Set logger (dependency injection)
+    void setLogger(core::Logger& logger) {
+        logger_ = &logger;
+    }
+    
     /// Initialize database with demo data
-    bool initialize() {
+    core::Result<void, core::DatabaseError> initialize() {
         // Create in-memory database for demo
         int rc = sqlite3_open(":memory:", &db_);
         if (rc != SQLITE_OK) {
-            return false;
+            if (logger_) {
+                logger_->error("Failed to open database: {}", sqlite3_errmsg(db_));
+            }
+            return core::Err(core::DatabaseError::ConnectionFailed);
         }
         
         createTables();
         populateDemoData();
-        return true;
+        
+        if (logger_) {
+            logger_->info("Database initialized successfully");
+        }
+        
+        return core::Ok;
     }
     
     /// Get all active products (not deleted)
@@ -330,6 +349,7 @@ private:
     }
     
     sqlite3* db_{nullptr};
+    core::Logger* logger_{nullptr};  // Injected logger
 };
 
 }  // namespace app::model

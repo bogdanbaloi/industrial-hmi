@@ -159,6 +159,19 @@ target_sources(objectsConfig
             src/config/ConfigManager.h
 )
 
+# Core Layer - Logging, Error Handling, Result (C++20)
+add_library(objectsCore INTERFACE)
+target_sources(objectsCore
+    INTERFACE
+        FILE_SET HEADERS
+        FILES
+            src/core/LoggerBase.h
+            src/core/LoggerImpl.h
+            src/core/ExceptionHandler.h
+            src/core/Result.h
+            src/core/ErrorHandling.h
+)
+
 # Presenter Layer - MVP orchestration
 add_library(objectsPresenter OBJECT)
 target_sources(objectsPresenter
@@ -239,6 +252,7 @@ target_link_libraries(industrial-hmi
     PRIVATE
         objectsModel
         objectsConfig
+        objectsCore
         objectsPresenter
         objectsView
         Threads::Threads
