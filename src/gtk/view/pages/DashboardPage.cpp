@@ -82,8 +82,12 @@ void DashboardPage::onError(const std::string& errorMessage) {
 // ============================================================================
 
 void DashboardPage::buildUI() {
-    set_spacing(20);
-    set_margin(20);
+    // Set generous spacing and margins for airy design
+    set_spacing(40);  // Vertical spacing between sections
+    set_margin_start(60);
+    set_margin_end(60);
+    set_margin_top(40);
+    set_margin_bottom(40);
     
     buildStatusZone();
     buildWorkUnitSection();
@@ -99,21 +103,21 @@ void DashboardPage::buildWorkUnitSection() {
     
     // Work unit ID
     auto* idBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
-    idBox->append(*Gtk::make_managed<Gtk::Operation>("ID:"));
-    workUnitWidgets_.workUnitIdOperation = Gtk::make_managed<Gtk::Operation>("-");
+    idBox->append(*Gtk::make_managed<Gtk::Label>("ID:"));
+    workUnitWidgets_.workUnitIdOperation = Gtk::make_managed<Gtk::Label>("-");
     workUnitWidgets_.workUnitIdOperation->set_selectable(true);
     idBox->append(*workUnitWidgets_.workUnitIdOperation);
     box->append(*idBox);
     
     // Product ID
     auto* productBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
-    productBox->append(*Gtk::make_managed<Gtk::Operation>("Product:"));
-    workUnitWidgets_.productIdOperation = Gtk::make_managed<Gtk::Operation>("-");
+    productBox->append(*Gtk::make_managed<Gtk::Label>("Product:"));
+    workUnitWidgets_.productIdOperation = Gtk::make_managed<Gtk::Label>("-");
     productBox->append(*workUnitWidgets_.productIdOperation);
     box->append(*productBox);
     
     // Product description
-    workUnitWidgets_.productDescOperation = Gtk::make_managed<Gtk::Operation>("");
+    workUnitWidgets_.productDescOperation = Gtk::make_managed<Gtk::Label>("");
     workUnitWidgets_.productDescOperation->set_wrap(true);
     workUnitWidgets_.productDescOperation->set_xalign(0.0);
     box->append(*workUnitWidgets_.productDescOperation);
@@ -124,7 +128,7 @@ void DashboardPage::buildWorkUnitSection() {
     box->append(*workUnitWidgets_.progressBar);
     
     // Status operation
-    workUnitWidgets_.statusOperation = Gtk::make_managed<Gtk::Operation>("Ready");
+    workUnitWidgets_.statusOperation = Gtk::make_managed<Gtk::Label>("Ready");
     box->append(*workUnitWidgets_.statusOperation);
     
     frame->set_child(*box);
@@ -154,12 +158,12 @@ void DashboardPage::buildEquipmentCardsSection() {
         card.cardBox->append(*card.statusImage);
         
         // Status operation
-        card.statusOperation = Gtk::make_managed<Gtk::Operation>("Offline");
+        card.statusOperation = Gtk::make_managed<Gtk::Label>("Offline");
         card.statusOperation->add_css_class("status-operation");
         card.cardBox->append(*card.statusOperation);
         
         // Consumables operation
-        card.consumablesOperation = Gtk::make_managed<Gtk::Operation>("-");
+        card.consumablesOperation = Gtk::make_managed<Gtk::Label>("-");
         card.consumablesOperation->set_wrap(true);
         card.cardBox->append(*card.consumablesOperation);
         
@@ -203,17 +207,17 @@ void DashboardPage::buildActuatorCardsSection() {
         card.cardBox->append(*card.statusImage);
         
         // Status operation
-        card.statusOperation = Gtk::make_managed<Gtk::Operation>("Offline");
+        card.statusOperation = Gtk::make_managed<Gtk::Label>("Offline");
         card.statusOperation->add_css_class("status-operation");
         card.cardBox->append(*card.statusOperation);
         
         // Mode operation (Auto/Manual)
-        card.modeOperation = Gtk::make_managed<Gtk::Operation>("Manual Mode");
+        card.modeOperation = Gtk::make_managed<Gtk::Label>("Manual Mode");
         card.modeOperation->add_css_class("mode-operation");
         card.cardBox->append(*card.modeOperation);
         
         // Alert operation
-        card.alertOperation = Gtk::make_managed<Gtk::Operation>("");
+        card.alertOperation = Gtk::make_managed<Gtk::Label>("");
         card.alertOperation->add_css_class("alert-operation");
         card.alertOperation->set_wrap(true);
         card.cardBox->append(*card.alertOperation);
@@ -233,7 +237,7 @@ void DashboardPage::buildControlPanelSection() {
     box->set_halign(Gtk::Align::CENTER);
     
     // Active indicator
-    controlPanelWidgets_.activeIndicator = Gtk::make_managed<Gtk::Operation>("System Idle");
+    controlPanelWidgets_.activeIndicator = Gtk::make_managed<Gtk::Label>("System Idle");
     controlPanelWidgets_.activeIndicator->add_css_class("active-indicator");
     box->append(*controlPanelWidgets_.activeIndicator);
     
@@ -285,7 +289,7 @@ void DashboardPage::buildStatusZone() {
     statusZoneWidgets_.bannerBox->add_css_class("status-banner");
     statusZoneWidgets_.bannerBox->set_visible(false);  // Hidden by default
     
-    statusZoneWidgets_.messageOperation = Gtk::make_managed<Gtk::Operation>("");
+    statusZoneWidgets_.messageOperation = Gtk::make_managed<Gtk::Label>("");
     statusZoneWidgets_.messageOperation->set_wrap(true);
     statusZoneWidgets_.messageOperation->set_xalign(0.0);
     statusZoneWidgets_.bannerBox->append(*statusZoneWidgets_.messageOperation);
@@ -508,25 +512,74 @@ void DashboardPage::updateStatusZone(const presenter::StatusZoneViewModel& vm) {
 void DashboardPage::applyStyles() {
     cssProvider_ = Gtk::CssProvider::create();
     
-    // Load CSS from string (in production, load from file)
+    // Modern, airy design optimized for 1920x1080
     cssProvider_->load_from_data(R"(
-        .equipment-card {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 15px;
-            background: white;
+        /* Typography - Clear hierarchy */
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #263238;
+            padding: 12px 20px;
         }
         
+        .field-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #546E7A;
+            min-width: 120px;
+        }
+        
+        .field-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #263238;
+        }
+        
+        .description-text {
+            font-size: 14px;
+            color: #546E7A;
+            line-height: 1.6;
+        }
+        
+        .status-text {
+            font-size: 15px;
+            font-weight: 500;
+            color: #37474F;
+        }
+        
+        /* Equipment Cards - Generous spacing */
+        .equipment-card {
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 25px;
+            background: white;
+            min-width: 280px;
+            min-height: 340px;
+        }
+        
+        .equipment-card:hover {
+            border-color: #2196F3;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        /* Actuator Cards - Larger, more prominent */
         .actuator-card {
             border: 2px solid #2196F3;
-            border-radius: 10px;
-            padding: 20px;
-            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 30px;
+            background: #FAFAFA;
+            min-width: 400px;
+            min-height: 380px;
         }
         
+        /* Control Buttons - Bigger, clearer */
         .control-button {
-            font-weight: bold;
-            font-size: 14px;
+            font-weight: 600;
+            font-size: 16px;
+            min-width: 140px;
+            min-height: 60px;
+            border-radius: 8px;
+            margin: 0 8px;
         }
         
         .start-button {
@@ -534,36 +587,75 @@ void DashboardPage::applyStyles() {
             color: white;
         }
         
+        .start-button:hover {
+            background: #66BB6A;
+        }
+        
         .stop-button {
-            background: #f44336;
+            background: #F44336;
             color: white;
         }
         
+        .stop-button:hover {
+            background: #EF5350;
+        }
+        
+        /* Status Banner - Prominent but not overwhelming */
         .status-banner {
-            border-radius: 5px;
-            padding: 10px;
+            border-radius: 8px;
+            padding: 16px 24px;
+            margin-bottom: 20px;
         }
         
         .severity-info {
-            background: #2196F3;
-            color: white;
+            background: #E3F2FD;
+            border-left: 4px solid #2196F3;
+            color: #1565C0;
         }
         
         .severity-warning {
-            background: #FF9800;
-            color: white;
+            background: #FFF3E0;
+            border-left: 4px solid #FF9800;
+            color: #E65100;
         }
         
         .severity-error {
-            background: #f44336;
-            color: white;
+            background: #FFEBEE;
+            border-left: 4px solid #F44336;
+            color: #C62828;
         }
         
+        /* Active Indicator - Clear visual feedback */
         .active-indicator {
-            font-size: 18px;
-            font-weight: bold;
-            padding: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            padding: 12px 24px;
+            background: #F5F5F5;
+            border-radius: 8px;
+            margin-right: 20px;
         }
+        
+        /* Frame headers - Modern section dividers */
+        .section-header {
+            background: linear-gradient(to right, #FAFAFA, white);
+            border-bottom: 2px solid #E0E0E0;
+        }
+        
+        /* Progress bars - Thicker, more visible */
+        progressbar {
+            min-height: 32px;
+            border-radius: 6px;
+        }
+        
+        progressbar progress {
+            background: linear-gradient(to right, #42A5F5, #2196F3);
+            border-radius: 6px;
+        }
+        
+        /* Spacing utilities */
+        .spacer-small { margin: 10px; }
+        .spacer-medium { margin: 20px; }
+        .spacer-large { margin: 40px; }
     )");
     
     // Apply to display

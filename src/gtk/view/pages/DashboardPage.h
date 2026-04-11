@@ -41,11 +41,11 @@ private:
     
     /// Work unit information section
     struct WorkUnitWidgets {
-        Gtk::Operation* workUnitIdOperation{nullptr};
-        Gtk::Operation* productIdOperation{nullptr};
-        Gtk::Operation* productDescOperation{nullptr};
+        Gtk::Label* workUnitIdOperation{nullptr};
+        Gtk::Label* productIdOperation{nullptr};
+        Gtk::Label* productDescOperation{nullptr};
         Gtk::ProgressBar* progressBar{nullptr};
-        Gtk::Operation* statusOperation{nullptr};
+        Gtk::Label* statusOperation{nullptr};
     } workUnitWidgets_;
 
     /// Equipment status cards (e.g., equipment, stations)
@@ -53,8 +53,8 @@ private:
         uint32_t equipmentId{0};
         Gtk::Box* cardBox{nullptr};
         Gtk::Image* statusImage{nullptr};
-        Gtk::Operation* statusOperation{nullptr};
-        Gtk::Operation* consumablesOperation{nullptr};
+        Gtk::Label* statusOperation{nullptr};
+        Gtk::Label* consumablesOperation{nullptr};
         Gtk::Switch* enabledSwitch{nullptr};
     };
     std::vector<EquipmentCard> equipmentCards_;
@@ -64,9 +64,9 @@ private:
         uint32_t actuatorId{0};
         Gtk::Box* cardBox{nullptr};
         Gtk::Image* statusImage{nullptr};
-        Gtk::Operation* statusOperation{nullptr};
-        Gtk::Operation* alertOperation{nullptr};
-        Gtk::Operation* modeOperation{nullptr};  // Auto/Manual
+        Gtk::Label* statusOperation{nullptr};
+        Gtk::Label* alertOperation{nullptr};
+        Gtk::Label* modeOperation{nullptr};  // Auto/Manual
     };
     std::vector<ActuatorCard> actuatorCards_;
 
@@ -76,13 +76,13 @@ private:
         Gtk::Button* stopButton{nullptr};
         Gtk::Button* resetButton{nullptr};
         Gtk::Button* calibrationButton{nullptr};
-        Gtk::Operation* activeIndicator{nullptr};  // Shows which operation is active
+        Gtk::Label* activeIndicator{nullptr};  // Shows which operation is active
     } controlPanelWidgets_;
 
     /// Status zone (error banner at top)
     struct StatusZoneWidgets {
         Gtk::Box* bannerBox{nullptr};
-        Gtk::Operation* messageOperation{nullptr};
+        Gtk::Label* messageOperation{nullptr};
     } statusZoneWidgets_;
 
     /// Presenter reference

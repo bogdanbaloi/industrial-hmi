@@ -37,43 +37,60 @@ endif()
 # Source files
 set(PRESENTER_SOURCES
     src/presenter/BasePresenter.h
+    src/presenter/BasePresenter.cpp
+    src/presenter/DashboardPresenter.h
+    src/presenter/DashboardPresenter.cpp
     src/presenter/ViewObserver.h
-    src/presenter/modelview/PrinterCardViewModel.h
-    src/presenter/modelview/BotCardViewModel.h
+    src/presenter/modelview/EquipmentCardViewModel.h
+    src/presenter/modelview/ActuatorCardViewModel.h
     src/presenter/modelview/ControlPanelViewModel.h
-    src/presenter/modelview/OrderInfoViewModel.h
+    src/presenter/modelview/WorkUnitViewModel.h
     src/presenter/modelview/PlaceholderViewModels.h
-    # Add more source files here
 )
 
-# Main executable (placeholder - would need actual main.cpp)
-# add_executable(industrial-hmi
-#     src/main.cpp
-#     ${PRESENTER_SOURCES}
-# )
+set(VIEW_SOURCES
+    src/gtk/view/pages/DashboardPage.h
+    src/gtk/view/pages/DashboardPage.cpp
+)
+
+set(MODEL_SOURCES
+    src/model/SimulatedModel.h
+)
+
+# Main executable
+add_executable(industrial-hmi
+    src/main.cpp
+    ${PRESENTER_SOURCES}
+    ${VIEW_SOURCES}
+    ${MODEL_SOURCES}
+)
 
 # Include directories
-# target_include_directories(industrial-hmi PRIVATE
-#     ${CMAKE_SOURCE_DIR}
-#     ${GTKMM_INCLUDE_DIRS}
-#     ${Boost_INCLUDE_DIRS}
-# )
+target_include_directories(industrial-hmi PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${GTKMM_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
+)
 
 # Link libraries
-# target_link_libraries(industrial-hmi PRIVATE
-#     ${GTKMM_LIBRARIES}
-#     ${SQLITE_LIBRARIES}
-#     Boost::signals2
-#     Threads::Threads
-# )
+target_link_libraries(industrial-hmi PRIVATE
+    ${GTKMM_LIBRARIES}
+    ${SQLITE_LIBRARIES}
+    Boost::signals2
+    Threads::Threads
+)
 
-# if(open62541_FOUND)
-#     target_link_libraries(industrial-hmi PRIVATE open62541::open62541)
-# endif()
+if(open62541_FOUND)
+    target_link_libraries(industrial-hmi PRIVATE open62541::open62541)
+endif()
+
+# Copy assets to build directory
+file(COPY ${CMAKE_SOURCE_DIR}/assets 
+     DESTINATION ${CMAKE_BINARY_DIR})
 
 # Installation rules
-# install(TARGETS industrial-hmi DESTINATION bin)
-# install(DIRECTORY assets/ DESTINATION share/industrial-hmi/assets)
+install(TARGETS industrial-hmi DESTINATION bin)
+install(DIRECTORY assets/ DESTINATION share/industrial-hmi/assets)
 
 message(STATUS "")
 message(STATUS "Industrial HMI Configuration:")
