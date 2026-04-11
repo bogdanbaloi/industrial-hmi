@@ -7,9 +7,20 @@
 #include "src/presenter/ProductsPresenter.h"
 #include "src/model/SimulatedModel.h"
 #include "src/model/DatabaseManager.h"
+#include "src/config/ConfigManager.h"
 #include <iostream>
 
 MainWindow::MainWindow() {
+    // Initialize configuration from JSON
+    auto& config = config::ConfigManager::instance();
+    config.initialize("config/app-config.json");
+    
+    // Set window title from config
+    set_title(config.getWindowTitle());
+    
+    // Set window icon
+    set_icon_name(config.getWindowIconName());
+    
     // Load UI layout from .ui file
     loadUI();
     
@@ -70,6 +81,8 @@ void MainWindow::loadUI() {
     // Get widget references from builder
     radioFullscreen_ = builder->get_widget<Gtk::CheckButton>("radio_fullscreen");
     radioWindowed_ = builder->get_widget<Gtk::CheckButton>("radio_windowed");
+    radioDark_ = builder->get_widget<Gtk::CheckButton>("radio_dark");
+    radioLight_ = builder->get_widget<Gtk::CheckButton>("radio_light");
     dashboardContainer_ = builder->get_widget<Gtk::Box>("dashboard_container");
     productsContainer_ = builder->get_widget<Gtk::Box>("products_container");
     
@@ -113,6 +126,12 @@ void MainWindow::connectSignals() {
         radioFullscreen_->signal_toggled().connect(
             sigc::mem_fun(*this, &MainWindow::onDisplayModeChanged));
     }
+    
+    // Connect theme radio buttons to theme handler
+    if (radioDark_) {
+        radioDark_->signal_toggled().connect(
+            sigc::mem_fun(*this, &MainWindow::onThemeChanged));
+    }
 }
 
 void MainWindow::initializePages() {
@@ -155,6 +174,16 @@ void MainWindow::onDisplayModeChanged() {
         unfullscreen();
         isFullscreen_ = false;
         std::cout << "Switched to windowed mode (1920x1080)\n";
+    }
+}
+
+void MainWindow::onThemeChanged() {
+    if (radioDark_ && radioDark_->get_active()) {
+        view::ThemeManager::instance().setTheme(view::ThemeManager::Theme::DARK);
+        std::cout << "🌙 Switched to Dark Mode\n";
+    } else if (radioLight_ && radioLight_->get_active()) {
+        view::ThemeManager::instance().setTheme(view::ThemeManager::Theme::LIGHT);
+        std::cout << "☀️  Switched to Light Mode\n";
     }
 }
 

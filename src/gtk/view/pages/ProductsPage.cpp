@@ -394,13 +394,16 @@ void ProductsPage::showAddProductDialog() {
             float quality = qualitySpin->get_value();
             
             if (!code.empty() && !name.empty() && presenter_) {
-                bool success = presenter_->addProduct(code, name, status, stock, quality);
-                if (!success) {
-                    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
-                    dialogManager_.showError("Error", 
-                               "Failed to add product. Product code may already exist.",
-                               parent);
-                }
+                // ASYNC - non-blocking database operation
+                presenter_->addProduct(code, name, status, stock, quality, [this](bool success) {
+                    // Callback runs on GTK main thread
+                    if (!success) {
+                        auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+                        dialogManager_.showError("Error", 
+                                   "Failed to add product. Product code may already exist.",
+                                   parent);
+                    }
+                });
             }
         }
         dialog->close();
@@ -419,7 +422,16 @@ void ProductsPage::showDeleteConfirmDialog(int productId, const std::string& pro
         "The product will no longer appear in the list.",
         [this, productId](bool confirmed) {
             if (confirmed && presenter_) {
-                presenter_->deleteProduct(productId);
+                // ASYNC - non-blocking soft delete
+                presenter_->deleteProduct(productId, [this](bool success) {
+                    // Callback runs on GTK main thread
+                    if (!success) {
+                        auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+                        dialogManager_.showError("Error", 
+                                   "Failed to delete product.",
+                                   parent);
+                    }
+                });
             }
         },
         parent
@@ -506,13 +518,16 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
             float quality = qualitySpin->get_value();
             
             if (!name.empty() && presenter_) {
-                bool success = presenter_->updateProduct(product.id, name, status, stock, quality);
-                if (!success) {
-                    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
-                    dialogManager_.showError("Error", 
-                               "Failed to update product.",
+                // ASYNC - non-blocking update
+                presenter_->updateProduct(product.id, name, status, stock, quality, [this](bool success) {
+                    // Callback runs on GTK main thread
+                    if (!success) {
+                        auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+                        dialogManager_.showError("Error", 
+                                   "Failed to update product.",
                                parent);
-                }
+                    }
+                });
             }
         }
         dialog->close();

@@ -115,6 +115,58 @@
               </object>
             </child>
             
+            <!-- Theme Section -->
+            <child>
+              <object class="GtkBox" id="theme_section">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-top">20</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+                
+                <child>
+                  <object class="GtkLabel" id="theme_label">
+                    <property name="label">THEME</property>
+                    <property name="css-classes">section-header</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+                
+                <child>
+                  <object class="GtkBox" id="theme_controls">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+                    
+                    <child>
+                      <object class="GtkCheckButton" id="radio_dark">
+                        <property name="label">🌙 Dark Mode</property>
+                        <property name="active">true</property>
+                        <property name="css-classes">sidebar-option</property>
+                      </object>
+                    </child>
+                    
+                    <child>
+                      <object class="GtkCheckButton" id="radio_light">
+                        <property name="label">☀️ Light Mode</property>
+                        <property name="group">radio_dark</property>
+                        <property name="css-classes">sidebar-option</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Separator -->
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">horizontal</property>
+                <property name="margin-top">20</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+              </object>
+            </child>
+            
             <!-- System Options Section -->
             <child>
               <object class="GtkBox" id="system_section">

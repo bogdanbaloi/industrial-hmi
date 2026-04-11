@@ -38,6 +38,7 @@ private:
     
     // Event handlers
     void onDisplayModeChanged();
+    void onThemeChanged();
     bool onKeyPressed(guint keyval, guint keycode, Gdk::ModifierType state);
     void toggleFullscreen();
     
@@ -47,6 +48,8 @@ private:
     // Widgets from .ui file
     Gtk::CheckButton* radioFullscreen_ = nullptr;
     Gtk::CheckButton* radioWindowed_ = nullptr;
+    Gtk::CheckButton* radioDark_ = nullptr;
+    Gtk::CheckButton* radioLight_ = nullptr;
     Gtk::Box* dashboardContainer_ = nullptr;
     Gtk::Box* productsContainer_ = nullptr;
     

@@ -224,6 +224,58 @@ public:
         return success;
     }
     
+    // ========================================================================
+    // ASYNC I/O OPERATIONS - Non-blocking Database Access
+    // ========================================================================
+    
+    /**
+     * Add product asynchronously (non-blocking)
+     * 
+     * @param productCode Product code (must be unique)
+     * @param name Product name
+     * @param status Product status
+     * @param stock Stock quantity
+     * @param qualityRate Quality rate (0.0-100.0)
+     * @param callback Called on main thread with result (true = success)
+     * 
+     * Pattern:
+     * 1. Post to ModelContext I/O thread
+     * 2. Execute database operation (blocking on I/O thread)
+     * 3. Marshal result back to GTK main thread via Glib::signal_idle()
+     * 4. Invoke callback with result
+     */
+    void addProductAsync(
+        const std::string& productCode,
+        const std::string& name,
+        const std::string& status,
+        int stock,
+        float qualityRate,
+        std::function<void(bool)> callback);
+    
+    /**
+     * Update product asynchronously (non-blocking)
+     */
+    void updateProductAsync(
+        int id,
+        const std::string& name,
+        const std::string& status,
+        int stock,
+        float qualityRate,
+        std::function<void(bool)> callback);
+    
+    /**
+     * Delete product asynchronously (non-blocking, soft delete)
+     */
+    void deleteProductAsync(
+        int id,
+        std::function<void(bool)> callback);
+    
+    /**
+     * Load all products asynchronously (non-blocking)
+     */
+    void getAllProductsAsync(
+        std::function<void(std::vector<Product>)> callback);
+    
     ~DatabaseManager() {
         if (db_) {
             sqlite3_close(db_);

@@ -1,0 +1,74 @@
+# EditorConfig - Coding Style Consistency
+# https://editorconfig.org
+
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C++ files
+[*.{cpp,h,hpp,cc,cxx}]
+indent_style = space
+indent_size = 4
+max_line_length = 100
+cpp_indent_braces = false
+cpp_indent_multi_line_relative_to = innermost_parenthesis
+cpp_indent_within_parentheses = align_to_parenthesis
+cpp_indent_case_contents = true
+cpp_indent_case_labels = false
+cpp_space_before_function_open_parenthesis = remove
+
+# CMake files
+[CMakeLists.txt,*.cmake]
+indent_style = space
+indent_size = 4
+
+# JSON files
+[*.json]
+indent_style = space
+indent_size = 2
+
+# YAML files  
+[*.yml,*.yaml]
+indent_style = space
+indent_size = 2
+
+# XML files (GTK UI)
+[*.ui,*.xml]
+indent_style = space
+indent_size = 2
+
+# Markdown files
+[*.md]
+indent_style = space
+indent_size = 2
+max_line_length = 80
+trim_trailing_whitespace = false
+
+# Shell scripts
+[*.sh]
+indent_style = space
+indent_size = 2
+
+# Makefiles
+[Makefile,*.mk]
+indent_style = tab
+
+# Python (if any scripts)
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 88
+
+# CSS files
+[*.css]
+indent_style = space
+indent_size = 2
+
+# Windows batch files
+[*.bat,*.cmd]
+end_of_line = crlf

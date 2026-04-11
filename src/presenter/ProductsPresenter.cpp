@@ -80,45 +80,56 @@ presenter::ViewProductDialogViewModel ProductsPresenter::buildProductDetailViewM
     return vm;
 }
 
-bool ProductsPresenter::addProduct(const std::string& productCode, const std::string& name,
-                                   const std::string& status, int stock, float qualityRate) {
+void ProductsPresenter::addProduct(const std::string& productCode, const std::string& name,
+                                   const std::string& status, int stock, float qualityRate,
+                                   std::function<void(bool)> callback) {
     auto& db = model::DatabaseManager::instance();
     
-    bool success = db.addProduct(productCode, name, status, stock, qualityRate);
-    
-    if (success) {
-        // Reload products list to show new product
-        loadProducts();
-    }
-    
-    return success;
+    // ASYNC - non-blocking database operation
+    db.addProductAsync(productCode, name, status, stock, qualityRate, [this, callback](bool success) {
+        // This callback runs on GTK main thread (thanks to Glib::signal_idle)
+        if (success) {
+            // Reload products list to show new product
+            loadProducts();
+        }
+        
+        // Notify caller of result
+        callback(success);
+    });
 }
 
-bool ProductsPresenter::deleteProduct(int productId) {
+void ProductsPresenter::deleteProduct(int productId, std::function<void(bool)> callback) {
     auto& db = model::DatabaseManager::instance();
     
-    bool success = db.deleteProduct(productId);
-    
-    if (success) {
-        // Reload products list (deleted product won't appear)
-        loadProducts();
-    }
-    
-    return success;
+    // ASYNC - non-blocking soft delete
+    db.deleteProductAsync(productId, [this, callback](bool success) {
+        // This callback runs on GTK main thread
+        if (success) {
+            // Reload products list (deleted product won't appear)
+            loadProducts();
+        }
+        
+        // Notify caller of result
+        callback(success);
+    });
 }
 
-bool ProductsPresenter::updateProduct(int productId, const std::string& name,
-                                     const std::string& status, int stock, float qualityRate) {
+void ProductsPresenter::updateProduct(int productId, const std::string& name,
+                                     const std::string& status, int stock, float qualityRate,
+                                     std::function<void(bool)> callback) {
     auto& db = model::DatabaseManager::instance();
     
-    bool success = db.updateProduct(productId, name, status, stock, qualityRate);
-    
-    if (success) {
-        // Reload products list to show updated data
-        loadProducts();
-    }
-    
-    return success;
+    // ASYNC - non-blocking update
+    db.updateProductAsync(productId, name, status, stock, qualityRate, [this, callback](bool success) {
+        // This callback runs on GTK main thread
+        if (success) {
+            // Reload products list to show updated data
+            loadProducts();
+        }
+        
+        // Notify caller of result
+        callback(success);
+    });
 }
 
 model::DatabaseManager::Product ProductsPresenter::getProduct(int productId) {

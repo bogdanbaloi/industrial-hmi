@@ -4,6 +4,7 @@
 #include "src/presenter/modelview/PlaceholderViewModels.h"
 #include "src/model/DatabaseManager.h"
 #include <string>
+#include <functional>
 
 namespace app {
 
@@ -24,7 +25,7 @@ public:
 
     void initialize() override;
 
-    /// Load all products from database
+    /// Load all products from database (ASYNC - non-blocking)
     void loadProducts();
     
     /// Search products by query string
@@ -33,16 +34,21 @@ public:
     /// View product details
     void viewProduct(int productId);
     
-    /// Add new product to database
-    bool addProduct(const std::string& productCode, const std::string& name,
-                    const std::string& status, int stock, float qualityRate);
+    /// Add new product to database (ASYNC - non-blocking)
+    /// @param callback Called with success/failure result
+    void addProduct(const std::string& productCode, const std::string& name,
+                    const std::string& status, int stock, float qualityRate,
+                    std::function<void(bool)> callback);
     
-    /// Update existing product
-    bool updateProduct(int productId, const std::string& name,
-                      const std::string& status, int stock, float qualityRate);
+    /// Update existing product (ASYNC - non-blocking)
+    /// @param callback Called with success/failure result
+    void updateProduct(int productId, const std::string& name,
+                      const std::string& status, int stock, float qualityRate,
+                      std::function<void(bool)> callback);
     
-    /// Delete product (soft delete)
-    bool deleteProduct(int productId);
+    /// Delete product (ASYNC - non-blocking, soft delete)
+    /// @param callback Called with success/failure result
+    void deleteProduct(int productId, std::function<void(bool)> callback);
     
     /// Get single product (for dialogs)
     model::DatabaseManager::Product getProduct(int productId);

@@ -1,166 +1,93 @@
-# Build Instructions
+# Building Industrial HMI - Cross-Platform Guide
 
-## Prerequisites
+**This application builds on both Linux and Windows!** 🐧🪟
 
-### Ubuntu/Debian
+---
+
+## 🐧 **Linux Build (Ubuntu/Debian)**
+
+### Prerequisites
+
 ```bash
+# Ubuntu 24.04 / Debian 12+
 sudo apt-get update
 sudo apt-get install -y \
     build-essential \
     cmake \
+    ninja-build \
     libgtkmm-4.0-dev \
-    libboost-dev \
     libsqlite3-dev \
-    pkg-config
+    libboost-dev
 ```
 
-### Fedora/RHEL
+### Build Steps
+
 ```bash
-sudo dnf install -y \
-    gcc-c++ \
-    cmake \
-    gtkmm4.0-devel \
-    boost-devel \
-    sqlite-devel \
-    pkgconfig
-```
+# Clone repository
+git clone <repository-url>
+cd industrial-hmi-portfolio
 
-### macOS (Homebrew)
-```bash
-brew install cmake gtkmm4 boost sqlite3 pkg-config
-```
+# Create build directory
+mkdir build && cd build
 
----
+# Configure with CMake
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
 
-## Build Steps
+# Build
+ninja
 
-### 1. Clone Repository
-```bash
-git clone https://github.com/YOUR-USERNAME/industrial-hmi-architecture.git
-cd industrial-hmi-architecture
-```
-
-### 2. Create Build Directory
-```bash
-mkdir build
-cd build
-```
-
-### 3. Configure with CMake
-```bash
-cmake ..
-```
-
-### 4. Compile
-```bash
-make -j$(nproc)
-```
-
-### 5. Run
-```bash
+# Run
 ./industrial-hmi
 ```
 
 ---
 
-## What You'll See
+## 🪟 **Windows Build (Windows 10/11)**
 
-The application will launch with a GTK4 window showing:
+### Prerequisites
 
-- **Work Unit Section**: Simulated production progress (3/5 operations complete)
-- **Equipment Cards**: 4 equipment stations with different statuses
-  - Equipment 1: Online (green, 85% supply)
-  - Equipment 2: Processing (orange, working)
-  - Equipment 3: Error (red, low supply)
-  - Equipment 4: Offline (gray)
-- **Actuator Cards**: 2 automated actuators
-  - Actuator 0: Working (blue, at position X:150 Y:200)
-  - Actuator 1: Idle (green, at home position)
-- **Control Panel**: Buttons for START, STOP, RESET, CALIBRATION
+1. **Install Visual Studio 2022**
+   - Download: https://visualstudio.microsoft.com/downloads/
+   - Workload: "Desktop development with C++"
 
-### Interactive Demo
+2. **Install vcpkg** (Package Manager)
+   ```powershell
+   git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+   cd C:\vcpkg
+   .\bootstrap-vcpkg.bat
+   ```
 
-Try clicking:
-- **START** button → System starts "production"
-- **STOP** button → System returns to IDLE
-- **RESET** button → Resets work unit progress
-- **Equipment toggles** → Enable/disable equipment
+3. **Install Dependencies**
+   ```powershell
+   vcpkg install gtkmm:x64-windows
+   vcpkg install sqlite3:x64-windows
+   vcpkg install boost-signals2:x64-windows
+   ```
 
----
+### Build Steps
 
-## Troubleshooting
+```powershell
+# Configure
+cmake -G "Visual Studio 17 2022" `
+    -A x64 `
+    -DCMAKE_TOOLCHAIN_FILE="C:\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+    ..
 
-### GTK4 not found
-```
-CMake Error: Could not find gtkmm-4.0
-```
-**Solution:** Install GTK4 development packages (see Prerequisites)
+# Build
+cmake --build . --config Release
 
-### Boost not found
-```
-CMake Error: Could not find Boost
-```
-**Solution:** Install boost-devel or libboost-dev
-
-### Compilation errors about "Label"
-This is an older version - pull latest from git:
-```bash
-git pull origin main
+# Run
+.\Release\industrial-hmi.exe
 ```
 
 ---
 
-## Development Build
+## 📦 **Pre-Built Binaries**
 
-For development with debug symbols:
-```bash
-cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$(nproc)
-```
-
-For release build with optimizations:
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
-```
+**GitHub Releases:**
+- Linux: `industrial-hmi-ubuntu.tar.gz`
+- Windows: `industrial-hmi-windows.zip`
 
 ---
 
-## What This Demonstrates
-
-This application is a **functional MVP architecture demo** showing:
-
-1. **Model Layer**: Simulated data (see `src/model/SimulatedModel.h`)
-2. **Presenter Layer**: Business logic orchestration (see `src/presenter/`)
-3. **View Layer**: GTK4 UI rendering (see `src/gtk/view/`)
-4. **Observer Pattern**: View observes Presenter via `ViewObserver` interface
-5. **Thread Safety**: UI updates marshaled with `Glib::signal_idle()`
-6. **ViewModels**: DTOs for clean data flow
-7. **Professional Assets**: Technical SVG graphics
-
----
-
-## Architecture Highlights
-
-**Data Flow:**
-```
-SimulatedModel → DashboardPresenter → ViewModels → DashboardPage → GTK Widgets
-                     ↑                                    ↓
-                     └─────── User Actions ──────────────┘
-```
-
-**Thread Safety:**
-- Model callbacks arrive on background threads
-- Presenter uses `Glib::signal_idle()` to marshal to GTK thread
-- UI updates always on GTK main thread
-
-**Design Patterns:**
-- MVP (Model-View-Presenter)
-- Observer (View observes Presenter)
-- DTO (ViewModels)
-- Dependency Injection (Presenter injected into View)
-
----
-
-For architecture details, see `docs/ARCHITECTURE.md`
-For View layer specifics, see `docs/VIEW_LAYER.md`
+**Cross-platform development made easy!** 🚀

@@ -1,0 +1,236 @@
+{
+  "application": {
+    "name": "Industrial HMI",
+    "version": "1.0.0",
+    "organization": "Portfolio Project"
+  },
+  
+  "assets": {
+    "icons": {
+      "app_icon": "assets/icons/app-icon.svg",
+      "window_icon_name": "utilities-system-monitor"
+    },
+    "ui_files": {
+      "main_window": "ui/main-window.ui",
+      "sidebar_css": "ui/sidebar.css",
+      "adwaita_theme": "ui/adwaita-theme.css"
+    }
+  },
+  
+  "dialogs": {
+    "errors": {
+      "database_init_failed": {
+        "title": "Database Error",
+        "message": "Failed to initialize database. The application may not function correctly.",
+        "icon": "dialog-error"
+      },
+      "product_add_failed": {
+        "title": "Error",
+        "message": "Failed to add product. Product code may already exist.",
+        "icon": "dialog-error"
+      },
+      "product_update_failed": {
+        "title": "Error",
+        "message": "Failed to update product.",
+        "icon": "dialog-error"
+      },
+      "product_delete_failed": {
+        "title": "Error",
+        "message": "Failed to delete product.",
+        "icon": "dialog-error"
+      },
+      "invalid_input": {
+        "title": "Invalid Input",
+        "message": "Please check your input and try again.",
+        "icon": "dialog-warning"
+      }
+    },
+    
+    "confirmations": {
+      "delete_product": {
+        "title": "Confirm Delete",
+        "message_template": "Delete \"{product_name}\"?\n\nThis will mark the product as inactive (soft delete).\nThe product will no longer appear in the list.",
+        "confirm_button": "Delete",
+        "cancel_button": "Cancel",
+        "icon": "dialog-question"
+      },
+      "reset_equipment": {
+        "title": "Reset Equipment",
+        "message": "Reset all equipment to default values?\n\nThis action will reset production lines and quality metrics.",
+        "confirm_button": "Reset",
+        "cancel_button": "Cancel",
+        "icon": "dialog-warning"
+      },
+      "calibration": {
+        "title": "Start Calibration",
+        "message": "Begin equipment calibration?\n\nThis will temporarily pause production.",
+        "confirm_button": "Calibrate",
+        "cancel_button": "Cancel",
+        "icon": "dialog-question"
+      }
+    },
+    
+    "info": {
+      "product_added": {
+        "title": "Success",
+        "message": "Product added successfully.",
+        "icon": "dialog-information"
+      },
+      "product_updated": {
+        "title": "Success",
+        "message": "Product updated successfully.",
+        "icon": "dialog-information"
+      },
+      "product_deleted": {
+        "title": "Success",
+        "message": "Product deleted successfully.",
+        "icon": "dialog-information"
+      },
+      "equipment_reset": {
+        "title": "Success",
+        "message": "Equipment reset to default values.",
+        "icon": "dialog-information"
+      },
+      "calibration_complete": {
+        "title": "Calibration Complete",
+        "message": "Equipment calibration completed successfully.",
+        "icon": "dialog-information"
+      }
+    },
+    
+    "add_product": {
+      "title": "Add New Product",
+      "fields": {
+        "product_code": {
+          "label": "Product Code:",
+          "placeholder": "PROD-XXX",
+          "validation": "required|unique"
+        },
+        "product_name": {
+          "label": "Product Name:",
+          "placeholder": "Enter product name",
+          "validation": "required"
+        },
+        "status": {
+          "label": "Status:",
+          "options": ["Active", "Inactive", "Low Stock"],
+          "default": "Active"
+        },
+        "stock": {
+          "label": "Stock:",
+          "min": 0,
+          "max": 10000,
+          "default": 0
+        },
+        "quality_rate": {
+          "label": "Quality Rate (%):",
+          "min": 0.0,
+          "max": 100.0,
+          "default": 95.0,
+          "step": 0.1
+        }
+      },
+      "buttons": {
+        "confirm": "Add Product",
+        "cancel": "Cancel"
+      }
+    },
+    
+    "edit_product": {
+      "title": "Edit Product",
+      "note": "Product code cannot be changed after creation.",
+      "fields": {
+        "product_name": {
+          "label": "Product Name:",
+          "validation": "required"
+        },
+        "status": {
+          "label": "Status:",
+          "options": ["Active", "Inactive", "Low Stock"]
+        },
+        "stock": {
+          "label": "Stock:",
+          "min": 0,
+          "max": 10000
+        },
+        "quality_rate": {
+          "label": "Quality Rate (%):",
+          "min": 0.0,
+          "max": 100.0,
+          "step": 0.1
+        }
+      },
+      "buttons": {
+        "confirm": "Update",
+        "cancel": "Cancel"
+      }
+    },
+    
+    "view_product": {
+      "title": "Product Details",
+      "button": "Close"
+    }
+  },
+  
+  "theme": {
+    "default": "dark",
+    "available": ["dark", "light"]
+  },
+  
+  "window": {
+    "title": "Industrial HMI - MVP Architecture",
+    "default_width": 1920,
+    "default_height": 1080,
+    "default_mode": "fullscreen"
+  },
+  
+  "dashboard": {
+    "equipment_lines": [
+      {
+        "id": "A-LINE",
+        "name": "Tablet Press",
+        "type": "production",
+        "metrics": {
+          "rate": "tablets/hr",
+          "rate_value": 85000
+        }
+      },
+      {
+        "id": "B-LINE",
+        "name": "Film Coater",
+        "type": "coating",
+        "metrics": {
+          "coating_thickness": "45μm",
+          "speed": "12 RPM"
+        }
+      },
+      {
+        "id": "C-LINE",
+        "name": "Blister Pack",
+        "type": "packaging",
+        "metrics": {
+          "rate": "packs/min",
+          "rate_value": 120
+        }
+      }
+    ],
+    
+    "quality_checkpoints": [
+      {
+        "name": "Weight Check",
+        "tolerance": "±5%",
+        "status": "passing"
+      },
+      {
+        "name": "Hardness Test",
+        "range": "80-120N",
+        "status": "passing"
+      },
+      {
+        "name": "Final Inspection",
+        "criteria": "Visual + Dimensional",
+        "status": "passing"
+      }
+    ]
+  }
+}
