@@ -73,6 +73,19 @@ CheckOptions:
   - key: modernize-use-auto.MinTypeNameLength
     value: '5'
   
+  # C++20 Features (encouraged)
+  - key: modernize-use-nodiscard.ReplacementString
+    value: '[[nodiscard]]'
+  
+  # Const Correctness (clang-tidy recommendations)
+  - key: readability-const-return-type.CheckTemplates
+    value: 'true'
+  - key: readability-make-member-function-const.IgnoreMacros
+    value: 'false'
+  
+  # Prefer std::scoped_lock over std::lock_guard (C++17+)
+  # Note: No direct check, but encouraged in cppcoreguidelines-prefer-member-initializer
+  
   # Performance
   - key: performance-move-const-arg.CheckTriviallyCopyableMove
     value: 'true'

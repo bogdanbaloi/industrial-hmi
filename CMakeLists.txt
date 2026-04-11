@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(industrial-hmi VERSION 1.0.0 DESCRIPTION "Industrial HMI MVP Architecture" LANGUAGES CXX)
 
 # C++17 standard required
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -71,12 +71,14 @@ target_link_libraries(objectsPresenter
 add_library(objectsView OBJECT)
 target_sources(objectsView
     PRIVATE
+        src/gtk/view/MainWindow.cpp
         src/gtk/view/pages/DashboardPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
     PRIVATE
         FILE_SET internalHeaders
         TYPE HEADERS
         FILES
+            src/gtk/view/MainWindow.h
             src/gtk/view/pages/DashboardPage.h
             src/gtk/view/pages/ProductsPage.h
 )
