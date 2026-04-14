@@ -5,8 +5,10 @@ cmake-build-*/
 *.so
 *.a
 
-# IDE files (allow .vscode/ - it's project configuration)
+# IDE and editor files
 .idea/
+.vscode/
+.claude/
 *.swp
 *.swo
 *~
@@ -15,6 +17,7 @@ cmake-build-*/
 *.autosave
 *.user
 *.orig
+CMakeUserPresets.json
 
 # Compiled binaries
 industrial-hmi
@@ -24,4 +27,13 @@ industrial-hmi
 compile_commands.json
 
 # Logs
+logs/
 *.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug
+.gdb_history
+/core

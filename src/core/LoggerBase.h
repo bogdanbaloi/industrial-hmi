@@ -40,10 +40,14 @@ enum class LogLevel {
 class LoggerBase {
 public:
     virtual ~LoggerBase() = default;
-    
+    LoggerBase(const LoggerBase&) = delete;
+    LoggerBase& operator=(const LoggerBase&) = delete;
+    LoggerBase(LoggerBase&&) = delete;
+    LoggerBase& operator=(LoggerBase&&) = delete;
+
     /**
      * Log message with source location
-     * 
+     *
      * Uses std::vformat (non-template) to avoid code bloat
      */
     virtual void log(LogLevel level,
@@ -59,6 +63,12 @@ public:
      * Set minimum log level
      */
     virtual void setLevel(LogLevel level) = 0;
+
+    virtual void flush() {}
+    virtual void shutdown() {}
+
+protected:
+    LoggerBase() = default;
 };
 
 /**
@@ -122,6 +132,11 @@ public:
         critical_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
     }
 
+    void flush() { impl_->flush(); }
+    void shutdown() { impl_->shutdown(); }
+
+    LoggerBase* getImpl() { return impl_.get(); }
+
 private:
     // Implementation - source_location as first parameter
     template<typename... Args>
@@ -152,8 +167,6 @@ private:
         impl_->log(LogLevel::CRITICAL, msg, loc);
     }
 
-public:
-    
 private:
     std::unique_ptr<LoggerBase> impl_;
 };
@@ -178,8 +191,15 @@ inline std::string formatTimestamp() {
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         now.time_since_epoch()) % 1000;
     
+    std::tm localTime{};
+#ifdef _WIN32
+    localtime_s(&localTime, &time);
+#else
+    localtime_r(&time, &localTime);
+#endif
+
     std::ostringstream oss;
-    oss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
+    oss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
     oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
     return oss.str();
 }

@@ -128,8 +128,32 @@ public:
         }
     }
     
-    // Get current state
     SystemState getState() const { return currentState_; }
+
+    QualityCheckpoint& getQualityCheckpoint(uint32_t id) { return qualityCheckpoints_[id]; }
+    WorkUnit& getWorkUnit() { return currentWorkUnit_; }
+
+    void notifyQualityChange(uint32_t id) {
+        std::vector<QualityCheckpointCallback> cbs;
+        QualityCheckpoint cp;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            cbs = qualityCallbacks_;
+            cp = qualityCheckpoints_[id];
+        }
+        for (auto& cb : cbs) { cb(cp); }
+    }
+
+    void notifyWorkUnitChange() {
+        std::vector<WorkUnitCallback> cbs;
+        WorkUnit wu;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            cbs = workUnitCallbacks_;
+            wu = currentWorkUnit_;
+        }
+        for (auto& cb : cbs) { cb(wu); }
+    }
     
     // Initialize with demo data
     void initializeDemoData() {
@@ -176,44 +200,38 @@ private:
     SimulatedModel() = default;
     
     void notifyEquipmentChange(uint32_t equipmentId) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (equipmentStatuses_.count(equipmentId)) {
-            for (auto& cb : equipmentCallbacks_) {
-                cb(equipmentStatuses_[equipmentId]);
-            }
+        std::vector<EquipmentCallback> cbs;
+        EquipmentStatus es;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!equipmentStatuses_.count(equipmentId)) return;
+            cbs = equipmentCallbacks_;
+            es = equipmentStatuses_[equipmentId];
         }
+        for (auto& cb : cbs) { cb(es); }
     }
-    
+
     void notifyActuatorChange(uint32_t actuatorId) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (actuatorStatuses_.count(actuatorId)) {
-            for (auto& cb : actuatorCallbacks_) {
-                cb(actuatorStatuses_[actuatorId]);
-            }
+        std::vector<ActuatorCallback> cbs;
+        ActuatorStatus as;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!actuatorStatuses_.count(actuatorId)) return;
+            cbs = actuatorCallbacks_;
+            as = actuatorStatuses_[actuatorId];
         }
+        for (auto& cb : cbs) { cb(as); }
     }
-    
-    void notifyQualityChange(uint32_t checkpointId) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (qualityCheckpoints_.count(checkpointId)) {
-            for (auto& cb : qualityCallbacks_) {
-                cb(qualityCheckpoints_[checkpointId]);
-            }
-        }
-    }
-    
-    void notifyWorkUnitChange() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (auto& cb : workUnitCallbacks_) {
-            cb(currentWorkUnit_);
-        }
-    }
-    
+
     void notifyStateChange() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (auto& cb : stateCallbacks_) {
-            cb(currentState_);
+        std::vector<StateCallback> cbs;
+        SystemState state;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            cbs = stateCallbacks_;
+            state = currentState_;
         }
+        for (auto& cb : cbs) { cb(state); }
     }
     
     void simulateProductionCycle() {

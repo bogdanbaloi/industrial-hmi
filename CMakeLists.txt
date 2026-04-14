@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
-project(industrial-hmi 
-    VERSION 1.0.0 
-    DESCRIPTION "Industrial HMI MVP Architecture - Cross-Platform (Linux/Windows)" 
+
+# Use BoostConfig.cmake instead of deprecated FindBoost module
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
+project(industrial-hmi
+    VERSION 1.0.0
+    DESCRIPTION "Industrial HMI MVP Architecture - Cross-Platform (Linux/Windows)"
     LANGUAGES CXX)
 
 # ============================================================================
@@ -54,6 +60,7 @@ else()
         -Wall
         -Wextra
         -Wpedantic
+        -Wno-c2y-extensions
         -Werror
         -Wno-unused-parameter
     )
@@ -192,19 +199,37 @@ target_sources(objectsConfig
         FILE_SET HEADERS
         FILES
             src/config/ConfigManager.h
+            src/config/config_defaults.h
 )
 
-# Core Layer - Logging, Error Handling, Result (C++20)
-add_library(objectsCore INTERFACE)
+# Core Layer - Logging, Error Handling, Result, Application (C++20)
+add_library(objectsCore OBJECT)
 target_sources(objectsCore
-    INTERFACE
+    PRIVATE
+        src/core/Application.cpp
+    PUBLIC
         FILE_SET HEADERS
         FILES
+            src/core/Application.h
             src/core/LoggerBase.h
             src/core/LoggerImpl.h
             src/core/ExceptionHandler.h
             src/core/Result.h
             src/core/ErrorHandling.h
+)
+target_link_libraries(objectsCore
+    PUBLIC
+        objectsModel
+        objectsConfig
+        ${GTKMM_LIBRARIES}
+)
+target_include_directories(objectsCore
+    PUBLIC
+        ${GTKMM_INCLUDE_DIRS}
+)
+target_compile_options(objectsCore
+    PUBLIC
+        ${GTKMM_CFLAGS_OTHER}
 )
 
 # Presenter Layer - MVP orchestration
@@ -292,6 +317,11 @@ target_link_libraries(industrial-hmi
         objectsView
         Threads::Threads
 )
+
+# Windows: Boost.Asio requires Winsock
+if(WIN32)
+    target_link_libraries(industrial-hmi PRIVATE ws2_32)
+endif()
 
 # Windows: Add resource file if exists (icon, version info)
 if(WIN32 AND EXISTS "${CMAKE_SOURCE_DIR}/resources/app.rc")

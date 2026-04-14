@@ -3,6 +3,8 @@
 
 #include <gtkmm.h>
 #include <memory>
+#include <filesystem>
+#include "src/core/LoggerBase.h"
 
 // Forward declarations
 namespace app {
@@ -44,6 +46,8 @@ private:
     // Event handlers
     void onDisplayModeChanged();
     void onThemeChanged();
+    void onShowLogsToggled();
+    void onAutoRefreshToggled();
     bool onKeyPressed(guint keyval, guint keycode, Gdk::ModifierType state);
     void toggleFullscreen();
     
@@ -55,11 +59,18 @@ private:
     Gtk::CheckButton* radioWindowed_ = nullptr;
     Gtk::CheckButton* radioDark_ = nullptr;
     Gtk::CheckButton* radioLight_ = nullptr;
+    Gtk::CheckButton* checkAutoRefresh_ = nullptr;
+    Gtk::CheckButton* checkShowLogs_ = nullptr;
+    sigc::connection autoRefreshTimer_;
+    Gtk::Box* logPanel_ = nullptr;
+    Gtk::TextView* logTextView_ = nullptr;
+    sigc::connection logRefreshConnection_;
+    std::size_t lastLogSize_{0};
+    Gtk::Notebook* mainNotebook_ = nullptr;
     Gtk::Box* dashboardContainer_ = nullptr;
     Gtk::Box* productsContainer_ = nullptr;
     
     // Services (injected into pages)
-    std::unique_ptr<app::core::Logger> logger_;
     std::unique_ptr<app::core::ExceptionHandler> exceptionHandler_;
     std::unique_ptr<app::view::DialogManager> dialogManager_;
     

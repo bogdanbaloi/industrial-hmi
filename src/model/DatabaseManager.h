@@ -8,6 +8,7 @@
 #include "src/core/Result.h"
 #include "src/core/ErrorHandling.h"
 #include "src/core/LoggerBase.h"
+#include "src/config/config_defaults.h"
 
 namespace app::model {
 
@@ -50,9 +51,9 @@ public:
     }
     
     /// Initialize database with demo data
-    core::Result<void, core::DatabaseError> initialize() {
+    [[nodiscard]] core::Result<void, core::DatabaseError> initialize() {
         // Create in-memory database for demo
-        int rc = sqlite3_open(":memory:", &db_);
+        int rc = sqlite3_open(config::defaults::kDatabasePath, &db_);
         if (rc != SQLITE_OK) {
             if (logger_) {
                 logger_->error("Failed to open database: {}", sqlite3_errmsg(db_));
@@ -71,7 +72,7 @@ public:
     }
     
     /// Get all active products (not deleted)
-    std::vector<Product> getAllProducts() {
+    [[nodiscard]] std::vector<Product> getAllProducts() {
         std::vector<Product> products;
         
         const char* sql = "SELECT id, product_code, name, status, stock, quality_rate, "
@@ -81,34 +82,18 @@ public:
         sqlite3_stmt* stmt;
         if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
             while (sqlite3_step(stmt) == SQLITE_ROW) {
-                Product p;
-                p.id = sqlite3_column_int(stmt, 0);
-                p.productCode = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                p.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-                p.status = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
-                p.stock = sqlite3_column_int(stmt, 4);
-                p.qualityRate = sqlite3_column_double(stmt, 5);
-                
-                const char* createdAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
-                const char* updatedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
-                const char* deletedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
-                
-                p.createdAt = createdAt ? createdAt : "";
-                p.updatedAt = updatedAt ? updatedAt : "";
-                p.deletedAt = deletedAt ? deletedAt : "";
-                
-                products.push_back(p);
+                products.push_back(extractProduct(stmt));
             }
             sqlite3_finalize(stmt);
         }
-        
+
         return products;
     }
     
     /// Get product by ID
-    Product getProduct(int id) {
+    [[nodiscard]] Product getProduct(int id) {
         Product p;
-        p.id = -1;  // Invalid ID marker
+        p.id = config::defaults::kInvalidProductId;
         
         const char* sql = "SELECT id, product_code, name, status, stock, quality_rate, "
                          "created_at, updated_at, deleted_at "
@@ -118,29 +103,16 @@ public:
         if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
             sqlite3_bind_int(stmt, 1, id);
             if (sqlite3_step(stmt) == SQLITE_ROW) {
-                p.id = sqlite3_column_int(stmt, 0);
-                p.productCode = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                p.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-                p.status = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
-                p.stock = sqlite3_column_int(stmt, 4);
-                p.qualityRate = sqlite3_column_double(stmt, 5);
-                
-                const char* createdAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
-                const char* updatedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
-                const char* deletedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
-                
-                p.createdAt = createdAt ? createdAt : "";
-                p.updatedAt = updatedAt ? updatedAt : "";
-                p.deletedAt = deletedAt ? deletedAt : "";
+                p = extractProduct(stmt);
             }
             sqlite3_finalize(stmt);
         }
-        
+
         return p;
     }
     
     /// Search products by name or code
-    std::vector<Product> searchProducts(const std::string& query) {
+    [[nodiscard]] std::vector<Product> searchProducts(const std::string& query) {
         std::vector<Product> products;
         
         const char* sql = "SELECT id, product_code, name, status, stock, quality_rate, "
@@ -158,27 +130,11 @@ public:
             sqlite3_bind_text(stmt, 2, pattern.c_str(), -1, SQLITE_TRANSIENT);
             
             while (sqlite3_step(stmt) == SQLITE_ROW) {
-                Product p;
-                p.id = sqlite3_column_int(stmt, 0);
-                p.productCode = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                p.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-                p.status = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
-                p.stock = sqlite3_column_int(stmt, 4);
-                p.qualityRate = sqlite3_column_double(stmt, 5);
-                
-                const char* createdAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
-                const char* updatedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
-                const char* deletedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
-                
-                p.createdAt = createdAt ? createdAt : "";
-                p.updatedAt = updatedAt ? updatedAt : "";
-                p.deletedAt = deletedAt ? deletedAt : "";
-                
-                products.push_back(p);
+                products.push_back(extractProduct(stmt));
             }
             sqlite3_finalize(stmt);
         }
-        
+
         return products;
     }
     
@@ -330,10 +286,12 @@ private:
             END;
         )";
         
-        char* errMsg;
-        sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg);
+        char* errMsg = nullptr;
+        if (sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            sqlite3_free(errMsg);
+        }
     }
-    
+
     void populateDemoData() {
         const char* sql = R"(
             INSERT INTO products (product_code, name, status, stock, quality_rate) VALUES
@@ -345,12 +303,34 @@ private:
             ('PROD-006', 'Product F', 'Active', 540, 96.8)
         )";
         
-        char* errMsg;
-        sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg);
+        char* errMsg = nullptr;
+        if (sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            sqlite3_free(errMsg);
+        }
     }
-    
+
+    Product extractProduct(sqlite3_stmt* stmt) const {
+        Product p;
+        p.id = sqlite3_column_int(stmt, 0);
+        p.productCode = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        p.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        p.status = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+        p.stock = sqlite3_column_int(stmt, 4);
+        p.qualityRate = sqlite3_column_double(stmt, 5);
+
+        const char* createdAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        const char* updatedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+        const char* deletedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
+
+        p.createdAt = createdAt ? createdAt : "";
+        p.updatedAt = updatedAt ? updatedAt : "";
+        p.deletedAt = deletedAt ? deletedAt : "";
+
+        return p;
+    }
+
     sqlite3* db_{nullptr};
-    core::Logger* logger_{nullptr};  // Injected logger
+    core::Logger* logger_{nullptr};
 };
 
 }  // namespace app::model

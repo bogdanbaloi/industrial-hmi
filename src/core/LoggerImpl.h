@@ -6,6 +6,7 @@
 #include <fstream>
 #include <filesystem>
 #include <mutex>
+#include <functional>
 #include <chrono>
 #include <iomanip>
 #include <sstream>
@@ -43,7 +44,13 @@ public:
     void setLevel(LogLevel level) override {
         minLevel_ = level;
     }
-    
+
+    void flush() override {
+        std::lock_guard lock(mutex_);
+        std::cout.flush();
+        std::cerr.flush();
+    }
+
 private:
     LogLevel minLevel_;
     std::mutex mutex_;
@@ -55,11 +62,15 @@ private:
 class FileLogger : public LoggerBase {
 public:
     explicit FileLogger(const std::string& filename,
-                       LogLevel minLevel = LogLevel::INFO)
-        : minLevel_(minLevel) {
+                       LogLevel minLevel = LogLevel::INFO,
+                       std::size_t maxFileSize = 5 * 1024 * 1024,
+                       int maxFiles = 3)
+        : minLevel_(minLevel),
+          filePath_(filename),
+          maxFileSize_(maxFileSize),
+          maxFiles_(maxFiles) {
 
-        // Create parent directories if they don't exist
-        auto parentPath = std::filesystem::path(filename).parent_path();
+        auto parentPath = filePath_.parent_path();
         if (!parentPath.empty()) {
             std::filesystem::create_directories(parentPath);
         }
@@ -68,41 +79,96 @@ public:
         if (!file_.is_open()) {
             throw std::runtime_error("Failed to open log file: " + filename);
         }
+
+        currentSize_ = std::filesystem::file_size(filePath_);
     }
-    
+
     ~FileLogger() {
+        std::lock_guard lock(mutex_);
         if (file_.is_open()) {
             file_.close();
         }
     }
-    
+
     void log(LogLevel level,
             std::string_view message,
             const std::source_location& loc) override {
-        
+
         std::lock_guard lock(mutex_);
-        
-        if (file_.is_open()) {
-            file_ << std::format("[{}] [{}] [{}:{}] {}\n",
+
+        if (!file_.is_open()) return;
+
+        auto line = std::format("[{}] [{}] [{}:{}] {}\n",
                                 formatTimestamp(),
                                 levelToString(level),
                                 loc.file_name(),
                                 loc.line(),
                                 message);
-            file_.flush();
+        file_ << line;
+        file_.flush();
+        currentSize_ += line.size();
+
+        if (maxFileSize_ > 0 && currentSize_ >= maxFileSize_) {
+            rotate();
         }
     }
-    
+
     bool isEnabled(LogLevel level) const override {
         return level >= minLevel_;
     }
-    
+
     void setLevel(LogLevel level) override {
         minLevel_ = level;
     }
-    
+
+    void flush() override {
+        std::lock_guard lock(mutex_);
+        if (file_.is_open()) file_.flush();
+    }
+
+    void shutdown() override {
+        std::lock_guard lock(mutex_);
+        if (file_.is_open()) {
+            file_.flush();
+            file_.close();
+        }
+    }
+
 private:
+    void rotate() {
+        file_.close();
+
+        auto stem = filePath_.stem().string();
+        auto ext = filePath_.extension().string();
+        auto dir = filePath_.parent_path();
+
+        // Delete oldest rotated file
+        auto oldest = dir / (stem + "." + std::to_string(maxFiles_) + ext);
+        std::filesystem::remove(oldest);
+
+        // Shift existing rotated files: app.2.log -> app.3.log, etc.
+        for (int i = maxFiles_ - 1; i >= 1; --i) {
+            auto src = dir / (stem + "." + std::to_string(i) + ext);
+            auto dst = dir / (stem + "." + std::to_string(i + 1) + ext);
+            if (std::filesystem::exists(src)) {
+                std::filesystem::rename(src, dst);
+            }
+        }
+
+        // Rename current file to .1
+        auto first = dir / (stem + ".1" + ext);
+        std::filesystem::rename(filePath_, first);
+
+        // Reopen fresh file
+        file_.open(filePath_, std::ios::trunc);
+        currentSize_ = 0;
+    }
+
     LogLevel minLevel_;
+    std::filesystem::path filePath_;
+    std::size_t maxFileSize_;
+    int maxFiles_;
+    std::size_t currentSize_{0};
     std::ofstream file_;
     std::mutex mutex_;
 };
@@ -116,6 +182,12 @@ class CompositeLogger : public LoggerBase {
 public:
     void addLogger(std::unique_ptr<LoggerBase> logger) {
         loggers_.push_back(std::move(logger));
+    }
+
+    void removeLastLogger() {
+        if (!loggers_.empty()) {
+            loggers_.pop_back();
+        }
     }
     
     void log(LogLevel level,
@@ -142,7 +214,19 @@ public:
             logger->setLevel(level);
         }
     }
-    
+
+    void flush() override {
+        for (auto& logger : loggers_) {
+            logger->flush();
+        }
+    }
+
+    void shutdown() override {
+        for (auto& logger : loggers_) {
+            logger->shutdown();
+        }
+    }
+
 private:
     std::vector<std::unique_ptr<LoggerBase>> loggers_;
 };
@@ -164,6 +248,56 @@ public:
         // No-op
     }
 };
+
+/**
+ * CallbackLogger - Forwards log messages to a callback function
+ * Used for UI log panels that need real-time log output
+ */
+class CallbackLogger : public LoggerBase {
+public:
+    using LogCallback = std::function<void(const std::string&)>;
+
+    explicit CallbackLogger(LogCallback callback, LogLevel minLevel = LogLevel::DEBUG)
+        : callback_(std::move(callback)), minLevel_(minLevel) {}
+
+    void log(LogLevel level,
+            std::string_view message,
+            const std::source_location& loc) override {
+        if (!callback_ || writing_) return;
+        writing_ = true;
+
+        auto line = std::format("[{}] [{}] {}",
+                                formatTimestamp(),
+                                levelToString(level),
+                                message);
+        callback_(line);
+        writing_ = false;
+    }
+
+    bool isEnabled(LogLevel level) const override {
+        return level >= minLevel_;
+    }
+
+    void setLevel(LogLevel level) override {
+        minLevel_ = level;
+    }
+
+private:
+    LogCallback callback_;
+    LogLevel minLevel_;
+    bool writing_{false};
+};
+
+/**
+ * Parse log level from string (case-sensitive)
+ */
+inline LogLevel parseLogLevel(std::string_view str) {
+    if (str == "DEBUG") return LogLevel::DEBUG;
+    if (str == "WARN") return LogLevel::WARN;
+    if (str == "ERROR") return LogLevel::ERROR;
+    if (str == "CRITICAL") return LogLevel::CRITICAL;
+    return LogLevel::INFO;
+}
 
 /**
  * Factory functions (SOLID: Dependency Inversion)
@@ -192,6 +326,29 @@ inline std::unique_ptr<LoggerBase> createProductionLogger(const std::string& fil
     auto composite = std::make_unique<CompositeLogger>();
     composite->addLogger(createConsoleLogger(LogLevel::INFO));
     composite->addLogger(createFileLogger(filename, LogLevel::DEBUG));
+    return composite;
+}
+
+/**
+ * Create logger configured from ConfigManager settings
+ */
+inline std::unique_ptr<LoggerBase> createConfiguredLogger(
+        const std::string& logFile,
+        const std::string& levelStr,
+        std::size_t maxFileSize,
+        int maxFiles,
+        bool consoleEnabled) {
+
+    auto level = parseLogLevel(levelStr);
+    auto composite = std::make_unique<CompositeLogger>();
+
+    if (consoleEnabled) {
+        composite->addLogger(createConsoleLogger(level));
+    }
+
+    composite->addLogger(
+        std::make_unique<FileLogger>(logFile, LogLevel::DEBUG, maxFileSize, maxFiles));
+
     return composite;
 }
 

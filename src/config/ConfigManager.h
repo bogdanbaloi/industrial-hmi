@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include "config_defaults.h"
 
 namespace app::config {
 
@@ -37,7 +38,7 @@ public:
      * @param configPath Path to app-config.json
      * @return true if loaded successfully
      */
-    bool initialize(const std::string& configPath = "config/app-config.json") {
+    [[nodiscard]] bool initialize(const std::string& configPath = defaults::kConfigPath) {
         configPath_ = configPath;
         return loadConfig();
     }
@@ -71,7 +72,7 @@ public:
     std::string getDialogTitle(const std::string& category, const std::string& name) const {
         auto key = "dialogs." + category + "." + name + ".title";
         auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : "Dialog";
+        return (it != config_.end()) ? it->second : defaults::kDialogTitle;
     }
     
     std::string getDialogMessage(const std::string& category, const std::string& name) const {
@@ -90,19 +91,19 @@ public:
     std::string getDialogIcon(const std::string& category, const std::string& name) const {
         auto key = "dialogs." + category + "." + name + ".icon";
         auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : "dialog-information";
+        return (it != config_.end()) ? it->second : defaults::kDialogIcon;
     }
     
     std::string getConfirmButton(const std::string& dialogName) const {
         auto key = "dialogs.confirmations." + dialogName + ".confirm_button";
         auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : "OK";
+        return (it != config_.end()) ? it->second : defaults::kConfirmButton;
     }
     
     std::string getCancelButton(const std::string& dialogName) const {
         auto key = "dialogs.confirmations." + dialogName + ".cancel_button";
         auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : "Cancel";
+        return (it != config_.end()) ? it->second : defaults::kCancelButton;
     }
     
     // ========================================================================
@@ -110,27 +111,53 @@ public:
     // ========================================================================
     
     std::string getAppName() const {
-        return getValue("application.name", "Industrial HMI");
+        return getValue("application.name", defaults::kAppName);
     }
     
     std::string getAppVersion() const {
-        return getValue("application.version", "1.0.0");
+        return getValue("application.version", defaults::kAppVersion);
     }
     
     std::string getWindowTitle() const {
-        return getValue("window.title", "Industrial HMI");
+        return getValue("window.title", defaults::kWindowTitle);
     }
     
     int getWindowWidth() const {
-        return std::stoi(getValue("window.default_width", "1920"));
+        return getInt("window.default_width", defaults::kWindowWidth);
     }
-    
+
     int getWindowHeight() const {
-        return std::stoi(getValue("window.default_height", "1080"));
+        return getInt("window.default_height", defaults::kWindowHeight);
     }
     
     std::string getDefaultTheme() const {
-        return getValue("theme.default", "dark");
+        return getValue("theme.default", defaults::kDefaultTheme);
+    }
+
+    // ========================================================================
+    // Logging Configuration
+    // ========================================================================
+
+    std::string getLogLevel() const {
+        return getValue("logging.level", defaults::kLogLevel);
+    }
+
+    std::string getLogFilePath() const {
+        return getValue("logging.file", defaults::kLogFile);
+    }
+
+    std::size_t getLogMaxFileSize() const {
+        auto mb = getInt("logging.max_file_size_mb",
+                         static_cast<int>(defaults::kLogMaxFileSize / (1024 * 1024)));
+        return static_cast<std::size_t>(mb) * 1024 * 1024;
+    }
+
+    int getLogMaxFiles() const {
+        return getInt("logging.max_files", defaults::kLogMaxFiles);
+    }
+
+    bool getLogConsoleEnabled() const {
+        return getValue("logging.console", "true") == "true";
     }
     
     // ========================================================================
@@ -170,6 +197,16 @@ private:
         auto it = config_.find(key);
         return (it != config_.end()) ? it->second : defaultValue;
     }
+
+    int getInt(const std::string& key, int defaultValue) const {
+        auto it = config_.find(key);
+        if (it == config_.end()) return defaultValue;
+        try {
+            return std::stoi(it->second);
+        } catch (...) {
+            return defaultValue;
+        }
+    }
     
     bool loadConfig() {
         std::ifstream file(configPath_);
@@ -183,7 +220,7 @@ private:
         parseJSON(file);
         file.close();
         
-        std::cout << "Configuration loaded: " << config_.size() << " entries\n";
+        // Config loaded successfully
         return true;
     }
     

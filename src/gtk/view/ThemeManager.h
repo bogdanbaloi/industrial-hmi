@@ -2,6 +2,7 @@
 
 #include <gtkmm.h>
 #include <string>
+#include "src/config/config_defaults.h"
 
 namespace app::view {
 
@@ -63,9 +64,27 @@ public:
         }
     }
     
-    /// Check if dark mode
     [[nodiscard]] bool isDarkMode() const {
         return currentTheme_ == Theme::DARK;
+    }
+
+    /// Apply current theme CSS class to a dialog window
+    void applyToDialog(Gtk::Window* dialog) {
+        if (!dialog) return;
+        if (currentTheme_ == Theme::LIGHT) {
+            dialog->add_css_class("light-mode");
+        } else {
+            dialog->add_css_class("dark-mode");
+        }
+
+        // Custom titlebar that respects our theme
+        auto* titlebar = Gtk::make_managed<Gtk::HeaderBar>();
+        if (currentTheme_ == Theme::LIGHT) {
+            titlebar->add_css_class("dialog-titlebar-light");
+        } else {
+            titlebar->add_css_class("dialog-titlebar-dark");
+        }
+        dialog->set_titlebar(*titlebar);
     }
 
 private:
@@ -81,13 +100,13 @@ private:
         
         try {
             // Load from adwaita-theme.css
-            cssProvider_->load_from_path("ui/adwaita-theme.css");
+            cssProvider_->load_from_path(app::config::defaults::kThemeCSS);
             
             // Apply to display
             Gtk::StyleContext::add_provider_for_display(
                 Gdk::Display::get_default(),
                 cssProvider_,
-                GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+                GTK_STYLE_PROVIDER_PRIORITY_USER
             );
         } catch (const Glib::Error& e) {
             g_warning("Failed to load theme CSS: %s", e.what());
@@ -100,16 +119,17 @@ private:
         if (!mainWindow_) {
             return;
         }
-        
-        // Remove existing theme class
-        mainWindow_->remove_css_class("light-mode");
-        mainWindow_->remove_css_class("dark-mode");
-        
-        // Add new theme class
+
         if (theme == Theme::LIGHT) {
-            mainWindow_->add_css_class("light-mode");
+            mainWindow_->remove_css_class("dark-mode");
+            if (!mainWindow_->has_css_class("light-mode")) {
+                mainWindow_->add_css_class("light-mode");
+            }
         } else {
-            mainWindow_->add_css_class("dark-mode");
+            mainWindow_->remove_css_class("light-mode");
+            if (!mainWindow_->has_css_class("dark-mode")) {
+                mainWindow_->add_css_class("dark-mode");
+            }
         }
     }
     

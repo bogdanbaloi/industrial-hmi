@@ -1,4 +1,5 @@
 #include "DialogManager.h"
+#include "ThemeManager.h"
 
 namespace app::view {
 
@@ -85,10 +86,14 @@ std::pair<bool, std::string> DialogManager::showInput(const std::string& title,
                                                       const std::string& message,
                                                       const std::string& defaultValue,
                                                       Gtk::Window* parent) {
-    auto* dialog = new Gtk::Dialog(title, *getParent(parent));
+    auto* parentWindow = getParent(parent);
+    auto* dialog = parentWindow
+        ? new Gtk::Dialog(title, *parentWindow)
+        : new Gtk::Dialog(title);
     dialog->set_default_size(400, 150);
     dialog->set_modal(true);
-    
+    ThemeManager::instance().applyToDialog(dialog);
+
     // Content
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 12);
     box->set_margin(20);
@@ -131,10 +136,15 @@ std::pair<bool, std::vector<std::string>>
 DialogManager::showForm(const std::string& title,
                        const std::vector<std::pair<std::string, std::string>>& fields,
                        Gtk::Window* parent) {
-    auto* dialog = new Gtk::Dialog(title, *getParent(parent));
+    auto* parentWindow = getParent(parent);
+    auto* dialog = parentWindow
+        ? new Gtk::Dialog(title, *parentWindow)
+        : new Gtk::Dialog(title);
     dialog->set_default_size(400, 100 + fields.size() * 50);
     dialog->set_modal(true);
-    
+    ThemeManager::instance().applyToDialog(dialog);
+
+
     // Grid for form fields
     auto* grid = Gtk::make_managed<Gtk::Grid>();
     grid->set_row_spacing(12);
@@ -208,15 +218,20 @@ Gtk::MessageDialog* DialogManager::createMessageDialog(Type type,
             gtkType = Gtk::MessageType::INFO;
     }
     
-    auto* dialog = new Gtk::MessageDialog(*getParent(parent),
-                                          title,
-                                          false,  // use_markup
-                                          gtkType,
-                                          Gtk::ButtonsType::OK);
+    auto buttons = (type == Type::QUESTION)
+        ? Gtk::ButtonsType::NONE
+        : Gtk::ButtonsType::OK;
+
+    auto* parentWindow = getParent(parent);
+    auto* dialog = parentWindow
+        ? new Gtk::MessageDialog(*parentWindow, title, false, gtkType, buttons)
+        : new Gtk::MessageDialog(title, false, gtkType, buttons);
     
     dialog->set_secondary_text(message);
     dialog->set_modal(true);
-    
+    ThemeManager::instance().applyToDialog(dialog);
+
+
     return dialog;
 }
 

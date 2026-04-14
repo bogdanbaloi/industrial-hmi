@@ -232,5 +232,13 @@
         "status": "passing"
       }
     ]
+  },
+
+  "logging": {
+    "level": "INFO",
+    "file": "logs/app.log",
+    "max_file_size_mb": 5,
+    "max_files": 3,
+    "console": true
   }
 }

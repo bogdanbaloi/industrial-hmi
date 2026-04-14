@@ -34,38 +34,23 @@ void DashboardPage::initialize(std::shared_ptr<DashboardPresenter> presenter) {
 ///       Must use Glib::signal_idle() to update GTK widgets safely.
 
 void DashboardPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateWorkUnitWidgets(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateWorkUnitWidgets(vm); });
 }
 
 void DashboardPage::onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateEquipmentCard(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateEquipmentCard(vm); });
 }
 
 void DashboardPage::onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateQualityCard(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateQualityCard(vm); });
 }
 
 void DashboardPage::onControlPanelChanged(const presenter::ControlPanelViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateControlPanel(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateControlPanel(vm); });
 }
 
 void DashboardPage::onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateStatusZone(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateStatusZone(vm); });
 }
 
 void DashboardPage::onError(const std::string& errorMessage) {
@@ -85,14 +70,12 @@ void DashboardPage::onError(const std::string& errorMessage) {
 // ============================================================================
 
 void DashboardPage::buildUI() {
-    // Modern Industrial Clean design for 1920x1080
-    set_spacing(40);  // Airy vertical spacing between major sections
-    set_margin_start(60);
-    set_margin_end(60);
-    set_margin_top(40);
-    set_margin_bottom(40);
-    
-    // Section order: Status → Work Unit → Equipment → Quality → Controls
+    set_spacing(12);
+    set_margin_start(40);
+    set_margin_end(40);
+    set_margin_top(8);
+    set_margin_bottom(8);
+
     buildStatusZone();
     buildWorkUnitSection();
     buildEquipmentSection();
@@ -109,8 +92,8 @@ void DashboardPage::buildWorkUnitSection() {
     
     // Main card frame
     auto* frame = Gtk::make_managed<Gtk::Frame>();
-    frame->set_margin_top(15);
-    frame->set_margin_bottom(30);
+    frame->set_margin_top(4);
+    frame->set_margin_bottom(4);
     frame->add_css_class("work-unit-card");
     
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 15);
@@ -156,7 +139,7 @@ void DashboardPage::buildWorkUnitSection() {
     
     // Progress section
     auto* progressBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 8);
-    progressBox->set_margin_top(15);
+    progressBox->set_margin_top(4);
     
     workUnitWidgets_.progressBar = Gtk::make_managed<Gtk::ProgressBar>();
     workUnitWidgets_.progressBar->set_show_text(true);
@@ -172,6 +155,7 @@ void DashboardPage::buildWorkUnitSection() {
     box->append(*progressBox);
     
     frame->set_child(*box);
+    frame->set_vexpand(false);
     append(*frame);
 }
 
@@ -184,10 +168,10 @@ void DashboardPage::buildEquipmentSection() {
     
     // Cards container
     auto* grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_margin_top(15);
-    grid->set_margin_bottom(30);
-    grid->set_row_spacing(20);
-    grid->set_column_spacing(20);
+    grid->set_margin_top(4);
+    grid->set_margin_bottom(4);
+    grid->set_column_spacing(16);
+    grid->set_column_homogeneous(true);
     
     // Create 3 equipment cards (A-LINE, B-LINE, C-LINE)
     for (uint32_t i = 0; i < 3; ++i) {
@@ -196,7 +180,7 @@ void DashboardPage::buildEquipmentSection() {
         
         // Card container
         card.cardBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 12);
-        card.cardBox->set_size_request(280, 200);
+        card.cardBox->set_hexpand(true);
         card.cardBox->add_css_class("equipment-card");
         
         // Header: A-LINE, B-LINE, C-LINE with status dot
@@ -234,8 +218,8 @@ void DashboardPage::buildEquipmentSection() {
         }, false);
         card.cardBox->append(*card.enabledSwitch);
         
-        // Add to grid (2 columns)
-        grid->attach(*card.cardBox, i % 2, i / 2);
+        // Add to grid (3 columns - one per station)
+        grid->attach(*card.cardBox, i, 0);
         
         equipmentCards_.push_back(card);
     }
@@ -251,9 +235,9 @@ void DashboardPage::buildQualitySection() {
     append(*header);
     
     // Cards container - 3 quality checkpoints in a row
-    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 20);
-    box->set_margin_top(15);
-    box->set_margin_bottom(30);
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 16);
+    box->set_margin_top(4);
+    box->set_margin_bottom(4);
     box->set_homogeneous(true);
     
     // Create 3 quality checkpoint cards
@@ -263,7 +247,7 @@ void DashboardPage::buildQualitySection() {
         
         // Card container
         card.cardBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 10);
-        card.cardBox->set_size_request(350, 180);
+        card.cardBox->set_size_request(-1, -1);
         card.cardBox->add_css_class("quality-card");
         
         // Checkpoint name with status dot
@@ -280,7 +264,7 @@ void DashboardPage::buildQualitySection() {
         
         // Quality gauge visual indicator
         card.gaugeImage = Gtk::make_managed<Gtk::Picture>();
-        card.gaugeImage->set_size_request(60, 60);
+        card.gaugeImage->set_size_request(100, 100);
         card.gaugeImage->set_margin_top(8);
         card.gaugeImage->set_margin_bottom(8);
         card.cardBox->append(*card.gaugeImage);
@@ -311,7 +295,7 @@ void DashboardPage::buildQualitySection() {
 void DashboardPage::buildControlPanelSection() {
     auto* frame = Gtk::make_managed<Gtk::Frame>("Control Panel");
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 15);
-    box->set_margin(15);
+    box->set_margin(8);
     box->set_halign(Gtk::Align::CENTER);
     
     // Active indicator
@@ -323,7 +307,7 @@ void DashboardPage::buildControlPanelSection() {
     controlPanelWidgets_.startButton = Gtk::make_managed<Gtk::Button>("START");
     controlPanelWidgets_.startButton->add_css_class("control-button");
     controlPanelWidgets_.startButton->add_css_class("start-button");
-    controlPanelWidgets_.startButton->set_size_request(120, 60);
+    controlPanelWidgets_.startButton->set_size_request(100, 40);
     controlPanelWidgets_.startButton->signal_clicked().connect(
         sigc::mem_fun(*this, &DashboardPage::onStartButtonClicked)
     );
@@ -333,7 +317,7 @@ void DashboardPage::buildControlPanelSection() {
     controlPanelWidgets_.stopButton = Gtk::make_managed<Gtk::Button>("STOP");
     controlPanelWidgets_.stopButton->add_css_class("control-button");
     controlPanelWidgets_.stopButton->add_css_class("stop-button");
-    controlPanelWidgets_.stopButton->set_size_request(120, 60);
+    controlPanelWidgets_.stopButton->set_size_request(100, 40);
     controlPanelWidgets_.stopButton->signal_clicked().connect(
         sigc::mem_fun(*this, &DashboardPage::onStopButtonClicked)
     );
@@ -342,7 +326,8 @@ void DashboardPage::buildControlPanelSection() {
     // Reset button
     controlPanelWidgets_.resetButton = Gtk::make_managed<Gtk::Button>("RESET");
     controlPanelWidgets_.resetButton->add_css_class("control-button");
-    controlPanelWidgets_.resetButton->set_size_request(120, 60);
+    controlPanelWidgets_.resetButton->add_css_class("reset-button");
+    controlPanelWidgets_.resetButton->set_size_request(100, 40);
     controlPanelWidgets_.resetButton->signal_clicked().connect(
         sigc::mem_fun(*this, &DashboardPage::onResetButtonClicked)
     );
@@ -351,7 +336,8 @@ void DashboardPage::buildControlPanelSection() {
     // Calibration button
     controlPanelWidgets_.calibrationButton = Gtk::make_managed<Gtk::Button>("CALIBRATION");
     controlPanelWidgets_.calibrationButton->add_css_class("control-button");
-    controlPanelWidgets_.calibrationButton->set_size_request(120, 60);
+    controlPanelWidgets_.calibrationButton->add_css_class("calibration-button");
+    controlPanelWidgets_.calibrationButton->set_size_request(100, 40);
     controlPanelWidgets_.calibrationButton->signal_clicked().connect(
         sigc::mem_fun(*this, &DashboardPage::onCalibrationButtonClicked)
     );
@@ -538,22 +524,23 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     card.statusDot->remove_css_class("quality-critical");
     card.statusDot->add_css_class(dotColor);
     
-    // Update gauge image based on status
-    std::string gaugePath;
-    switch (vm.status) {
-        case presenter::QualityCheckpointStatus::Passing:
-            gaugePath = "assets/img/quality-gauge-pass.svg";
-            break;
-        case presenter::QualityCheckpointStatus::Warning:
-            gaugePath = "assets/img/quality-gauge-warning.svg";
-            break;
-        case presenter::QualityCheckpointStatus::Critical:
-            gaugePath = "assets/img/quality-gauge-critical.svg";
-            break;
+    // Update gauge image only when status changes
+    if (card.lastStatus != vm.status) {
+        card.lastStatus = vm.status;
+        std::string gaugePath;
+        switch (vm.status) {
+            case presenter::QualityCheckpointStatus::Passing:
+                gaugePath = "assets/img/quality-gauge-pass.svg";
+                break;
+            case presenter::QualityCheckpointStatus::Warning:
+                gaugePath = "assets/img/quality-gauge-warning.svg";
+                break;
+            case presenter::QualityCheckpointStatus::Critical:
+                gaugePath = "assets/img/quality-gauge-critical.svg";
+                break;
+        }
+        card.gaugeImage->set_filename(gaugePath);
     }
-    
-    // Load SVG using Gtk::Picture (GTK4 native SVG support)
-    card.gaugeImage->set_filename(gaugePath);
     
     // Update pass rate - large and prominent
     char passRateText[32];
@@ -585,16 +572,16 @@ void DashboardPage::updateControlPanel(const presenter::ControlPanelViewModel& v
     std::string indicatorText;
     switch (vm.activeButton) {
         case presenter::ActiveControl::Start:
-            indicatorText = "🟢 RUNNING";
+            indicatorText = "RUNNING";
             break;
         case presenter::ActiveControl::Stop:
-            indicatorText = "🔴 STOPPED";
+            indicatorText = "STOPPED";
             break;
         case presenter::ActiveControl::Calibration:
-            indicatorText = "🟡 CALIBRATION";
+            indicatorText = "CALIBRATION";
             break;
         default:
-            indicatorText = "⚪ IDLE";
+            indicatorText = "IDLE";
             break;
     }
     controlPanelWidgets_.activeIndicator->set_text(indicatorText);
@@ -637,268 +624,12 @@ void DashboardPage::updateStatusZone(const presenter::StatusZoneViewModel& vm) {
 
 void DashboardPage::applyStyles() {
     cssProvider_ = Gtk::CssProvider::create();
-    
-    // Modern Industrial Clean design - optimized for 1920x1080
-    cssProvider_->load_from_data(R"(
-        /* ===== SECTION HEADERS ===== */
-        .section-header {
-            font-size: 13px;
-            font-weight: 700;
-            color: #90A4AE;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-        }
-        
-        /* ===== WORK UNIT CARD ===== */
-        .work-unit-card {
-            border: 2px solid #E0E0E0;
-            border-radius: 12px;
-            background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        
-        .field-label {
-            font-size: 13px;
-            font-weight: 500;
-            color: #78909C;
-        }
-        
-        .field-value {
-            font-size: 15px;
-            font-weight: 600;
-            color: #37474F;
-        }
-        
-        .field-value-large {
-            font-size: 17px;
-            font-weight: 700;
-            color: #263238;
-        }
-        
-        .separator-dot {
-            font-size: 18px;
-            color: #CFD8DC;
-            font-weight: 400;
-        }
-        
-        .description-text {
-            font-size: 14px;
-            color: #607D8B;
-            line-height: 1.5;
-        }
-        
-        .progress-bar-large progressbar {
-            min-height: 28px;
-            border-radius: 6px;
-            background: #ECEFF1;
-        }
-        
-        .progress-bar-large progressbar progress {
-            background: linear-gradient(90deg, #42A5F5, #1E88E5);
-            border-radius: 6px;
-        }
-        
-        .status-message {
-            font-size: 14px;
-            color: #546E7A;
-            font-weight: 500;
-        }
-        
-        /* ===== EQUIPMENT CARDS ===== */
-        .equipment-card {
-            border: 2px solid #ECEFF1;
-            border-radius: 12px;
-            padding: 20px;
-            background: white;
-            transition: all 0.2s;
-        }
-        
-        .equipment-card:hover {
-            border-color: #90CAF9;
-            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
-        }
-        
-        .card-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #455A64;
-        }
-        
-        .status-dot {
-            font-size: 16px;
-            margin-left: auto;
-        }
-        
-        .equipment-status {
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            margin-top: 12px;
-        }
-        
-        .equipment-info {
-            font-size: 13px;
-            color: #78909C;
-            margin-top: 8px;
-        }
-        
-        /* ===== QUALITY CARDS ===== */
-        .quality-card {
-            border: 2px solid #E8F5E9;
-            border-radius: 12px;
-            padding: 20px;
-            background: #FAFAFA;
-            transition: all 0.2s;
-        }
-        
-        .quality-card:hover {
-            border-color: #81C784;
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
-        }
-        
-        .pass-rate-large {
-            font-size: 36px;
-            font-weight: 700;
-            color: #2E7D32;
-            margin: 12px 0;
-        }
-        
-        .quality-stats {
-            font-size: 13px;
-            color: #546E7A;
-            font-weight: 500;
-        }
-        
-        .defect-info {
-            font-size: 12px;
-            color: #78909C;
-            margin-top: 8px;
-        }
-        
-        /* Quality status dots colors */
-        .quality-passing {
-            color: #4CAF50;
-        }
-        
-        .quality-warning {
-            color: #FF9800;
-        }
-        
-        .quality-critical {
-            color: #F44336;
-        }
-        
-        /* Equipment status dots colors */
-        .equipment-online {
-            color: #4CAF50;  /* Green */
-        }
-        
-        .equipment-processing {
-            color: #2196F3;  /* Blue */
-        }
-        
-        .equipment-error {
-            color: #F44336;  /* Red */
-        }
-        
-        .equipment-offline {
-            color: #9E9E9E;  /* Gray */
-        }
-        
-        /* ===== CONTROL BUTTONS ===== */
-        .control-button {
-            font-weight: 600;
-            font-size: 15px;
-            min-width: 140px;
-            min-height: 56px;
-            border-radius: 8px;
-            margin: 0 6px;
-            transition: all 0.2s;
-        }
-        
-        .start-button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-        }
-        
-        .start-button:hover {
-            background: #66BB6A;
-            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
-        }
-        
-        .stop-button {
-            background: #F44336;
-            color: white;
-            border: none;
-        }
-        
-        .stop-button:hover {
-            background: #EF5350;
-            box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
-        }
-        
-        .reset-button {
-            background: #FF9800;
-            color: white;
-            border: none;
-        }
-        
-        .reset-button:hover {
-            background: #FFA726;
-        }
-        
-        .calibration-button {
-            background: #2196F3;
-            color: white;
-            border: none;
-        }
-        
-        .calibration-button:hover {
-            background: #42A5F5;
-        }
-        
-        /* ===== STATUS BANNER ===== */
-        .status-banner {
-            border-radius: 8px;
-            padding: 14px 20px;
-            margin-bottom: 20px;
-        }
-        
-        .severity-info {
-            background: #E3F2FD;
-            border-left: 4px solid #2196F3;
-            color: #1565C0;
-        }
-        
-        .severity-warning {
-            background: #FFF3E0;
-            border-left: 4px solid #FF9800;
-            color: #E65100;
-        }
-        
-        .severity-error {
-            background: #FFEBEE;
-            border-left: 4px solid #F44336;
-            color: #C62828;
-        }
-        
-        /* ===== ACTIVE INDICATOR ===== */
-        .active-indicator {
-            font-size: 16px;
-            font-weight: 600;
-            padding: 10px 20px;
-            background: #ECEFF1;
-            border-radius: 6px;
-            color: #37474F;
-        }
-    )");
-    
-    // Apply to display
+    cssProvider_->load_from_path("ui/dashboard.css");
+
     Gtk::StyleContext::add_provider_for_display(
         Gdk::Display::get_default(),
         cssProvider_,
-        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+        GTK_STYLE_PROVIDER_PRIORITY_USER
     );
 }
 
