@@ -1,333 +1,148 @@
-# Industrial HMI - Portfolio Project
+# Industrial HMI
 
-**A Modern C++20 Industrial Human-Machine Interface demonstrating professional software architecture patterns and pharmaceutical manufacturing domain knowledge.**
+Cross-platform industrial Human-Machine Interface built with C++20 and GTK4.
+Designed for equipment monitoring, quality control, and product management
+in manufacturing environments.
 
-[![C++](https://img.shields.io/badge/C++-20-blue.svg?style=flat&logo=c%2B%2B)](https://en.cppreference.com/w/cpp/20)
-[![GTK](https://img.shields.io/badge/GTK-4-green.svg?style=flat)](https://www.gtk.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+## Screenshots
 
----
+### Dashboard - Equipment Monitoring
+![Dashboard](docs/screenshots/dashboard-dark.png)
 
-## 🎯 **Purpose**
+### Products Database - CRUD Operations
+![Products](docs/screenshots/products-dark.png)
 
-This project showcases:
-- **Software Architecture**: MVP pattern, SOLID principles, Dependency Injection
-- **Modern C++**: C++20 features, Core Guidelines, design patterns
-- **Domain Knowledge**: Pharmaceutical tablet manufacturing processes
-- **Professional Practices**: Complete CRUD, error handling, testability
+## Features
 
-**Target audience**: Senior/Staff/Principal Software Engineer roles in industrial automation, embedded systems, or C++ development.
+- **Dashboard** with real-time equipment status, quality checkpoints, and control panel
+- **Products Database** with full CRUD operations (Create, Read, Update, Delete)
+- **Dark/Light theme** switching with Adwaita design tokens
+- **Live data simulation** with configurable auto-refresh from background I/O thread
+- **Log panel** with real-time log viewing (verbose logging toggle)
+- **Fullscreen/windowed** mode with F11/ESC keyboard shortcuts
+- **Cross-platform** builds on Linux (GCC) and Windows (Clang/MSYS2)
+- **CI/CD pipeline** with GitHub Actions (Ubuntu + Windows MSYS2)
 
----
+## Architecture
 
-## 🏭 **Domain: Pharmaceutical Manufacturing**
-
-### Production Lines (3 Equipment Stations)
-
-| Line | Equipment | Capacity | Purpose |
-|------|-----------|----------|---------|
-| **A-LINE** | Tablet Press | 85,000 tablets/hr | Compression molding |
-| **B-LINE** | Film Coater | 45μm @ 12 RPM | Protective coating |
-| **C-LINE** | Blister Pack | 120 packs/min | Packaging |
-
-### Quality Checkpoints
-
-- **Weight Check**: ±5% tolerance
-- **Hardness Test**: 80-120 N force
-- **Final Inspection**: Visual + dimensional
-
-### Work Unit Tracking
-
-- Format: `Batch WU-2024-001234 | TAB-200`
-- Simplified internal codes (NDA-compliant)
-- No chemical formulas or proprietary data
-
----
-
-## 🏗️ **Architecture**
-
-### MVP (Model-View-Presenter) Pattern
+Model-View-Presenter (MVP) with dependency injection and observer pattern.
 
 ```
-┌─────────────────┐
-│  View (GTK4)    │  ← Pure UI, no business logic
-│  - DashboardPage│
-│  - ProductsPage │
-└────────┬────────┘
-         │ ViewObserver
-         │ interface
-┌────────▼────────┐
-│  Presenter      │  ← Business logic coordinator
-│  - Dashboard    │
-│  - Products     │
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│  Model          │  ← Data & domain logic
-│  - Database     │
-│  - Simulated    │
-└─────────────────┘
+src/
+  core/           Application lifecycle, logging, error handling
+    Application.h/cpp     Init/teardown, config-driven logging
+    LoggerBase.h          Abstract logger with std::vformat
+    LoggerImpl.h          Console, File (rotating), Callback loggers
+    config_defaults.h     Constexpr configuration defaults
+    Result.h              Monadic Result<T,E> error handling
+
+  config/          JSON configuration with fallback defaults
+    ConfigManager.h       Singleton, value_or pattern
+    config_defaults.h     Compile-time constants
+
+  model/           Data layer and async I/O
+    DatabaseManager.h     SQLite CRUD with prepared statements
+    SimulatedModel.h      Equipment/quality simulation
+    ModelContext.h         Boost.Asio background thread
+
+  presenter/       MVP orchestration
+    DashboardPresenter    Equipment + quality ViewModel builders
+    ProductsPresenter     Product CRUD coordination
+    ViewObserver.h        Observer interface for View updates
+
+  gtk/view/        GTK4 UI layer
+    MainWindow            Window management, theme, signals
+    DashboardPage         Equipment cards, quality gauges, controls
+    ProductsPage          Product table, dialogs, search
+    ThemeManager           Dark/light theme with CSS classes
+    DialogManager          Themed dialog factory with DI
 ```
 
-### Key Design Patterns
+## Tech Stack
 
-| Pattern | Usage | Benefits |
-|---------|-------|----------|
-| **Dependency Injection** | DialogManager, Services | Testable, explicit dependencies |
-| **Observer** | View ← Presenter updates | Decoupled communication |
-| **Factory** | Dialog creation | Consistent UI components |
-| **Template Method** | BasePresenter&lt;View&gt; | Code reuse with type safety |
-| **RAII** | Resource management | No memory leaks |
+| Component | Technology |
+|-----------|-----------|
+| Language | C++20 (concepts, std::format, std::jthread, std::source_location) |
+| UI Framework | GTK4 / gtkmm-4.0 |
+| Database | SQLite3 (in-memory, prepared statements) |
+| Async I/O | Boost.Asio io_context with work guard |
+| Build | CMake 3.20+ with presets, Ninja |
+| CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2) |
+| Static Analysis | cppcheck, clang-tidy |
 
----
+## Building
 
-## ✨ **Features**
+### Linux (Ubuntu 22.04+)
 
-### ✅ **Complete CRUD Operations**
+```bash
+sudo apt install cmake ninja-build g++ \
+    libgtkmm-4.0-dev libsqlite3-dev libboost-dev
 
-- **CREATE**: Add new products with validation
-- **READ**: View product list, search, details
-- **UPDATE**: Edit existing products (immutable codes)
-- **DELETE**: Soft delete (audit trail preserved)
-
-### ✅ **Soft Delete Pattern**
-
-```sql
--- Products never truly deleted
-UPDATE products 
-SET deleted_at = CURRENT_TIMESTAMP 
-WHERE id = ?
-
--- Queries exclude deleted
-SELECT * FROM products 
-WHERE deleted_at IS NULL
+cmake --preset release
+cmake --build build/release -- -j$(nproc)
+./build/release/industrial-hmi
 ```
 
-**Benefits**: Audit trail, data recovery, compliance
+### Windows (MSYS2 Clang64)
 
-### ✅ **Dependency Injection**
+```bash
+pacman -S mingw-w64-clang-x86_64-toolchain \
+    mingw-w64-clang-x86_64-cmake \
+    mingw-w64-clang-x86_64-ninja \
+    mingw-w64-clang-x86_64-gtkmm-4.0 \
+    mingw-w64-clang-x86_64-sqlite3 \
+    mingw-w64-clang-x86_64-boost
 
-**Before (Singleton - Anti-Pattern)**:
-```cpp
-void onError() {
-    DialogManager::instance().showError(...);  // ❌ Hidden dependency
+./build-windows.sh
+./build/debug/industrial-hmi.exe
+```
+
+See [BUILD.md](BUILD.md) for detailed instructions including packaging.
+
+## Configuration
+
+Application settings are loaded from `config/app-config.json` with fallback
+to compile-time defaults in `config_defaults.h`. If the config file is missing,
+the application starts with default values.
+
+```json
+{
+  "logging": {
+    "level": "INFO",
+    "file": "logs/app.log",
+    "max_file_size_mb": 5,
+    "max_files": 3,
+    "console": true
+  }
 }
 ```
 
-**After (DI - Production Pattern)**:
-```cpp
-class ProductsPage {
-    DialogManager& dialogManager_;  // ✅ Explicit dependency
-public:
-    ProductsPage(DialogManager& dm) : dialogManager_(dm) {}
-};
-```
+## Design Decisions
 
-**Result**: Testable, clear dependencies, no global state
+**Custom logging over spdlog** - Demonstrates C++20 std::vformat, SOLID
+principles (LoggerBase abstraction, CompositeLogger, CallbackLogger),
+and production patterns (rotation, flush, shutdown lifecycle).
 
-### ✅ **Modern C++20**
+**Custom JSON parser over nlohmann/json** - Shows understanding of parsing
+fundamentals. Production deployment would use a proven library.
 
-- **Concepts**: `ViewInterfaceConcept` for compile-time validation
-- **Ranges**: Cleaner container operations
-- **Attributes**: `[[nodiscard]]`, `[[likely]]`
-- **constexpr**: Compile-time evaluation
-- **Core Guidelines**: CP.20, Con.1, Con.3, ES.25
+**MVP over MVC** - Better testability. Presenters have no GTK dependency
+and can be unit tested with mock observers.
 
-### ✅ **Thread-Safe Design**
+**Singleton for global services** - ConfigManager, DatabaseManager,
+SimulatedModel use Meyer's singleton. Application class manages
+initialization order and shutdown sequence.
 
-- DialogManager auto-marshals to GTK thread
-- Scoped locks (`std::scoped_lock` > `std::lock_guard`)
-- Const correctness throughout
+**Config defaults in constexpr header** - Single source of truth for
+fallback values. No magic strings scattered across getters.
 
----
+## Known Limitations
 
-## 🛠️ **Technology Stack**
+- ViewObserver interface is broad (16 methods) - could be split per page
+- Presenters access model singletons directly - could use injected interfaces
+- SimulatedModel combines multiple responsibilities - could be split
+- CSS theme support has minor GTK4 compatibility gaps on some properties
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Language | C++ | 20 |
-| UI Framework | GTK | 4.x |
-| Build System | CMake + Ninja | 3.20+ |
-| Database | SQLite3 | 3.x |
-| Platform | Linux (Ubuntu 24) | - |
+## License
 
----
-
-## 📦 **Project Structure**
-
-```
-industrial-hmi/
-├── src/
-│   ├── main.cpp                    # Entry point (3 lines!)
-│   ├── gtk/view/
-│   │   ├── MainWindow.h/.cpp       # Main window, owns services
-│   │   ├── DialogManager.h/.cpp    # Centralized dialogs (DI)
-│   │   └── pages/
-│   │       ├── DashboardPage.h/.cpp    # Equipment monitoring
-│   │       └── ProductsPage.h/.cpp     # CRUD interface
-│   ├── presenter/
-│   │   ├── DashboardView.h         # ISP interface
-│   │   ├── ProductsView.h          # ISP interface  
-│   │   ├── BasePresenterTemplate.h # C++20 concepts
-│   │   ├── DashboardPresenter.h/.cpp
-│   │   └── ProductsPresenter.h/.cpp
-│   └── model/
-│       ├── SimulatedModel.h        # 3 equipment demo data
-│       └── DatabaseManager.h       # CRUD + soft delete
-├── ui/
-│   ├── main-window.ui              # GTK layout
-│   └── sidebar.css                 # Industrial dark theme
-├── tests/
-│   └── README_TESTING.md           # Unit test examples
-├── CMakeLists.txt
-└── README.md
-```
-
----
-
-## 🚀 **Building & Running**
-
-### Prerequisites
-
-```bash
-# Ubuntu/Debian
-sudo apt install build-essential cmake ninja-build \
-                 libgtkmm-4.0-dev libsqlite3-dev
-
-# Fedora/RHEL
-sudo dnf install gcc-c++ cmake ninja-build \
-                 gtkmm4.0-devel sqlite-devel
-```
-
-### Build
-
-```bash
-mkdir build && cd build
-cmake -G Ninja ..
-ninja
-
-# Run
-./industrial-hmi
-```
-
-### Controls
-
-| Key | Action |
-|-----|--------|
-| **F11** | Toggle fullscreen |
-| **ESC** | Exit fullscreen |
-
----
-
-## 📊 **Git History Highlights**
-
-```bash
-git log --oneline
-```
-
-Key commits demonstrating software engineering skills:
-
-```
-f5e8937 Implement Edit/Update - Complete CRUD
-b33e985 Integrate DialogManager into DashboardPage with DI
-2ac3bec Refactor DialogManager from Singleton to Dependency Injection  ← MAJOR
-cd812e7 Add centralized DialogManager for consistent UI
-14e971a Implement complete CRUD UI for Products page
-ea0a51f Add CRUD operations with deleted_at soft delete
-ea76cd4 Refactor to pharmaceutical manufacturing domain
-c9e57d1 Apply C++ Core Guidelines: scoped_lock + const correctness
-a0d1270 Upgrade to C++20 with Concepts and Modern Features
-d613dee Add SOLID ISP interfaces with Modern C++ best practices
-```
-
-**Notable**: Commit `2ac3bec` shows refactoring from anti-pattern (Singleton) to production pattern (DI) - demonstrates critical thinking and pattern knowledge.
-
----
-
-## 🎓 **Interview Talking Points**
-
-### Architecture
-
-> **"I implemented MVP architecture with complete separation of concerns. The View is pure GTK UI with no business logic. The Presenter coordinates between View and Model using the Observer pattern. This makes the codebase maintainable and testable."**
-
-### Design Patterns
-
-> **"I initially used a Singleton for DialogManager but recognized this as an anti-pattern. I refactored to Dependency Injection - MainWindow owns DialogManager and injects it into pages via constructor. This makes dependencies explicit and enables unit testing with mock objects."**
-
-### SOLID Principles
-
-> **"I applied Interface Segregation Principle - instead of one fat ViewObserver with 20+ methods, I created focused interfaces: DashboardView (4 methods), ProductsView (3 methods). This prevents classes from depending on methods they don't use."**
-
-### C++20 Modernization
-
-> **"I used C++20 concepts to enforce compile-time constraints. BasePresenter is a template that accepts only types satisfying ViewInterfaceConcept. This catches errors at compile time rather than runtime."**
-
-### Domain Knowledge
-
-> **"I modeled pharmaceutical tablet manufacturing: Tablet Press (85K tablets/hr), Film Coater (45μm @ 12 RPM), Blister Pack (120/min). Real factory floor naming like 'A-LINE' instead of academic 'Station 1'. This shows I understand both software AND the domain."**
-
-### Database Patterns
-
-> **"I implemented soft delete with `deleted_at` timestamp instead of hard delete. Benefits: audit trail, data recovery, compliance requirements. Queries use `WHERE deleted_at IS NULL` to exclude deleted records."**
-
-### Testability
-
-> **"Dependency Injection makes this codebase fully testable. I can inject MockDialogManager to verify UI behavior without showing actual dialogs. See `tests/README_TESTING.md` for examples."**
-
----
-
-## 📚 **Additional Resources**
-
-- **Testing Guide**: `tests/README_TESTING.md` - Unit test examples with DI
-- **Git History**: 40+ commits showing incremental development
-- **Code Comments**: Doxygen-style documentation throughout
-
----
-
-## 🎯 **Skills Demonstrated**
-
-### Software Engineering
-✅ MVP architecture  
-✅ SOLID principles  
-✅ Design patterns (DI, Observer, Factory, Template Method)  
-✅ Refactoring anti-patterns  
-✅ Code review mindset  
-
-### Modern C++
-✅ C++20 concepts  
-✅ Template metaprogramming  
-✅ Core Guidelines compliance  
-✅ Thread safety  
-✅ RAII & smart pointers  
-
-### Domain Knowledge
-✅ Pharmaceutical manufacturing  
-✅ Equipment monitoring  
-✅ Quality control systems  
-✅ Industrial HMI requirements  
-
-### Professional Practices
-✅ Complete CRUD operations  
-✅ Error handling  
-✅ Data integrity (soft delete, immutable codes)  
-✅ Testability  
-✅ Documentation  
-
----
-
-## 📝 **License**
-
-MIT License - Free to use for portfolio review and educational purposes.
-
----
-
-## 👤 **Contact**
-
-**Portfolio Project** - Demonstrating Senior/Staff/Principal Software Engineer capabilities
-
-- **Focus**: Industrial C++, Embedded Systems, Automation
-- **Skills**: Architecture, Patterns, Domain Knowledge, Modern C++
-
----
-
-**Built with attention to production-quality code and professional software engineering practices.** ✨
+MIT License - see [LICENSE](LICENSE)
