@@ -75,9 +75,6 @@ jobs:
       with:
         vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
 
-    - name: Install Dependencies
-      run: vcpkg install gtkmm sqlite3 boost-signals2 boost-asio
-
     - name: Configure
       run: |
         cmake -B build `
