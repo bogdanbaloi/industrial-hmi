@@ -1,93 +1,116 @@
-# Building Industrial HMI - Cross-Platform Guide
+# Building and Packaging
 
-**This application builds on both Linux and Windows!** 🐧🪟
+## Prerequisites
 
----
-
-## 🐧 **Linux Build (Ubuntu/Debian)**
-
-### Prerequisites
+### Linux (Ubuntu 22.04+ / Debian 12+)
 
 ```bash
-# Ubuntu 24.04 / Debian 12+
-sudo apt-get update
-sudo apt-get install -y \
-    build-essential \
-    cmake \
-    ninja-build \
-    libgtkmm-4.0-dev \
-    libsqlite3-dev \
-    libboost-dev
+sudo apt install cmake ninja-build g++ pkg-config \
+    libgtkmm-4.0-dev libsqlite3-dev libboost-dev
 ```
 
-### Build Steps
+### Windows (MSYS2 Clang64)
+
+1. Install [MSYS2](https://www.msys2.org/)
+2. Open **MSYS2 Clang64** terminal
+3. Install dependencies:
 
 ```bash
-# Clone repository
-git clone <repository-url>
-cd industrial-hmi-portfolio
-
-# Create build directory
-mkdir build && cd build
-
-# Configure with CMake
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
-
-# Build
-ninja
-
-# Run
-./industrial-hmi
+pacman -S mingw-w64-clang-x86_64-toolchain \
+    mingw-w64-clang-x86_64-cmake \
+    mingw-w64-clang-x86_64-ninja \
+    mingw-w64-clang-x86_64-gtkmm-4.0 \
+    mingw-w64-clang-x86_64-sqlite3 \
+    mingw-w64-clang-x86_64-boost
 ```
 
 ---
 
-## 🪟 **Windows Build (Windows 10/11)**
+## Build
 
-### Prerequisites
+### Linux
 
-1. **Install Visual Studio 2022**
-   - Download: https://visualstudio.microsoft.com/downloads/
-   - Workload: "Desktop development with C++"
+```bash
+# Debug (with AddressSanitizer + UBSanitizer)
+./build-linux.sh
 
-2. **Install vcpkg** (Package Manager)
-   ```powershell
-   git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
-   cd C:\vcpkg
-   .\bootstrap-vcpkg.bat
-   ```
+# Release (optimized, no sanitizers)
+./build-linux.sh --release
+```
 
-3. **Install Dependencies**
-   ```powershell
-   vcpkg install gtkmm:x64-windows
-   vcpkg install sqlite3:x64-windows
-   vcpkg install boost-signals2:x64-windows
-   ```
+Or manually:
 
-### Build Steps
+```bash
+cmake --preset debug
+cmake --build build/debug -- -j$(nproc)
+./build/debug/industrial-hmi
+```
 
-```powershell
-# Configure
-cmake -G "Visual Studio 17 2022" `
-    -A x64 `
-    -DCMAKE_TOOLCHAIN_FILE="C:\vcpkg\scripts\buildsystems\vcpkg.cmake" `
-    ..
+### Windows (from MSYS2 Clang64 terminal)
 
-# Build
-cmake --build . --config Release
+```bash
+./build-windows.sh
+./build/debug/industrial-hmi.exe
+```
 
-# Run
-.\Release\industrial-hmi.exe
+Or manually:
+
+```bash
+cmake --preset windows-msys2-debug
+cmake --build build/debug
+./build/debug/industrial-hmi.exe
 ```
 
 ---
 
-## 📦 **Pre-Built Binaries**
+## Package for Distribution
 
-**GitHub Releases:**
-- Linux: `industrial-hmi-ubuntu.tar.gz`
-- Windows: `industrial-hmi-windows.zip`
+### Windows
+
+Creates a standalone ZIP with the executable, all DLL dependencies,
+GTK runtime files, and application assets. Runs on any Windows machine
+without MSYS2 installed.
+
+```bash
+# From MSYS2 Clang64 terminal
+./package-windows.sh            # package release build
+./package-windows.sh -d         # package debug build
+```
+
+Output: `install/industrial-hmi_<type>_<git-hash>.zip`
+
+### Linux
+
+Creates a tarball with the executable, assets, a launch script,
+and a dependency list. Users need GTK4 and SQLite installed via
+their package manager.
+
+```bash
+./package-linux.sh              # package release build
+./package-linux.sh -d           # package debug build
+```
+
+Output: `install/industrial-hmi_<type>_<git-hash>.tar.gz`
 
 ---
 
-**Cross-platform development made easy!** 🚀
+## CMake Presets
+
+| Preset | Platform | Type | Sanitizers |
+|--------|----------|------|------------|
+| `debug` | Any | Debug | ASan + UBSan |
+| `release` | Any | Release | Off |
+| `windows-msys2-debug` | Windows | Debug | Off |
+| `windows-msys2-release` | Windows | Release | Off |
+
+---
+
+## Running with Sanitizer Suppressions (Linux)
+
+Debug builds on Linux enable AddressSanitizer, which reports known
+leaks from third-party libraries (GTK, Pango, Fontconfig). Suppress
+them with:
+
+```bash
+LSAN_OPTIONS=suppressions=asan_suppressions.txt ./build/debug/industrial-hmi
+```
