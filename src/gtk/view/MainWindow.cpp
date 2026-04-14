@@ -17,7 +17,6 @@
 #include "src/core/Application.h"
 #include "src/core/ExceptionHandler.h"
 #include <fstream>
-#include <random>
 
 
 MainWindow::MainWindow() {
@@ -58,7 +57,7 @@ MainWindow::MainWindow() {
         if (checkAutoRefresh_ && checkAutoRefresh_->get_active()) {
             onAutoRefreshToggled();
         }
-    }, 1000);
+    }, app::config::defaults::kAutoRefreshStartDelayMs);
 
     // Start in fullscreen (industrial kiosk mode)
     fullscreen();
@@ -194,35 +193,11 @@ void MainWindow::onAutoRefreshToggled() {
     if (checkAutoRefresh_->get_active()) {
         logger.info("Auto refresh enabled");
 
-        // Simulate live data updates every 2 seconds
-        // Simulate periodic data updates (like PLC/sensor feed)
         autoRefreshTimer_ = Glib::signal_timeout().connect([this]() {
-            // Only update when Dashboard tab is active
             if (mainNotebook_ && mainNotebook_->get_current_page() != 0) return true;
-
-            auto& model = app::model::SimulatedModel::instance();
-
-            static std::mt19937 rng(42);
-            std::uniform_real_distribution<float> rateDist(-0.3f, 0.3f);
-            std::uniform_int_distribution<int> unitDist(1, 3);
-
-            for (uint32_t i = 0; i < 3; ++i) {
-                auto& cp = model.getQualityCheckpoint(i);
-                cp.passRate = std::clamp(cp.passRate + rateDist(rng), 85.0f, 100.0f);
-                cp.unitsInspected += unitDist(rng);
-                model.notifyQualityChange(i);
-            }
-
-            auto& wu = model.getWorkUnit();
-            if (wu.completedOperations < wu.totalOperations) {
-                wu.completedOperations++;
-            } else {
-                wu.completedOperations = 0;
-            }
-            model.notifyWorkUnitChange();
-
+            app::model::SimulatedModel::instance().tickSimulation();
             return true;
-        }, 2000);
+        }, app::config::defaults::kAutoRefreshIntervalMs);
     } else {
         logger.info("Auto refresh disabled");
         autoRefreshTimer_.disconnect();
@@ -283,7 +258,7 @@ void MainWindow::onShowLogsToggled() {
                 lastLogSize_ = currentSize;
             }
             return true;
-        }, 500);
+        }, app::config::defaults::kLogPanelRefreshMs);
     } else {
         app.logger().info("Verbose logging disabled");
         logRefreshConnection_.disconnect();

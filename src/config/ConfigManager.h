@@ -211,7 +211,6 @@ private:
     bool loadConfig() {
         std::ifstream file(configPath_);
         if (!file.is_open()) {
-            std::cerr << "Failed to open config file: " << configPath_ << "\n";
             return false;
         }
         

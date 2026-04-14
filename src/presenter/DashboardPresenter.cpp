@@ -1,5 +1,6 @@
 #include "DashboardPresenter.h"
 #include "src/model/SimulatedModel.h"
+#include "src/config/config_defaults.h"
 
 namespace app {
 
@@ -178,12 +179,12 @@ presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpoint
     vm.unitsInspected = cp.unitsInspected;
     vm.defectsFound = cp.defectsFound;
     vm.passRate = cp.passRate;
-    vm.targetPassRate = 95.0f;
+    vm.targetPassRate = config::defaults::kQualityPassThreshold;
     vm.lastDefect = cp.lastDefect;
 
-    if (cp.passRate >= 95.0f)
+    if (cp.passRate >= config::defaults::kQualityPassThreshold)
         vm.status = presenter::QualityCheckpointStatus::Passing;
-    else if (cp.passRate >= 90.0f)
+    else if (cp.passRate >= config::defaults::kQualityWarningThreshold)
         vm.status = presenter::QualityCheckpointStatus::Warning;
     else
         vm.status = presenter::QualityCheckpointStatus::Critical;

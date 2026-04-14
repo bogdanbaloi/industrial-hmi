@@ -541,7 +541,7 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
 
 void ProductsPage::applyStyles() {
     cssProvider_ = Gtk::CssProvider::create();
-    cssProvider_->load_from_path("ui/products.css");
+    cssProvider_->load_from_path(app::config::defaults::kProductsCSS);
 
     Gtk::StyleContext::add_provider_for_display(
         Gdk::Display::get_default(),

@@ -258,6 +258,11 @@ public:
         }
     }
 
+    DatabaseManager(const DatabaseManager&) = delete;
+    DatabaseManager& operator=(const DatabaseManager&) = delete;
+    DatabaseManager(DatabaseManager&&) = delete;
+    DatabaseManager& operator=(DatabaseManager&&) = delete;
+
 private:
     DatabaseManager() = default;
     

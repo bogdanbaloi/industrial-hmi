@@ -4,6 +4,8 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <random>
+#include <algorithm>
 
 namespace app::model {
 
@@ -130,8 +132,35 @@ public:
     
     SystemState getState() const { return currentState_; }
 
-    QualityCheckpoint& getQualityCheckpoint(uint32_t id) { return qualityCheckpoints_[id]; }
-    WorkUnit& getWorkUnit() { return currentWorkUnit_; }
+    const QualityCheckpoint& getQualityCheckpoint(uint32_t id) const {
+        return qualityCheckpoints_.at(id);
+    }
+    const WorkUnit& getWorkUnit() const { return currentWorkUnit_; }
+
+    /// Advance simulation by one tick (called by auto refresh timer)
+    void tickSimulation() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            std::uniform_real_distribution<float> rateDist(-0.3f, 0.3f);
+            std::uniform_int_distribution<int> unitDist(1, 3);
+
+            for (auto& [id, cp] : qualityCheckpoints_) {
+                cp.passRate = std::clamp(cp.passRate + rateDist(rng_), 85.0f, 100.0f);
+                cp.unitsInspected += unitDist(rng_);
+            }
+
+            if (currentWorkUnit_.completedOperations < currentWorkUnit_.totalOperations) {
+                currentWorkUnit_.completedOperations++;
+            } else {
+                currentWorkUnit_.completedOperations = 0;
+            }
+        }
+
+        for (const auto& [id, cp] : qualityCheckpoints_) {
+            notifyQualityChange(id);
+        }
+        notifyWorkUnitChange();
+    }
 
     void notifyQualityChange(uint32_t id) {
         std::vector<QualityCheckpointCallback> cbs;
@@ -196,9 +225,14 @@ public:
         notifyStateChange();
     }
 
+    SimulatedModel(const SimulatedModel&) = delete;
+    SimulatedModel& operator=(const SimulatedModel&) = delete;
+    SimulatedModel(SimulatedModel&&) = delete;
+    SimulatedModel& operator=(SimulatedModel&&) = delete;
+
 private:
     SimulatedModel() = default;
-    
+
     void notifyEquipmentChange(uint32_t equipmentId) {
         std::vector<EquipmentCallback> cbs;
         EquipmentStatus es;
@@ -259,6 +293,7 @@ private:
     std::vector<StateCallback> stateCallbacks_;
     
     mutable std::mutex mutex_;
+    std::mt19937 rng_{42};
 };
 
 }  // namespace app::model
