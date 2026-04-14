@@ -1,10 +1,13 @@
-#include <gtkmm.h>
-#include "src/gtk/view/MainWindow.h"
+#include "src/core/Application.h"
 
-/// Application entry point
-/// 
-/// Single Responsibility: Create application and run main window
 int main(int argc, char* argv[]) {
-    auto app = Gtk::Application::create("com.industrial.hmi.demo");
-    return app->make_window_and_run<MainWindow>(argc, argv);
+    auto& app = app::core::Application::instance();
+
+    if (!app.initialize(argc, argv)) {
+        return 1;
+    }
+
+    int result = app.run(argc, argv);
+    app.shutdown();
+    return result;
 }

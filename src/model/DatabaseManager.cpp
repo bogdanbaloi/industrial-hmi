@@ -1,6 +1,9 @@
+// glibmm must be included before Windows headers to avoid
+// wingdi.h ERROR macro conflicting with glibmm enums
+#include <glibmm.h>
+
 #include "src/model/DatabaseManager.h"
 #include "src/model/ModelContext.h"
-#include <glibmm/main.h>
 
 namespace app::model {
 

@@ -128,8 +128,24 @@ public:
         }
     }
     
-    // Get current state
     SystemState getState() const { return currentState_; }
+
+    QualityCheckpoint& getQualityCheckpoint(uint32_t id) { return qualityCheckpoints_[id]; }
+    WorkUnit& getWorkUnit() { return currentWorkUnit_; }
+
+    void notifyQualityChange(uint32_t id) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (auto& cb : qualityCallbacks_) {
+            cb(qualityCheckpoints_[id]);
+        }
+    }
+
+    void notifyWorkUnitChange() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (auto& cb : workUnitCallbacks_) {
+            cb(currentWorkUnit_);
+        }
+    }
     
     // Initialize with demo data
     void initializeDemoData() {
@@ -190,22 +206,6 @@ private:
             for (auto& cb : actuatorCallbacks_) {
                 cb(actuatorStatuses_[actuatorId]);
             }
-        }
-    }
-    
-    void notifyQualityChange(uint32_t checkpointId) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (qualityCheckpoints_.count(checkpointId)) {
-            for (auto& cb : qualityCallbacks_) {
-                cb(qualityCheckpoints_[checkpointId]);
-            }
-        }
-    }
-    
-    void notifyWorkUnitChange() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (auto& cb : workUnitCallbacks_) {
-            cb(currentWorkUnit_);
         }
     }
     

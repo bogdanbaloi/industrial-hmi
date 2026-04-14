@@ -1,5 +1,6 @@
 #include "ProductsPresenter.h"
 #include "src/model/DatabaseManager.h"
+#include "src/config/config_defaults.h"
 
 namespace app {
 
@@ -60,7 +61,7 @@ presenter::ViewProductDialogViewModel ProductsPresenter::buildProductDetailViewM
     auto& db = model::DatabaseManager::instance();
     auto product = db.getProduct(productId);
     
-    if (product.id == -1) {
+    if (product.id == config::defaults::kInvalidProductId) {
         // Product not found
         vm.productId = "NOT FOUND";
         vm.description = "Product not found or deleted";
@@ -75,7 +76,7 @@ presenter::ViewProductDialogViewModel ProductsPresenter::buildProductDetailViewM
                      "Stock: " + std::to_string(product.stock) + " units\n" +
                      "Quality: " + std::to_string(product.qualityRate) + "%";
     vm.createdDate = product.createdAt;
-    vm.isVerified = (product.status == "Active");
+    vm.isVerified = (product.status == config::defaults::kStatusActive);
     
     return vm;
 }

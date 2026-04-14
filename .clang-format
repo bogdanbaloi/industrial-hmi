@@ -86,7 +86,6 @@ BinPackParameters: true
 
 # Comments
 ReflowComments: true
-SpacesBeforeTrailingComments: 2
 
 # Namespace
 CompactNamespaces: false

@@ -66,10 +66,6 @@ private:
     /// @param workUnitId Work unit identifier from PLC
     void handleNewWorkUnit(const std::string& workUnitId);
     
-    /// Called when work unit processing completes
-    /// @param workUnitId Work unit identifier
-    void handleWorkUnitComplete(const std::string& workUnitId);
-    
     /// Called when equipment status changes
     /// @param equipmentId Equipment identifier
     /// @param status Raw hardware status data
@@ -89,10 +85,6 @@ private:
     /// @param newState New state from state machine
     void handleSystemStateChanged(/* State enum */ int newState);
     
-    /// Called when error conditions change
-    /// @param errorMask Bitfield of active errors
-    void handleErrorUpdate(uint32_t errorMask);
-
     // ViewModel builders (transform Model data → ViewModels)
     
     /// Build work unit ViewModel from database query
@@ -122,11 +114,6 @@ private:
     /// @return Display-ready ViewModel with button states
     presenter::ControlPanelViewModel buildControlPanelVM();
     
-    /// Build status zone ViewModel from error mask
-    /// @param errorMask Bitfield of active errors
-    /// @return Display-ready ViewModel
-    presenter::StatusZoneViewModel buildStatusZoneVM(uint32_t errorMask);
-
     // Notification helpers
     
     /// Notify observers of work unit change
@@ -144,12 +131,6 @@ private:
     /// Notify observers of control panel state change
     void notifyControlPanelChanged(const presenter::ControlPanelViewModel& vm);
     
-    /// Notify observers of status zone change
-    void notifyStatusZoneChanged(const presenter::StatusZoneViewModel& vm);
-    
-    /// Notify observers of error
-    void notifyError(const std::string& errorMessage);
-
     // State caching (for change detection and optimization)
     
     /// Cached ViewModels - only notify on actual changes

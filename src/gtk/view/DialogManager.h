@@ -79,7 +79,7 @@ public:
     /// @param message Dialog message
     /// @param parent Parent window (nullptr = find root)
     /// @return true if user clicked OK/Yes, false if Cancel/No
-    bool showConfirm(const std::string& title,
+    [[nodiscard]] bool showConfirm(const std::string& title,
                      const std::string& message,
                      Gtk::Window* parent = nullptr);
     
@@ -99,7 +99,7 @@ public:
     /// @param defaultValue Default input value
     /// @param parent Parent window (nullptr = find root)
     /// @return Pair of (ok_clicked, input_value)
-    std::pair<bool, std::string> showInput(const std::string& title,
+    [[nodiscard]] std::pair<bool, std::string> showInput(const std::string& title,
                                           const std::string& message,
                                           const std::string& defaultValue = "",
                                           Gtk::Window* parent = nullptr);
@@ -109,7 +109,7 @@ public:
     /// @param fields Vector of (label, default_value) pairs
     /// @param parent Parent window (nullptr = find root)
     /// @return Pair of (ok_clicked, field_values)
-    std::pair<bool, std::vector<std::string>> 
+    [[nodiscard]] std::pair<bool, std::vector<std::string>>
     showForm(const std::string& title,
              const std::vector<std::pair<std::string, std::string>>& fields,
              Gtk::Window* parent = nullptr);

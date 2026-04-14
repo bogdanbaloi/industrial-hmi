@@ -123,7 +123,7 @@ public:
     }
     
     // Explicit bool conversion
-    explicit operator bool() const noexcept {
+    [[nodiscard]] explicit operator bool() const noexcept {
         return isOk();
     }
     
@@ -171,7 +171,7 @@ public:
         return Result<int, E>::errorToString(std::get<E>(data_));
     }
     
-    explicit operator bool() const noexcept {
+    [[nodiscard]] explicit operator bool() const noexcept {
         return isOk();
     }
     

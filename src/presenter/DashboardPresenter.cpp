@@ -85,17 +85,24 @@ void DashboardPresenter::handleSystemStateChanged(int newState) {
 
 // ViewModel builders
 presenter::WorkUnitViewModel DashboardPresenter::buildWorkUnitVM(const std::string& workUnitId) {
+    auto& model = model::SimulatedModel::instance();
+    auto& wu = model.getWorkUnit();
+
     presenter::WorkUnitViewModel vm;
-    vm.workUnitId = workUnitId;
-    vm.productId = "PROD-STD-001";
-    vm.productDescription = "Standard Production Item - Type A";
-    vm.completedOperations = 3;
-    vm.totalOperations = 5;
-    vm.progress = 3.0f / 5.0f;
-    vm.statusMessage = "Processing operation 4...";
+    vm.workUnitId = wu.workUnitId;
+    vm.productId = wu.productId;
+    vm.productDescription = wu.description;
+    vm.completedOperations = wu.completedOperations;
+    vm.totalOperations = wu.totalOperations;
+    vm.progress = wu.totalOperations > 0
+        ? static_cast<float>(wu.completedOperations) / wu.totalOperations
+        : 0.0f;
+    vm.statusMessage = wu.completedOperations < wu.totalOperations
+        ? "Processing operation " + std::to_string(wu.completedOperations + 1) + "..."
+        : "Complete";
     vm.isTestMode = false;
     vm.hasErrors = false;
-    
+
     return vm;
 }
 
@@ -162,42 +169,25 @@ presenter::ActuatorCardViewModel DashboardPresenter::buildActuatorVM(uint32_t ac
 }
 
 presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpointVM(uint32_t checkpointId, int status) {
+    auto& model = model::SimulatedModel::instance();
+    auto& cp = model.getQualityCheckpoint(checkpointId);
+
     presenter::QualityCheckpointViewModel vm;
     vm.checkpointId = checkpointId;
-    
-    // Get data from model
-    // Simplified - in real app would query model properly
-    
-    switch (checkpointId) {
-        case 0:
-            vm.checkpointName = "Visual Inspection";
-            vm.unitsInspected = 645;
-            vm.defectsFound = 12;
-            vm.passRate = 98.1f;
-            vm.targetPassRate = 95.0f;
-            vm.lastDefect = "Surface scratch detected";
-            vm.status = presenter::QualityCheckpointStatus::Passing;
-            break;
-        case 1:
-            vm.checkpointName = "Dimensional Check";
-            vm.unitsInspected = 645;
-            vm.defectsFound = 28;
-            vm.passRate = 95.7f;
-            vm.targetPassRate = 95.0f;
-            vm.lastDefect = "Tolerance exceeded +0.02mm";
-            vm.status = presenter::QualityCheckpointStatus::Passing;
-            break;
-        case 2:
-            vm.checkpointName = "Functional Test";
-            vm.unitsInspected = 645;
-            vm.defectsFound = 45;
-            vm.passRate = 93.0f;
-            vm.targetPassRate = 95.0f;
-            vm.lastDefect = "Response time slow";
-            vm.status = presenter::QualityCheckpointStatus::Warning;
-            break;
-    }
-    
+    vm.checkpointName = cp.name;
+    vm.unitsInspected = cp.unitsInspected;
+    vm.defectsFound = cp.defectsFound;
+    vm.passRate = cp.passRate;
+    vm.targetPassRate = 95.0f;
+    vm.lastDefect = cp.lastDefect;
+
+    if (cp.passRate >= 95.0f)
+        vm.status = presenter::QualityCheckpointStatus::Passing;
+    else if (cp.passRate >= 90.0f)
+        vm.status = presenter::QualityCheckpointStatus::Warning;
+    else
+        vm.status = presenter::QualityCheckpointStatus::Critical;
+
     return vm;
 }
 

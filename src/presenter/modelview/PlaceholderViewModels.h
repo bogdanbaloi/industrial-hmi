@@ -61,12 +61,12 @@ struct ResetProductDialogViewModel {
 
 struct ProductsViewModel {
     struct ProductItem {
-        int id;
+        int id{0};
         std::string productCode;    // PROD-001, PROD-002
         std::string name;            // Product A, Product B
         std::string status;          // Active, Inactive, Low Stock
-        int stock;                   // 850, 320, 45
-        float qualityRate;           // 98.1, 95.7, 93.0
+        int stock{0};                // 850, 320, 45
+        float qualityRate{0.0f};     // 98.1, 95.7, 93.0
     };
     std::vector<ProductItem> products;
 };

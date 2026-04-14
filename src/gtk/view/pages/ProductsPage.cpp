@@ -1,5 +1,7 @@
 #include "ProductsPage.h"
 #include "src/gtk/view/DialogManager.h"
+#include "src/gtk/view/ThemeManager.h"
+#include "src/config/config_defaults.h"
 
 namespace app::view {
 
@@ -187,18 +189,21 @@ void ProductsPage::buildProductsList() {
     actionBox->set_margin_top(10);
     
     auto* viewButton = Gtk::make_managed<Gtk::Button>("View Details");
+    viewButton->add_css_class("toolbar-button");
     viewButton->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onViewProductClicked)
     );
     actionBox->append(*viewButton);
-    
+
     auto* editButton = Gtk::make_managed<Gtk::Button>("Edit");
+    editButton->add_css_class("toolbar-button");
     editButton->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onEditProductClicked)
     );
     actionBox->append(*editButton);
-    
+
     auto* deleteButton = Gtk::make_managed<Gtk::Button>("Delete");
+    deleteButton->add_css_class("toolbar-button");
     deleteButton->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onDeleteProductClicked)
     );
@@ -244,15 +249,7 @@ void ProductsPage::updateProductsList(const presenter::ProductsViewModel& vm) {
         row[columns_.name] = product.name;
         
         // Add visual indicators to status
-        std::string statusIcon;
-        if (product.status == "Active") {
-            statusIcon = "● ";  // Green dot
-        } else if (product.status == "Low Stock") {
-            statusIcon = "! ";  // Warning
-        } else {
-            statusIcon = "○ ";  // Gray dot
-        }
-        row[columns_.status] = statusIcon + product.status;
+        row[columns_.status] = product.status;
         
         row[columns_.stock] = product.stock;
         row[columns_.qualityRate] = product.qualityRate;
@@ -260,20 +257,25 @@ void ProductsPage::updateProductsList(const presenter::ProductsViewModel& vm) {
 }
 
 void ProductsPage::showProductDetail(const presenter::ViewProductDialogViewModel& vm) {
-    // Create detail dialog
-    auto dialog = Gtk::MessageDialog(*dynamic_cast<Gtk::Window*>(get_root()),
-                                     "Product Details",
-                                     false,
-                                     Gtk::MessageType::INFO,
-                                     Gtk::ButtonsType::OK);
-    
+    auto* dialog = new Gtk::MessageDialog(*dynamic_cast<Gtk::Window*>(get_root()),
+                                          "Product Details",
+                                          false,
+                                          Gtk::MessageType::INFO,
+                                          Gtk::ButtonsType::OK);
+
     std::string message = "Product ID: " + vm.productId + "\n\n" +
                          vm.description + "\n\n" +
                          "Created: " + vm.createdDate + "\n" +
-                         "Status: " + (vm.isVerified ? "Active" : "Inactive");
-    
-    dialog.set_secondary_text(message);
-    dialog.present();
+                         "Status: " + std::string(vm.isVerified ? config::defaults::kStatusActive : config::defaults::kStatusInactive);
+
+    dialog->set_secondary_text(message);
+    dialog->set_modal(true);
+    app::view::ThemeManager::instance().applyToDialog(dialog);
+
+    dialog->signal_response().connect([dialog](int) {
+        delete dialog;
+    });
+    dialog->present();
 }
 
 void ProductsPage::onAddProductClicked() {
@@ -282,16 +284,16 @@ void ProductsPage::onAddProductClicked() {
 
 void ProductsPage::onViewProductClicked() {
     int productId = getSelectedProductId();
-    if (productId != -1 && presenter_) {
+    if (productId != config::defaults::kInvalidProductId && presenter_) {
         presenter_->viewProduct(productId);
     }
 }
 
 void ProductsPage::onDeleteProductClicked() {
     int productId = getSelectedProductId();
-    if (productId != -1 && presenter_) {
+    if (productId != config::defaults::kInvalidProductId && presenter_) {
         auto product = presenter_->getProduct(productId);
-        if (product.id != -1) {
+        if (product.id != config::defaults::kInvalidProductId) {
             showDeleteConfirmDialog(productId, product.name);
         }
     }
@@ -299,9 +301,9 @@ void ProductsPage::onDeleteProductClicked() {
 
 void ProductsPage::onEditProductClicked() {
     int productId = getSelectedProductId();
-    if (productId != -1 && presenter_) {
+    if (productId != config::defaults::kInvalidProductId && presenter_) {
         auto product = presenter_->getProduct(productId);
-        if (product.id != -1) {
+        if (product.id != config::defaults::kInvalidProductId) {
             showEditProductDialog(product);
         }
     }
@@ -313,13 +315,14 @@ int ProductsPage::getSelectedProductId() {
     if (iter) {
         return (*iter)[columns_.id];
     }
-    return -1;
+    return config::defaults::kInvalidProductId;
 }
 
 void ProductsPage::showAddProductDialog() {
     auto* dialog = new Gtk::Dialog("Add New Product", *dynamic_cast<Gtk::Window*>(get_root()));
     dialog->set_default_size(400, 350);
     dialog->set_modal(true);
+    app::view::ThemeManager::instance().applyToDialog(dialog);
     
     auto* grid = Gtk::make_managed<Gtk::Grid>();
     grid->set_row_spacing(12);
@@ -348,9 +351,9 @@ void ProductsPage::showAddProductDialog() {
     auto* statusLabel = Gtk::make_managed<Gtk::Label>("Status:");
     statusLabel->set_xalign(0);
     auto* statusCombo = Gtk::make_managed<Gtk::ComboBoxText>();
-    statusCombo->append("Active");
-    statusCombo->append("Inactive");
-    statusCombo->append("Low Stock");
+    statusCombo->append(config::defaults::kStatusActive);
+    statusCombo->append(config::defaults::kStatusInactive);
+    statusCombo->append(config::defaults::kStatusLowStock);
     statusCombo->set_active(0);
     grid->attach(*statusLabel, 0, 2);
     grid->attach(*statusCombo, 1, 2);
@@ -406,9 +409,9 @@ void ProductsPage::showAddProductDialog() {
                 });
             }
         }
-        dialog->close();
+        delete dialog;
     });
-    
+
     dialog->present();
 }
 
@@ -442,6 +445,7 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
     auto* dialog = new Gtk::Dialog("Edit Product", *dynamic_cast<Gtk::Window*>(get_root()));
     dialog->set_default_size(400, 350);
     dialog->set_modal(true);
+    app::view::ThemeManager::instance().applyToDialog(dialog);
     
     auto* grid = Gtk::make_managed<Gtk::Grid>();
     grid->set_row_spacing(12);
@@ -470,13 +474,12 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
     auto* statusLabel = Gtk::make_managed<Gtk::Label>("Status:");
     statusLabel->set_xalign(0);
     auto* statusCombo = Gtk::make_managed<Gtk::ComboBoxText>();
-    statusCombo->append("Active");
-    statusCombo->append("Inactive");
-    statusCombo->append("Low Stock");
-    // Set current status
-    if (product.status == "Active") statusCombo->set_active(0);
-    else if (product.status == "Inactive") statusCombo->set_active(1);
-    else if (product.status == "Low Stock") statusCombo->set_active(2);
+    statusCombo->append(config::defaults::kStatusActive);
+    statusCombo->append(config::defaults::kStatusInactive);
+    statusCombo->append(config::defaults::kStatusLowStock);
+    if (product.status == config::defaults::kStatusActive) statusCombo->set_active(0);
+    else if (product.status == config::defaults::kStatusInactive) statusCombo->set_active(1);
+    else if (product.status == config::defaults::kStatusLowStock) statusCombo->set_active(2);
     grid->attach(*statusLabel, 0, 2);
     grid->attach(*statusCombo, 1, 2);
     
@@ -530,41 +533,20 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
                 });
             }
         }
-        dialog->close();
+        delete dialog;
     });
-    
+
     dialog->present();
 }
 
 void ProductsPage::applyStyles() {
     cssProvider_ = Gtk::CssProvider::create();
-    
-    cssProvider_->load_from_data(R"(
-        .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #263238;
-        }
-        
-        .toolbar-button {
-            font-size: 14px;
-            font-weight: 500;
-            min-width: 100px;
-            min-height: 40px;
-            border-radius: 6px;
-        }
-        
-        .search-label {
-            font-size: 14px;
-            font-weight: 500;
-            color: #546E7A;
-        }
-    )");
-    
+    cssProvider_->load_from_path("ui/products.css");
+
     Gtk::StyleContext::add_provider_for_display(
         Gdk::Display::get_default(),
         cssProvider_,
-        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+        GTK_STYLE_PROVIDER_PRIORITY_USER
     );
 }
 
