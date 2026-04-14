@@ -2,266 +2,152 @@ name: Industrial HMI - CI/CD Pipeline
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ main ]
   workflow_dispatch:
 
 env:
   BUILD_TYPE: Release
 
 jobs:
-  # ============================================
-  # BUILD & TEST
-  # ============================================
   build-ubuntu:
-    name: Build & Test (Ubuntu 24.04)
+    name: Build (Ubuntu 24.04)
     runs-on: ubuntu-24.04
-    
+
     steps:
-    - name: 📥 Checkout Code
+    - name: Checkout
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Full history for better git operations
-    
-    - name: 🔧 Install Dependencies
+
+    - name: Install Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          build-essential \
-          cmake \
-          ninja-build \
-          libgtkmm-4.0-dev \
-          libsqlite3-dev \
-          clang-tidy \
-          cppcheck
-    
-    - name: 📊 Configure CMake
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev
+
+    - name: Configure
+      run: cmake --preset release
+
+    - name: Build
+      run: cmake --build build/release -- -j$(nproc)
+
+    - name: Verify
+      run: test -f build/release/industrial-hmi
+
+    - name: Package
       run: |
-        cmake -B build \
-          -G Ninja \
-          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
-          -DCMAKE_CXX_COMPILER=g++ \
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-    
-    - name: 🏗️ Build
-      run: cmake --build build --config ${{env.BUILD_TYPE}}
-    
-    - name: 🧪 Run Tests (if available)
-      run: |
-        cd build
-        # If you add CTest tests later:
-        # ctest --output-on-failure
-        echo "✅ Tests placeholder (add CTest later)"
-    
-    - name: 📦 Package Artifacts
-      run: |
-        cd build
-        tar -czf industrial-hmi-ubuntu.tar.gz industrial-hmi ui/*.ui ui/*.css
-    
-    - name: 📤 Upload Artifacts
+        mkdir -p dist
+        cp build/release/industrial-hmi dist/
+        cp -r build/release/ui dist/
+        cp -r build/release/config dist/
+        cp -r build/release/assets dist/ 2>/dev/null || true
+        tar -czf industrial-hmi-linux.tar.gz -C dist .
+
+    - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: industrial-hmi-ubuntu-${{ github.sha }}
-        path: build/industrial-hmi-ubuntu.tar.gz
+        name: industrial-hmi-linux-${{ github.sha }}
+        path: industrial-hmi-linux.tar.gz
         retention-days: 30
 
   build-windows:
-    name: Build & Test (Windows Server 2022)
+    name: Build (Windows / vcpkg)
     runs-on: windows-2022
-    
+
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
     steps:
-    - name: 📥 Checkout Code
+    - name: Checkout
       uses: actions/checkout@v4
+
+    - name: Enable vcpkg binary caching
+      uses: actions/github-script@v7
       with:
-        fetch-depth: 0
-    
-    - name: 🔧 Setup vcpkg
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
-        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'  # Latest stable
-    
-    - name: 📦 Install Dependencies via vcpkg
-      run: |
-        vcpkg install gtkmm:x64-windows
-        vcpkg install sqlite3:x64-windows
-        vcpkg install boost-signals2:x64-windows
-    
-    - name: 📊 Configure CMake (Windows)
+        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Install Dependencies
+      run: vcpkg install gtkmm sqlite3 boost-signals2 boost-asio
+
+    - name: Configure
       run: |
         cmake -B build `
           -G "Visual Studio 17 2022" `
           -A x64 `
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
-          -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-    
-    - name: 🏗️ Build (Windows)
-      run: cmake --build build --config ${{env.BUILD_TYPE}}
-    
-    - name: 📦 Package Artifacts (Windows)
-      run: |
-        cd build/${{env.BUILD_TYPE}}
-        7z a ../../industrial-hmi-windows.zip industrial-hmi.exe ../../ui
-    
-    - name: 📤 Upload Artifacts (Windows)
-      uses: actions/upload-artifact@v4
-      with:
-        name: industrial-hmi-windows-${{ github.sha }}
-        path: build/industrial-hmi-windows.zip
-        retention-days: 30
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 
-  # ============================================
-  # CODE QUALITY CHECKS
-  # ============================================
+    - name: Build
+      run: cmake --build build --config ${{env.BUILD_TYPE}}
+
   code-quality:
-    name: Code Quality Analysis
+    name: Code Quality
     runs-on: ubuntu-24.04
-    
+
     steps:
-    - name: 📥 Checkout Code
+    - name: Checkout
       uses: actions/checkout@v4
-    
-    - name: 🔧 Install Tools
+
+    - name: Install Tools
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          clang-tidy \
-          cppcheck \
-          libgtkmm-4.0-dev \
-          libsqlite3-dev
-    
-    - name: 📊 Configure for Analysis
-      run: |
-        cmake -B build \
-          -G Ninja \
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-    
-    - name: 🔍 Run clang-tidy
-      run: |
-        # Run on source files
-        find src -name '*.cpp' -exec \
-          clang-tidy {} \
-          -p build \
-          --config-file=.clang-tidy \
-          --warnings-as-errors='' \
-        \;
-      continue-on-error: true  # Don't fail build, just report
-    
-    - name: 🔍 Run cppcheck
+          cmake ninja-build cppcheck \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev
+
+    - name: Run cppcheck
       run: |
         cppcheck \
-          --enable=all \
+          --enable=warning,style,performance \
           --suppress=missingIncludeSystem \
           --suppress=unusedFunction \
-          --inline-suppr \
           --error-exitcode=0 \
+          --inline-suppr \
           src/
-      continue-on-error: true
 
-  # ============================================
-  # DOCUMENTATION
-  # ============================================
   documentation:
-    name: Generate Documentation
+    name: Documentation
     runs-on: ubuntu-24.04
-    
-    steps:
-    - name: 📥 Checkout Code
-      uses: actions/checkout@v4
-    
-    - name: 📚 Verify Documentation
-      run: |
-        echo "✅ Checking documentation files..."
-        test -f README.md || exit 1
-        test -f PORTFOLIO_SUMMARY.md || exit 1
-        test -f tests/README_TESTING.md || exit 1
-        echo "✅ All documentation present"
-    
-    - name: 📊 Generate Project Stats
-      run: |
-        echo "## 📊 Project Statistics" > stats.md
-        echo "" >> stats.md
-        echo "- **Total Commits**: $(git rev-list --count HEAD)" >> stats.md
-        echo "- **C++ Files**: $(find src -name '*.cpp' -o -name '*.h' | wc -l)" >> stats.md
-        echo "- **Lines of Code**: $(find src -name '*.cpp' -o -name '*.h' -exec cat {} \; | wc -l)" >> stats.md
-        echo "- **Build Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> stats.md
-        cat stats.md
-    
-    - name: 📤 Upload Stats
-      uses: actions/upload-artifact@v4
-      with:
-        name: project-stats
-        path: stats.md
 
-  # ============================================
-  # RELEASE (on tags)
-  # ============================================
-  release:
-    name: Create Release
-    runs-on: ubuntu-24.04
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build-ubuntu, build-windows, code-quality]
-    
     steps:
-    - name: 📥 Checkout Code
+    - name: Checkout
       uses: actions/checkout@v4
-    
-    - name: 📥 Download Ubuntu Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: industrial-hmi-ubuntu-${{ github.sha }}
-        path: ./artifacts
-    
-    - name: 📥 Download Windows Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: industrial-hmi-windows-${{ github.sha }}
-        path: ./artifacts
-    
-    - name: 🚀 Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          ./artifacts/industrial-hmi-ubuntu.tar.gz
-          ./artifacts/industrial-hmi-windows.zip
-        generate_release_notes: true
-        body: |
-          ## Cross-Platform Industrial HMI Release
-          
-          **Platforms:**
-          - 🐧 Linux (Ubuntu 24.04+)
-          - 🪟 Windows (10/11, Server 2022)
-          
-          **Features:**
-          - MVP Architecture (Model-View-Presenter)
-          - Complete CRUD with soft delete
-          - Dependency Injection pattern
-          - Adwaita Dark/Light themes
-          - Professional UI/UX
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ============================================
-  # SUMMARY
-  # ============================================
+    - name: Verify
+      run: |
+        test -f README.md
+        test -f BUILD.md
+        test -f LICENSE
+
+    - name: Stats
+      run: |
+        echo "## Project Statistics" >> $GITHUB_STEP_SUMMARY
+        echo "- C++ files: $(find src -name '*.cpp' -o -name '*.h' | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- Lines of code: $(find src -name '*.cpp' -o -name '*.h' -exec cat {} \; | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- Commits: $(git rev-list --count HEAD)" >> $GITHUB_STEP_SUMMARY
+
   summary:
     name: Pipeline Summary
     runs-on: ubuntu-24.04
     needs: [build-ubuntu, build-windows, code-quality, documentation]
     if: always()
-    
+
     steps:
-    - name: 📋 Generate Summary
+    - name: Summary
       run: |
-        echo "## 🎯 CI/CD Pipeline Results" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## CI/CD Results" >> $GITHUB_STEP_SUMMARY
         echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
         echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
         echo "| Build Ubuntu | ${{ needs.build-ubuntu.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Build Windows | ${{ needs.build-windows.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Code Quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Platform**: Cross-Platform (Linux + Windows)" >> $GITHUB_STEP_SUMMARY
-        echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
