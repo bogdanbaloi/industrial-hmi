@@ -60,6 +60,7 @@ else()
         -Wall
         -Wextra
         -Wpedantic
+        -Wno-c2y-extensions
         -Werror
         -Wno-unused-parameter
     )
