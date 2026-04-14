@@ -36,4 +36,4 @@ Thumbs.db
 
 # Debug
 .gdb_history
-core
+/core
