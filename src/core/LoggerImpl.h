@@ -6,6 +6,7 @@
 #include <fstream>
 #include <filesystem>
 #include <mutex>
+#include <functional>
 #include <chrono>
 #include <iomanip>
 #include <sstream>
