@@ -34,38 +34,23 @@ void DashboardPage::initialize(std::shared_ptr<DashboardPresenter> presenter) {
 ///       Must use Glib::signal_idle() to update GTK widgets safely.
 
 void DashboardPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateWorkUnitWidgets(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateWorkUnitWidgets(vm); });
 }
 
 void DashboardPage::onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateEquipmentCard(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateEquipmentCard(vm); });
 }
 
 void DashboardPage::onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateQualityCard(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateQualityCard(vm); });
 }
 
 void DashboardPage::onControlPanelChanged(const presenter::ControlPanelViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateControlPanel(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateControlPanel(vm); });
 }
 
 void DashboardPage::onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) {
-    // Marshal to GTK main thread
-    Glib::signal_idle().connect_once([this, vm]() {
-        updateStatusZone(vm);
-    });
+    Glib::signal_idle().connect_once([this, vm]() { updateStatusZone(vm); });
 }
 
 void DashboardPage::onError(const std::string& errorMessage) {
@@ -279,7 +264,7 @@ void DashboardPage::buildQualitySection() {
         
         // Quality gauge visual indicator
         card.gaugeImage = Gtk::make_managed<Gtk::Picture>();
-        card.gaugeImage->set_size_request(40, 40);
+        card.gaugeImage->set_size_request(100, 100);
         card.gaugeImage->set_margin_top(8);
         card.gaugeImage->set_margin_bottom(8);
         card.cardBox->append(*card.gaugeImage);
@@ -539,22 +524,23 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     card.statusDot->remove_css_class("quality-critical");
     card.statusDot->add_css_class(dotColor);
     
-    // Update gauge image based on status
-    std::string gaugePath;
-    switch (vm.status) {
-        case presenter::QualityCheckpointStatus::Passing:
-            gaugePath = "assets/img/quality-gauge-pass.svg";
-            break;
-        case presenter::QualityCheckpointStatus::Warning:
-            gaugePath = "assets/img/quality-gauge-warning.svg";
-            break;
-        case presenter::QualityCheckpointStatus::Critical:
-            gaugePath = "assets/img/quality-gauge-critical.svg";
-            break;
+    // Update gauge image only when status changes
+    if (card.lastStatus != vm.status) {
+        card.lastStatus = vm.status;
+        std::string gaugePath;
+        switch (vm.status) {
+            case presenter::QualityCheckpointStatus::Passing:
+                gaugePath = "assets/img/quality-gauge-pass.svg";
+                break;
+            case presenter::QualityCheckpointStatus::Warning:
+                gaugePath = "assets/img/quality-gauge-warning.svg";
+                break;
+            case presenter::QualityCheckpointStatus::Critical:
+                gaugePath = "assets/img/quality-gauge-critical.svg";
+                break;
+        }
+        card.gaugeImage->set_filename(gaugePath);
     }
-    
-    // Load SVG using Gtk::Picture (GTK4 native SVG support)
-    card.gaugeImage->set_filename(gaugePath);
     
     // Update pass rate - large and prominent
     char passRateText[32];
