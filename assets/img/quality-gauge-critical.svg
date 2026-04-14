@@ -1,25 +1,10 @@
-<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-  <!-- Quality Checkpoint Gauge - Critical (Red) -->
-  <defs>
-    <linearGradient id="critGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#EF5350;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#F44336;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  
-  <!-- Background circle (gray track) -->
-  <circle cx="40" cy="40" r="30" fill="none" stroke="#E0E0E0" stroke-width="8"/>
-  
-  <!-- Progress arc (93% fill - critical zone) -->
-  <circle cx="40" cy="40" r="30" fill="none" 
-          stroke="url(#critGradient)" 
-          stroke-width="8"
-          stroke-dasharray="175 200"
-          stroke-dashoffset="-50"
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#3a3a3a" stroke-width="12"/>
+  <circle cx="100" cy="100" r="80" fill="none"
+          stroke="#F44336"
+          stroke-width="12"
+          stroke-dasharray="403 503"
           stroke-linecap="round"
-          transform="rotate(-90 40 40)"/>
-  
-  <!-- Center alert indicator -->
-  <circle cx="40" cy="40" r="4" fill="#F44336"/>
-  <circle cx="40" cy="40" r="8" fill="none" stroke="#F44336" stroke-width="2" opacity="0.4"/>
+          transform="rotate(-90 100 100)"/>
+  <circle cx="100" cy="100" r="8" fill="#F44336"/>
 </svg>

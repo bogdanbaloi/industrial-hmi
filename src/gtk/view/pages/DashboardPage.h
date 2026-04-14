@@ -71,11 +71,12 @@ private:
         uint32_t checkpointId{0};
         Gtk::Box* cardBox{nullptr};
         Gtk::Label* nameLabel{nullptr};
-        Gtk::Label* statusDot{nullptr};  // Colored ● for pass/warning/critical
-        Gtk::Picture* gaugeImage{nullptr}; // Visual gauge indicator (SVG support)
+        Gtk::Label* statusDot{nullptr};
+        Gtk::Picture* gaugeImage{nullptr};
         Gtk::Label* passRateLabel{nullptr};
         Gtk::Label* statsLabel{nullptr};
         Gtk::Label* lastDefectLabel{nullptr};
+        presenter::QualityCheckpointStatus lastStatus{static_cast<presenter::QualityCheckpointStatus>(-1)};
     };
     std::vector<QualityCard> qualityCards_;
 

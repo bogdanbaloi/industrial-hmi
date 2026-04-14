@@ -52,7 +52,14 @@ MainWindow::MainWindow() {
     
     // Initialize MVP pages
     initializePages();
-    
+
+    // Start auto refresh after UI is ready (delayed)
+    Glib::signal_timeout().connect_once([this]() {
+        if (checkAutoRefresh_ && checkAutoRefresh_->get_active()) {
+            onAutoRefreshToggled();
+        }
+    }, 1000);
+
     // Start in fullscreen (industrial kiosk mode)
     fullscreen();
     isFullscreen_ = true;
@@ -139,10 +146,6 @@ void MainWindow::connectSignals() {
     if (checkAutoRefresh_) {
         checkAutoRefresh_->property_active().signal_changed().connect(
             sigc::mem_fun(*this, &MainWindow::onAutoRefreshToggled));
-        // Trigger initial state if checked by default
-        if (checkAutoRefresh_->get_active()) {
-            onAutoRefreshToggled();
-        }
     }
     if (checkShowLogs_) {
         checkShowLogs_->property_active().signal_changed().connect(
@@ -153,29 +156,20 @@ void MainWindow::connectSignals() {
 }
 
 void MainWindow::initializePages() {
-    // Database already initialized by Application lifecycle
-
-    // Create Dashboard page (MVP pattern with Dependency Injection)
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
     dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
     dashboardPage_->initialize(dashboardPresenter_);
-    dashboardPresenter_->initialize();
-    
-    if (dashboardContainer_) {
-        dashboardContainer_->append(*dashboardPage_);
-    }
-    
-    // Create Products page (MVP pattern with Dependency Injection)
+
     productsPresenter_ = std::make_shared<app::ProductsPresenter>();
     productsPage_ = Gtk::make_managed<app::view::ProductsPage>(*dialogManager_);
     productsPage_->initialize(productsPresenter_);
+
+    if (dashboardContainer_) dashboardContainer_->append(*dashboardPage_);
+    if (productsContainer_) productsContainer_->append(*productsPage_);
+
+    dashboardPresenter_->initialize();
     productsPresenter_->initialize();
-    
-    if (productsContainer_) {
-        productsContainer_->append(*productsPage_);
-    }
-    
-    // Initialize model with demo data
+
     app::model::SimulatedModel::instance().initializeDemoData();
 }
 
