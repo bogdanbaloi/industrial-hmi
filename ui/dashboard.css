@@ -1,0 +1,207 @@
+/* Dashboard Page Styles */
+/* Layout + typography. Theme-aware colors via window.light-mode overrides */
+
+.section-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: #90A4AE;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+/* Work Unit Card */
+.work-unit-card {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.field-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #90A4AE;
+}
+
+.field-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ECEFF1;
+}
+
+.field-value-large {
+    font-size: 17px;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.separator-dot {
+    font-size: 18px;
+    color: #546E7A;
+    font-weight: 400;
+}
+
+.description-text {
+    font-size: 14px;
+    color: #B0BEC5;
+}
+
+.progress-bar-large progressbar {
+    min-height: 24px;
+    border-radius: 6px;
+}
+
+.status-message {
+    font-size: 14px;
+    font-weight: 500;
+    color: #B0BEC5;
+}
+
+/* Equipment Cards */
+.equipment-card {
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.card-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.status-dot {
+    font-size: 16px;
+}
+
+.equipment-status {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+}
+
+.equipment-info {
+    font-size: 13px;
+    color: #90A4AE;
+    margin-top: 4px;
+}
+
+/* Quality Cards */
+.quality-card {
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.pass-rate-large {
+    font-size: 28px;
+    font-weight: 700;
+    color: #4CAF50;
+    margin: 4px 0;
+}
+
+.quality-stats {
+    font-size: 12px;
+    font-weight: 500;
+    color: #90A4AE;
+}
+
+.defect-info {
+    font-size: 11px;
+    color: #78909C;
+    margin-top: 4px;
+}
+
+.quality-passing { color: #4CAF50; }
+.quality-warning { color: #FF9800; }
+.quality-critical { color: #F44336; }
+
+.equipment-online { color: #4CAF50; }
+.equipment-processing { color: #2196F3; }
+.equipment-error { color: #F44336; }
+.equipment-offline { color: #9E9E9E; }
+
+/* Control Buttons */
+.control-button {
+    font-weight: 600;
+    font-size: 14px;
+    min-width: 120px;
+    min-height: 40px;
+    border-radius: 8px;
+    margin: 0 4px;
+}
+
+.start-button { background: #4CAF50; color: white; border: none; }
+.start-button:hover { background: #66BB6A; }
+
+.stop-button { background: #F44336; color: white; border: none; }
+.stop-button:hover { background: #EF5350; }
+
+.reset-button { background: #FF9800; color: white; border: none; }
+.reset-button:hover { background: #FFA726; }
+
+.calibration-button { background: #2196F3; color: white; border: none; }
+.calibration-button:hover { background: #42A5F5; }
+
+.status-banner {
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin-bottom: 8px;
+}
+
+.severity-info { background: #1E3A5F; border-left: 4px solid #2196F3; color: #90CAF9; }
+.severity-warning { background: #4E3517; border-left: 4px solid #FF9800; color: #FFB74D; }
+.severity-error { background: #4E1717; border-left: 4px solid #F44336; color: #EF9A9A; }
+
+.active-indicator {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 6px;
+    color: #ECEFF1;
+    background: #37474F;
+}
+
+frame {
+    background: transparent;
+    border-color: #455A64;
+}
+
+frame > border {
+    background: transparent;
+    border-color: #455A64;
+}
+
+frame > label {
+    color: #B0BEC5;
+}
+
+/* Light mode overrides */
+window.light-mode .work-unit-card {
+    border-color: #E0E0E0;
+}
+
+window.light-mode .field-label { color: #78909C; }
+window.light-mode .field-value { color: #37474F; }
+window.light-mode .field-value-large { color: #263238; }
+window.light-mode .separator-dot { color: #CFD8DC; }
+window.light-mode .description-text { color: #607D8B; }
+window.light-mode .status-message { color: #546E7A; }
+window.light-mode .equipment-info { color: #78909C; }
+window.light-mode .quality-stats { color: #546E7A; }
+window.light-mode .defect-info { color: #78909C; }
+window.light-mode .active-indicator { color: #37474F; }
+window.light-mode .pass-rate-large { color: #2E7D32; }
+
+window.light-mode .active-indicator {
+    color: #37474F;
+    background: #ECEFF1;
+}
+
+window.light-mode frame > border {
+    border-color: #E0E0E0;
+}
+
+window.light-mode frame > label {
+    color: #546E7A;
+}
+
+window.light-mode .severity-info { background: #E3F2FD; color: #1565C0; }
+window.light-mode .severity-warning { background: #FFF3E0; color: #E65100; }
+window.light-mode .severity-error { background: #FFEBEE; color: #C62828; }

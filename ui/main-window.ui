@@ -139,7 +139,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="radio_dark">
-                        <property name="label">🌙 Dark Mode</property>
+                        <property name="label">Dark Mode</property>
                         <property name="active">true</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -147,7 +147,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="radio_light">
-                        <property name="label">☀️ Light Mode</property>
+                        <property name="label">Light Mode</property>
                         <property name="group">radio_dark</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -199,7 +199,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="check_show_logs">
-                        <property name="label">Show Logs</property>
+                        <property name="label">Verbose Logging</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
                     </child>
@@ -246,36 +246,69 @@
         
         <!-- RIGHT CONTENT AREA - Main Application -->
         <child>
-          <object class="GtkNotebook" id="main_notebook">
+          <object class="GtkBox" id="content_area">
+            <property name="orientation">vertical</property>
             <property name="hexpand">true</property>
             <property name="vexpand">true</property>
-            <property name="tab-pos">top</property>
-            
-            <!-- Dashboard Page -->
+
             <child>
-              <object class="GtkNotebookPage">
-                <property name="tab-label">Dashboard</property>
-                <property name="child">
-                  <object class="GtkBox" id="dashboard_container">
-                    <property name="orientation">vertical</property>
-                    <!-- Dashboard content will be added programmatically -->
+              <object class="GtkNotebook" id="main_notebook">
+                <property name="hexpand">true</property>
+                <property name="vexpand">true</property>
+                <property name="tab-pos">top</property>
+
+                <!-- Dashboard Page -->
+                <child>
+                  <object class="GtkNotebookPage">
+                    <property name="tab-label">Dashboard</property>
+                    <property name="child">
+                      <object class="GtkBox" id="dashboard_container">
+                        <property name="orientation">vertical</property>
+                      </object>
+                    </property>
                   </object>
-                </property>
+                </child>
+
+                <!-- Products Database Page -->
+                <child>
+                  <object class="GtkNotebookPage">
+                    <property name="tab-label">Products Database</property>
+                    <property name="child">
+                      <object class="GtkBox" id="products_container">
+                        <property name="orientation">vertical</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
               </object>
             </child>
-            
-            <!-- Products Database Page -->
+
+            <!-- Log Panel (hidden by default, shown via Verbose Logging) -->
             <child>
-              <object class="GtkNotebookPage">
-                <property name="tab-label">Products Database</property>
-                <property name="child">
-                  <object class="GtkBox" id="products_container">
-                    <property name="orientation">vertical</property>
-                    <!-- Products content will be added programmatically -->
+              <object class="GtkBox" id="log_panel">
+                <property name="orientation">vertical</property>
+                <property name="visible">false</property>
+                <property name="height-request">150</property>
+                <property name="css-classes">log-panel</property>
+
+                <child>
+                  <object class="GtkScrolledWindow" id="log_scroll">
+                    <property name="vexpand">true</property>
+                    <property name="hexpand">true</property>
+                    <child>
+                      <object class="GtkTextView" id="log_text_view">
+                        <property name="editable">false</property>
+                        <property name="cursor-visible">false</property>
+                        <property name="monospace">true</property>
+                        <property name="wrap-mode">word</property>
+                        <property name="css-classes">log-text</property>
+                      </object>
+                    </child>
                   </object>
-                </property>
+                </child>
               </object>
             </child>
+
           </object>
         </child>
       </object>

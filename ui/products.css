@@ -1,0 +1,48 @@
+/* Products Page Styles */
+
+/* Dark mode defaults */
+.page-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ECEFF1;
+}
+
+.toolbar-button {
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 100px;
+    min-height: 40px;
+    border-radius: 6px;
+    background: #455A64;
+    color: #FFFFFF;
+    border: 1px solid #607D8B;
+}
+
+.toolbar-button:hover {
+    background: #546E7A;
+}
+
+.search-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #b0bec5;
+}
+
+/* Light mode overrides */
+window.light-mode .page-title {
+    color: #263238;
+}
+
+window.light-mode .search-label {
+    color: #546E7A;
+}
+
+window.light-mode .toolbar-button {
+    background: #e8eaed;
+    color: #202124;
+    border-color: #dadce0;
+}
+
+window.light-mode .toolbar-button:hover {
+    background: #d2d5d9;
+}

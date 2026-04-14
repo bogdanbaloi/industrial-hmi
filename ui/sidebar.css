@@ -1,12 +1,12 @@
 /* Sidebar Styling - Industrial HMI Theme */
 
-/* Sidebar Container */
+/* Dark mode sidebar (default) */
 .sidebar {
-    background: linear-gradient(180deg, #263238 0%, #37474F 100%);
+    background-color: #263238;
     border-right: 1px solid #455A64;
+    padding: 16px;
 }
 
-/* Sidebar Header */
 .sidebar-header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -25,7 +25,6 @@
     letter-spacing: 0.5px;
 }
 
-/* Section Headers */
 .section-header {
     font-size: 11px;
     font-weight: 700;
@@ -33,7 +32,6 @@
     letter-spacing: 1.2px;
 }
 
-/* Sidebar Options (Radio/Check buttons) */
 .sidebar-option {
     font-size: 13px;
     color: #CFD8DC;
@@ -48,7 +46,26 @@
     font-weight: 600;
 }
 
-/* Footer */
+.sidebar button {
+    background: #455A64;
+    color: #ECEFF1;
+    border: 1px solid #607D8B;
+}
+
+.sidebar button:hover {
+    background: #546E7A;
+}
+
+window.light-mode .sidebar button {
+    background: #e8eaed;
+    color: #202124;
+    border-color: #dadce0;
+}
+
+window.light-mode .sidebar button:hover {
+    background: #d2d5d9;
+}
+
 .sidebar-version {
     font-size: 11px;
     font-weight: 600;
@@ -58,4 +75,44 @@
 .sidebar-author {
     font-size: 10px;
     color: #546E7A;
+}
+
+/* Light mode sidebar overrides */
+window.light-mode .sidebar {
+    background-color: #e8eaed;
+    border-right: 1px solid #dadce0;
+}
+
+window.light-mode .sidebar-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+window.light-mode .sidebar-title {
+    color: #202124;
+}
+
+window.light-mode .sidebar-subtitle {
+    color: #1a73e8;
+}
+
+window.light-mode .section-header {
+    color: #5f6368;
+}
+
+window.light-mode .sidebar-option {
+    color: #3c4043;
+}
+
+window.light-mode .sidebar-option:hover {
+    color: #202124;
+}
+
+window.light-mode .sidebar-option:checked {
+    color: #1a73e8;
+    font-weight: 600;
+}
+
+window.light-mode .sidebar-version,
+window.light-mode .sidebar-author {
+    color: #80868b;
 }

@@ -13,8 +13,6 @@
    DESIGN TOKENS - DARK MODE (Default)
    ============================================ */
 
-@define-color theme_name "dark";
-
 /* Color Palette - Adwaita Dark */
 @define-color window_bg_color #242424;
 @define-color window_fg_color #ffffff;
@@ -80,41 +78,10 @@
 @define-color selected_bg_color #3584e4;
 @define-color selected_fg_color #ffffff;
 
-/* Spacing Tokens */
-@define-color spacing_xs 4px;
-@define-color spacing_sm 8px;
-@define-color spacing_md 12px;
-@define-color spacing_lg 16px;
-@define-color spacing_xl 24px;
-@define-color spacing_2xl 32px;
 
-/* Border Radius */
-@define-color radius_sm 4px;
-@define-color radius_md 6px;
-@define-color radius_lg 8px;
-@define-color radius_xl 12px;
-@define-color radius_round 9999px;
 
-/* Shadows */
-@define-color shadow_sm 0 1px 2px rgba(0, 0, 0, 0.3);
-@define-color shadow_md 0 2px 8px rgba(0, 0, 0, 0.4);
-@define-color shadow_lg 0 8px 16px rgba(0, 0, 0, 0.5);
-@define-color shadow_xl 0 16px 32px rgba(0, 0, 0, 0.6);
 
-/* Typography */
-@define-color font_family -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-@define-color font_size_xs 11px;
-@define-color font_size_sm 12px;
-@define-color font_size_base 14px;
-@define-color font_size_lg 16px;
-@define-color font_size_xl 20px;
-@define-color font_size_2xl 24px;
-@define-color font_size_3xl 32px;
 
-@define-color font_weight_normal 400;
-@define-color font_weight_medium 500;
-@define-color font_weight_semibold 600;
-@define-color font_weight_bold 700;
 
 /* ============================================
    LIGHT MODE DESIGN TOKENS
@@ -153,70 +120,79 @@
 
 * {
     /* Use design tokens */
-    font-family: @font_family;
-    font-size: @font_size_base;
+    font-family: "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
 }
 
-window {
+window,
+notebook,
+notebook > stack {
     background-color: @window_bg_color;
     color: @window_fg_color;
+}
+
+/* Log Panel */
+.log-panel {
+    border-top: 1px solid #455A64;
+    background-color: #1a1a1a;
+}
+
+.log-text {
+    background-color: #1a1a1a;
+    color: #b0bec5;
+    font-size: 11px;
+    padding: 8px;
+}
+
+window.light-mode .log-panel {
+    border-top: 1px solid #dadce0;
+    background-color: #f5f5f5;
+}
+
+window.light-mode .log-text {
+    background-color: #f5f5f5;
+    color: #37474F;
 }
 
 /* ============================================
    SIDEBAR STYLES
    ============================================ */
 
-.sidebar {
-    background: linear-gradient(180deg, 
-        @sidebar_bg_start 0%, 
-        @sidebar_bg_end 100%);
-    border-right: 1px solid @sidebar_border_color;
-    padding: @spacing_lg;
-}
-
-.sidebar-title {
-    font-size: @font_size_2xl;
-    font-weight: @font_weight_bold;
-    color: @sidebar_fg_color;
-    margin-bottom: @spacing_xl;
-}
+/* Sidebar styles managed by sidebar.css */
 
 .sidebar-section {
-    margin-bottom: @spacing_2xl;
-}
-
-.sidebar-section-title {
-    font-size: @font_size_sm;
-    font-weight: @font_weight_semibold;
-    color: @text_secondary;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: @spacing_sm;
+    margin-bottom: 32px;
 }
 
 /* ============================================
    BUTTONS
    ============================================ */
 
-button {
-    background-color: @card_bg_color;
-    color: @card_fg_color;
-    border: 1px solid @border_color;
-    border-radius: @radius_md;
-    padding: @spacing_sm @spacing_lg;
-    font-weight: @font_weight_medium;
-    transition: all 150ms ease;
+button,
+button.text-button,
+button.flat {
+    background: #455A64;
+    color: #ECEFF1;
+    border: 1px solid #607D8B;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 500;
+    opacity: 1;
 }
 
-button:hover {
-    background-color: @hover_bg_color;
-    border-color: @border_strong;
-    box-shadow: @shadow_sm;
+button:hover,
+button.text-button:hover,
+button.flat:hover {
+    background: #546E7A;
+    border-color: #78909C;
 }
 
 button:active {
-    background-color: @active_bg_color;
-    box-shadow: none;
+    background: #37474F;
+}
+
+button:disabled {
+    opacity: 0.5;
 }
 
 button.suggested-action {
@@ -227,7 +203,6 @@ button.suggested-action {
 
 button.suggested-action:hover {
     background-color: shade(@accent_bg_color, 1.1);
-    box-shadow: @shadow_md;
 }
 
 button.destructive-action {
@@ -248,15 +223,14 @@ button.destructive-action:hover {
     background-color: @card_bg_color;
     color: @card_fg_color;
     border: 1px solid @border_subtle;
-    border-radius: @radius_lg;
-    padding: @spacing_lg;
-    box-shadow: @shadow_sm;
+    border-radius: 8px;
+    padding: 16px;
 }
 
 .card-title {
-    font-size: @font_size_lg;
-    font-weight: @font_weight_semibold;
-    margin-bottom: @spacing_md;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
 }
 
 .card-content {
@@ -271,16 +245,13 @@ button.destructive-action:hover {
 .equipment-card {
     background-color: @card_bg_color;
     border: 1px solid @border_color;
-    border-radius: @radius_lg;
-    padding: @spacing_lg;
-    margin: @spacing_md;
-    transition: all 200ms ease;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 12px;
 }
 
 .equipment-card:hover {
     border-color: @accent_color;
-    box-shadow: @shadow_md;
-    transform: translateY(-2px);
 }
 
 .equipment-card.active {
@@ -298,29 +269,40 @@ button.destructive-action:hover {
     border-width: 2px;
 }
 
+.quality-card {
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+    border: 1px solid @border_color;
+}
+
+.work-unit-card {
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+    border: 1px solid @border_color;
+}
+
 .equipment-title {
-    font-size: @font_size_lg;
-    font-weight: @font_weight_bold;
+    font-size: 16px;
+    font-weight: 700;
     color: @text_primary;
-    margin-bottom: @spacing_sm;
+    margin-bottom: 8px;
 }
 
 .equipment-subtitle {
-    font-size: @font_size_sm;
+    font-size: 12px;
     color: @text_secondary;
-    margin-bottom: @spacing_md;
+    margin-bottom: 12px;
 }
 
 .equipment-metric {
-    font-size: @font_size_xl;
-    font-weight: @font_weight_semibold;
+    font-size: 20px;
+    font-weight: 600;
     color: @accent_color;
 }
 
 .equipment-metric-label {
-    font-size: @font_size_xs;
+    font-size: 11px;
     color: @text_secondary;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
@@ -345,12 +327,10 @@ button.destructive-action:hover {
 }
 
 .status-badge {
-    display: inline-block;
-    padding: 2px @spacing_sm;
-    border-radius: @radius_round;
-    font-size: @font_size_xs;
-    font-weight: @font_weight_medium;
-    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 500;
 }
 
 .status-badge.active {
@@ -376,16 +356,15 @@ entry {
     background-color: @view_bg_color;
     color: @view_fg_color;
     border: 1px solid @border_color;
-    border-radius: @radius_md;
-    padding: @spacing_sm @spacing_md;
+    border-radius: 6px;
+    padding: 8px 12px;
 }
 
 entry:focus {
     border-color: @accent_color;
-    box-shadow: 0 0 0 2px alpha(@accent_color, 0.2);
 }
 
-entry::placeholder {
+entry > text > placeholder {
     color: @text_placeholder;
 }
 
@@ -403,33 +382,61 @@ treeview header button {
     color: @headerbar_fg_color;
     border: none;
     border-bottom: 1px solid @border_color;
-    font-weight: @font_weight_semibold;
-    padding: @spacing_md;
+    font-weight: 600;
+    padding: 12px;
 }
 
-treeview:selected {
-    background-color: @selected_bg_color;
-    color: @selected_fg_color;
+treeview:selected,
+treeview row:selected {
+    background-color: @accent_bg_color;
+    color: #ffffff;
 }
 
 treeview row:hover {
-    background-color: @hover_bg_color;
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 /* ============================================
    DIALOGS
    ============================================ */
 
-dialog {
+dialog,
+dialog.dark-mode {
     background-color: @dialog_bg_color;
     color: @dialog_fg_color;
-    border-radius: @radius_xl;
-    box-shadow: @shadow_xl;
+    border-radius: 12px;
 }
 
-dialog headerbar {
-    background-color: @headerbar_bg_color;
+dialog.light-mode {
+    background-color: @light_dialog_bg_color;
+    color: @light_dialog_fg_color;
+}
+
+dialog.dark-mode button,
+messagedialog.dark-mode button {
+    background: #455A64;
+    color: #ECEFF1;
+    border-color: #607D8B;
+}
+
+dialog.light-mode button,
+messagedialog.light-mode button {
+    background: #e8eaed;
+    color: #202124;
+    border-color: #dadce0;
+}
+
+.dialog-titlebar-dark {
+    background: @headerbar_bg_color;
+    color: @headerbar_fg_color;
     border-bottom: 1px solid @border_color;
+}
+
+.dialog-titlebar-light {
+    background: @light_headerbar_bg_color;
+    color: @light_headerbar_fg_color;
+    border-bottom: 1px solid #dadce0;
+    color: @light_headerbar_fg_color;
 }
 
 /* ============================================
@@ -440,9 +447,8 @@ popover {
     background-color: @popover_bg_color;
     color: @popover_fg_color;
     border: 1px solid @border_color;
-    border-radius: @radius_lg;
-    box-shadow: @shadow_lg;
-    padding: @spacing_md;
+    border-radius: 8px;
+    padding: 12px;
 }
 
 /* ============================================
@@ -455,7 +461,7 @@ scrollbar {
 
 scrollbar slider {
     background-color: alpha(@text_secondary, 0.3);
-    border-radius: @radius_round;
+    border-radius: 9999px;
     min-width: 8px;
     min-height: 8px;
 }
@@ -469,35 +475,31 @@ scrollbar slider:hover {
    Use .light-mode class on window
    ============================================ */
 
-window.light-mode {
+window.light-mode,
+window.light-mode notebook,
+window.light-mode notebook > stack {
     background-color: @light_window_bg_color;
     color: @light_window_fg_color;
 }
 
-window.light-mode .sidebar {
-    background: linear-gradient(180deg, 
-        @light_sidebar_bg_start 0%, 
-        @light_sidebar_bg_end 100%);
-    border-right-color: @light_sidebar_border_color;
-}
+/* Sidebar light-mode managed by sidebar.css */
 
-window.light-mode .sidebar-title,
-window.light-mode .sidebar-section-title {
-    color: @light_text_primary;
-}
-
-window.light-mode button {
-    background-color: @light_card_bg_color;
-    color: @light_card_fg_color;
-    border-color: @light_border_color;
+window.light-mode button,
+window.light-mode button.text-button,
+window.light-mode button.flat {
+    background: #e8eaed;
+    color: #202124;
+    border-color: #dadce0;
 }
 
 window.light-mode button:hover {
-    background-color: @light_hover_bg_color;
+    background: #d2d5d9;
 }
 
 window.light-mode .card,
-window.light-mode .equipment-card {
+window.light-mode .equipment-card,
+window.light-mode .quality-card,
+window.light-mode .work-unit-card {
     background-color: @light_card_bg_color;
     color: @light_card_fg_color;
     border-color: @light_border_color;
@@ -514,6 +516,16 @@ window.light-mode treeview {
     color: @light_view_fg_color;
 }
 
+window.light-mode treeview:selected,
+window.light-mode treeview row:selected {
+    background-color: @accent_bg_color;
+    color: #ffffff;
+}
+
+window.light-mode treeview row:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
 window.light-mode .equipment-metric {
     color: @accent_color;
 }
@@ -527,42 +539,42 @@ window.light-mode .card-content {
    UTILITY CLASSES
    ============================================ */
 
-.text-xs { font-size: @font_size_xs; }
-.text-sm { font-size: @font_size_sm; }
-.text-base { font-size: @font_size_base; }
-.text-lg { font-size: @font_size_lg; }
-.text-xl { font-size: @font_size_xl; }
-.text-2xl { font-size: @font_size_2xl; }
-.text-3xl { font-size: @font_size_3xl; }
+.text-xs { font-size: 11px; }
+.text-sm { font-size: 12px; }
+.text-base { font-size: 14px; }
+.text-lg { font-size: 16px; }
+.text-xl { font-size: 20px; }
+.text-2xl { font-size: 24px; }
+.text-3xl { font-size: 32px; }
 
-.font-normal { font-weight: @font_weight_normal; }
-.font-medium { font-weight: @font_weight_medium; }
-.font-semibold { font-weight: @font_weight_semibold; }
-.font-bold { font-weight: @font_weight_bold; }
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
 
 .text-primary { color: @text_primary; }
 .text-secondary { color: @text_secondary; }
 .text-disabled { color: @text_disabled; }
 
-.m-xs { margin: @spacing_xs; }
-.m-sm { margin: @spacing_sm; }
-.m-md { margin: @spacing_md; }
-.m-lg { margin: @spacing_lg; }
-.m-xl { margin: @spacing_xl; }
+.m-xs { margin: 4px; }
+.m-sm { margin: 8px; }
+.m-md { margin: 12px; }
+.m-lg { margin: 16px; }
+.m-xl { margin: 24px; }
 
-.p-xs { padding: @spacing_xs; }
-.p-sm { padding: @spacing_sm; }
-.p-md { padding: @spacing_md; }
-.p-lg { padding: @spacing_lg; }
-.p-xl { padding: @spacing_xl; }
+.p-xs { padding: 4px; }
+.p-sm { padding: 8px; }
+.p-md { padding: 12px; }
+.p-lg { padding: 16px; }
+.p-xl { padding: 24px; }
 
-.rounded-sm { border-radius: @radius_sm; }
-.rounded-md { border-radius: @radius_md; }
-.rounded-lg { border-radius: @radius_lg; }
-.rounded-xl { border-radius: @radius_xl; }
-.rounded-full { border-radius: @radius_round; }
+.rounded-sm { border-radius: 4px; }
+.rounded-md { border-radius: 6px; }
+.rounded-lg { border-radius: 8px; }
+.rounded-xl { border-radius: 12px; }
+.rounded-full { border-radius: 9999px; }
 
-.shadow-sm { box-shadow: @shadow_sm; }
-.shadow-md { box-shadow: @shadow_md; }
-.shadow-lg { box-shadow: @shadow_lg; }
-.shadow-xl { box-shadow: @shadow_xl; }
+.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+.shadow-md { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
+.shadow-lg { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5); }
+.shadow-xl { box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6); }
