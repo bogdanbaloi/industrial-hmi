@@ -3,29 +3,11 @@
   "name": "industrial-hmi",
   "version": "1.0.0",
   "description": "Industrial HMI - Cross-Platform MVP Architecture Application",
-  "homepage": "https://github.com/yourusername/industrial-hmi-portfolio",
   "license": "MIT",
   "dependencies": [
-    {
-      "name": "gtkmm",
-      "version>=": "4.0.0",
-      "features": [
-        "win32"
-      ]
-    },
-    {
-      "name": "sqlite3",
-      "version>=": "3.0.0"
-    },
-    {
-      "name": "boost-signals2",
-      "version>=": "1.70.0"
-    },
-    {
-      "name": "boost-asio",
-      "version>=": "1.70.0"
-    }
-  ],
-  "builtin-baseline": "a42af01b72c28a8e1d7b48107b33e4f286a55ef6",
-  "overrides": []
+    "gtkmm",
+    "sqlite3",
+    "boost-signals2",
+    "boost-asio"
+  ]
 }
