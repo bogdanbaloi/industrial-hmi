@@ -1,5 +1,6 @@
 #include "DashboardPage.h"
 #include "src/gtk/view/DialogManager.h"
+#include "src/config/config_defaults.h"
 
 namespace app::view {
 
@@ -624,7 +625,7 @@ void DashboardPage::updateStatusZone(const presenter::StatusZoneViewModel& vm) {
 
 void DashboardPage::applyStyles() {
     cssProvider_ = Gtk::CssProvider::create();
-    cssProvider_->load_from_path("ui/dashboard.css");
+    cssProvider_->load_from_path(app::config::defaults::kDashboardCSS);
 
     Gtk::StyleContext::add_provider_for_display(
         Gdk::Display::get_default(),

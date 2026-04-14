@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <mutex>
 #include <functional>
+#include <atomic>
 #include <chrono>
 #include <iomanip>
 #include <sstream>
@@ -285,7 +286,7 @@ public:
 private:
     LogCallback callback_;
     LogLevel minLevel_;
-    bool writing_{false};
+    std::atomic<bool> writing_{false};
 };
 
 /**

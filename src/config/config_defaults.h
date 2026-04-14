@@ -50,5 +50,16 @@ constexpr const char* kGtkAppId = "com.portfolio.industrial-hmi";
 constexpr const char* kMainWindowUI = "ui/main-window.ui";
 constexpr const char* kSidebarCSS = "ui/sidebar.css";
 constexpr const char* kThemeCSS = "ui/adwaita-theme.css";
+constexpr const char* kDashboardCSS = "ui/dashboard.css";
+constexpr const char* kProductsCSS = "ui/products.css";
+
+// Timers (milliseconds)
+constexpr int kAutoRefreshIntervalMs = 2000;
+constexpr int kAutoRefreshStartDelayMs = 1000;
+constexpr int kLogPanelRefreshMs = 500;
+
+// Quality thresholds
+constexpr float kQualityPassThreshold = 95.0f;
+constexpr float kQualityWarningThreshold = 90.0f;
 
 }  // namespace app::config::defaults
