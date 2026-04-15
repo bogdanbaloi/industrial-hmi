@@ -274,6 +274,7 @@ target_sources(objectsView
             src/gtk/view/DialogManager.h
             src/gtk/view/pages/DashboardPage.h
             src/gtk/view/pages/ProductsPage.h
+            src/gtk/view/pages/ProductObject.h
 )
 target_link_libraries(objectsView
     PUBLIC
