@@ -2,6 +2,7 @@
 
 #include "src/presenter/ViewObserver.h"
 #include "src/presenter/DashboardPresenter.h"
+#include "src/gtk/view/widgets/QualityGauge.h"
 #include <gtkmm.h>
 #include <memory>
 
@@ -34,6 +35,10 @@ public:
 
     /// Initialize the page - sets up presenter connection
     void initialize(std::shared_ptr<DashboardPresenter> presenter);
+
+    /// Redraw the dynamically-painted widgets (gauges) after a theme change,
+    /// so they pick up the new track/background colors.
+    void refreshThemedWidgets();
 
     // ViewObserver interface implementation
     void onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) override;
@@ -72,11 +77,10 @@ private:
         Gtk::Box* cardBox{nullptr};
         Gtk::Label* nameLabel{nullptr};
         Gtk::Label* statusDot{nullptr};
-        Gtk::Picture* gaugeImage{nullptr};
+        QualityGauge* gauge{nullptr};
         Gtk::Label* passRateLabel{nullptr};
         Gtk::Label* statsLabel{nullptr};
         Gtk::Label* lastDefectLabel{nullptr};
-        presenter::QualityCheckpointStatus lastStatus{static_cast<presenter::QualityCheckpointStatus>(-1)};
     };
     std::vector<QualityCard> qualityCards_;
 

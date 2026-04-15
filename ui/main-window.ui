@@ -24,18 +24,18 @@
                 <property name="margin-start">20</property>
                 <property name="margin-end">20</property>
                 <property name="css-classes">sidebar-header</property>
-                
+
                 <child>
                   <object class="GtkLabel" id="app_title">
-                    <property name="label">[BB] Industrial HMI</property>
+                    <property name="label" translatable="yes">[BB] Industrial HMI</property>
                     <property name="css-classes">sidebar-title</property>
                     <property name="xalign">0</property>
                   </object>
                 </child>
-                
+
                 <child>
                   <object class="GtkLabel" id="app_subtitle">
-                    <property name="label">MVP Architecture</property>
+                    <property name="label" translatable="yes">MVP Architecture</property>
                     <property name="css-classes">sidebar-subtitle</property>
                     <property name="xalign">0</property>
                   </object>
@@ -51,18 +51,7 @@
                 <property name="margin-end">12</property>
               </object>
             </child>
-            
-            <!-- Exit Fullscreen Button -->
-            <child>
-              <object class="GtkButton" id="exit_fullscreen_button">
-                <property name="label">Exit Fullscreen</property>
-                <property name="margin-top">16</property>
-                <property name="margin-start">20</property>
-                <property name="margin-end">20</property>
-                <property name="css-classes">sidebar-option</property>
-              </object>
-            </child>
-            
+
             <!-- Display Mode Section -->
             <child>
               <object class="GtkBox" id="display_section">
@@ -74,7 +63,7 @@
                 
                 <child>
                   <object class="GtkLabel" id="display_label">
-                    <property name="label">DISPLAY MODE</property>
+                    <property name="label" translatable="yes">DISPLAY MODE</property>
                     <property name="css-classes">section-header</property>
                     <property name="xalign">0</property>
                   </object>
@@ -87,7 +76,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="radio_fullscreen">
-                        <property name="label">Fullscreen</property>
+                        <property name="label" translatable="yes">Fullscreen</property>
                         <property name="active">true</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -95,7 +84,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="radio_windowed">
-                        <property name="label">Windowed</property>
+                        <property name="label" translatable="yes">Windowed</property>
                         <property name="group">radio_fullscreen</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -126,7 +115,7 @@
                 
                 <child>
                   <object class="GtkLabel" id="theme_label">
-                    <property name="label">THEME</property>
+                    <property name="label" translatable="yes">THEME</property>
                     <property name="css-classes">section-header</property>
                     <property name="xalign">0</property>
                   </object>
@@ -139,7 +128,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="radio_dark">
-                        <property name="label">Dark Mode</property>
+                        <property name="label" translatable="yes">Dark Mode</property>
                         <property name="active">true</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -147,7 +136,7 @@
                     
                     <child>
                       <object class="GtkCheckButton" id="radio_light">
-                        <property name="label">Light Mode</property>
+                        <property name="label" translatable="yes">Light Mode</property>
                         <property name="group">radio_dark</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
@@ -167,6 +156,54 @@
               </object>
             </child>
             
+            <!-- Language Section -->
+            <child>
+              <object class="GtkBox" id="language_section">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-top">20</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+
+                <child>
+                  <object class="GtkLabel" id="language_label">
+                    <property name="label" translatable="yes">LANGUAGE</property>
+                    <property name="css-classes">section-header</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkComboBoxText" id="language_combo">
+                    <items>
+                      <item id="auto" translatable="yes">Auto (System)</item>
+                      <item id="en">English</item>
+                      <item id="de">Deutsch</item>
+                      <item id="es">Español</item>
+                      <item id="es_MX">Español (México)</item>
+                      <item id="fi">Suomi</item>
+                      <item id="fr">Français</item>
+                      <item id="ga">Gaeilge</item>
+                      <item id="it">Italiano</item>
+                      <item id="pt">Português</item>
+                      <item id="pt_BR">Português (Brasil)</item>
+                      <item id="sv">Svenska</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- Separator -->
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">horizontal</property>
+                <property name="margin-top">20</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+              </object>
+            </child>
+
             <!-- System Options Section -->
             <child>
               <object class="GtkBox" id="system_section">
@@ -175,31 +212,31 @@
                 <property name="margin-top">20</property>
                 <property name="margin-start">20</property>
                 <property name="margin-end">20</property>
-                
+
                 <child>
                   <object class="GtkLabel" id="system_label">
-                    <property name="label">SYSTEM</property>
+                    <property name="label" translatable="yes">SYSTEM</property>
                     <property name="css-classes">section-header</property>
                     <property name="xalign">0</property>
                   </object>
                 </child>
-                
+
                 <child>
                   <object class="GtkBox" id="system_controls">
                     <property name="orientation">vertical</property>
                     <property name="spacing">8</property>
-                    
+
                     <child>
                       <object class="GtkCheckButton" id="check_auto_refresh">
-                        <property name="label">Auto Refresh</property>
+                        <property name="label" translatable="yes">Auto Refresh</property>
                         <property name="active">true</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
                     </child>
-                    
+
                     <child>
                       <object class="GtkCheckButton" id="check_show_logs">
-                        <property name="label">Verbose Logging</property>
+                        <property name="label" translatable="yes">Verbose Logging</property>
                         <property name="css-classes">sidebar-option</property>
                       </object>
                     </child>
@@ -207,14 +244,25 @@
                 </child>
               </object>
             </child>
-            
+
             <!-- Spacer to push footer to bottom -->
             <child>
               <object class="GtkBox">
                 <property name="vexpand">true</property>
               </object>
             </child>
-            
+
+            <!-- Close Application button -->
+            <child>
+              <object class="GtkButton" id="close_app_button">
+                <property name="label" translatable="yes">Close Application</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+                <property name="margin-bottom">12</property>
+                <property name="css-classes">sidebar-close-app</property>
+              </object>
+            </child>
+
             <!-- Footer - Version Info -->
             <child>
               <object class="GtkBox" id="sidebar_footer">
@@ -226,7 +274,7 @@
                 
                 <child>
                   <object class="GtkLabel" id="version_label">
-                    <property name="label">Version 1.0.0</property>
+                    <property name="label" translatable="yes">Version 1.0.0</property>
                     <property name="css-classes">sidebar-version</property>
                     <property name="xalign">0</property>
                   </object>
@@ -234,7 +282,7 @@
                 
                 <child>
                   <object class="GtkLabel" id="author_label">
-                    <property name="label">Portfolio Demo</property>
+                    <property name="label" translatable="yes">Portfolio Demo</property>
                     <property name="css-classes">sidebar-author</property>
                     <property name="xalign">0</property>
                   </object>
@@ -260,7 +308,7 @@
                 <!-- Dashboard Page -->
                 <child>
                   <object class="GtkNotebookPage">
-                    <property name="tab-label">Dashboard</property>
+                    <property name="tab-label" translatable="yes">Dashboard</property>
                     <property name="child">
                       <object class="GtkBox" id="dashboard_container">
                         <property name="orientation">vertical</property>
@@ -272,7 +320,7 @@
                 <!-- Products Database Page -->
                 <child>
                   <object class="GtkNotebookPage">
-                    <property name="tab-label">Products Database</property>
+                    <property name="tab-label" translatable="yes">Products Database</property>
                     <property name="child">
                       <object class="GtkBox" id="products_container">
                         <property name="orientation">vertical</property>

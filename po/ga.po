@@ -1,0 +1,306 @@
+# Irish (Gaeilge) translations for industrial-hmi.
+# Copyright (C) 2026
+# This file is distributed under the same license as the industrial-hmi package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: industrial-hmi 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-15 00:00+0000\n"
+"PO-Revision-Date: 2026-04-15 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Irish\n"
+"Language: ga\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=5; plural=(n==1 ? 0 : n==2 ? 1 : n<7 ? 2 : n<11 ? 3 : 4);\n"
+
+msgid "[BB] Industrial HMI"
+msgstr "[BB] HMI Tionsclaíoch"
+
+msgid "MVP Architecture"
+msgstr "Ailtireacht MVP"
+
+msgid "DISPLAY MODE"
+msgstr "MÓD TAISPEÁNA"
+
+msgid "Fullscreen"
+msgstr "Lánscáileán"
+
+msgid "Windowed"
+msgstr "Fuinneog"
+
+msgid "THEME"
+msgstr "TÉAMA"
+
+msgid "Dark Mode"
+msgstr "Mód Dorcha"
+
+msgid "Light Mode"
+msgstr "Mód Geal"
+
+msgid "SYSTEM"
+msgstr "CÓRAS"
+
+msgid "LANGUAGE"
+msgstr "TEANGA"
+
+msgid "Auto (System)"
+msgstr "Uathoibríoch (Córas)"
+
+msgid "Language Changed"
+msgstr "Teanga athraithe"
+
+msgid ""
+"The language has been updated.\n"
+"\n"
+"Please restart the application for the change to take effect."
+msgstr ""
+"Nuashonraíodh an teanga.\n"
+"\n"
+"Atosaigh an feidhmchlár chun an t-athrú a chur i bhfeidhm."
+
+msgid "Could not save the language preference."
+msgstr "Níorbh fhéidir an sainrogha teanga a shábháil."
+
+msgid "Auto Refresh"
+msgstr "Athnuachan Uathoibríoch"
+
+msgid "Verbose Logging"
+msgstr "Logáil Mhionsonraithe"
+
+msgid "Version 1.0.0"
+msgstr "Leagan 1.0.0"
+
+msgid "Portfolio Demo"
+msgstr "Taispeántas Punainne"
+
+msgid "Close Application"
+msgstr "Dún an Feidhmchlár"
+
+msgid "Dashboard"
+msgstr "Deais"
+
+msgid "Products Database"
+msgstr "Bunachar Sonraí Táirgí"
+
+msgid "Cancel"
+msgstr "Cealaigh"
+
+msgid "OK"
+msgstr "Ceart go leor"
+
+msgid "Save"
+msgstr "Sábháil"
+
+msgid "Update"
+msgstr "Nuashonraigh"
+
+msgid "Error"
+msgstr "Earráid"
+
+msgid "WORK UNIT"
+msgstr "AONAD OIBRE"
+
+msgid "Work Unit:"
+msgstr "Aonad Oibre:"
+
+msgid "Product:"
+msgstr "Táirge:"
+
+msgid "Ready"
+msgstr "Réidh"
+
+msgid "EQUIPMENT STATIONS"
+msgstr "STÁISIÚIN TROSCÁIN"
+
+msgid "QUALITY CHECKPOINTS"
+msgstr "SEICPHOINTÍ CÁILÍOCHTA"
+
+msgid "Checkpoint %1"
+msgstr "Seicphointe %1"
+
+msgid "0 inspected • 0 defects"
+msgstr "0 iniúchta • 0 locht"
+
+msgid "%1 inspected • %2 defects"
+msgstr "%1 iniúchta • %2 locht"
+
+msgid "Last: %1"
+msgstr "Is déanaí: %1"
+
+msgid "No defects detected"
+msgstr "Níor braitheadh aon locht"
+
+msgid "Control Panel"
+msgstr "Painéal Rialaithe"
+
+msgid "System Idle"
+msgstr "Córas Díomhaoin"
+
+msgid "START"
+msgstr "TOSAIGH"
+
+msgid "STOP"
+msgstr "STAD"
+
+msgid "RESET"
+msgstr "ATHSHOCRAIGH"
+
+msgid "CALIBRATION"
+msgstr "CALLÚ"
+
+msgid "ONLINE"
+msgstr "AR LÍNE"
+
+msgid "OFFLINE"
+msgstr "AS LÍNE"
+
+msgid "PROCESSING"
+msgstr "Á PHRÓISEÁIL"
+
+msgid "ERROR"
+msgstr "EARRÁID"
+
+msgid "UNKNOWN"
+msgstr "ANAITHNID"
+
+msgid "RUNNING"
+msgstr "AG RITH"
+
+msgid "STOPPED"
+msgstr "STADTA"
+
+msgid "IDLE"
+msgstr "DÍOMHAOIN"
+
+msgid "Confirm Reset"
+msgstr "Deimhnigh an tAthshocrú"
+
+msgid ""
+"Reset the system?\n"
+"\n"
+"This will stop all operations and return equipment to initial state."
+msgstr ""
+"Athshocraigh an córas?\n"
+"\n"
+"Stopfar gach oibríocht agus fillfidh an trealamh ar an staid thosaigh."
+
+msgid "Confirm Calibration"
+msgstr "Deimhnigh an Callú"
+
+msgid ""
+"Start calibration procedure?\n"
+"\n"
+"All equipment will be moved to home position.\n"
+"This may take several minutes."
+msgstr ""
+"Tosaigh an nós imeachta callaithe?\n"
+"\n"
+"Cuirfear an trealamh uile chuig an suíomh baile.\n"
+"D'fhéadfadh sé seo roinnt nóiméad a thógáil."
+
+msgid "+ Add New Product"
+msgstr "+ Cuir Táirge Nua Leis"
+
+msgid "Refresh"
+msgstr "Athnuaigh"
+
+msgid "Search:"
+msgstr "Cuardaigh:"
+
+msgid "Search by Product ID or Name..."
+msgstr "Cuardaigh de réir aitheantais nó ainm..."
+
+msgid "Product Code"
+msgstr "Cód Táirge"
+
+msgid "Name"
+msgstr "Ainm"
+
+msgid "Status"
+msgstr "Stádas"
+
+msgid "Stock"
+msgstr "Stoc"
+
+msgid "Quality %"
+msgstr "Cáilíocht %"
+
+msgid "View Details"
+msgstr "Féach ar Shonraí"
+
+msgid "Edit"
+msgstr "Cuir in Eagar"
+
+msgid "Delete"
+msgstr "Scrios"
+
+msgid "Product Details"
+msgstr "Sonraí an Táirge"
+
+msgid "Product ID: %1"
+msgstr "Aitheantas an Táirge: %1"
+
+msgid "Created: %1"
+msgstr "Cruthaithe: %1"
+
+msgid "Status: %1"
+msgstr "Stádas: %1"
+
+msgid "Active"
+msgstr "Gníomhach"
+
+msgid "Inactive"
+msgstr "Neamhghníomhach"
+
+msgid "Low Stock"
+msgstr "Stoc Íseal"
+
+msgid "Add New Product"
+msgstr "Cuir Táirge Nua Leis"
+
+msgid "Product Code:"
+msgstr "Cód Táirge:"
+
+msgid "Name:"
+msgstr "Ainm:"
+
+msgid "Product G"
+msgstr "Táirge G"
+
+msgid "Status:"
+msgstr "Stádas:"
+
+msgid "Stock (units):"
+msgstr "Stoc (aonaid):"
+
+msgid "Quality (%):"
+msgstr "Cáilíocht (%):"
+
+msgid "Failed to add product. Product code may already exist."
+msgstr "Theip ar chur an táirge leis. D'fhéadfadh go bhfuil an cód táirge ann cheana."
+
+msgid "Confirm Delete"
+msgstr "Deimhnigh an Scriosadh"
+
+msgid ""
+"Delete \"%1\"?\n"
+"\n"
+"This will mark the product as inactive (soft delete).\n"
+"The product will no longer appear in the list."
+msgstr ""
+"Scrios \"%1\"?\n"
+"\n"
+"Marcálfar an táirge mar neamhghníomhach (scriosadh bog).\n"
+"Ní bheidh sé le feiceáil sa liosta níos mó."
+
+msgid "Failed to delete product."
+msgstr "Theip ar scriosadh an táirge."
+
+msgid "Edit Product"
+msgstr "Cuir an Táirge in Eagar"
+
+msgid "Failed to update product."
+msgstr "Theip ar nuashonrú an táirge."

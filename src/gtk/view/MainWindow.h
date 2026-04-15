@@ -48,6 +48,7 @@ private:
     void onThemeChanged();
     void onShowLogsToggled();
     void onAutoRefreshToggled();
+    void onLanguageChanged();
     bool onKeyPressed(guint keyval, guint keycode, Gdk::ModifierType state);
     void toggleFullscreen();
     
@@ -69,6 +70,7 @@ private:
     Gtk::Notebook* mainNotebook_ = nullptr;
     Gtk::Box* dashboardContainer_ = nullptr;
     Gtk::Box* productsContainer_ = nullptr;
+    Gtk::ComboBoxText* languageCombo_ = nullptr;
     
     // Services (injected into pages)
     std::unique_ptr<app::core::ExceptionHandler> exceptionHandler_;

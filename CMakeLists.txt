@@ -162,6 +162,14 @@ endif()
 find_package(Threads REQUIRED)
 
 # ============================================================================
+# Internationalization (gettext)
+# ============================================================================
+# Build catalog: po/<lang>.po -> <build>/locale/<lang>/LC_MESSAGES/<domain>.mo
+set(GETTEXT_DOMAIN "industrial-hmi")
+find_package(Gettext)  # msgfmt + msgmerge (translators only need the former)
+find_package(Intl)     # libintl (MSVC/MinGW expose it as a separate library)
+
+# ============================================================================
 # Object Libraries (Modular Build Pattern)
 # ============================================================================
 
@@ -207,6 +215,7 @@ add_library(objectsCore OBJECT)
 target_sources(objectsCore
     PRIVATE
         src/core/Application.cpp
+        src/core/i18n.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -216,6 +225,7 @@ target_sources(objectsCore
             src/core/ExceptionHandler.h
             src/core/Result.h
             src/core/ErrorHandling.h
+            src/core/i18n.h
 )
 target_link_libraries(objectsCore
     PUBLIC
@@ -231,6 +241,16 @@ target_compile_options(objectsCore
     PUBLIC
         ${GTKMM_CFLAGS_OTHER}
 )
+target_compile_definitions(objectsCore
+    PUBLIC
+        GETTEXT_PACKAGE="${GETTEXT_DOMAIN}"
+)
+
+# libintl on platforms where it isn't merged into libc (Windows, macOS)
+if(Intl_FOUND)
+    target_include_directories(objectsCore PUBLIC ${Intl_INCLUDE_DIRS})
+    target_link_libraries(objectsCore PUBLIC ${Intl_LIBRARIES})
+endif()
 
 # Presenter Layer - MVP orchestration
 add_library(objectsPresenter OBJECT)
@@ -275,6 +295,7 @@ target_sources(objectsView
             src/gtk/view/pages/DashboardPage.h
             src/gtk/view/pages/ProductsPage.h
             src/gtk/view/pages/ProductObject.h
+            src/gtk/view/widgets/QualityGauge.h
 )
 target_link_libraries(objectsView
     PUBLIC
@@ -324,6 +345,12 @@ if(WIN32)
     target_link_libraries(industrial-hmi PRIVATE ws2_32)
 endif()
 
+# libintl - needed on platforms where gettext is not in libc (Windows, macOS)
+if(Intl_FOUND)
+    target_include_directories(industrial-hmi PRIVATE ${Intl_INCLUDE_DIRS})
+    target_link_libraries(industrial-hmi PRIVATE ${Intl_LIBRARIES})
+endif()
+
 # Windows: Add resource file if exists (icon, version info)
 if(WIN32 AND EXISTS "${CMAKE_SOURCE_DIR}/resources/app.rc")
     target_sources(industrial-hmi PRIVATE resources/app.rc)
@@ -356,6 +383,54 @@ add_custom_target(CopyUIFiles ALL
 )
 
 add_dependencies(industrial-hmi CopyAssets CopyConfig CopyUIFiles)
+
+# ============================================================================
+# Translation Catalogs (.po -> .mo)
+# ============================================================================
+set(PO_DIR "${CMAKE_SOURCE_DIR}/po")
+set(LOCALE_BUILD_DIR "${CMAKE_BINARY_DIR}/locale")
+
+# Tell main.cpp where runtime catalogs live (dev: build tree, install: share)
+target_compile_definitions(industrial-hmi PRIVATE
+    LOCALE_DIR="${LOCALE_BUILD_DIR}"
+)
+
+if(GETTEXT_MSGFMT_EXECUTABLE AND EXISTS "${PO_DIR}/LINGUAS")
+    file(STRINGS "${PO_DIR}/LINGUAS" LINGUAS_RAW)
+    set(MO_FILES "")
+    foreach(line IN LISTS LINGUAS_RAW)
+        string(STRIP "${line}" lang)
+        if(lang AND NOT lang MATCHES "^#")
+            set(po_file "${PO_DIR}/${lang}.po")
+            set(mo_dir  "${LOCALE_BUILD_DIR}/${lang}/LC_MESSAGES")
+            set(mo_file "${mo_dir}/${GETTEXT_DOMAIN}.mo")
+            add_custom_command(
+                OUTPUT "${mo_file}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${mo_dir}"
+                COMMAND ${GETTEXT_MSGFMT_EXECUTABLE} -o "${mo_file}" "${po_file}"
+                DEPENDS "${po_file}"
+                COMMENT "Compiling ${lang}.po -> ${GETTEXT_DOMAIN}.mo"
+                VERBATIM
+            )
+            list(APPEND MO_FILES "${mo_file}")
+
+            # Install compiled catalog
+            if(WIN32)
+                install(FILES "${mo_file}"
+                        DESTINATION "locale/${lang}/LC_MESSAGES")
+            else()
+                install(FILES "${mo_file}"
+                        DESTINATION "share/locale/${lang}/LC_MESSAGES")
+            endif()
+        endif()
+    endforeach()
+    if(MO_FILES)
+        add_custom_target(translations ALL DEPENDS ${MO_FILES})
+        add_dependencies(industrial-hmi translations)
+    endif()
+else()
+    message(STATUS "gettext msgfmt not found - translations will not be compiled")
+endif()
 
 # ============================================================================
 # Installation Rules (Cross-Platform)

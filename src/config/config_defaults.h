@@ -16,6 +16,11 @@ constexpr int kWindowHeight = 1080;
 // Theme
 constexpr const char* kDefaultTheme = "dark";
 
+// i18n
+// "auto" = respect LANGUAGE/LANG from environment (OS locale)
+// otherwise: one of the LINGUAS codes (en, de, es, fi, fr, ga, it, pt, sv)
+constexpr const char* kDefaultLanguage = "auto";
+
 // Dialogs
 constexpr const char* kDialogTitle = "Dialog";
 constexpr const char* kDialogIcon = "dialog-information";

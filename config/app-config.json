@@ -4,6 +4,10 @@
     "version": "1.0.0",
     "organization": "Portfolio Project"
   },
+
+  "i18n": {
+    "language": "auto"
+  },
   
   "assets": {
     "icons": {

@@ -1,0 +1,306 @@
+# Finnish translations for industrial-hmi.
+# Copyright (C) 2026
+# This file is distributed under the same license as the industrial-hmi package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: industrial-hmi 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-15 00:00+0000\n"
+"PO-Revision-Date: 2026-04-15 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Finnish\n"
+"Language: fi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "[BB] Industrial HMI"
+msgstr "[BB] Teollinen HMI"
+
+msgid "MVP Architecture"
+msgstr "MVP-arkkitehtuuri"
+
+msgid "DISPLAY MODE"
+msgstr "NÄYTTÖTILA"
+
+msgid "Fullscreen"
+msgstr "Koko näyttö"
+
+msgid "Windowed"
+msgstr "Ikkunoitu"
+
+msgid "THEME"
+msgstr "TEEMA"
+
+msgid "Dark Mode"
+msgstr "Tumma tila"
+
+msgid "Light Mode"
+msgstr "Vaalea tila"
+
+msgid "SYSTEM"
+msgstr "JÄRJESTELMÄ"
+
+msgid "LANGUAGE"
+msgstr "KIELI"
+
+msgid "Auto (System)"
+msgstr "Automaattinen (Järjestelmä)"
+
+msgid "Language Changed"
+msgstr "Kieli vaihdettu"
+
+msgid ""
+"The language has been updated.\n"
+"\n"
+"Please restart the application for the change to take effect."
+msgstr ""
+"Kieli on päivitetty.\n"
+"\n"
+"Käynnistä sovellus uudelleen, jotta muutos tulee voimaan."
+
+msgid "Could not save the language preference."
+msgstr "Kieliasetusta ei voitu tallentaa."
+
+msgid "Auto Refresh"
+msgstr "Automaattinen päivitys"
+
+msgid "Verbose Logging"
+msgstr "Yksityiskohtainen loki"
+
+msgid "Version 1.0.0"
+msgstr "Versio 1.0.0"
+
+msgid "Portfolio Demo"
+msgstr "Portfoliodemo"
+
+msgid "Close Application"
+msgstr "Sulje sovellus"
+
+msgid "Dashboard"
+msgstr "Kojelauta"
+
+msgid "Products Database"
+msgstr "Tuotetietokanta"
+
+msgid "Cancel"
+msgstr "Peruuta"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Save"
+msgstr "Tallenna"
+
+msgid "Update"
+msgstr "Päivitä"
+
+msgid "Error"
+msgstr "Virhe"
+
+msgid "WORK UNIT"
+msgstr "TYÖYKSIKKÖ"
+
+msgid "Work Unit:"
+msgstr "Työyksikkö:"
+
+msgid "Product:"
+msgstr "Tuote:"
+
+msgid "Ready"
+msgstr "Valmis"
+
+msgid "EQUIPMENT STATIONS"
+msgstr "LAITEASEMAT"
+
+msgid "QUALITY CHECKPOINTS"
+msgstr "LAADUNTARKISTUSPISTEET"
+
+msgid "Checkpoint %1"
+msgstr "Tarkistuspiste %1"
+
+msgid "0 inspected • 0 defects"
+msgstr "0 tarkastettua • 0 vikaa"
+
+msgid "%1 inspected • %2 defects"
+msgstr "%1 tarkastettua • %2 vikaa"
+
+msgid "Last: %1"
+msgstr "Viimeisin: %1"
+
+msgid "No defects detected"
+msgstr "Vikoja ei havaittu"
+
+msgid "Control Panel"
+msgstr "Ohjauspaneeli"
+
+msgid "System Idle"
+msgstr "Järjestelmä vapaana"
+
+msgid "START"
+msgstr "KÄYNNISTÄ"
+
+msgid "STOP"
+msgstr "PYSÄYTÄ"
+
+msgid "RESET"
+msgstr "NOLLAA"
+
+msgid "CALIBRATION"
+msgstr "KALIBROINTI"
+
+msgid "ONLINE"
+msgstr "VERKOSSA"
+
+msgid "OFFLINE"
+msgstr "POISSA VERKOSTA"
+
+msgid "PROCESSING"
+msgstr "KÄSITELLÄÄN"
+
+msgid "ERROR"
+msgstr "VIRHE"
+
+msgid "UNKNOWN"
+msgstr "TUNTEMATON"
+
+msgid "RUNNING"
+msgstr "KÄYNNISSÄ"
+
+msgid "STOPPED"
+msgstr "PYSÄYTETTY"
+
+msgid "IDLE"
+msgstr "VAPAA"
+
+msgid "Confirm Reset"
+msgstr "Vahvista nollaus"
+
+msgid ""
+"Reset the system?\n"
+"\n"
+"This will stop all operations and return equipment to initial state."
+msgstr ""
+"Nollataanko järjestelmä?\n"
+"\n"
+"Kaikki toiminnot pysäytetään ja laitteet palautetaan alkutilaan."
+
+msgid "Confirm Calibration"
+msgstr "Vahvista kalibrointi"
+
+msgid ""
+"Start calibration procedure?\n"
+"\n"
+"All equipment will be moved to home position.\n"
+"This may take several minutes."
+msgstr ""
+"Käynnistetäänkö kalibrointi?\n"
+"\n"
+"Kaikki laitteet siirretään alkuasentoon.\n"
+"Toiminto voi kestää useita minuutteja."
+
+msgid "+ Add New Product"
+msgstr "+ Lisää uusi tuote"
+
+msgid "Refresh"
+msgstr "Päivitä"
+
+msgid "Search:"
+msgstr "Haku:"
+
+msgid "Search by Product ID or Name..."
+msgstr "Hae tuote-ID:llä tai nimellä..."
+
+msgid "Product Code"
+msgstr "Tuotekoodi"
+
+msgid "Name"
+msgstr "Nimi"
+
+msgid "Status"
+msgstr "Tila"
+
+msgid "Stock"
+msgstr "Varasto"
+
+msgid "Quality %"
+msgstr "Laatu %"
+
+msgid "View Details"
+msgstr "Näytä tiedot"
+
+msgid "Edit"
+msgstr "Muokkaa"
+
+msgid "Delete"
+msgstr "Poista"
+
+msgid "Product Details"
+msgstr "Tuotteen tiedot"
+
+msgid "Product ID: %1"
+msgstr "Tuote-ID: %1"
+
+msgid "Created: %1"
+msgstr "Luotu: %1"
+
+msgid "Status: %1"
+msgstr "Tila: %1"
+
+msgid "Active"
+msgstr "Aktiivinen"
+
+msgid "Inactive"
+msgstr "Ei aktiivinen"
+
+msgid "Low Stock"
+msgstr "Vähäinen varasto"
+
+msgid "Add New Product"
+msgstr "Lisää uusi tuote"
+
+msgid "Product Code:"
+msgstr "Tuotekoodi:"
+
+msgid "Name:"
+msgstr "Nimi:"
+
+msgid "Product G"
+msgstr "Tuote G"
+
+msgid "Status:"
+msgstr "Tila:"
+
+msgid "Stock (units):"
+msgstr "Varasto (kpl):"
+
+msgid "Quality (%):"
+msgstr "Laatu (%):"
+
+msgid "Failed to add product. Product code may already exist."
+msgstr "Tuotteen lisääminen epäonnistui. Tuotekoodi saattaa olla jo olemassa."
+
+msgid "Confirm Delete"
+msgstr "Vahvista poisto"
+
+msgid ""
+"Delete \"%1\"?\n"
+"\n"
+"This will mark the product as inactive (soft delete).\n"
+"The product will no longer appear in the list."
+msgstr ""
+"Poistetaanko \"%1\"?\n"
+"\n"
+"Tuote merkitään ei-aktiiviseksi (looginen poisto).\n"
+"Se ei enää näy luettelossa."
+
+msgid "Failed to delete product."
+msgstr "Tuotteen poistaminen epäonnistui."
+
+msgid "Edit Product"
+msgstr "Muokkaa tuotetta"
+
+msgid "Failed to update product."
+msgstr "Tuotteen päivitys epäonnistui."

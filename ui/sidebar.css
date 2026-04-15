@@ -116,3 +116,37 @@ window.light-mode .sidebar-version,
 window.light-mode .sidebar-author {
     color: #80868b;
 }
+
+/* Close Application button (danger style, bottom of sidebar) */
+.sidebar-close-app {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 16px;
+    border-radius: 6px;
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #F48FB1;
+    border: 1px solid rgba(244, 67, 54, 0.35);
+}
+
+.sidebar-close-app:hover {
+    background-color: rgba(244, 67, 54, 0.85);
+    color: #ffffff;
+    border-color: rgba(244, 67, 54, 0.9);
+}
+
+.sidebar-close-app:active {
+    background-color: #d32f2f;
+    color: #ffffff;
+}
+
+window.light-mode .sidebar-close-app {
+    background-color: rgba(234, 67, 53, 0.08);
+    color: #c5221f;
+    border-color: rgba(234, 67, 53, 0.4);
+}
+
+window.light-mode .sidebar-close-app:hover {
+    background-color: #ea4335;
+    color: #ffffff;
+    border-color: #ea4335;
+}

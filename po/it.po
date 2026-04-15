@@ -1,0 +1,306 @@
+# Italian translations for industrial-hmi.
+# Copyright (C) 2026
+# This file is distributed under the same license as the industrial-hmi package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: industrial-hmi 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-15 00:00+0000\n"
+"PO-Revision-Date: 2026-04-15 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Italian\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "[BB] Industrial HMI"
+msgstr "[BB] HMI Industriale"
+
+msgid "MVP Architecture"
+msgstr "Architettura MVP"
+
+msgid "DISPLAY MODE"
+msgstr "MODALITÀ DISPLAY"
+
+msgid "Fullscreen"
+msgstr "Schermo intero"
+
+msgid "Windowed"
+msgstr "Finestra"
+
+msgid "THEME"
+msgstr "TEMA"
+
+msgid "Dark Mode"
+msgstr "Modalità scura"
+
+msgid "Light Mode"
+msgstr "Modalità chiara"
+
+msgid "SYSTEM"
+msgstr "SISTEMA"
+
+msgid "LANGUAGE"
+msgstr "LINGUA"
+
+msgid "Auto (System)"
+msgstr "Automatico (Sistema)"
+
+msgid "Language Changed"
+msgstr "Lingua modificata"
+
+msgid ""
+"The language has been updated.\n"
+"\n"
+"Please restart the application for the change to take effect."
+msgstr ""
+"La lingua è stata aggiornata.\n"
+"\n"
+"Riavviare l'applicazione per applicare la modifica."
+
+msgid "Could not save the language preference."
+msgstr "Impossibile salvare l'impostazione della lingua."
+
+msgid "Auto Refresh"
+msgstr "Aggiornamento automatico"
+
+msgid "Verbose Logging"
+msgstr "Log dettagliato"
+
+msgid "Version 1.0.0"
+msgstr "Versione 1.0.0"
+
+msgid "Portfolio Demo"
+msgstr "Demo portfolio"
+
+msgid "Close Application"
+msgstr "Chiudi applicazione"
+
+msgid "Dashboard"
+msgstr "Cruscotto"
+
+msgid "Products Database"
+msgstr "Database prodotti"
+
+msgid "Cancel"
+msgstr "Annulla"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Save"
+msgstr "Salva"
+
+msgid "Update"
+msgstr "Aggiorna"
+
+msgid "Error"
+msgstr "Errore"
+
+msgid "WORK UNIT"
+msgstr "UNITÀ DI LAVORO"
+
+msgid "Work Unit:"
+msgstr "Unità di lavoro:"
+
+msgid "Product:"
+msgstr "Prodotto:"
+
+msgid "Ready"
+msgstr "Pronto"
+
+msgid "EQUIPMENT STATIONS"
+msgstr "STAZIONI DI LAVORO"
+
+msgid "QUALITY CHECKPOINTS"
+msgstr "PUNTI DI CONTROLLO QUALITÀ"
+
+msgid "Checkpoint %1"
+msgstr "Punto di controllo %1"
+
+msgid "0 inspected • 0 defects"
+msgstr "0 ispezionati • 0 difetti"
+
+msgid "%1 inspected • %2 defects"
+msgstr "%1 ispezionati • %2 difetti"
+
+msgid "Last: %1"
+msgstr "Ultimo: %1"
+
+msgid "No defects detected"
+msgstr "Nessun difetto rilevato"
+
+msgid "Control Panel"
+msgstr "Pannello di controllo"
+
+msgid "System Idle"
+msgstr "Sistema in attesa"
+
+msgid "START"
+msgstr "AVVIA"
+
+msgid "STOP"
+msgstr "STOP"
+
+msgid "RESET"
+msgstr "RESET"
+
+msgid "CALIBRATION"
+msgstr "CALIBRAZIONE"
+
+msgid "ONLINE"
+msgstr "ONLINE"
+
+msgid "OFFLINE"
+msgstr "OFFLINE"
+
+msgid "PROCESSING"
+msgstr "IN ELABORAZIONE"
+
+msgid "ERROR"
+msgstr "ERRORE"
+
+msgid "UNKNOWN"
+msgstr "SCONOSCIUTO"
+
+msgid "RUNNING"
+msgstr "IN FUNZIONE"
+
+msgid "STOPPED"
+msgstr "FERMATO"
+
+msgid "IDLE"
+msgstr "INATTIVO"
+
+msgid "Confirm Reset"
+msgstr "Conferma reset"
+
+msgid ""
+"Reset the system?\n"
+"\n"
+"This will stop all operations and return equipment to initial state."
+msgstr ""
+"Ripristinare il sistema?\n"
+"\n"
+"Tutte le operazioni verranno interrotte e le apparecchiature torneranno allo stato iniziale."
+
+msgid "Confirm Calibration"
+msgstr "Conferma calibrazione"
+
+msgid ""
+"Start calibration procedure?\n"
+"\n"
+"All equipment will be moved to home position.\n"
+"This may take several minutes."
+msgstr ""
+"Avviare la procedura di calibrazione?\n"
+"\n"
+"Tutte le apparecchiature verranno portate in posizione iniziale.\n"
+"L'operazione può richiedere diversi minuti."
+
+msgid "+ Add New Product"
+msgstr "+ Aggiungi nuovo prodotto"
+
+msgid "Refresh"
+msgstr "Aggiorna"
+
+msgid "Search:"
+msgstr "Cerca:"
+
+msgid "Search by Product ID or Name..."
+msgstr "Cerca per ID prodotto o nome..."
+
+msgid "Product Code"
+msgstr "Codice prodotto"
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "Status"
+msgstr "Stato"
+
+msgid "Stock"
+msgstr "Scorta"
+
+msgid "Quality %"
+msgstr "Qualità %"
+
+msgid "View Details"
+msgstr "Visualizza dettagli"
+
+msgid "Edit"
+msgstr "Modifica"
+
+msgid "Delete"
+msgstr "Elimina"
+
+msgid "Product Details"
+msgstr "Dettagli prodotto"
+
+msgid "Product ID: %1"
+msgstr "ID prodotto: %1"
+
+msgid "Created: %1"
+msgstr "Creato: %1"
+
+msgid "Status: %1"
+msgstr "Stato: %1"
+
+msgid "Active"
+msgstr "Attivo"
+
+msgid "Inactive"
+msgstr "Inattivo"
+
+msgid "Low Stock"
+msgstr "Scorta bassa"
+
+msgid "Add New Product"
+msgstr "Aggiungi nuovo prodotto"
+
+msgid "Product Code:"
+msgstr "Codice prodotto:"
+
+msgid "Name:"
+msgstr "Nome:"
+
+msgid "Product G"
+msgstr "Prodotto G"
+
+msgid "Status:"
+msgstr "Stato:"
+
+msgid "Stock (units):"
+msgstr "Scorta (unità):"
+
+msgid "Quality (%):"
+msgstr "Qualità (%):"
+
+msgid "Failed to add product. Product code may already exist."
+msgstr "Impossibile aggiungere il prodotto. Il codice prodotto potrebbe esistere già."
+
+msgid "Confirm Delete"
+msgstr "Conferma eliminazione"
+
+msgid ""
+"Delete \"%1\"?\n"
+"\n"
+"This will mark the product as inactive (soft delete).\n"
+"The product will no longer appear in the list."
+msgstr ""
+"Eliminare \"%1\"?\n"
+"\n"
+"Il prodotto sarà contrassegnato come inattivo (eliminazione logica).\n"
+"Non apparirà più nella lista."
+
+msgid "Failed to delete product."
+msgstr "Impossibile eliminare il prodotto."
+
+msgid "Edit Product"
+msgstr "Modifica prodotto"
+
+msgid "Failed to update product."
+msgstr "Impossibile aggiornare il prodotto."
