@@ -102,113 +102,97 @@ void ProductsPage::buildSearchBar() {
 }
 
 void ProductsPage::buildProductsList() {
-    // Create ListStore with new columns
-    columns_.add(columns_.id);
-    columns_.add(columns_.productCode);
-    columns_.add(columns_.name);
-    columns_.add(columns_.status);
-    columns_.add(columns_.stock);
-    columns_.add(columns_.qualityRate);
-    
-    listStore_ = Gtk::ListStore::create(columns_);
-    
-    // Create TreeView
-    treeView_ = Gtk::make_managed<Gtk::TreeView>(listStore_);
-    treeView_->set_hexpand(true);
-    treeView_->set_vexpand(true);
-    
-    // Add columns
-    treeView_->append_column("Product Code", columns_.productCode);
-    treeView_->append_column("Name", columns_.name);
-    treeView_->append_column("Status", columns_.status);
-    treeView_->append_column("Stock", columns_.stock);
-    
-    // Quality column with custom formatting
-    auto* qualityRenderer = Gtk::make_managed<Gtk::CellRendererText>();
-    auto* qualityColumn = Gtk::make_managed<Gtk::TreeViewColumn>("Quality %", *qualityRenderer);
-    qualityColumn->set_cell_data_func(*qualityRenderer, 
-        [this](Gtk::CellRenderer* renderer, const Gtk::TreeModel::const_iterator& iter) {
-            auto* textRenderer = dynamic_cast<Gtk::CellRendererText*>(renderer);
-            if (textRenderer) {
-                float quality = (*iter)[columns_.qualityRate];
-                char buffer[16];
-                snprintf(buffer, sizeof(buffer), "%.1f%%", quality);
-                textRenderer->property_text() = buffer;
+    // GTK4 ColumnView with virtual rendering
+    // Only visible rows have allocated widgets (widget recycling)
+    listStore_ = Gio::ListStore<ProductObject>::create();
+    selectionModel_ = Gtk::SingleSelection::create(listStore_);
+
+    columnView_ = Gtk::make_managed<Gtk::ColumnView>(selectionModel_);
+    columnView_->set_hexpand(true);
+    columnView_->set_vexpand(true);
+    columnView_->set_show_column_separators(true);
+    columnView_->set_show_row_separators(true);
+
+    // Helper to create a text column with SignalListItemFactory
+    auto makeColumn = [](const Glib::ustring& title, int fixedWidth, bool expand,
+                         std::function<Glib::ustring(const Glib::RefPtr<ProductObject>&)> getter) {
+        auto factory = Gtk::SignalListItemFactory::create();
+
+        factory->signal_setup().connect([](const Glib::RefPtr<Gtk::ListItem>& item) {
+            auto* label = Gtk::make_managed<Gtk::Label>();
+            label->set_xalign(0.0);
+            label->set_margin_start(8);
+            label->set_margin_end(8);
+            item->set_child(*label);
+        });
+
+        factory->signal_bind().connect([getter](const Glib::RefPtr<Gtk::ListItem>& item) {
+            auto obj = std::dynamic_pointer_cast<ProductObject>(item->get_item());
+            auto* label = dynamic_cast<Gtk::Label*>(item->get_child());
+            if (obj && label) {
+                label->set_text(getter(obj));
             }
-        }
-    );
-    treeView_->append_column(*qualityColumn);
-    
-    // Configure columns
-    auto* col1 = treeView_->get_column(0);
-    col1->set_fixed_width(120);
-    col1->set_resizable(true);
-    
-    auto* col2 = treeView_->get_column(1);
-    col2->set_expand(true);
-    col2->set_resizable(true);
-    
-    auto* col3 = treeView_->get_column(2);
-    col3->set_fixed_width(120);
-    col3->set_resizable(true);
-    
-    auto* col4 = treeView_->get_column(3);
-    col4->set_fixed_width(80);
-    col4->set_resizable(true);
-    
-    auto* col5 = treeView_->get_column(4);
-    col5->set_fixed_width(100);
-    col5->set_resizable(true);
-    
-    // Row activation (double-click to view details)
-    treeView_->signal_row_activated().connect([this](const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*) {
-        onProductSelected(path);
-    });
-    
-    // Create context menu for right-click actions
-    auto gestureClick = Gtk::GestureClick::create();
-    gestureClick->set_button(3);  // Right mouse button
-    gestureClick->signal_pressed().connect([this](int, double, double) {
-        auto selection = treeView_->get_selection();
-        if (selection->count_selected_rows() > 0) {
-            // Context menu would be created here
-            // For now, use toolbar buttons instead
-            // auto menu = Gtk::make_managed<Gtk::PopoverMenu>();
-        }
-    });
-    treeView_->add_controller(gestureClick);
-    
+        });
+
+        auto column = Gtk::ColumnViewColumn::create(title, factory);
+        if (fixedWidth > 0) column->set_fixed_width(fixedWidth);
+        if (expand) column->set_expand(true);
+        column->set_resizable(true);
+        return column;
+    };
+
+    // Add columns
+    columnView_->append_column(makeColumn("Product Code", 120, false,
+        [](const Glib::RefPtr<ProductObject>& p) { return p->getProductCode(); }));
+
+    columnView_->append_column(makeColumn("Name", 0, true,
+        [](const Glib::RefPtr<ProductObject>& p) { return p->getName(); }));
+
+    columnView_->append_column(makeColumn("Status", 120, false,
+        [](const Glib::RefPtr<ProductObject>& p) { return p->getStatus(); }));
+
+    columnView_->append_column(makeColumn("Stock", 80, false,
+        [](const Glib::RefPtr<ProductObject>& p) { return std::to_string(p->getStock()); }));
+
+    columnView_->append_column(makeColumn("Quality %", 100, false,
+        [](const Glib::RefPtr<ProductObject>& p) {
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%.1f%%", p->getQualityRate());
+            return Glib::ustring(buf);
+        }));
+
+    // Row activation (double-click)
+    columnView_->signal_activate().connect(
+        sigc::mem_fun(*this, &ProductsPage::onProductActivated));
+
     // ScrolledWindow
     scrolledWindow_ = Gtk::make_managed<Gtk::ScrolledWindow>();
-    scrolledWindow_->set_child(*treeView_);
+    scrolledWindow_->set_child(*columnView_);
     scrolledWindow_->set_policy(Gtk::PolicyType::AUTOMATIC, Gtk::PolicyType::AUTOMATIC);
     scrolledWindow_->set_vexpand(true);
-    
-    // Action buttons below table
+
+    // Action buttons
     auto* actionBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
     actionBox->set_margin_top(10);
-    
+
     auto* viewButton = Gtk::make_managed<Gtk::Button>("View Details");
     viewButton->add_css_class("toolbar-button");
     viewButton->signal_clicked().connect(
-        sigc::mem_fun(*this, &ProductsPage::onViewProductClicked)
-    );
+        sigc::mem_fun(*this, &ProductsPage::onViewProductClicked));
     actionBox->append(*viewButton);
 
     auto* editButton = Gtk::make_managed<Gtk::Button>("Edit");
     editButton->add_css_class("toolbar-button");
     editButton->signal_clicked().connect(
-        sigc::mem_fun(*this, &ProductsPage::onEditProductClicked)
-    );
+        sigc::mem_fun(*this, &ProductsPage::onEditProductClicked));
     actionBox->append(*editButton);
 
     auto* deleteButton = Gtk::make_managed<Gtk::Button>("Delete");
     deleteButton->add_css_class("toolbar-button");
     deleteButton->signal_clicked().connect(
-        sigc::mem_fun(*this, &ProductsPage::onDeleteProductClicked)
-    );
+        sigc::mem_fun(*this, &ProductsPage::onDeleteProductClicked));
     actionBox->append(*deleteButton);
-    
+
     append(*scrolledWindow_);
     append(*actionBox);
 }
@@ -228,31 +212,20 @@ void ProductsPage::onRefreshClicked() {
     }
 }
 
-void ProductsPage::onProductSelected(const Gtk::TreeModel::Path& path) {
-    auto iter = listStore_->get_iter(path);
-    if (iter) {
-        int id = (*iter)[columns_.id];
-        if (presenter_) {
-            presenter_->viewProduct(id);
-        }
+void ProductsPage::onProductActivated(guint position) {
+    auto item = listStore_->get_item(position);
+    if (item && presenter_) {
+        presenter_->viewProduct(item->getId());
     }
 }
 
-// Helper Methods
 void ProductsPage::updateProductsList(const presenter::ProductsViewModel& vm) {
-    listStore_->clear();
-    
+    listStore_->remove_all();
+
     for (const auto& product : vm.products) {
-        auto row = *(listStore_->append());
-        row[columns_.id] = product.id;
-        row[columns_.productCode] = product.productCode;
-        row[columns_.name] = product.name;
-        
-        // Add visual indicators to status
-        row[columns_.status] = product.status;
-        
-        row[columns_.stock] = product.stock;
-        row[columns_.qualityRate] = product.qualityRate;
+        listStore_->append(ProductObject::create(
+            product.id, product.productCode, product.name,
+            product.status, product.stock, product.qualityRate));
     }
 }
 
@@ -310,10 +283,10 @@ void ProductsPage::onEditProductClicked() {
 }
 
 int ProductsPage::getSelectedProductId() {
-    auto selection = treeView_->get_selection();
-    auto iter = selection->get_selected();
-    if (iter) {
-        return (*iter)[columns_.id];
+    auto pos = selectionModel_->get_selected();
+    if (pos != GTK_INVALID_LIST_POSITION) {
+        auto item = listStore_->get_item(pos);
+        if (item) return item->getId();
     }
     return config::defaults::kInvalidProductId;
 }
