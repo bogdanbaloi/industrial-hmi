@@ -120,6 +120,74 @@ jobs:
           --inline-suppr \
           src/
 
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
+          libgtest-dev libgmock-dev \
+          gcovr
+
+    # Debug + ENABLE_COVERAGE adds --coverage / -fprofile-arcs / -ftest-coverage
+    # to the existing compile and link options. Sanitizers are deliberately
+    # left OFF here - their instrumentation overlaps with gcov's and can
+    # distort line-hit counts.
+    - name: Configure
+      run: |
+        cmake -S . -B build/coverage -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DENABLE_COVERAGE=ON \
+          -DENABLE_SANITIZERS=OFF
+
+    - name: Build
+      run: cmake --build build/coverage -- -j$(nproc)
+
+    - name: Run tests
+      working-directory: build/coverage
+      run: ctest --output-on-failure --no-tests=error
+
+    # Generate report from the .gcda files dropped by the test runs.
+    # --filter src/ keeps third-party headers (gtest, gtkmm, boost) and the
+    # tests/ directory itself out of the percentages.
+    - name: Generate coverage report
+      run: |
+        mkdir -p coverage
+        gcovr \
+          --root . \
+          --filter 'src/' \
+          --exclude '.*ModelContext\.h' \
+          --html-details coverage/index.html \
+          --xml coverage/coverage.xml \
+          --txt coverage/summary.txt \
+          --print-summary \
+          build/coverage
+
+    # Surface the totals at the top of the GitHub Actions run page so the
+    # number is visible without downloading the artifact.
+    - name: Post coverage summary
+      run: |
+        echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat coverage/summary.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload HTML report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-html-${{ github.sha }}
+        path: coverage/
+        retention-days: 30
+
   documentation:
     name: Documentation
     runs-on: ubuntu-24.04
@@ -144,7 +212,7 @@ jobs:
   summary:
     name: Pipeline Summary
     runs-on: ubuntu-24.04
-    needs: [build-ubuntu, build-windows, code-quality, documentation]
+    needs: [build-ubuntu, build-windows, code-quality, coverage, documentation]
     if: always()
 
     steps:
@@ -156,4 +224,5 @@ jobs:
         echo "| Build Ubuntu | ${{ needs.build-ubuntu.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Build Windows | ${{ needs.build-windows.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Code Quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Coverage | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY
