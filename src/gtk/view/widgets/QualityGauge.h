@@ -39,6 +39,8 @@ public:
     }
 
 private:
+    struct Rgb { double r, g, b; };
+
     void onDraw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
         constexpr double kStroke = 10.0;
         constexpr double kMargin = 6.0;
@@ -49,14 +51,11 @@ private:
         const double radius = std::min(width, height) / 2.0 - kMargin;
         if (radius <= 0.0) return;
 
-        double fgR, fgG, fgB;
-        statusColor(fgR, fgG, fgB);
-
-        double bgR, bgG, bgB;
-        trackColor(bgR, bgG, bgB);
+        const Rgb fg = statusColor();
+        const Rgb bg = trackColor();
 
         // Background track (full ring)
-        cr->set_source_rgb(bgR, bgG, bgB);
+        cr->set_source_rgb(bg.r, bg.g, bg.b);
         cr->set_line_width(kStroke);
         cr->set_line_cap(Cairo::Context::LineCap::BUTT);
         cr->arc(cx, cy, radius, 0.0, 2.0 * std::numbers::pi);
@@ -66,7 +65,7 @@ private:
         if (passRate_ > 0.0f) {
             const double start = -std::numbers::pi / 2.0;
             const double sweep = 2.0 * std::numbers::pi * (passRate_ / 100.0);
-            cr->set_source_rgb(fgR, fgG, fgB);
+            cr->set_source_rgb(fg.r, fg.g, fg.b);
             cr->set_line_width(kStroke);
             cr->set_line_cap(Cairo::Context::LineCap::ROUND);
             cr->arc(cx, cy, radius, start, start + sweep);
@@ -74,35 +73,35 @@ private:
         }
 
         // Center dot in the status color
-        cr->set_source_rgb(fgR, fgG, fgB);
+        cr->set_source_rgb(fg.r, fg.g, fg.b);
         cr->arc(cx, cy, kDotRadius, 0.0, 2.0 * std::numbers::pi);
         cr->fill();
     }
 
-    void statusColor(double& r, double& g, double& b) const {
+    // Returns status color. Default arm covers any out-of-range enum value so
+    // GCC's -Wmaybe-uninitialized on -O3 stays happy without trusting the enum
+    // to hold only declared values.
+    Rgb statusColor() const {
         switch (status_) {
             case presenter::QualityCheckpointStatus::Passing:
-                r = 0x4C / 255.0; g = 0xAF / 255.0; b = 0x50 / 255.0;
-                break;
+                return {0x4C / 255.0, 0xAF / 255.0, 0x50 / 255.0};
             case presenter::QualityCheckpointStatus::Warning:
-                r = 0xFF / 255.0; g = 0x98 / 255.0; b = 0x00 / 255.0;
-                break;
+                return {0xFF / 255.0, 0x98 / 255.0, 0x00 / 255.0};
             case presenter::QualityCheckpointStatus::Critical:
-                r = 0xF4 / 255.0; g = 0x43 / 255.0; b = 0x36 / 255.0;
-                break;
+                return {0xF4 / 255.0, 0x43 / 255.0, 0x36 / 255.0};
         }
+        return {0x4C / 255.0, 0xAF / 255.0, 0x50 / 255.0};  // fallback: passing green
     }
 
     // Track color adapts to theme: light mode uses a soft gray, dark mode uses
     // a slightly lifted near-black so the ring is still visible on card bg.
-    void trackColor(double& r, double& g, double& b) const {
+    Rgb trackColor() const {
         if (const auto* root = dynamic_cast<const Gtk::Window*>(get_root())) {
             if (root->has_css_class("light-mode")) {
-                r = 0xE0 / 255.0; g = 0xE0 / 255.0; b = 0xE0 / 255.0;
-                return;
+                return {0xE0 / 255.0, 0xE0 / 255.0, 0xE0 / 255.0};
             }
         }
-        r = 0x3A / 255.0; g = 0x3A / 255.0; b = 0x3A / 255.0;
+        return {0x3A / 255.0, 0x3A / 255.0, 0x3A / 255.0};
     }
 
     float passRate_{0.0f};
