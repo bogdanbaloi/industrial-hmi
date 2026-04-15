@@ -97,10 +97,11 @@ public:
         return std::get<E>(data_);
     }
     
-    // Get error message
+    // Get error message. Routes through Result<int, E>::errorToString so
+    // callers don't need to specialize the table for every T they use.
     [[nodiscard]] std::string errorMessage() const {
         if (isOk()) return "";
-        return errorToString(std::get<E>(data_));
+        return Result<int, E>::errorToString(std::get<E>(data_));
     }
     
     // Map: transform Ok value, propagate Err
@@ -127,11 +128,14 @@ public:
         return isOk();
     }
     
+    // Convert error enum to string (specialized per error type in
+    // ErrorHandling.h). Public so the Result<void, E> specialization can
+    // delegate to Result<int, E>::errorToString without violating access
+    // control across template instantiations.
+    static std::string errorToString(E error);
+
 private:
     std::variant<T, E> data_;
-    
-    // Convert error enum to string (can be specialized per error type)
-    static std::string errorToString(E error);
 };
 
 /**

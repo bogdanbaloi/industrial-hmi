@@ -35,13 +35,25 @@ public:
     
     /**
      * Initialize - Load configuration from JSON file
-     * 
+     *
      * @param configPath Path to app-config.json
      * @return true if loaded successfully
      */
     [[nodiscard]] bool initialize(const std::string& configPath = defaults::kConfigPath) {
         configPath_ = configPath;
         return loadConfig();
+    }
+
+    /**
+     * Reset in-memory configuration.
+     *
+     * The JSON parser appends to the key map, so reloading a second file
+     * leaves stale keys behind. Tests call this between runs to get a clean
+     * baseline; production code shouldn't need it.
+     */
+    void clear() {
+        config_.clear();
+        configPath_.clear();
     }
     
     // ========================================================================

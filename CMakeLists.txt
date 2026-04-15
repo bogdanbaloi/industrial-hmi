@@ -95,16 +95,21 @@ option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
 
 if(ENABLE_COVERAGE AND NOT MSVC)
     message(STATUS "Code coverage enabled")
-    
+
     set(COVERAGE_FLAGS
         --coverage              # Enable coverage
         -fprofile-arcs         # Generate .gcda files
         -ftest-coverage        # Generate .gcno files
     )
-    
+
     add_compile_options(${COVERAGE_FLAGS})
     add_link_options(${COVERAGE_FLAGS})
 endif()
+
+# ============================================================================
+# Unit Tests (opt-in)
+# ============================================================================
+option(BUILD_TESTS "Build unit tests (requires GoogleTest + gmock)" OFF)
 
 # ============================================================================
 # Platform-Specific Definitions
@@ -450,6 +455,14 @@ else()
     install(TARGETS industrial-hmi RUNTIME DESTINATION bin)
     install(DIRECTORY assets DESTINATION share/industrial-hmi)
     install(DIRECTORY ui DESTINATION share/industrial-hmi)
+endif()
+
+# ============================================================================
+# Tests (only when BUILD_TESTS=ON)
+# ============================================================================
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 
 # ============================================================================
