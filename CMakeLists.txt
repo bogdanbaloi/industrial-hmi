@@ -189,6 +189,8 @@ target_sources(objectsModel
             src/model/SimulatedModel.h
             src/model/DatabaseManager.h
             src/model/ModelContext.h
+            src/model/Product.h
+            src/model/ProductsRepository.h
 )
 target_link_libraries(objectsModel
     PUBLIC

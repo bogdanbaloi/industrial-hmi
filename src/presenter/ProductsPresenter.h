@@ -3,6 +3,7 @@
 #include "BasePresenter.h"
 #include "src/presenter/modelview/PlaceholderViewModels.h"
 #include "src/model/DatabaseManager.h"
+#include "src/model/ProductsRepository.h"
 #include <string>
 #include <functional>
 
@@ -15,9 +16,18 @@ namespace app {
 /// - Data transformation to ViewModels
 /// - Search/filter operations
 /// - CRUD operations (Read in this demo)
+///
+/// The presenter takes a ProductsRepository reference for read operations.
+/// Production wiring uses DatabaseManager (the singleton implements the
+/// interface); tests inject a MockProductsRepository.
 class ProductsPresenter : public BasePresenter {
 public:
-    ProductsPresenter() = default;
+    /// Default constructor wires up the production DatabaseManager singleton.
+    ProductsPresenter();
+
+    /// DI constructor used by tests to inject a mock repository.
+    explicit ProductsPresenter(model::ProductsRepository& repository);
+
     ~ProductsPresenter() override = default;
 
     ProductsPresenter(const ProductsPresenter&) = delete;
@@ -65,7 +75,11 @@ private:
     
     /// Notify observers to show product detail dialog
     void notifyViewProductReady(const presenter::ViewProductDialogViewModel& vm);
-    
+
+    /// Read repository (injected). Async helpers still use DatabaseManager
+    /// directly; only the synchronous read paths route through here.
+    model::ProductsRepository& repository_;
+
     /// Cached search query
     std::string currentSearchQuery_;
 };
