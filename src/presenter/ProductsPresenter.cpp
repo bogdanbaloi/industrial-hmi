@@ -4,6 +4,12 @@
 
 namespace app {
 
+ProductsPresenter::ProductsPresenter()
+    : ProductsPresenter(model::DatabaseManager::instance()) {}
+
+ProductsPresenter::ProductsPresenter(model::ProductsRepository& repository)
+    : repository_(repository) {}
+
 void ProductsPresenter::initialize() {
     // Load initial products list
     loadProducts();
@@ -28,17 +34,16 @@ void ProductsPresenter::viewProduct(int productId) {
 
 presenter::ProductsViewModel ProductsPresenter::buildProductsViewModel() {
     presenter::ProductsViewModel vm;
-    
-    auto& db = model::DatabaseManager::instance();
-    std::vector<model::DatabaseManager::Product> dbProducts;
-    
-    // Get products from database (excludes soft-deleted)
+
+    std::vector<model::Product> dbProducts;
+
+    // Get products from repository (excludes soft-deleted)
     if (currentSearchQuery_.empty()) {
-        dbProducts = db.getAllProducts();
+        dbProducts = repository_.getAllProducts();
     } else {
-        dbProducts = db.searchProducts(currentSearchQuery_);
+        dbProducts = repository_.searchProducts(currentSearchQuery_);
     }
-    
+
     // Transform to ViewModel
     for (const auto& dbProd : dbProducts) {
         presenter::ProductsViewModel::ProductItem item;
@@ -48,19 +53,18 @@ presenter::ProductsViewModel ProductsPresenter::buildProductsViewModel() {
         item.status = dbProd.status;
         item.stock = dbProd.stock;
         item.qualityRate = dbProd.qualityRate;
-        
+
         vm.products.push_back(item);
     }
-    
+
     return vm;
 }
 
 presenter::ViewProductDialogViewModel ProductsPresenter::buildProductDetailViewModel(int productId) {
     presenter::ViewProductDialogViewModel vm;
-    
-    auto& db = model::DatabaseManager::instance();
-    auto product = db.getProduct(productId);
-    
+
+    auto product = repository_.getProduct(productId);
+
     if (product.id == config::defaults::kInvalidProductId) {
         // Product not found
         vm.productId = "NOT FOUND";
@@ -134,8 +138,7 @@ void ProductsPresenter::updateProduct(int productId, const std::string& name,
 }
 
 model::DatabaseManager::Product ProductsPresenter::getProduct(int productId) {
-    auto& db = model::DatabaseManager::instance();
-    return db.getProduct(productId);
+    return repository_.getProduct(productId);
 }
 
 void ProductsPresenter::notifyProductsLoaded(const presenter::ProductsViewModel& vm) {

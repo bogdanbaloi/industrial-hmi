@@ -9,37 +9,27 @@
 #include "src/core/ErrorHandling.h"
 #include "src/core/LoggerBase.h"
 #include "src/config/config_defaults.h"
+#include "src/model/Product.h"
+#include "src/model/ProductsRepository.h"
 
 namespace app::model {
 
 /// Modern database manager with Result<T, E> error handling
-/// 
+///
 /// Features:
 /// - Result<T, DatabaseError> instead of bool
 /// - Typed errors (ConnectionFailed, UniqueViolation, etc.)
 /// - Logging integration
 /// - Exception-safe
-class DatabaseManager {
+///
+/// Implements ProductsRepository so the presenter layer can depend on the
+/// abstraction (and tests can inject a mock).
+class DatabaseManager : public ProductsRepository {
 public:
-    struct Product {
-        int id;
-        std::string productCode;  // PROD-001, PROD-002, etc.
-        std::string name;          // Product A, Product B, etc.
-        std::string status;        // Active, Inactive, Low Stock
-        int stock;
-        float qualityRate;         // 0.0-100.0 (percentage)
-        
-        // Timestamps (ISO 8601 format)
-        std::string createdAt;     // "2024-04-09T14:30:22Z"
-        std::string updatedAt;     // "2024-04-09T14:30:22Z"
-        std::string deletedAt;     // Empty if active, timestamp if deleted
-        
-        // Helper
-        bool isDeleted() const {
-            return !deletedAt.empty();
-        }
-    };
-    
+    // Re-export at class scope so existing call sites that say
+    // `DatabaseManager::Product` keep compiling unchanged.
+    using Product = ::app::model::Product;
+
     static DatabaseManager& instance() {
         static DatabaseManager inst;
         return inst;
@@ -72,7 +62,7 @@ public:
     }
     
     /// Get all active products (not deleted)
-    [[nodiscard]] std::vector<Product> getAllProducts() {
+    [[nodiscard]] std::vector<Product> getAllProducts() override {
         std::vector<Product> products;
         
         const char* sql = "SELECT id, product_code, name, status, stock, quality_rate, "
@@ -91,7 +81,7 @@ public:
     }
     
     /// Get product by ID
-    [[nodiscard]] Product getProduct(int id) {
+    [[nodiscard]] Product getProduct(int id) override {
         Product p;
         p.id = config::defaults::kInvalidProductId;
         
@@ -112,7 +102,8 @@ public:
     }
     
     /// Search products by name or code
-    [[nodiscard]] std::vector<Product> searchProducts(const std::string& query) {
+    [[nodiscard]] std::vector<Product>
+    searchProducts(const std::string& query) override {
         std::vector<Product> products;
         
         const char* sql = "SELECT id, product_code, name, status, stock, quality_rate, "

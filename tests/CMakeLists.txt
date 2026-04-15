@@ -93,8 +93,35 @@ target_link_libraries(test_database_manager PRIVATE
 )
 add_test(NAME DatabaseManagerTest COMMAND test_database_manager)
 
+# --- Presenter: BasePresenter (header-only observer mechanics) ------------
+add_executable(test_base_presenter BasePresenterTest.cpp)
+target_link_libraries(test_base_presenter PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME BasePresenterTest COMMAND test_base_presenter)
+
+# --- Presenter: ProductsPresenter (with mock repository) ------------------
+# ProductsPresenter.cpp lives in objectsPresenter; MockProductsRepository
+# is a header in tests/mocks. The test target needs the source root on its
+# include path (tests_includes) plus objectsPresenter (and transitively
+# objectsModel for DatabaseManager symbols referenced in the .cpp).
+add_executable(test_products_presenter ProductsPresenterTest.cpp)
+target_include_directories(test_products_presenter PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}  # so #include "mocks/..." resolves
+)
+target_link_libraries(test_products_presenter PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsModel
+)
+
+add_test(NAME ProductsPresenterTest COMMAND test_products_presenter)
+
 # Boost.Asio on Windows references WSAStartup / WSACleanup from Winsock;
-# the main executable links ws2_32 for the same reason.
+# both objectsModel-linked targets need ws2_32.
 if(WIN32)
-    target_link_libraries(test_database_manager PRIVATE ws2_32)
+    target_link_libraries(test_database_manager  PRIVATE ws2_32)
+    target_link_libraries(test_products_presenter PRIVATE ws2_32)
 endif()
