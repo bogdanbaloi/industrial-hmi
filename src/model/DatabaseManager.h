@@ -312,6 +312,7 @@ private:
         if (sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
             sqlite3_free(errMsg);
         }
+
     }
 
     Product extractProduct(sqlite3_stmt* stmt) const {
