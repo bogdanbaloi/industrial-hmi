@@ -16,6 +16,7 @@
 #include "src/config/config_defaults.h"
 #include "src/core/Application.h"
 #include "src/core/ExceptionHandler.h"
+#include "src/core/i18n.h"
 #include <fstream>
 
 
@@ -91,17 +92,22 @@ void MainWindow::loadUI() {
     logTextView_ = builder->get_widget<Gtk::TextView>("log_text_view");
     dashboardContainer_ = builder->get_widget<Gtk::Box>("dashboard_container");
     productsContainer_ = builder->get_widget<Gtk::Box>("products_container");
-    
-    // Exit Fullscreen button
-    auto* exitFullscreenBtn = builder->get_widget<Gtk::Button>("exit_fullscreen_button");
-    if (exitFullscreenBtn) {
-        exitFullscreenBtn->signal_clicked().connect([this]() {
-            unfullscreen();
-            if (radioWindowed_) {
-                radioWindowed_->set_active(true);
-            }
+    languageCombo_ = builder->get_widget<Gtk::ComboBoxText>("language_combo");
+
+    // Close Application button (sidebar footer)
+    auto* closeAppBtn = builder->get_widget<Gtk::Button>("close_app_button");
+    if (closeAppBtn) {
+        closeAppBtn->signal_clicked().connect([this]() {
+            close();
         });
     }
+
+    // Reflect the currently saved language in the dropdown
+    if (languageCombo_) {
+        const auto current = app::config::ConfigManager::instance().getLanguage();
+        languageCombo_->set_active_id(current);
+    }
+    
 }
 
 void MainWindow::loadSidebarCSS() {
@@ -151,6 +157,10 @@ void MainWindow::connectSignals() {
             sigc::mem_fun(*this, &MainWindow::onShowLogsToggled));
     } else {
         app::core::Application::instance().logger().warn("Show Logs checkbox not found in UI");
+    }
+    if (languageCombo_) {
+        languageCombo_->signal_changed().connect(
+            sigc::mem_fun(*this, &MainWindow::onLanguageChanged));
     }
 }
 
@@ -215,6 +225,47 @@ void MainWindow::onThemeChanged() {
         app::view::ThemeManager::instance().setTheme(app::view::ThemeManager::Theme::LIGHT);
         app::core::Application::instance().logger().info("Theme: light");
     }
+
+    // Redraw cairo-painted widgets (gauges) so their theme-aware colors update
+    if (dashboardPage_) {
+        dashboardPage_->refreshThemedWidgets();
+    }
+}
+
+void MainWindow::onLanguageChanged() {
+    if (!languageCombo_) return;
+
+    const auto selectedId = languageCombo_->get_active_id();
+    if (selectedId.empty()) return;
+
+    auto& config = app::config::ConfigManager::instance();
+    const auto currentLanguage = config.getLanguage();
+
+    // No-op if the user re-picked the same value (e.g., we just set it in loadUI)
+    if (std::string(selectedId) == currentLanguage) return;
+
+    auto& logger = app::core::Application::instance().logger();
+
+    if (!config.setLanguage(std::string(selectedId))) {
+        logger.error("Failed to persist language preference");
+        dialogManager_->showError(
+            _("Error"),
+            _("Could not save the language preference."),
+            this);
+        return;
+    }
+
+    logger.info("Language preference saved: {}", std::string(selectedId));
+
+    // Language changes take effect after restart — inform the user.
+    // We deliberately do not live-swap translations: widgets cache
+    // their labels at construction time via _(), so a restart is simpler
+    // and less error-prone than rebuilding the entire UI tree.
+    dialogManager_->showInfo(
+        _("Language Changed"),
+        _("The language has been updated.\n\n"
+          "Please restart the application for the change to take effect."),
+        this);
 }
 
 void MainWindow::onShowLogsToggled() {

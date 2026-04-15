@@ -1,0 +1,306 @@
+# Swedish translations for industrial-hmi.
+# Copyright (C) 2026
+# This file is distributed under the same license as the industrial-hmi package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: industrial-hmi 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-15 00:00+0000\n"
+"PO-Revision-Date: 2026-04-15 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Swedish\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "[BB] Industrial HMI"
+msgstr "[BB] Industriellt HMI"
+
+msgid "MVP Architecture"
+msgstr "MVP-arkitektur"
+
+msgid "DISPLAY MODE"
+msgstr "VISNINGSLÄGE"
+
+msgid "Fullscreen"
+msgstr "Helskärm"
+
+msgid "Windowed"
+msgstr "Fönster"
+
+msgid "THEME"
+msgstr "TEMA"
+
+msgid "Dark Mode"
+msgstr "Mörkt läge"
+
+msgid "Light Mode"
+msgstr "Ljust läge"
+
+msgid "SYSTEM"
+msgstr "SYSTEM"
+
+msgid "LANGUAGE"
+msgstr "SPRÅK"
+
+msgid "Auto (System)"
+msgstr "Automatiskt (System)"
+
+msgid "Language Changed"
+msgstr "Språk ändrat"
+
+msgid ""
+"The language has been updated.\n"
+"\n"
+"Please restart the application for the change to take effect."
+msgstr ""
+"Språket har uppdaterats.\n"
+"\n"
+"Starta om programmet för att ändringen ska träda i kraft."
+
+msgid "Could not save the language preference."
+msgstr "Det gick inte att spara språkinställningen."
+
+msgid "Auto Refresh"
+msgstr "Automatisk uppdatering"
+
+msgid "Verbose Logging"
+msgstr "Detaljerad loggning"
+
+msgid "Version 1.0.0"
+msgstr "Version 1.0.0"
+
+msgid "Portfolio Demo"
+msgstr "Portfoliodemo"
+
+msgid "Close Application"
+msgstr "Stäng programmet"
+
+msgid "Dashboard"
+msgstr "Översikt"
+
+msgid "Products Database"
+msgstr "Produktdatabas"
+
+msgid "Cancel"
+msgstr "Avbryt"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Save"
+msgstr "Spara"
+
+msgid "Update"
+msgstr "Uppdatera"
+
+msgid "Error"
+msgstr "Fel"
+
+msgid "WORK UNIT"
+msgstr "ARBETSENHET"
+
+msgid "Work Unit:"
+msgstr "Arbetsenhet:"
+
+msgid "Product:"
+msgstr "Produkt:"
+
+msgid "Ready"
+msgstr "Klar"
+
+msgid "EQUIPMENT STATIONS"
+msgstr "UTRUSTNINGSSTATIONER"
+
+msgid "QUALITY CHECKPOINTS"
+msgstr "KVALITETSKONTROLLPUNKTER"
+
+msgid "Checkpoint %1"
+msgstr "Kontrollpunkt %1"
+
+msgid "0 inspected • 0 defects"
+msgstr "0 inspekterade • 0 defekter"
+
+msgid "%1 inspected • %2 defects"
+msgstr "%1 inspekterade • %2 defekter"
+
+msgid "Last: %1"
+msgstr "Senaste: %1"
+
+msgid "No defects detected"
+msgstr "Inga defekter upptäckta"
+
+msgid "Control Panel"
+msgstr "Kontrollpanel"
+
+msgid "System Idle"
+msgstr "Systemet i viloläge"
+
+msgid "START"
+msgstr "STARTA"
+
+msgid "STOP"
+msgstr "STOPPA"
+
+msgid "RESET"
+msgstr "ÅTERSTÄLL"
+
+msgid "CALIBRATION"
+msgstr "KALIBRERING"
+
+msgid "ONLINE"
+msgstr "ANSLUTEN"
+
+msgid "OFFLINE"
+msgstr "FRÅNKOPPLAD"
+
+msgid "PROCESSING"
+msgstr "BEARBETAR"
+
+msgid "ERROR"
+msgstr "FEL"
+
+msgid "UNKNOWN"
+msgstr "OKÄND"
+
+msgid "RUNNING"
+msgstr "I DRIFT"
+
+msgid "STOPPED"
+msgstr "STOPPAD"
+
+msgid "IDLE"
+msgstr "INAKTIV"
+
+msgid "Confirm Reset"
+msgstr "Bekräfta återställning"
+
+msgid ""
+"Reset the system?\n"
+"\n"
+"This will stop all operations and return equipment to initial state."
+msgstr ""
+"Återställ systemet?\n"
+"\n"
+"Alla åtgärder stoppas och utrustningen återgår till ursprungsläget."
+
+msgid "Confirm Calibration"
+msgstr "Bekräfta kalibrering"
+
+msgid ""
+"Start calibration procedure?\n"
+"\n"
+"All equipment will be moved to home position.\n"
+"This may take several minutes."
+msgstr ""
+"Starta kalibreringsproceduren?\n"
+"\n"
+"All utrustning flyttas till utgångsläget.\n"
+"Detta kan ta flera minuter."
+
+msgid "+ Add New Product"
+msgstr "+ Lägg till ny produkt"
+
+msgid "Refresh"
+msgstr "Uppdatera"
+
+msgid "Search:"
+msgstr "Sök:"
+
+msgid "Search by Product ID or Name..."
+msgstr "Sök efter produkt-ID eller namn..."
+
+msgid "Product Code"
+msgstr "Produktkod"
+
+msgid "Name"
+msgstr "Namn"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Stock"
+msgstr "Lager"
+
+msgid "Quality %"
+msgstr "Kvalitet %"
+
+msgid "View Details"
+msgstr "Visa detaljer"
+
+msgid "Edit"
+msgstr "Redigera"
+
+msgid "Delete"
+msgstr "Ta bort"
+
+msgid "Product Details"
+msgstr "Produktdetaljer"
+
+msgid "Product ID: %1"
+msgstr "Produkt-ID: %1"
+
+msgid "Created: %1"
+msgstr "Skapad: %1"
+
+msgid "Status: %1"
+msgstr "Status: %1"
+
+msgid "Active"
+msgstr "Aktiv"
+
+msgid "Inactive"
+msgstr "Inaktiv"
+
+msgid "Low Stock"
+msgstr "Lågt lager"
+
+msgid "Add New Product"
+msgstr "Lägg till ny produkt"
+
+msgid "Product Code:"
+msgstr "Produktkod:"
+
+msgid "Name:"
+msgstr "Namn:"
+
+msgid "Product G"
+msgstr "Produkt G"
+
+msgid "Status:"
+msgstr "Status:"
+
+msgid "Stock (units):"
+msgstr "Lager (enheter):"
+
+msgid "Quality (%):"
+msgstr "Kvalitet (%):"
+
+msgid "Failed to add product. Product code may already exist."
+msgstr "Det gick inte att lägga till produkten. Produktkoden finns kanske redan."
+
+msgid "Confirm Delete"
+msgstr "Bekräfta borttagning"
+
+msgid ""
+"Delete \"%1\"?\n"
+"\n"
+"This will mark the product as inactive (soft delete).\n"
+"The product will no longer appear in the list."
+msgstr ""
+"Ta bort \"%1\"?\n"
+"\n"
+"Produkten markeras som inaktiv (mjuk borttagning).\n"
+"Den visas inte längre i listan."
+
+msgid "Failed to delete product."
+msgstr "Det gick inte att ta bort produkten."
+
+msgid "Edit Product"
+msgstr "Redigera produkt"
+
+msgid "Failed to update product."
+msgstr "Det gick inte att uppdatera produkten."

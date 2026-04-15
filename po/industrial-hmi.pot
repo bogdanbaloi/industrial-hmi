@@ -1,0 +1,300 @@
+# Industrial HMI - Translation template.
+# Copyright (C) 2026
+# This file is distributed under the same license as the industrial-hmi package.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: industrial-hmi 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-15 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# ui/main-window.ui
+
+msgid "[BB] Industrial HMI"
+msgstr ""
+
+msgid "MVP Architecture"
+msgstr ""
+
+msgid "DISPLAY MODE"
+msgstr ""
+
+msgid "Fullscreen"
+msgstr ""
+
+msgid "Windowed"
+msgstr ""
+
+msgid "THEME"
+msgstr ""
+
+msgid "Dark Mode"
+msgstr ""
+
+msgid "Light Mode"
+msgstr ""
+
+msgid "SYSTEM"
+msgstr ""
+
+msgid "LANGUAGE"
+msgstr ""
+
+msgid "Auto (System)"
+msgstr ""
+
+msgid "Language Changed"
+msgstr ""
+
+msgid ""
+"The language has been updated.\n"
+"\n"
+"Please restart the application for the change to take effect."
+msgstr ""
+
+msgid "Could not save the language preference."
+msgstr ""
+
+msgid "Auto Refresh"
+msgstr ""
+
+msgid "Verbose Logging"
+msgstr ""
+
+msgid "Version 1.0.0"
+msgstr ""
+
+msgid "Portfolio Demo"
+msgstr ""
+
+msgid "Close Application"
+msgstr ""
+
+msgid "Dashboard"
+msgstr ""
+
+msgid "Products Database"
+msgstr ""
+
+# Dialogs (common buttons)
+
+msgid "Cancel"
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Update"
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+# Dashboard page
+
+msgid "WORK UNIT"
+msgstr ""
+
+msgid "Work Unit:"
+msgstr ""
+
+msgid "Product:"
+msgstr ""
+
+msgid "Ready"
+msgstr ""
+
+msgid "EQUIPMENT STATIONS"
+msgstr ""
+
+msgid "QUALITY CHECKPOINTS"
+msgstr ""
+
+msgid "Checkpoint %1"
+msgstr ""
+
+msgid "0 inspected • 0 defects"
+msgstr ""
+
+msgid "%1 inspected • %2 defects"
+msgstr ""
+
+msgid "Last: %1"
+msgstr ""
+
+msgid "No defects detected"
+msgstr ""
+
+msgid "Control Panel"
+msgstr ""
+
+msgid "System Idle"
+msgstr ""
+
+msgid "START"
+msgstr ""
+
+msgid "STOP"
+msgstr ""
+
+msgid "RESET"
+msgstr ""
+
+msgid "CALIBRATION"
+msgstr ""
+
+msgid "ONLINE"
+msgstr ""
+
+msgid "OFFLINE"
+msgstr ""
+
+msgid "PROCESSING"
+msgstr ""
+
+msgid "ERROR"
+msgstr ""
+
+msgid "UNKNOWN"
+msgstr ""
+
+msgid "RUNNING"
+msgstr ""
+
+msgid "STOPPED"
+msgstr ""
+
+msgid "IDLE"
+msgstr ""
+
+msgid "Confirm Reset"
+msgstr ""
+
+msgid ""
+"Reset the system?\n"
+"\n"
+"This will stop all operations and return equipment to initial state."
+msgstr ""
+
+msgid "Confirm Calibration"
+msgstr ""
+
+msgid ""
+"Start calibration procedure?\n"
+"\n"
+"All equipment will be moved to home position.\n"
+"This may take several minutes."
+msgstr ""
+
+# Products page
+
+msgid "+ Add New Product"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Search:"
+msgstr ""
+
+msgid "Search by Product ID or Name..."
+msgstr ""
+
+msgid "Product Code"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Stock"
+msgstr ""
+
+msgid "Quality %"
+msgstr ""
+
+msgid "View Details"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Product Details"
+msgstr ""
+
+msgid "Product ID: %1"
+msgstr ""
+
+msgid "Created: %1"
+msgstr ""
+
+msgid "Status: %1"
+msgstr ""
+
+msgid "Active"
+msgstr ""
+
+msgid "Inactive"
+msgstr ""
+
+msgid "Low Stock"
+msgstr ""
+
+msgid "Add New Product"
+msgstr ""
+
+msgid "Product Code:"
+msgstr ""
+
+msgid "Name:"
+msgstr ""
+
+msgid "Product G"
+msgstr ""
+
+msgid "Status:"
+msgstr ""
+
+msgid "Stock (units):"
+msgstr ""
+
+msgid "Quality (%):"
+msgstr ""
+
+msgid "Failed to add product. Product code may already exist."
+msgstr ""
+
+msgid "Confirm Delete"
+msgstr ""
+
+msgid ""
+"Delete \"%1\"?\n"
+"\n"
+"This will mark the product as inactive (soft delete).\n"
+"The product will no longer appear in the list."
+msgstr ""
+
+msgid "Failed to delete product."
+msgstr ""
+
+msgid "Edit Product"
+msgstr ""
+
+msgid "Failed to update product."
+msgstr ""

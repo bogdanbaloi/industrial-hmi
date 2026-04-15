@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <cstdio>
 #include "config_defaults.h"
 
 namespace app::config {
@@ -132,6 +133,29 @@ public:
     
     std::string getDefaultTheme() const {
         return getValue("theme.default", defaults::kDefaultTheme);
+    }
+
+    // ========================================================================
+    // i18n
+    // ========================================================================
+
+    std::string getLanguage() const {
+        return getValue("i18n.language", defaults::kDefaultLanguage);
+    }
+
+    /**
+     * Persist language selection to disk and update in-memory value.
+     *
+     * Rewrites the "i18n.language" field in the JSON config file.
+     * If the i18n section is missing, inserts one.
+     *
+     * @param language One of "auto" or a LINGUAS code (e.g. "it", "de")
+     * @return true on success, false if the config file cannot be written
+     */
+    [[nodiscard]] bool setLanguage(const std::string& language) {
+        // Update in-memory first so subsequent getLanguage() reflects the change
+        config_["i18n.language"] = language;
+        return persistLanguage(language);
     }
 
     // ========================================================================
@@ -290,6 +314,63 @@ private:
         }
     }
     
+    /**
+     * Targeted rewrite of the JSON config's i18n.language field.
+     * Reads the whole file, replaces (or inserts) the language value,
+     * and writes it back atomically-ish (via a temp file + rename).
+     */
+    bool persistLanguage(const std::string& language) {
+        // Read entire file
+        std::ifstream in(configPath_);
+        if (!in.is_open()) return false;
+        std::stringstream buffer;
+        buffer << in.rdbuf();
+        in.close();
+        std::string content = buffer.str();
+
+        // Try to replace an existing "language": "..." value within the i18n section.
+        // We look for the literal `"language"` key and swap the string that follows.
+        const std::string key = "\"language\"";
+        size_t keyPos = content.find(key);
+        bool replaced = false;
+        if (keyPos != std::string::npos) {
+            // Find the colon, then the opening quote of the value
+            size_t colon = content.find(':', keyPos + key.size());
+            if (colon != std::string::npos) {
+                size_t quoteStart = content.find('"', colon + 1);
+                if (quoteStart != std::string::npos) {
+                    size_t quoteEnd = content.find('"', quoteStart + 1);
+                    if (quoteEnd != std::string::npos) {
+                        content.replace(quoteStart + 1,
+                                        quoteEnd - quoteStart - 1,
+                                        language);
+                        replaced = true;
+                    }
+                }
+            }
+        }
+
+        // If not found, insert a new i18n block right after the opening brace.
+        if (!replaced) {
+            size_t brace = content.find('{');
+            if (brace == std::string::npos) return false;
+            std::string block =
+                "\n  \"i18n\": {\n    \"language\": \"" + language + "\"\n  },\n";
+            content.insert(brace + 1, block);
+        }
+
+        // Write atomically via temp file
+        std::string tmpPath = configPath_ + ".tmp";
+        {
+            std::ofstream out(tmpPath, std::ios::binary | std::ios::trunc);
+            if (!out.is_open()) return false;
+            out << content;
+            if (!out.good()) return false;
+        }
+        std::remove(configPath_.c_str());
+        return std::rename(tmpPath.c_str(), configPath_.c_str()) == 0;
+    }
+
     std::string configPath_;
     std::map<std::string, std::string> config_;
 };

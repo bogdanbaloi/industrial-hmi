@@ -1,6 +1,7 @@
 #include "DashboardPage.h"
 #include "src/gtk/view/DialogManager.h"
 #include "src/config/config_defaults.h"
+#include "src/core/i18n.h"
 
 namespace app::view {
 
@@ -20,11 +21,17 @@ DashboardPage::~DashboardPage() {
 
 void DashboardPage::initialize(std::shared_ptr<DashboardPresenter> presenter) {
     presenter_ = presenter;
-    
+
     // Register as observer - will receive all state updates
     presenter_->addObserver(this);
-    
+
     // Presenter will send initial state after registration
+}
+
+void DashboardPage::refreshThemedWidgets() {
+    for (auto& card : qualityCards_) {
+        if (card.gauge) card.gauge->queue_draw();
+    }
 }
 
 // ============================================================================
@@ -60,7 +67,7 @@ void DashboardPage::onError(const std::string& errorMessage) {
         auto dialog = Gtk::MessageDialog(errorMessage, false, 
                                          Gtk::MessageType::ERROR, 
                                          Gtk::ButtonsType::OK, true);
-        dialog.set_title("Error");
+        dialog.set_title(_("Error"));
         dialog.set_modal(true);
         dialog.present();
     });
@@ -81,12 +88,19 @@ void DashboardPage::buildUI() {
     buildWorkUnitSection();
     buildEquipmentSection();
     buildQualitySection();
+
+    // Absorb leftover vertical space so the Control Panel sits at the bottom
+    // instead of floating below the Quality section with a visible empty band.
+    auto* spacer = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL);
+    spacer->set_vexpand(true);
+    append(*spacer);
+
     buildControlPanelSection();
 }
 
 void DashboardPage::buildWorkUnitSection() {
     // Section header
-    auto* header = Gtk::make_managed<Gtk::Label>("WORK UNIT");
+    auto* header = Gtk::make_managed<Gtk::Label>(_("WORK UNIT"));
     header->set_xalign(0.0);
     header->add_css_class("section-header");
     append(*header);
@@ -105,7 +119,7 @@ void DashboardPage::buildWorkUnitSection() {
     
     // Work Unit ID
     auto* wuBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
-    auto* wuLabel = Gtk::make_managed<Gtk::Label>("Work Unit:");
+    auto* wuLabel = Gtk::make_managed<Gtk::Label>(_("Work Unit:"));
     wuLabel->add_css_class("field-label");
     workUnitWidgets_.workUnitIdLabel = Gtk::make_managed<Gtk::Label>("-");
     workUnitWidgets_.workUnitIdLabel->add_css_class("field-value-large");
@@ -121,7 +135,7 @@ void DashboardPage::buildWorkUnitSection() {
     
     // Product ID
     auto* prodBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
-    auto* prodLabel = Gtk::make_managed<Gtk::Label>("Product:");
+    auto* prodLabel = Gtk::make_managed<Gtk::Label>(_("Product:"));
     prodLabel->add_css_class("field-label");
     workUnitWidgets_.productIdLabel = Gtk::make_managed<Gtk::Label>("-");
     workUnitWidgets_.productIdLabel->add_css_class("field-value");
@@ -148,7 +162,7 @@ void DashboardPage::buildWorkUnitSection() {
     workUnitWidgets_.progressBar->add_css_class("progress-bar-large");
     progressBox->append(*workUnitWidgets_.progressBar);
     
-    workUnitWidgets_.statusLabel = Gtk::make_managed<Gtk::Label>("Ready");
+    workUnitWidgets_.statusLabel = Gtk::make_managed<Gtk::Label>(_("Ready"));
     workUnitWidgets_.statusLabel->add_css_class("status-message");
     workUnitWidgets_.statusLabel->set_xalign(0.0);
     progressBox->append(*workUnitWidgets_.statusLabel);
@@ -162,7 +176,7 @@ void DashboardPage::buildWorkUnitSection() {
 
 void DashboardPage::buildEquipmentSection() {
     // Section header
-    auto* header = Gtk::make_managed<Gtk::Label>("EQUIPMENT STATIONS");
+    auto* header = Gtk::make_managed<Gtk::Label>(_("EQUIPMENT STATIONS"));
     header->set_xalign(0.0);
     header->add_css_class("section-header");
     append(*header);
@@ -199,13 +213,16 @@ void DashboardPage::buildEquipmentSection() {
         card.cardBox->append(*headerBox);
         
         // Status text (ONLINE/OFFLINE/ERROR/PROCESSING)
-        card.statusLabel = Gtk::make_managed<Gtk::Label>("OFFLINE");
+        card.statusLabel = Gtk::make_managed<Gtk::Label>(_("OFFLINE"));
         card.statusLabel->add_css_class("equipment-status");
         card.cardBox->append(*card.statusLabel);
         
-        // Consumables/supply info
+        // Consumables/supply info - ellipsize on overflow so the label always
+        // reports a single, stable line height (avoids GTK re-measure warnings
+        // when text length changes between simulation ticks).
         card.consumablesLabel = Gtk::make_managed<Gtk::Label>("-");
-        card.consumablesLabel->set_wrap(true);
+        card.consumablesLabel->set_ellipsize(Pango::EllipsizeMode::END);
+        card.consumablesLabel->set_xalign(0.5);
         card.consumablesLabel->add_css_class("equipment-info");
         card.cardBox->append(*card.consumablesLabel);
         
@@ -230,11 +247,11 @@ void DashboardPage::buildEquipmentSection() {
 
 void DashboardPage::buildQualitySection() {
     // Section header
-    auto* header = Gtk::make_managed<Gtk::Label>("QUALITY CHECKPOINTS");
+    auto* header = Gtk::make_managed<Gtk::Label>(_("QUALITY CHECKPOINTS"));
     header->set_xalign(0.0);
     header->add_css_class("section-header");
     append(*header);
-    
+
     // Cards container - 3 quality checkpoints in a row
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 16);
     box->set_margin_top(4);
@@ -253,7 +270,8 @@ void DashboardPage::buildQualitySection() {
         
         // Checkpoint name with status dot
         auto* headerBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 8);
-        card.nameLabel = Gtk::make_managed<Gtk::Label>("Checkpoint " + std::to_string(i + 1));
+        card.nameLabel = Gtk::make_managed<Gtk::Label>(
+            Glib::ustring::compose(_("Checkpoint %1"), i + 1));
         card.nameLabel->add_css_class("card-title");
         headerBox->append(*card.nameLabel);
         
@@ -263,12 +281,12 @@ void DashboardPage::buildQualitySection() {
         
         card.cardBox->append(*headerBox);
         
-        // Quality gauge visual indicator
-        card.gaugeImage = Gtk::make_managed<Gtk::Picture>();
-        card.gaugeImage->set_size_request(100, 100);
-        card.gaugeImage->set_margin_top(8);
-        card.gaugeImage->set_margin_bottom(8);
-        card.cardBox->append(*card.gaugeImage);
+        // Quality gauge visual indicator (dynamic, cairo-drawn).
+        // Intrinsic size is set inside the widget via set_content_width/height.
+        card.gauge = Gtk::make_managed<QualityGauge>();
+        card.gauge->set_margin_top(8);
+        card.gauge->set_margin_bottom(8);
+        card.cardBox->append(*card.gauge);
         
         // Pass rate - large and prominent
         card.passRateLabel = Gtk::make_managed<Gtk::Label>("---%");
@@ -276,13 +294,14 @@ void DashboardPage::buildQualitySection() {
         card.cardBox->append(*card.passRateLabel);
         
         // Stats: Inspected / Defects
-        card.statsLabel = Gtk::make_managed<Gtk::Label>("0 inspected • 0 defects");
+        card.statsLabel = Gtk::make_managed<Gtk::Label>(_("0 inspected • 0 defects"));
         card.statsLabel->add_css_class("quality-stats");
         card.cardBox->append(*card.statsLabel);
         
-        // Last defect info
+        // Last defect info - ellipsize (single line, stable height)
         card.lastDefectLabel = Gtk::make_managed<Gtk::Label>("-");
-        card.lastDefectLabel->set_wrap(true);
+        card.lastDefectLabel->set_ellipsize(Pango::EllipsizeMode::END);
+        card.lastDefectLabel->set_xalign(0.5);
         card.lastDefectLabel->add_css_class("defect-info");
         card.cardBox->append(*card.lastDefectLabel);
         
@@ -294,18 +313,18 @@ void DashboardPage::buildQualitySection() {
 }
 
 void DashboardPage::buildControlPanelSection() {
-    auto* frame = Gtk::make_managed<Gtk::Frame>("Control Panel");
+    auto* frame = Gtk::make_managed<Gtk::Frame>(_("Control Panel"));
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 15);
     box->set_margin(8);
     box->set_halign(Gtk::Align::CENTER);
     
     // Active indicator
-    controlPanelWidgets_.activeIndicator = Gtk::make_managed<Gtk::Label>("System Idle");
+    controlPanelWidgets_.activeIndicator = Gtk::make_managed<Gtk::Label>(_("System Idle"));
     controlPanelWidgets_.activeIndicator->add_css_class("active-indicator");
     box->append(*controlPanelWidgets_.activeIndicator);
     
     // Start button
-    controlPanelWidgets_.startButton = Gtk::make_managed<Gtk::Button>("START");
+    controlPanelWidgets_.startButton = Gtk::make_managed<Gtk::Button>(_("START"));
     controlPanelWidgets_.startButton->add_css_class("control-button");
     controlPanelWidgets_.startButton->add_css_class("start-button");
     controlPanelWidgets_.startButton->set_size_request(100, 40);
@@ -315,7 +334,7 @@ void DashboardPage::buildControlPanelSection() {
     box->append(*controlPanelWidgets_.startButton);
     
     // Stop button
-    controlPanelWidgets_.stopButton = Gtk::make_managed<Gtk::Button>("STOP");
+    controlPanelWidgets_.stopButton = Gtk::make_managed<Gtk::Button>(_("STOP"));
     controlPanelWidgets_.stopButton->add_css_class("control-button");
     controlPanelWidgets_.stopButton->add_css_class("stop-button");
     controlPanelWidgets_.stopButton->set_size_request(100, 40);
@@ -325,7 +344,7 @@ void DashboardPage::buildControlPanelSection() {
     box->append(*controlPanelWidgets_.stopButton);
     
     // Reset button
-    controlPanelWidgets_.resetButton = Gtk::make_managed<Gtk::Button>("RESET");
+    controlPanelWidgets_.resetButton = Gtk::make_managed<Gtk::Button>(_("RESET"));
     controlPanelWidgets_.resetButton->add_css_class("control-button");
     controlPanelWidgets_.resetButton->add_css_class("reset-button");
     controlPanelWidgets_.resetButton->set_size_request(100, 40);
@@ -335,7 +354,7 @@ void DashboardPage::buildControlPanelSection() {
     box->append(*controlPanelWidgets_.resetButton);
     
     // Calibration button
-    controlPanelWidgets_.calibrationButton = Gtk::make_managed<Gtk::Button>("CALIBRATION");
+    controlPanelWidgets_.calibrationButton = Gtk::make_managed<Gtk::Button>(_("CALIBRATION"));
     controlPanelWidgets_.calibrationButton->add_css_class("control-button");
     controlPanelWidgets_.calibrationButton->add_css_class("calibration-button");
     controlPanelWidgets_.calibrationButton->set_size_request(100, 40);
@@ -382,9 +401,9 @@ void DashboardPage::onResetButtonClicked() {
     auto* parent = dynamic_cast<Gtk::Window*>(get_root());
     
     dialogManager_.showConfirmAsync(
-        "Confirm Reset",
-        "Reset the system?\n\n"
-        "This will stop all operations and return equipment to initial state.",
+        _("Confirm Reset"),
+        _("Reset the system?\n\n"
+          "This will stop all operations and return equipment to initial state."),
         [this](bool confirmed) {
             if (confirmed && presenter_) {
                 presenter_->onResetRestartClicked();
@@ -398,10 +417,10 @@ void DashboardPage::onCalibrationButtonClicked() {
     auto* parent = dynamic_cast<Gtk::Window*>(get_root());
     
     dialogManager_.showConfirmAsync(
-        "Confirm Calibration",
-        "Start calibration procedure?\n\n"
-        "All equipment will be moved to home position.\n"
-        "This may take several minutes.",
+        _("Confirm Calibration"),
+        _("Start calibration procedure?\n\n"
+          "All equipment will be moved to home position.\n"
+          "This may take several minutes."),
         [this](bool confirmed) {
             if (confirmed && presenter_) {
                 presenter_->onCalibrationClicked();
@@ -480,13 +499,13 @@ void DashboardPage::updateEquipmentCard(const presenter::EquipmentCardViewModel&
     card.statusDot->add_css_class(dotColor);
     
     // Update status text
-    std::string statusText;
+    Glib::ustring statusText;
     switch (vm.status) {
-        case presenter::EquipmentCardStatus::Online: statusText = "ONLINE"; break;
-        case presenter::EquipmentCardStatus::Processing: statusText = "PROCESSING"; break;
-        case presenter::EquipmentCardStatus::Error: statusText = "ERROR"; break;
-        case presenter::EquipmentCardStatus::Offline: statusText = "OFFLINE"; break;
-        default: statusText = "UNKNOWN"; break;
+        case presenter::EquipmentCardStatus::Online: statusText = _("ONLINE"); break;
+        case presenter::EquipmentCardStatus::Processing: statusText = _("PROCESSING"); break;
+        case presenter::EquipmentCardStatus::Error: statusText = _("ERROR"); break;
+        case presenter::EquipmentCardStatus::Offline: statusText = _("OFFLINE"); break;
+        default: statusText = _("UNKNOWN"); break;
     }
     card.statusLabel->set_text(statusText);
     
@@ -525,23 +544,8 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     card.statusDot->remove_css_class("quality-critical");
     card.statusDot->add_css_class(dotColor);
     
-    // Update gauge image only when status changes
-    if (card.lastStatus != vm.status) {
-        card.lastStatus = vm.status;
-        std::string gaugePath;
-        switch (vm.status) {
-            case presenter::QualityCheckpointStatus::Passing:
-                gaugePath = "assets/img/quality-gauge-pass.svg";
-                break;
-            case presenter::QualityCheckpointStatus::Warning:
-                gaugePath = "assets/img/quality-gauge-warning.svg";
-                break;
-            case presenter::QualityCheckpointStatus::Critical:
-                gaugePath = "assets/img/quality-gauge-critical.svg";
-                break;
-        }
-        card.gaugeImage->set_filename(gaugePath);
-    }
+    // Update gauge: arc length reflects real pass rate, color follows status
+    card.gauge->setValue(vm.passRate, vm.status);
     
     // Update pass rate - large and prominent
     char passRateText[32];
@@ -549,16 +553,16 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     card.passRateLabel->set_text(passRateText);
     
     // Update stats - inspected • defects
-    char statsText[128];
-    snprintf(statsText, sizeof(statsText), "%d inspected • %d defects", 
-             vm.unitsInspected, vm.defectsFound);
-    card.statsLabel->set_text(statsText);
-    
+    card.statsLabel->set_text(
+        Glib::ustring::compose(_("%1 inspected • %2 defects"),
+                               vm.unitsInspected, vm.defectsFound));
+
     // Update last defect info
     if (!vm.lastDefect.empty()) {
-        card.lastDefectLabel->set_text("Last: " + vm.lastDefect);
+        card.lastDefectLabel->set_text(
+            Glib::ustring::compose(_("Last: %1"), vm.lastDefect));
     } else {
-        card.lastDefectLabel->set_text("No defects detected");
+        card.lastDefectLabel->set_text(_("No defects detected"));
     }
 }
 
@@ -570,19 +574,19 @@ void DashboardPage::updateControlPanel(const presenter::ControlPanelViewModel& v
     controlPanelWidgets_.calibrationButton->set_sensitive(vm.calibrationEnabled);
     
     // Update active indicator
-    std::string indicatorText;
+    Glib::ustring indicatorText;
     switch (vm.activeButton) {
         case presenter::ActiveControl::Start:
-            indicatorText = "RUNNING";
+            indicatorText = _("RUNNING");
             break;
         case presenter::ActiveControl::Stop:
-            indicatorText = "STOPPED";
+            indicatorText = _("STOPPED");
             break;
         case presenter::ActiveControl::Calibration:
-            indicatorText = "CALIBRATION";
+            indicatorText = _("CALIBRATION");
             break;
         default:
-            indicatorText = "IDLE";
+            indicatorText = _("IDLE");
             break;
     }
     controlPanelWidgets_.activeIndicator->set_text(indicatorText);

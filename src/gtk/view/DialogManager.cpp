@@ -1,5 +1,6 @@
 #include "DialogManager.h"
 #include "ThemeManager.h"
+#include "src/core/i18n.h"
 
 namespace app::view {
 
@@ -44,11 +45,11 @@ bool DialogManager::showConfirm(const std::string& title,
                                 Gtk::Window* parent) {
     // Note: This is blocking, so must be called from GTK main thread
     auto* dialog = createMessageDialog(Type::QUESTION, title, message, parent);
-    dialog->add_button("Cancel", Gtk::ResponseType::CANCEL);
-    dialog->add_button("OK", Gtk::ResponseType::OK);
-    
+    dialog->add_button(_("Cancel"), Gtk::ResponseType::CANCEL);
+    dialog->add_button(_("OK"), Gtk::ResponseType::OK);
+
     dialog->present();
-    
+
     // Run modal loop
     auto loop = Glib::MainLoop::create();
     bool result = false;
@@ -69,8 +70,8 @@ void DialogManager::showConfirmAsync(const std::string& title,
                                      Gtk::Window* parent) {
     marshalToMainThread([this, title, message, callback, parent]() {
         auto* dialog = createMessageDialog(Type::QUESTION, title, message, parent);
-        dialog->add_button("Cancel", Gtk::ResponseType::CANCEL);
-        dialog->add_button("OK", Gtk::ResponseType::OK);
+        dialog->add_button(_("Cancel"), Gtk::ResponseType::CANCEL);
+        dialog->add_button(_("OK"), Gtk::ResponseType::OK);
         
         dialog->signal_response().connect([callback, dialog](int response) {
             bool confirmed = (response == Gtk::ResponseType::OK);
@@ -108,12 +109,12 @@ std::pair<bool, std::string> DialogManager::showInput(const std::string& title,
     box->append(*entry);
     
     dialog->get_content_area()->append(*box);
-    
-    dialog->add_button("Cancel", Gtk::ResponseType::CANCEL);
-    dialog->add_button("OK", Gtk::ResponseType::OK);
-    
+
+    dialog->add_button(_("Cancel"), Gtk::ResponseType::CANCEL);
+    dialog->add_button(_("OK"), Gtk::ResponseType::OK);
+
     dialog->present();
-    
+
     // Run modal loop
     auto loop = Glib::MainLoop::create();
     bool ok = false;
@@ -169,12 +170,12 @@ DialogManager::showForm(const std::string& title,
     }
     
     dialog->get_content_area()->append(*grid);
-    
-    dialog->add_button("Cancel", Gtk::ResponseType::CANCEL);
-    dialog->add_button("OK", Gtk::ResponseType::OK);
-    
+
+    dialog->add_button(_("Cancel"), Gtk::ResponseType::CANCEL);
+    dialog->add_button(_("OK"), Gtk::ResponseType::OK);
+
     dialog->present();
-    
+
     // Run modal loop
     auto loop = Glib::MainLoop::create();
     bool ok = false;

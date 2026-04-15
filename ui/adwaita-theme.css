@@ -578,3 +578,79 @@ window.light-mode .card-content {
 .shadow-md { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
 .shadow-lg { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5); }
 .shadow-xl { box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6); }
+
+/* ============================================
+   COMBOBOX DROPDOWN POPUP
+   GTK4 GtkComboBoxText uses an internal treeview inside a
+   popover; items are cellviews / labels. The generic popover
+   rule (color:#fff, padding:12px) breaks contrast and spacing,
+   so we flatten the combobox popup and force item colors.
+   ============================================ */
+
+combobox > popover {
+    padding: 0;
+    background-color: #383838;
+    color: #ffffff;
+    border-radius: 6px;
+}
+
+combobox > popover > contents,
+combobox > popover scrolledwindow,
+combobox > popover viewport,
+combobox > popover treeview {
+    background-color: #383838;
+    color: #ffffff;
+    padding: 0;
+}
+
+/* Rows (items) — explicit colors, default state */
+combobox > popover treeview.view,
+combobox > popover row,
+combobox > popover cellview,
+combobox > popover label {
+    background-color: transparent;
+    color: #ffffff;
+}
+
+combobox > popover row:hover,
+combobox > popover treeview.view:hover {
+    background-color: #4a4a4a;
+    color: #ffffff;
+}
+
+combobox > popover row:selected,
+combobox > popover treeview.view:selected,
+combobox > popover treeview.view:selected:focus {
+    background-color: #1976D2;
+    color: #ffffff;
+}
+
+/* Light mode */
+window.light-mode combobox > popover,
+window.light-mode combobox > popover > contents,
+window.light-mode combobox > popover scrolledwindow,
+window.light-mode combobox > popover viewport,
+window.light-mode combobox > popover treeview {
+    background-color: #ffffff;
+    color: #202124;
+}
+
+window.light-mode combobox > popover treeview.view,
+window.light-mode combobox > popover row,
+window.light-mode combobox > popover cellview,
+window.light-mode combobox > popover label {
+    color: #202124;
+}
+
+window.light-mode combobox > popover row:hover,
+window.light-mode combobox > popover treeview.view:hover {
+    background-color: #e8eaed;
+    color: #202124;
+}
+
+window.light-mode combobox > popover row:selected,
+window.light-mode combobox > popover treeview.view:selected,
+window.light-mode combobox > popover treeview.view:selected:focus {
+    background-color: #1a73e8;
+    color: #ffffff;
+}
