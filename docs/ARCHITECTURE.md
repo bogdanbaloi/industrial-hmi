@@ -59,7 +59,7 @@ The system follows a strict MVP architecture to ensure:
 **Why Observer instead of direct coupling?**
 
 ```cpp
-// ❌ BAD: Direct coupling
+// BAD: Direct coupling
 class Presenter {
     DashboardPage* view;  // Tight coupling!
     
@@ -68,7 +68,7 @@ class Presenter {
     }
 };
 
-// ✅ GOOD: Observer pattern
+// GOOD: Observer pattern
 class Presenter {
     std::vector<ViewObserver*> observers;  // Loose coupling
     

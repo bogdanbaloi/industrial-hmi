@@ -27,10 +27,10 @@ class DashboardPage : public Gtk::Box, public ViewObserver {
 
 ```cpp
 void DashboardPage::onEquipmentCardChanged(const EquipmentCardViewModel& vm) {
-    // ❌ WRONG - called from Presenter thread!
+    // WRONG - called from Presenter thread!
     // equipmentOperation->set_text(vm.statusMessage);  // CRASH!
     
-    // ✅ CORRECT - marshal to GTK thread
+    // CORRECT - marshal to GTK thread
     Glib::signal_idle().connect_once([this, vm]() {
         // This lambda runs on GTK main thread - safe to update widgets
         equipmentOperation->set_text(vm.statusMessage);
@@ -328,13 +328,13 @@ void DashboardPage::updateControlPanel(const ControlPanelViewModel& vm) {
     // Visual indicator of active operation
     switch (vm.activeButton) {
         case ActiveControl::Start:
-            activeIndicator_->set_text("🟢 RUNNING");
+            activeIndicator_->set_text("RUNNING");
             break;
         case ActiveControl::Stop:
-            activeIndicator_->set_text("🔴 STOPPED");
+            activeIndicator_->set_text("STOPPED");
             break;
         default:
-            activeIndicator_->set_text("⚪ IDLE");
+            activeIndicator_->set_text("IDLE");
             break;
     }
 }
@@ -369,7 +369,7 @@ TEST(DashboardPresenter, NotifiesWorkUnitChanged) {
 
 ## Best Practices
 
-### ✅ DO:
+### DO:
 
 - Keep Views dumb - only rendering logic
 - Use Glib::signal_idle() for thread safety
@@ -378,7 +378,7 @@ TEST(DashboardPresenter, NotifiesWorkUnitChanged) {
 - Apply CSS for styling, not hardcoded colors
 - Unregister from Presenter in destructor
 
-### ❌ DON'T:
+### DON'T:
 
 - Put business logic in Views
 - Access GTK widgets from non-GTK threads

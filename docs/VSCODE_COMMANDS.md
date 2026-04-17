@@ -1,6 +1,6 @@
 # VSCode Commands for Industrial HMI
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Deschide Proiectul
 ```
@@ -30,7 +30,7 @@ Debug: Start Debugging
 
 ---
 
-## 📋 VSCode Commands (Ctrl+Shift+P)
+## VSCode Commands (Ctrl+Shift+P)
 
 ### CMake Commands:
 ```
@@ -65,7 +65,7 @@ Terminal: Create New Terminal - Ctrl+Shift+` (MSYS2 bash)
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
 | Action | Shortcut |
 |--------|----------|
@@ -83,7 +83,7 @@ Terminal: Create New Terminal - Ctrl+Shift+` (MSYS2 bash)
 
 ---
 
-## 🔧 First Time Setup
+## First Time Setup
 
 ### 1. Instalează GTK4 în MSYS2:
 ```bash
@@ -110,7 +110,7 @@ CMake (twxs)
 
 ---
 
-## 🐛 Debugging Tips
+## Debugging Tips
 
 ### Set Breakpoint:
 - Click în margin (lângă numărul liniei)
@@ -130,12 +130,12 @@ CMake (twxs)
 
 ---
 
-## 📊 Status Bar (jos în VSCode)
+## Status Bar (jos în VSCode)
 
 ```
 [CMake Kit] [Build Type] [Build] [Debug] [Test]
      ↓           ↓          ↓       ↓      ↓
-  CLANG64      Debug     ⚙Build   🐛Debug  🧪Test
+  CLANG64      Debug     Build   Debug  Test
 ```
 
 **Click pe:**
@@ -146,7 +146,7 @@ CMake (twxs)
 
 ---
 
-## 🎯 Common Workflows
+## Common Workflows
 
 ### Workflow 1: Edit → Build → Run
 ```
@@ -172,7 +172,7 @@ CMake (twxs)
 
 ---
 
-## 🔍 IntelliSense Features
+## IntelliSense Features
 
 ### Go to Definition:
 - `F12` SAU `Ctrl+Click`
@@ -191,7 +191,7 @@ CMake (twxs)
 
 ---
 
-## ⚠️ Troubleshooting
+## Troubleshooting
 
 ### "Kit not found"
 **Solution:**
@@ -222,7 +222,7 @@ pacman -S mingw-w64-clang-x86_64-ninja
 
 ---
 
-## 📁 Project Structure în VSCode
+## Project Structure în VSCode
 
 ```
 INDUSTRIAL-HMI/
@@ -239,7 +239,7 @@ INDUSTRIAL-HMI/
 
 ---
 
-## 🎓 Pro Tips
+## Pro Tips
 
 1. **Multi-cursor editing:** `Alt+Click`
 2. **Duplicate line:** `Shift+Alt+Down`
@@ -249,4 +249,4 @@ INDUSTRIAL-HMI/
 
 ---
 
-**Enjoy coding!** 🚀
+**Enjoy coding!**
