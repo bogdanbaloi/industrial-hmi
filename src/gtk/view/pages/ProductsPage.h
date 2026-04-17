@@ -31,10 +31,10 @@ public:
     void onViewProductReady(const presenter::ViewProductDialogViewModel& vm) override;
 
 private:
+    // UI construction — loads layout from ui/products-page.ui and injects
+    // the ColumnView (programmatic: factories + list model) into the
+    // ScrolledWindow container defined in XML.
     void buildUI();
-    void buildSearchBar();
-    void buildProductsList();
-    void buildToolbar();
 
     // Event handlers
     void onSearchChanged();

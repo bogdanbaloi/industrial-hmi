@@ -43,79 +43,31 @@ void ProductsPage::onViewProductReady(const presenter::ViewProductDialogViewMode
     });
 }
 
-// UI Construction
+// UI Construction — static layout from XML, dynamic ColumnView from code.
 void ProductsPage::buildUI() {
-    set_spacing(20);
-    set_margin_start(60);
-    set_margin_end(60);
-    set_margin_top(40);
-    set_margin_bottom(40);
-    
-    buildToolbar();
-    buildSearchBar();
-    buildProductsList();
-}
+    auto builder = Gtk::Builder::create_from_file("ui/products-page.ui");
 
-void ProductsPage::buildToolbar() {
-    auto* toolbar = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 15);
-    toolbar->set_margin_bottom(20);
-    
-    // Title
-    auto* title = Gtk::make_managed<Gtk::Label>(_("Products Database"));
-    title->add_css_class("page-title");
-    title->set_hexpand(true);
-    title->set_xalign(0.0);
-    toolbar->append(*title);
-    
-    // Add Product button
-    addButton_ = Gtk::make_managed<Gtk::Button>(_("+ Add New Product"));
-    addButton_->add_css_class("toolbar-button");
+    auto* root = builder->get_widget<Gtk::Box>("products_root");
+    if (root) append(*root);
+
+    // ---- Toolbar buttons ----
+    addButton_ = builder->get_widget<Gtk::Button>("btn_add");
+    refreshButton_ = builder->get_widget<Gtk::Button>("btn_refresh");
+    exportButton_ = builder->get_widget<Gtk::Button>("btn_export");
+
     addButton_->signal_clicked().connect(
-        sigc::mem_fun(*this, &ProductsPage::onAddProductClicked)
-    );
-    toolbar->append(*addButton_);
-    
-    // Refresh button
-    refreshButton_ = Gtk::make_managed<Gtk::Button>(_("Refresh"));
-    refreshButton_->add_css_class("toolbar-button");
+        sigc::mem_fun(*this, &ProductsPage::onAddProductClicked));
     refreshButton_->signal_clicked().connect(
-        sigc::mem_fun(*this, &ProductsPage::onRefreshClicked)
-    );
-    toolbar->append(*refreshButton_);
-
-    // Export CSV button
-    exportButton_ = Gtk::make_managed<Gtk::Button>(_("Export CSV"));
-    exportButton_->add_css_class("toolbar-button");
+        sigc::mem_fun(*this, &ProductsPage::onRefreshClicked));
     exportButton_->signal_clicked().connect(
-        sigc::mem_fun(*this, &ProductsPage::onExportCsvClicked)
-    );
-    toolbar->append(*exportButton_);
+        sigc::mem_fun(*this, &ProductsPage::onExportCsvClicked));
 
-    append(*toolbar);
-}
-
-void ProductsPage::buildSearchBar() {
-    auto* searchBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
-    searchBox->set_margin_bottom(20);
-    
-    auto* searchLabel = Gtk::make_managed<Gtk::Label>(_("Search:"));
-    searchLabel->add_css_class("search-label");
-    searchBox->append(*searchLabel);
-    
-    searchEntry_ = Gtk::make_managed<Gtk::SearchEntry>();
-    searchEntry_->set_placeholder_text(_("Search by Product ID or Name..."));
-    searchEntry_->set_hexpand(true);
+    // ---- Search ----
+    searchEntry_ = builder->get_widget<Gtk::SearchEntry>("search_entry");
     searchEntry_->signal_search_changed().connect(
-        sigc::mem_fun(*this, &ProductsPage::onSearchChanged)
-    );
-    searchBox->append(*searchEntry_);
-    
-    append(*searchBox);
-}
+        sigc::mem_fun(*this, &ProductsPage::onSearchChanged));
 
-void ProductsPage::buildProductsList() {
-    // GTK4 ColumnView with virtual rendering
-    // Only visible rows have allocated widgets (widget recycling)
+    // ---- ColumnView (programmatic — factories + list model can't live in XML) ----
     listStore_ = Gio::ListStore<ProductObject>::create();
     selectionModel_ = Gtk::SingleSelection::create(listStore_);
 
@@ -125,11 +77,9 @@ void ProductsPage::buildProductsList() {
     columnView_->set_show_column_separators(true);
     columnView_->set_show_row_separators(true);
 
-    // Helper to create a text column with SignalListItemFactory
     auto makeColumn = [](const Glib::ustring& title, int fixedWidth, bool expand,
                          std::function<Glib::ustring(const Glib::RefPtr<ProductObject>&)> getter) {
         auto factory = Gtk::SignalListItemFactory::create();
-
         factory->signal_setup().connect([](const Glib::RefPtr<Gtk::ListItem>& item) {
             auto* label = Gtk::make_managed<Gtk::Label>();
             label->set_xalign(0.0);
@@ -137,15 +87,11 @@ void ProductsPage::buildProductsList() {
             label->set_margin_end(8);
             item->set_child(*label);
         });
-
         factory->signal_bind().connect([getter](const Glib::RefPtr<Gtk::ListItem>& item) {
             auto obj = std::dynamic_pointer_cast<ProductObject>(item->get_item());
             auto* label = dynamic_cast<Gtk::Label*>(item->get_child());
-            if (obj && label) {
-                label->set_text(getter(obj));
-            }
+            if (obj && label) label->set_text(getter(obj));
         });
-
         auto column = Gtk::ColumnViewColumn::create(title, factory);
         if (fixedWidth > 0) column->set_fixed_width(fixedWidth);
         if (expand) column->set_expand(true);
@@ -153,13 +99,10 @@ void ProductsPage::buildProductsList() {
         return column;
     };
 
-    // Add columns
     columnView_->append_column(makeColumn(_("Product Code"), 120, false,
         [](const Glib::RefPtr<ProductObject>& p) { return p->getProductCode(); }));
-
     columnView_->append_column(makeColumn(_("Name"), 0, true,
         [](const Glib::RefPtr<ProductObject>& p) { return p->getName(); }));
-
     columnView_->append_column(makeColumn(_("Status"), 120, false,
         [](const Glib::RefPtr<ProductObject>& p) -> Glib::ustring {
             const auto& s = p->getStatus();
@@ -168,10 +111,8 @@ void ProductsPage::buildProductsList() {
             if (s == config::defaults::kStatusLowStock) return _("Low Stock");
             return s;
         }));
-
     columnView_->append_column(makeColumn(_("Stock"), 80, false,
         [](const Glib::RefPtr<ProductObject>& p) { return std::to_string(p->getStock()); }));
-
     columnView_->append_column(makeColumn(_("Quality %"), 100, false,
         [](const Glib::RefPtr<ProductObject>& p) {
             char buf[16];
@@ -179,41 +120,24 @@ void ProductsPage::buildProductsList() {
             return Glib::ustring(buf);
         }));
 
-    // Row activation (double-click)
     columnView_->signal_activate().connect(
         sigc::mem_fun(*this, &ProductsPage::onProductActivated));
 
-    // ScrolledWindow — CSS class for scoped dark/light styling
-    scrolledWindow_ = Gtk::make_managed<Gtk::ScrolledWindow>();
-    scrolledWindow_->add_css_class("products-table");
+    // Inject ColumnView into the ScrolledWindow defined in XML
+    scrolledWindow_ = builder->get_widget<Gtk::ScrolledWindow>("table_container");
     scrolledWindow_->set_child(*columnView_);
-    scrolledWindow_->set_policy(Gtk::PolicyType::AUTOMATIC, Gtk::PolicyType::AUTOMATIC);
-    scrolledWindow_->set_vexpand(true);
 
-    // Action buttons
-    auto* actionBox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 10);
-    actionBox->set_margin_top(10);
+    // ---- Action buttons ----
+    auto* viewBtn = builder->get_widget<Gtk::Button>("btn_view");
+    auto* editBtn = builder->get_widget<Gtk::Button>("btn_edit");
+    auto* deleteBtn = builder->get_widget<Gtk::Button>("btn_delete");
 
-    auto* viewButton = Gtk::make_managed<Gtk::Button>(_("View Details"));
-    viewButton->add_css_class("toolbar-button");
-    viewButton->signal_clicked().connect(
+    viewBtn->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onViewProductClicked));
-    actionBox->append(*viewButton);
-
-    auto* editButton = Gtk::make_managed<Gtk::Button>(_("Edit"));
-    editButton->add_css_class("toolbar-button");
-    editButton->signal_clicked().connect(
+    editBtn->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onEditProductClicked));
-    actionBox->append(*editButton);
-
-    auto* deleteButton = Gtk::make_managed<Gtk::Button>(_("Delete"));
-    deleteButton->add_css_class("toolbar-button");
-    deleteButton->signal_clicked().connect(
+    deleteBtn->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onDeleteProductClicked));
-    actionBox->append(*deleteButton);
-
-    append(*scrolledWindow_);
-    append(*actionBox);
 }
 
 // Event Handlers

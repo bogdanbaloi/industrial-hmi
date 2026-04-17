@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+
+  <object class="GtkBox" id="products_root">
+    <property name="orientation">vertical</property>
+    <property name="spacing">20</property>
+    <property name="margin-start">60</property>
+    <property name="margin-end">60</property>
+    <property name="margin-top">40</property>
+    <property name="margin-bottom">40</property>
+
+    <!-- ============================================================ -->
+    <!-- TOOLBAR                                                      -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkBox" id="toolbar">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">15</property>
+        <property name="margin-bottom">20</property>
+
+        <child>
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Products Database</property>
+            <property name="css-classes">page-title</property>
+            <property name="hexpand">true</property>
+            <property name="xalign">0</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="btn_add">
+            <property name="label" translatable="yes">+ Add New Product</property>
+            <property name="css-classes">toolbar-button</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="btn_refresh">
+            <property name="label" translatable="yes">Refresh</property>
+            <property name="css-classes">toolbar-button</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="btn_export">
+            <property name="label" translatable="yes">Export CSV</property>
+            <property name="css-classes">toolbar-button</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- SEARCH BAR                                                   -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">10</property>
+        <property name="margin-bottom">20</property>
+
+        <child>
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Search:</property>
+            <property name="css-classes">search-label</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkSearchEntry" id="search_entry">
+            <property name="placeholder-text" translatable="yes">Search by Product ID or Name...</property>
+            <property name="hexpand">true</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- TABLE CONTAINER (ColumnView injected from code)              -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkScrolledWindow" id="table_container">
+        <property name="css-classes">products-table</property>
+        <property name="hscrollbar-policy">automatic</property>
+        <property name="vscrollbar-policy">automatic</property>
+        <property name="vexpand">true</property>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- ACTION BUTTONS                                               -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkBox" id="action_bar">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">10</property>
+        <property name="margin-top">10</property>
+
+        <child>
+          <object class="GtkButton" id="btn_view">
+            <property name="label" translatable="yes">View Details</property>
+            <property name="css-classes">toolbar-button</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="btn_edit">
+            <property name="label" translatable="yes">Edit</property>
+            <property name="css-classes">toolbar-button</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="btn_delete">
+            <property name="label" translatable="yes">Delete</property>
+            <property name="css-classes">toolbar-button</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+  </object>
+</interface>

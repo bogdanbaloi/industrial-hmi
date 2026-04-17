@@ -54,10 +54,10 @@ private:
 
 TEST(LoggerHelpersTest, LevelToStringMapsAllLevels) {
     EXPECT_STREQ(app::core::levelToString(LogLevel::DEBUG),    "DEBUG");
-    EXPECT_STREQ(app::core::levelToString(LogLevel::INFO),     "INFO ");
-    EXPECT_STREQ(app::core::levelToString(LogLevel::WARN),     "WARN ");
+    EXPECT_STREQ(app::core::levelToString(LogLevel::INFO),     "INFO");
+    EXPECT_STREQ(app::core::levelToString(LogLevel::WARN),     "WARN");
     EXPECT_STREQ(app::core::levelToString(LogLevel::ERROR),    "ERROR");
-    EXPECT_STREQ(app::core::levelToString(LogLevel::CRITICAL), "CRIT ");
+    EXPECT_STREQ(app::core::levelToString(LogLevel::CRITICAL), "CRIT");
 }
 
 // ============================================================================
