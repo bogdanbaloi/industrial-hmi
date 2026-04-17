@@ -21,8 +21,11 @@ class SimulatedModelTest : public ::testing::Test {
 protected:
     SimulatedModel& model() { return SimulatedModel::instance(); }
 
-    void SetUp() override {
-        model().initializeDemoData();
+    // Initialize demo data ONCE — callbacks persist in the singleton so
+    // re-initializing per test would fire stale callbacks from previous
+    // tests that captured stack-local variables.
+    static void SetUpTestSuite() {
+        SimulatedModel::instance().initializeDemoData();
     }
 };
 
@@ -85,25 +88,21 @@ TEST_F(SimulatedModelTest, StartCalibrationSetsCalibration) {
 // ============================================================================
 
 TEST_F(SimulatedModelTest, SetEquipmentEnabledChangesStatus) {
-    // Equipment 0 starts as status=2 (processing) from demo data
-    model().setEquipmentEnabled(0, false);
-
-    // Capture via callback
-    EquipmentStatus captured;
-    model().onEquipmentStatusChanged([&](const EquipmentStatus& es) {
-        if (es.equipmentId == 0) captured = es;
+    auto captured = std::make_shared<EquipmentStatus>();
+    model().onEquipmentStatusChanged([captured](const EquipmentStatus& es) {
+        if (es.equipmentId == 0) *captured = es;
     });
     model().setEquipmentEnabled(0, true);
-    EXPECT_EQ(captured.status, 1);  // online
+    EXPECT_EQ(captured->status, 1);  // online
 }
 
 TEST_F(SimulatedModelTest, SetEquipmentDisabledSetsOffline) {
-    EquipmentStatus captured;
-    model().onEquipmentStatusChanged([&](const EquipmentStatus& es) {
-        if (es.equipmentId == 1) captured = es;
+    auto captured = std::make_shared<EquipmentStatus>();
+    model().onEquipmentStatusChanged([captured](const EquipmentStatus& es) {
+        if (es.equipmentId == 1) *captured = es;
     });
     model().setEquipmentEnabled(1, false);
-    EXPECT_EQ(captured.status, 0);  // offline
+    EXPECT_EQ(captured->status, 0);  // offline
 }
 
 // ============================================================================
@@ -111,32 +110,34 @@ TEST_F(SimulatedModelTest, SetEquipmentDisabledSetsOffline) {
 // ============================================================================
 
 TEST_F(SimulatedModelTest, StateCallbackFiresOnTransition) {
-    std::vector<SystemState> states;
-    model().onSystemStateChanged([&](SystemState s) { states.push_back(s); });
+    // shared_ptr so the vector outlives the test — callback persists in singleton
+    auto states = std::make_shared<std::vector<SystemState>>();
+    model().onSystemStateChanged([states](SystemState s) { states->push_back(s); });
 
     model().startProduction();
     model().stopProduction();
 
-    ASSERT_GE(states.size(), 2u);
-    EXPECT_EQ(states[0], SystemState::RUNNING);
-    EXPECT_EQ(states[1], SystemState::IDLE);
+    ASSERT_GE(states->size(), 2u);
+    // Last two entries (other callbacks from earlier tests may have fired too)
+    auto sz = states->size();
+    EXPECT_EQ((*states)[sz - 2], SystemState::RUNNING);
+    EXPECT_EQ((*states)[sz - 1], SystemState::IDLE);
 }
 
 TEST_F(SimulatedModelTest, WorkUnitCallbackFiresOnReset) {
-    int callCount = 0;
-    model().onWorkUnitChanged([&](const WorkUnit&) { ++callCount; });
+    auto callCount = std::make_shared<int>(0);
+    model().onWorkUnitChanged([callCount](const WorkUnit&) { ++(*callCount); });
 
     model().resetSystem();
-    EXPECT_GE(callCount, 1);
+    EXPECT_GE(*callCount, 1);
 }
 
 TEST_F(SimulatedModelTest, QualityCallbackFiresOnTick) {
-    int callCount = 0;
-    model().onQualityCheckpointChanged([&](const QualityCheckpoint&) { ++callCount; });
+    auto callCount = std::make_shared<int>(0);
+    model().onQualityCheckpointChanged([callCount](const QualityCheckpoint&) { ++(*callCount); });
 
     model().tickSimulation();
-    // 3 checkpoints -> at least 3 callbacks
-    EXPECT_GE(callCount, 3);
+    EXPECT_GE(*callCount, 3);
 }
 
 // ============================================================================
