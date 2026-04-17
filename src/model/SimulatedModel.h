@@ -1,5 +1,8 @@
 #pragma once
 
+#include "src/model/ProductionModel.h"
+#include "src/model/ProductionTypes.h"
+
 #include <string>
 #include <functional>
 #include <map>
@@ -10,132 +13,84 @@
 namespace app::model {
 
 /// Simulated Model layer for demo purposes
-/// 
+///
 /// This stub provides simulated data and state changes to demonstrate
 /// the MVP architecture without exposing proprietary business logic.
-class SimulatedModel {
+///
+/// Implements ProductionModel so DashboardPresenter can depend on the
+/// abstraction; tests inject a MockProductionModel instead of this
+/// singleton.
+class SimulatedModel : public ProductionModel {
 public:
-    /// Equipment status simulation
-    struct EquipmentStatus {
-        uint32_t equipmentId{0};
-        int status{0};  // 0=offline, 1=online, 2=processing, 3=error
-        int supplyLevel{0};  // 0-100%
-        std::string message;
-    };
-    
-    /// Actuator status simulation
-    struct ActuatorStatus {
-        uint32_t actuatorId{0};
-        int status{0};  // 0=idle, 1=working, 2=error
-        int posX{0};
-        int posY{0};
-        bool autoMode{true};
-        bool atHome{true};
-    };
-    
-    /// Quality checkpoint simulation
-    struct QualityCheckpoint {
-        uint32_t checkpointId{0};
-        std::string name;
-        int status{0};  // 0=passing, 1=warning, 2=critical
-        int unitsInspected{0};
-        int defectsFound{0};
-        float passRate{100.0f};
-        std::string lastDefect;
-    };
-    
-    /// Work unit simulation
-    struct WorkUnit {
-        std::string workUnitId;
-        std::string productId;
-        std::string description;
-        int completedOperations{0};
-        int totalOperations{5};
-    };
-    
-    /// System state
-    enum class SystemState {
-        IDLE,
-        RUNNING,
-        ERROR,
-        CALIBRATION
-    };
-    
     static SimulatedModel& instance() {
         static SimulatedModel inst;
         return inst;
     }
-    
-    // Subscribe to state changes
-    using EquipmentCallback = std::function<void(const EquipmentStatus&)>;
-    using ActuatorCallback = std::function<void(const ActuatorStatus&)>;
-    using QualityCheckpointCallback = std::function<void(const QualityCheckpoint&)>;
-    using WorkUnitCallback = std::function<void(const WorkUnit&)>;
-    using StateCallback = std::function<void(SystemState)>;
-    
-    void onEquipmentStatusChanged(EquipmentCallback cb) {
+
+    void onEquipmentStatusChanged(EquipmentCallback cb) override {
         std::lock_guard<std::mutex> lock(mutex_);
         equipmentCallbacks_.push_back(cb);
     }
-    
-    void onActuatorStatusChanged(ActuatorCallback cb) {
+
+    void onActuatorStatusChanged(ActuatorCallback cb) override {
         std::lock_guard<std::mutex> lock(mutex_);
         actuatorCallbacks_.push_back(cb);
     }
-    
-    void onQualityCheckpointChanged(QualityCheckpointCallback cb) {
+
+    void onQualityCheckpointChanged(QualityCheckpointCallback cb) override {
         std::lock_guard<std::mutex> lock(mutex_);
         qualityCallbacks_.push_back(cb);
     }
-    
-    void onWorkUnitChanged(WorkUnitCallback cb) {
+
+    void onWorkUnitChanged(WorkUnitCallback cb) override {
         std::lock_guard<std::mutex> lock(mutex_);
         workUnitCallbacks_.push_back(cb);
     }
-    
-    void onSystemStateChanged(StateCallback cb) {
+
+    void onSystemStateChanged(StateCallback cb) override {
         std::lock_guard<std::mutex> lock(mutex_);
         stateCallbacks_.push_back(cb);
     }
-    
+
     // User commands
-    void startProduction() {
+    void startProduction() override {
         currentState_ = SystemState::RUNNING;
         notifyStateChange();
         simulateProductionCycle();
     }
-    
-    void stopProduction() {
+
+    void stopProduction() override {
         currentState_ = SystemState::IDLE;
         notifyStateChange();
     }
-    
-    void resetSystem() {
+
+    void resetSystem() override {
         currentState_ = SystemState::IDLE;
         currentWorkUnit_.completedOperations = 0;
         notifyStateChange();
         notifyWorkUnitChange();
     }
-    
-    void startCalibration() {
+
+    void startCalibration() override {
         currentState_ = SystemState::CALIBRATION;
         notifyStateChange();
     }
-    
-    void setEquipmentEnabled(uint32_t equipmentId, bool enabled) {
+
+    void setEquipmentEnabled(uint32_t equipmentId, bool enabled) override {
         // Simulate enable/disable
         if (equipmentId < 4) {
             equipmentStatuses_[equipmentId].status = enabled ? 1 : 0;
             notifyEquipmentChange(equipmentId);
         }
     }
-    
-    SystemState getState() const { return currentState_; }
 
-    const QualityCheckpoint& getQualityCheckpoint(uint32_t id) const {
+    [[nodiscard]] SystemState getState() const override { return currentState_; }
+
+    [[nodiscard]] QualityCheckpoint getQualityCheckpoint(uint32_t id) const override {
         return qualityCheckpoints_.at(id);
     }
-    const WorkUnit& getWorkUnit() const { return currentWorkUnit_; }
+
+    [[nodiscard]] WorkUnit getWorkUnit() const override { return currentWorkUnit_; }
 
     /// Advance simulation by one tick (called by auto refresh timer)
     void tickSimulation() {

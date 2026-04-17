@@ -119,9 +119,27 @@ target_link_libraries(test_products_presenter PRIVATE
 
 add_test(NAME ProductsPresenterTest COMMAND test_products_presenter)
 
+# --- Presenter: DashboardPresenter (with mock production model) -----------
+# DashboardPresenter.cpp pulls in SimulatedModel via its default
+# constructor's initializer list, so we still need objectsModel for the
+# default-ctor instantiation, even though the test injects a mock.
+add_executable(test_dashboard_presenter DashboardPresenterTest.cpp)
+target_include_directories(test_dashboard_presenter PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}  # so #include "mocks/..." resolves
+)
+target_link_libraries(test_dashboard_presenter PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsModel
+)
+
+add_test(NAME DashboardPresenterTest COMMAND test_dashboard_presenter)
+
 # Boost.Asio on Windows references WSAStartup / WSACleanup from Winsock;
-# both objectsModel-linked targets need ws2_32.
+# every objectsModel-linked target needs ws2_32.
 if(WIN32)
-    target_link_libraries(test_database_manager  PRIVATE ws2_32)
+    target_link_libraries(test_database_manager   PRIVATE ws2_32)
     target_link_libraries(test_products_presenter PRIVATE ws2_32)
+    target_link_libraries(test_dashboard_presenter PRIVATE ws2_32)
 endif()

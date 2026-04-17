@@ -4,58 +4,54 @@
 
 namespace app {
 
-DashboardPresenter::DashboardPresenter() {
-}
+DashboardPresenter::DashboardPresenter()
+    : DashboardPresenter(model::SimulatedModel::instance()) {}
+
+DashboardPresenter::DashboardPresenter(model::ProductionModel& model)
+    : model_(model) {}
 
 void DashboardPresenter::initialize() {
-    auto& model = model::SimulatedModel::instance();
-    
     // Subscribe to Model signals
-    model.onEquipmentStatusChanged([this](const model::SimulatedModel::EquipmentStatus& status) {
+    model_.onEquipmentStatusChanged([this](const model::EquipmentStatus& status) {
         handleEquipmentStatusUpdate(status.equipmentId, status.status);
     });
-    
-    model.onActuatorStatusChanged([this](const model::SimulatedModel::ActuatorStatus& status) {
+
+    model_.onActuatorStatusChanged([this](const model::ActuatorStatus& status) {
         handleActuatorStatusUpdate(status.actuatorId, status.status);
     });
-    
-    model.onQualityCheckpointChanged([this](const model::SimulatedModel::QualityCheckpoint& checkpoint) {
+
+    model_.onQualityCheckpointChanged([this](const model::QualityCheckpoint& checkpoint) {
         handleQualityCheckpointUpdate(checkpoint.checkpointId, checkpoint.status);
     });
-    
-    model.onWorkUnitChanged([this](const model::SimulatedModel::WorkUnit& wu) {
+
+    model_.onWorkUnitChanged([this](const model::WorkUnit& wu) {
         handleNewWorkUnit(wu.workUnitId);
     });
-    
-    model.onSystemStateChanged([this](model::SimulatedModel::SystemState state) {
+
+    model_.onSystemStateChanged([this](model::SystemState state) {
         handleSystemStateChanged(static_cast<int>(state));
     });
 }
 
 // User action handlers
 void DashboardPresenter::onStartClicked() {
-    auto& model = model::SimulatedModel::instance();
-    model.startProduction();
+    model_.startProduction();
 }
 
 void DashboardPresenter::onStopClicked() {
-    auto& model = model::SimulatedModel::instance();
-    model.stopProduction();
+    model_.stopProduction();
 }
 
 void DashboardPresenter::onResetRestartClicked() {
-    auto& model = model::SimulatedModel::instance();
-    model.resetSystem();
+    model_.resetSystem();
 }
 
 void DashboardPresenter::onCalibrationClicked() {
-    auto& model = model::SimulatedModel::instance();
-    model.startCalibration();
+    model_.startCalibration();
 }
 
 void DashboardPresenter::onEquipmentToggled(uint32_t equipmentId, bool enabled) {
-    auto& model = model::SimulatedModel::instance();
-    model.setEquipmentEnabled(equipmentId, enabled);
+    model_.setEquipmentEnabled(equipmentId, enabled);
 }
 
 // Model signal handlers
@@ -86,8 +82,7 @@ void DashboardPresenter::handleSystemStateChanged(int newState) {
 
 // ViewModel builders
 presenter::WorkUnitViewModel DashboardPresenter::buildWorkUnitVM(const std::string& workUnitId) {
-    auto& model = model::SimulatedModel::instance();
-    auto& wu = model.getWorkUnit();
+    auto wu = model_.getWorkUnit();
 
     presenter::WorkUnitViewModel vm;
     vm.workUnitId = wu.workUnitId;
@@ -110,7 +105,7 @@ presenter::WorkUnitViewModel DashboardPresenter::buildWorkUnitVM(const std::stri
 presenter::EquipmentCardViewModel DashboardPresenter::buildEquipmentVM(uint32_t equipmentId, int status) {
     presenter::EquipmentCardViewModel vm;
     vm.equipmentId = equipmentId;
-    
+
     switch (status) {
         case 0:  // Offline
             vm.status = presenter::EquipmentCardStatus::Offline;
@@ -133,14 +128,14 @@ presenter::EquipmentCardViewModel DashboardPresenter::buildEquipmentVM(uint32_t 
             vm.enabled = false;
             break;
     }
-    
+
     return vm;
 }
 
 presenter::ActuatorCardViewModel DashboardPresenter::buildActuatorVM(uint32_t actuatorId, int status) {
     presenter::ActuatorCardViewModel vm;
     vm.actuatorId = actuatorId;
-    
+
     switch (status) {
         case 0:  // Idle
             vm.status = presenter::ActuatorCardStatus::Idle;
@@ -165,13 +160,12 @@ presenter::ActuatorCardViewModel DashboardPresenter::buildActuatorVM(uint32_t ac
             vm.alertMessage = "Position timeout detected";
             break;
     }
-    
+
     return vm;
 }
 
 presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpointVM(uint32_t checkpointId, int status) {
-    auto& model = model::SimulatedModel::instance();
-    auto& cp = model.getQualityCheckpoint(checkpointId);
+    auto cp = model_.getQualityCheckpoint(checkpointId);
 
     presenter::QualityCheckpointViewModel vm;
     vm.checkpointId = checkpointId;
@@ -193,13 +187,12 @@ presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpoint
 }
 
 presenter::ControlPanelViewModel DashboardPresenter::buildControlPanelVM() {
-    auto& model = model::SimulatedModel::instance();
-    auto state = model.getState();
-    
+    auto state = model_.getState();
+
     presenter::ControlPanelViewModel vm;
-    
-    using State = model::SimulatedModel::SystemState;
-    
+
+    using State = model::SystemState;
+
     switch (state) {
         case State::IDLE:
             vm.startEnabled = true;
@@ -230,7 +223,7 @@ presenter::ControlPanelViewModel DashboardPresenter::buildControlPanelVM() {
             vm.activeButton = presenter::ActiveControl::Calibration;
             break;
     }
-    
+
     return vm;
 }
 

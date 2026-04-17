@@ -7,6 +7,7 @@
 #include "src/presenter/modelview/QualityCheckpointViewModel.h"
 #include "src/presenter/modelview/ControlPanelViewModel.h"
 #include "src/presenter/modelview/PlaceholderViewModels.h"
+#include "src/model/ProductionModel.h"
 
 #include <memory>
 #include <mutex>
@@ -22,13 +23,22 @@ namespace app {
 ///         - Notifies Views via Observer pattern
 ///         - Forwards user commands to Model
 ///
+/// The presenter holds a reference to a ProductionModel injected through the
+/// constructor. The default constructor wires up the SimulatedModel singleton
+/// for production use; tests inject a MockProductionModel.
+///
 /// @thread_safety Methods can be called from multiple threads:
 ///                - Model signals arrive on hardware/app threads
 ///                - User actions arrive on UI thread
 ///                All shared state is protected by mutex or atomics
 class DashboardPresenter : public BasePresenter {
 public:
+    /// Default constructor wires up the production SimulatedModel singleton.
     DashboardPresenter();
+
+    /// DI constructor used by tests to inject a mock model.
+    explicit DashboardPresenter(model::ProductionModel& model);
+
     ~DashboardPresenter() override = default;
 
     // Disable copy/move
@@ -139,13 +149,16 @@ private:
     std::vector<presenter::ActuatorCardViewModel> lastActuatorVMs_;
     presenter::ControlPanelViewModel lastControlPanelVM_;
     presenter::StatusZoneViewModel lastStatusZoneVM_;
-    
+
     /// Mutex protecting cached state
     std::mutex cacheMutex_;
-    
+
     /// Atomic flags for simple state
     std::atomic<bool> waitingForEquipmentHome_{false};
     std::atomic<uint32_t> currentErrorMask_{0};
+
+    /// Injected production model (subscriptions, commands, queries route here).
+    model::ProductionModel& model_;
 };
 
 }  // namespace app
