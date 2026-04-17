@@ -16,7 +16,28 @@ Checks: >
   -modernize-use-trailing-return-type,
   -readability-identifier-length,
   -misc-non-private-member-variables-in-classes,
-  -cppcoreguidelines-non-private-member-variables-in-classes
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+
+  # Stylistic / opinion checks we deliberately opt out of:
+  -portability-avoid-pragma-once,
+  -readability-braces-around-statements,
+  -hicpp-braces-around-statements,
+  -google-readability-braces-around-statements,
+  -readability-uppercase-literal-suffix,
+  -hicpp-uppercase-literal-suffix,
+  -readability-implicit-bool-conversion,
+  -modernize-use-nodiscard,
+
+  # Noisy checks that flag every transitive include:
+  -misc-include-cleaner,
+
+  # Google-specific conventions we don't follow:
+  -google-readability-namespace-comments,
+  -google-build-using-namespace,
+  -google-runtime-references,
+
+  # Fuchsia's ban on default arguments / multiple inheritance we use heavily:
+  -cert-dcl21-cpp
 
 # Warning-as-error (optional - comment out if too strict)
 WarningsAsErrors: ''
