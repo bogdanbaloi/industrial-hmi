@@ -6,6 +6,8 @@
 #include <gtkmm.h>
 #include <memory>
 
+class DashboardPageTest;  // forward-declare the gtest fixture
+
 namespace app::view {
 
 // Forward declaration
@@ -27,6 +29,7 @@ class DialogManager;
 /// @thread_safety All ViewObserver callbacks arrive on Presenter thread.
 ///                Must use Glib::signal_idle() to update GTK widgets safely.
 class DashboardPage : public Gtk::Box, public ViewObserver {
+    friend class ::DashboardPageTest;  // test access to private handlers
 public:
     /// Constructor with dependency injection
     /// @param dialogManager Reference to DialogManager (injected)
