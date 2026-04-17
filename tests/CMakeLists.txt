@@ -102,6 +102,22 @@ target_link_libraries(test_csv_serializer PRIVATE
 )
 add_test(NAME CsvSerializerTest COMMAND test_csv_serializer)
 
+# --- Model: SimulatedModel (singleton, no GTK) ----------------------------
+add_executable(test_simulated_model SimulatedModelTest.cpp)
+target_link_libraries(test_simulated_model PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME SimulatedModelTest COMMAND test_simulated_model)
+
+# --- Core: Logger (CapturingLogger + helpers) ------------------------------
+add_executable(test_logger LoggerTest.cpp)
+target_link_libraries(test_logger PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME LoggerTest COMMAND test_logger)
+
 # --- Presenter: BasePresenter (header-only observer mechanics) ------------
 add_executable(test_base_presenter BasePresenterTest.cpp)
 target_link_libraries(test_base_presenter PRIVATE
