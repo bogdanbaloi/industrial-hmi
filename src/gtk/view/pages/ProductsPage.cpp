@@ -45,7 +45,8 @@ void ProductsPage::onViewProductReady(const presenter::ViewProductDialogViewMode
 
 // UI Construction — static layout from XML, dynamic ColumnView from code.
 void ProductsPage::buildUI() {
-    auto builder = Gtk::Builder::create_from_file("ui/products-page.ui");
+    auto builder = Gtk::Builder::create_from_file(
+        app::config::defaults::kProductsPageUI);
 
     auto* root = builder->get_widget<Gtk::Box>("products_root");
     if (root) append(*root);

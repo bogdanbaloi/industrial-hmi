@@ -39,7 +39,7 @@ struct ActuatorCardViewModel {
 
     /// Filesystem path to actuator status image
     /// @note Images: actuator-left-good.png, actuator-right-good.png, actuator-*-moderate.png, actuator-*-bad.png
-    /// @example "assets/img/actuators/actuator-left-good.png"
+    /// @example "assets/images/actuators/actuator-left-good.png"
     std::string imagePath;
 
     /// Whether actuator is in automatic mode (vs manual/jog mode)

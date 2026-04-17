@@ -51,12 +51,16 @@ constexpr const char* kConfigPath = "config/app-config.json";
 // GTK Application
 constexpr const char* kGtkAppId = "com.portfolio.industrial-hmi";
 
-// UI files
-constexpr const char* kMainWindowUI = "ui/main-window.ui";
-constexpr const char* kSidebarCSS = "ui/sidebar.css";
-constexpr const char* kThemeCSS = "ui/adwaita-theme.css";
-constexpr const char* kDashboardCSS = "ui/dashboard.css";
-constexpr const char* kProductsCSS = "ui/products.css";
+// UI layout files (GtkBuilder XML)
+constexpr const char* kMainWindowUI    = "assets/ui/main-window.ui";
+constexpr const char* kDashboardPageUI = "assets/ui/dashboard-page.ui";
+constexpr const char* kProductsPageUI  = "assets/ui/products-page.ui";
+
+// CSS stylesheets
+constexpr const char* kThemeCSS     = "assets/styles/adwaita-theme.css";
+constexpr const char* kSidebarCSS   = "assets/styles/sidebar.css";
+constexpr const char* kDashboardCSS = "assets/styles/dashboard.css";
+constexpr const char* kProductsCSS  = "assets/styles/products.css";
 
 // Timers (milliseconds)
 constexpr int kAutoRefreshIntervalMs = 2000;

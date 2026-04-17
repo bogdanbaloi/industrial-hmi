@@ -389,14 +389,10 @@ add_custom_target(CopyConfig ALL
     COMMENT "Copying config files to build directory"
 )
 
-add_custom_target(CopyUIFiles ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/ui
-        ${CMAKE_BINARY_DIR}/ui
-    COMMENT "Copying UI files to build directory"
-)
+# CopyUIFiles removed — UI layouts and CSS now live under assets/ui and
+# assets/styles, so CopyAssets already covers them.
 
-add_dependencies(industrial-hmi CopyAssets CopyConfig CopyUIFiles)
+add_dependencies(industrial-hmi CopyAssets CopyConfig)
 
 # ============================================================================
 # Translation Catalogs (.po -> .mo)
@@ -455,15 +451,13 @@ if(WIN32)
     set(CMAKE_INSTALL_PREFIX "C:/Program Files/IndustrialHMI" CACHE PATH "Install path" FORCE)
     install(TARGETS industrial-hmi RUNTIME DESTINATION .)
     install(DIRECTORY assets DESTINATION .)
-    install(DIRECTORY ui DESTINATION .)
-    
+
     # Install GTK4 runtime DLLs (if using vcpkg)
     # vcpkg automatically handles this with VCPKG_APPLOCAL_DEPS
 else()
     # Linux/Unix: Standard FHS layout
     install(TARGETS industrial-hmi RUNTIME DESTINATION bin)
     install(DIRECTORY assets DESTINATION share/industrial-hmi)
-    install(DIRECTORY ui DESTINATION share/industrial-hmi)
 endif()
 
 # ============================================================================

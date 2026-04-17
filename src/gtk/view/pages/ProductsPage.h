@@ -31,9 +31,9 @@ public:
     void onViewProductReady(const presenter::ViewProductDialogViewModel& vm) override;
 
 private:
-    // UI construction — loads layout from ui/products-page.ui and injects
-    // the ColumnView (programmatic: factories + list model) into the
-    // ScrolledWindow container defined in XML.
+    // UI construction — loads layout from assets/ui/products-page.ui and
+    // injects the ColumnView (programmatic: factories + list model) into
+    // the ScrolledWindow container defined in XML.
     void buildUI();
 
     // Event handlers

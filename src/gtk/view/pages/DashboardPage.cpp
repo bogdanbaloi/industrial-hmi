@@ -83,7 +83,8 @@ void DashboardPage::onError(const std::string& errorMessage) {
 void DashboardPage::buildUI() {
     // Load the entire static layout from XML — all widget creation,
     // spacing, CSS classes, and translatable labels live in the .ui file.
-    auto builder = Gtk::Builder::create_from_file("ui/dashboard-page.ui");
+    auto builder = Gtk::Builder::create_from_file(
+        app::config::defaults::kDashboardPageUI);
 
     auto* root = builder->get_widget<Gtk::Box>("dashboard_root");
     if (root) {

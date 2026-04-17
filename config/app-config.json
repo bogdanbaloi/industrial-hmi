@@ -15,9 +15,9 @@
       "window_icon_name": "utilities-system-monitor"
     },
     "ui_files": {
-      "main_window": "ui/main-window.ui",
-      "sidebar_css": "ui/sidebar.css",
-      "adwaita_theme": "ui/adwaita-theme.css"
+      "main_window": "assets/ui/main-window.ui",
+      "sidebar_css": "assets/styles/sidebar.css",
+      "adwaita_theme": "assets/styles/adwaita-theme.css"
     }
   },
   

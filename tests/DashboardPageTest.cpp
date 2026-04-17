@@ -33,7 +33,7 @@ protected:
     void SetUp() override {
         presenter_ = std::make_shared<app::DashboardPresenter>(mockModel_);
 
-        // DashboardPage buildUI() loads CSS from ui/dashboard.css relative
+        // DashboardPage buildUI() loads CSS from assets/styles/*.css relative
         // to CWD. CTest's WORKING_DIRECTORY is set to the source root.
         page_ = Gtk::make_managed<app::view::DashboardPage>(mockDM_);
         page_->initialize(presenter_);

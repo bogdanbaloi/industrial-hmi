@@ -45,9 +45,8 @@ jobs:
       run: |
         mkdir -p dist
         cp build/release/industrial-hmi dist/
-        cp -r build/release/ui dist/
+        cp -r build/release/assets dist/
         cp -r build/release/config dist/
-        cp -r build/release/assets dist/ 2>/dev/null || true
         tar -czf industrial-hmi-linux.tar.gz -C dist .
 
     - name: Upload
