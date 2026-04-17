@@ -44,6 +44,9 @@ private:
     void onViewProductClicked();
     void onEditProductClicked();
     void onDeleteProductClicked();
+    void onExportCsvClicked();
+    void exportToCsv(const std::string& path,
+                     const std::vector<model::Product>& products);
 
     // Helper methods
     void updateProductsList(const presenter::ProductsViewModel& vm);
@@ -57,6 +60,7 @@ private:
     Gtk::SearchEntry* searchEntry_{nullptr};
     Gtk::Button* refreshButton_{nullptr};
     Gtk::Button* addButton_{nullptr};
+    Gtk::Button* exportButton_{nullptr};
     Gtk::ScrolledWindow* scrolledWindow_{nullptr};
     Gtk::ColumnView* columnView_{nullptr};
 

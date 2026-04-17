@@ -304,3 +304,21 @@ msgstr "Muokkaa tuotetta"
 
 msgid "Failed to update product."
 msgstr "Tuotteen päivitys epäonnistui."
+
+msgid "Export CSV"
+msgstr "Vie CSV"
+
+msgid "Export Products"
+msgstr "Vie tuotteet"
+
+msgid "CSV files"
+msgstr "CSV-tiedostot"
+
+msgid "Export Complete"
+msgstr "Vienti valmis"
+
+msgid "Products exported to:\n%1"
+msgstr "Tuotteet viety kohteeseen:\n%1"
+
+msgid "Could not write the CSV file."
+msgstr "CSV-tiedostoa ei voitu kirjoittaa."

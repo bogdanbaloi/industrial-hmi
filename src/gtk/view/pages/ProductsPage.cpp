@@ -3,6 +3,9 @@
 #include "src/gtk/view/ThemeManager.h"
 #include "src/config/config_defaults.h"
 #include "src/core/i18n.h"
+#include "src/core/CsvSerializer.h"
+
+#include <fstream>
 
 namespace app::view {
 
@@ -79,7 +82,15 @@ void ProductsPage::buildToolbar() {
         sigc::mem_fun(*this, &ProductsPage::onRefreshClicked)
     );
     toolbar->append(*refreshButton_);
-    
+
+    // Export CSV button
+    exportButton_ = Gtk::make_managed<Gtk::Button>(_("Export CSV"));
+    exportButton_->add_css_class("toolbar-button");
+    exportButton_->signal_clicked().connect(
+        sigc::mem_fun(*this, &ProductsPage::onExportCsvClicked)
+    );
+    toolbar->append(*exportButton_);
+
     append(*toolbar);
 }
 
@@ -524,6 +535,44 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
     });
 
     dialog->present();
+}
+
+void ProductsPage::onExportCsvClicked() {
+    if (!presenter_) return;
+
+    // Fetch products asynchronously; callback runs on GTK main thread.
+    presenter_->exportProducts([this](std::vector<model::Product> products) {
+        const std::string path = "products.csv";
+        exportToCsv(path, products);
+    });
+}
+
+void ProductsPage::exportToCsv(const std::string& path,
+                                const std::vector<model::Product>& products) {
+    std::vector<std::string> header = {
+        _("Product Code"), _("Name"), _("Status"),
+        _("Stock"), _("Quality %")
+    };
+
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out.is_open()) {
+        auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+        dialogManager_.showError(
+            _("Error"),
+            _("Could not write the CSV file."),
+            parent);
+        return;
+    }
+
+    app::core::CsvSerializer::write(out, products, header);
+    out.close();
+
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    dialogManager_.showInfo(
+        _("Export Complete"),
+        Glib::ustring::compose(
+            _("Products exported to:\n%1"), path),
+        parent);
 }
 
 void ProductsPage::applyStyles() {

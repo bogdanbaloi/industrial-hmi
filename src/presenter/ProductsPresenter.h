@@ -63,6 +63,10 @@ public:
     /// Get single product (for dialogs)
     model::DatabaseManager::Product getProduct(int productId);
 
+    /// Export all active products asynchronously (for CSV export).
+    /// Callback runs on GTK main thread with the product list.
+    void exportProducts(std::function<void(std::vector<model::Product>)> callback);
+
 private:
     /// Build ProductsViewModel from database results
     presenter::ProductsViewModel buildProductsViewModel();
