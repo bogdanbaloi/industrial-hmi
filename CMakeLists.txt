@@ -60,7 +60,8 @@ else()
         -Wall
         -Wextra
         -Wpedantic
-        -Wno-c2y-extensions
+        -Wno-unknown-warning-option   # Tolerate compiler-specific flags below
+        -Wno-c2y-extensions           # Newer clang only; ignored elsewhere
         -Werror
         -Wno-unused-parameter
     )

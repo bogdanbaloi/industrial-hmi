@@ -28,27 +28,27 @@ public:
     }
 
     void onEquipmentStatusChanged(EquipmentCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         equipmentCallbacks_.push_back(cb);
     }
 
     void onActuatorStatusChanged(ActuatorCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         actuatorCallbacks_.push_back(cb);
     }
 
     void onQualityCheckpointChanged(QualityCheckpointCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         qualityCallbacks_.push_back(cb);
     }
 
     void onWorkUnitChanged(WorkUnitCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         workUnitCallbacks_.push_back(cb);
     }
 
     void onSystemStateChanged(StateCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         stateCallbacks_.push_back(cb);
     }
 
@@ -95,7 +95,7 @@ public:
     /// Advance simulation by one tick (called by auto refresh timer)
     void tickSimulation() {
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             std::uniform_real_distribution<float> rateDist(-0.3f, 0.3f);
             std::uniform_int_distribution<int> unitDist(1, 3);
 
@@ -121,7 +121,7 @@ public:
         std::vector<QualityCheckpointCallback> cbs;
         QualityCheckpoint cp;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             cbs = qualityCallbacks_;
             cp = qualityCheckpoints_[id];
         }
@@ -132,7 +132,7 @@ public:
         std::vector<WorkUnitCallback> cbs;
         WorkUnit wu;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             cbs = workUnitCallbacks_;
             wu = currentWorkUnit_;
         }
@@ -192,7 +192,7 @@ private:
         std::vector<EquipmentCallback> cbs;
         EquipmentStatus es;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             if (!equipmentStatuses_.count(equipmentId)) return;
             cbs = equipmentCallbacks_;
             es = equipmentStatuses_[equipmentId];
@@ -204,7 +204,7 @@ private:
         std::vector<ActuatorCallback> cbs;
         ActuatorStatus as;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             if (!actuatorStatuses_.count(actuatorId)) return;
             cbs = actuatorCallbacks_;
             as = actuatorStatuses_[actuatorId];
@@ -216,7 +216,7 @@ private:
         std::vector<StateCallback> cbs;
         SystemState state;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             cbs = stateCallbacks_;
             state = currentState_;
         }

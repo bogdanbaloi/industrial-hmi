@@ -184,7 +184,7 @@ class Presenter {
     ControlPanelViewModel lastState_;
     
     void updateState() {
-        std::lock_guard<std::mutex> lock(controlPanelMutex_);
+        const std::scoped_lock lock(controlPanelMutex_);
         // Atomically update state
         lastState_ = computeNewState();
     }

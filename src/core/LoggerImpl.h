@@ -25,9 +25,9 @@ public:
     void log(LogLevel level,
             std::string_view message,
             const std::source_location& loc) override {
-        
-        std::lock_guard lock(mutex_);
-        
+
+        const std::scoped_lock lock(mutex_);
+
         auto& stream = (level >= LogLevel::ERROR) ? std::cerr : std::cout;
         
         stream << std::format("[{}] [{}] [{}:{}] {}\n",
@@ -47,7 +47,7 @@ public:
     }
 
     void flush() override {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         std::cout.flush();
         std::cerr.flush();
     }
@@ -85,7 +85,7 @@ public:
     }
 
     ~FileLogger() {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         if (file_.is_open()) {
             file_.close();
         }
@@ -95,7 +95,7 @@ public:
             std::string_view message,
             const std::source_location& loc) override {
 
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
 
         if (!file_.is_open()) return;
 
@@ -123,12 +123,12 @@ public:
     }
 
     void flush() override {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         if (file_.is_open()) file_.flush();
     }
 
     void shutdown() override {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         if (file_.is_open()) {
             file_.flush();
             file_.close();
