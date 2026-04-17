@@ -225,6 +225,7 @@ target_sources(objectsCore
     PRIVATE
         src/core/Application.cpp
         src/core/i18n.cpp
+        src/core/CsvSerializer.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -235,6 +236,7 @@ target_sources(objectsCore
             src/core/Result.h
             src/core/ErrorHandling.h
             src/core/i18n.h
+            src/core/CsvSerializer.h
 )
 target_link_libraries(objectsCore
     PUBLIC

@@ -298,3 +298,21 @@ msgstr ""
 
 msgid "Failed to update product."
 msgstr ""
+
+msgid "Export CSV"
+msgstr ""
+
+msgid "Export Products"
+msgstr ""
+
+msgid "CSV files"
+msgstr ""
+
+msgid "Export Complete"
+msgstr ""
+
+msgid "Products exported to:\n%1"
+msgstr ""
+
+msgid "Could not write the CSV file."
+msgstr ""

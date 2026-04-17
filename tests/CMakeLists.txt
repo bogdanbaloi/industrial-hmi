@@ -93,6 +93,15 @@ target_link_libraries(test_database_manager PRIVATE
 )
 add_test(NAME DatabaseManagerTest COMMAND test_database_manager)
 
+# --- Core: CsvSerializer (pure C++, no GTK) --------------------------------
+add_executable(test_csv_serializer CsvSerializerTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CsvSerializer.cpp)
+target_link_libraries(test_csv_serializer PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME CsvSerializerTest COMMAND test_csv_serializer)
+
 # --- Presenter: BasePresenter (header-only observer mechanics) ------------
 add_executable(test_base_presenter BasePresenterTest.cpp)
 target_link_libraries(test_base_presenter PRIVATE

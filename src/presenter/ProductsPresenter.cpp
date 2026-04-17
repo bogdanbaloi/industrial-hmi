@@ -141,6 +141,12 @@ model::DatabaseManager::Product ProductsPresenter::getProduct(int productId) {
     return repository_.getProduct(productId);
 }
 
+void ProductsPresenter::exportProducts(
+        std::function<void(std::vector<model::Product>)> callback) {
+    auto& db = model::DatabaseManager::instance();
+    db.getAllProductsAsync(std::move(callback));
+}
+
 void ProductsPresenter::notifyProductsLoaded(const presenter::ProductsViewModel& vm) {
     notifyAll([&vm](ViewObserver* obs) {
         obs->onProductsLoaded(vm);

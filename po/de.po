@@ -304,3 +304,21 @@ msgstr "Produkt bearbeiten"
 
 msgid "Failed to update product."
 msgstr "Produkt konnte nicht aktualisiert werden."
+
+msgid "Export CSV"
+msgstr "CSV exportieren"
+
+msgid "Export Products"
+msgstr "Produkte exportieren"
+
+msgid "CSV files"
+msgstr "CSV-Dateien"
+
+msgid "Export Complete"
+msgstr "Export abgeschlossen"
+
+msgid "Products exported to:\n%1"
+msgstr "Produkte exportiert nach:\n%1"
+
+msgid "Could not write the CSV file."
+msgstr "Die CSV-Datei konnte nicht geschrieben werden."
