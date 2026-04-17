@@ -1,6 +1,6 @@
 # Repository Usage Guide
 
-## 📦 Ce conține acest repository
+## Ce conține acest repository
 
 Acest repository demonstrează **arhitectura profesională** a unui sistem HMI industrial real, **fără** să expună detalii despre client sau business logic.
 
@@ -24,27 +24,27 @@ industrial-hmi/
 │
 └── docs/
     ├── ARCHITECTURE.md            # Technical deep dive (public)
-    ├── INTERVIEW_GUIDE.md         # ⭐ CUM SĂ PREZINȚI (PRIVAT)
-    └── CHEAT_SHEET.md             # ⭐ REFERINȚĂ RAPIDĂ (PRIVAT)
+    ├── INTERVIEW_GUIDE.md         # CUM SĂ PREZINȚI (PRIVAT)
+    └── CHEAT_SHEET.md             # REFERINȚĂ RAPIDĂ (PRIVAT)
 ```
 
 ---
 
-## 🎯 Cum să folosești acest repository
+## Cum să folosești acest repository
 
 ### 1. Pentru GitHub Public
 
 **Fișiere SAFE pentru public:**
-- ✅ README.md
-- ✅ LICENSE
-- ✅ CMakeLists.txt
-- ✅ Tot din `src/`
-- ✅ docs/ARCHITECTURE.md
+- README.md
+- LICENSE
+- CMakeLists.txt
+- Tot din `src/`
+- docs/ARCHITECTURE.md
 
 **Fișiere de EXCLUS din GitHub public:**
-- ❌ **docs/INTERVIEW_GUIDE.md** (conține strategii interne)
-- ❌ **docs/CHEAT_SHEET.md** (conține pivot phrases)
-- ❌ **docs/USAGE.md** (acest fișier)
+- **docs/INTERVIEW_GUIDE.md** (conține strategii interne)
+- **docs/CHEAT_SHEET.md** (conține pivot phrases)
+- **docs/USAGE.md** (acest fișier)
 
 ### 2. Pentru interviuri
 
@@ -83,9 +83,9 @@ git push -u origin main
 
 ---
 
-## ⚠️ Reguli de Confidențialitate
+## Reguli de Confidențialitate
 
-### ❌ NU expune NICIODATĂ:
+### NU expune NICIODATĂ:
 
 1. **Nume client:** RLS, Springer, We as Web, etc.
 2. **Domeniu specific:** operation placement, workUnit faces, etc.
@@ -95,7 +95,7 @@ git push -u origin main
 6. **Screenshots:** cu branding sau date reale
 7. **Algoritmi proprietari:** logică business specifică
 
-### ✅ SAFE să discuți:
+### SAFE să discuți:
 
 1. **Arhitectură:** MVP, Observer, ViewModel
 2. **Threading:** 4-thread model, signal marshaling
@@ -106,7 +106,7 @@ git push -u origin main
 
 ---
 
-## 📝 Notițe pentru Tine
+## Notițe pentru Tine
 
 ### De ce această abordare?
 
@@ -132,12 +132,12 @@ git push -u origin main
 3. Oferă detalii tehnice (demonstrează profunzime)
 
 **Exemplu:**
-- ❌ "Nu pot să spun... (tăcere incomodă)"
-- ✅ "Din cauza NDA nu pot discuta domeniul specific, dar pot să-ți arăt threading model-ul pe care l-am proiectat pentru procesarea real-time..."
+- NOT: "Nu pot să spun... (tăcere incomodă)"
+- "Din cauza NDA nu pot discuta domeniul specific, dar pot să-ți arăt threading model-ul pe care l-am proiectat pentru procesarea real-time..."
 
 ---
 
-## 🚀 Următorii pași
+## Următorii pași
 
 ### Înainte de primul interviu:
 
@@ -173,23 +173,23 @@ GitHub: github.com/USERNAME/industrial-hmi
 
 ---
 
-## 💡 Tips
+## Tips
 
 ### Ce să faci:
-- ✅ **Deschide repository ÎNAINTE de interviu** - nu căuta fișiere live
-- ✅ **Arată diagrame Mermaid** - vizualele comunică mai bine
-- ✅ **Citește cod cu voce tare** - explică de ce ai scris așa
-- ✅ **Menționează trade-offs** - de ce MVP vs MVC, de ce 4 threads, etc.
+- **Deschide repository ÎNAINTE de interviu** - nu căuta fișiere live
+- **Arată diagrame Mermaid** - vizualele comunică mai bine
+- **Citește cod cu voce tare** - explică de ce ai scris așa
+- **Menționează trade-offs** - de ce MVP vs MVC, de ce 4 threads, etc.
 
 ### Ce să eviți:
-- ❌ **Nu improviza răspunsuri la domeniu** - respectă NDA strict
-- ❌ **Nu te scuzi pentru anonimizare** - e profesionalism, nu slăbiciune
-- ❌ **Nu minimalizezi contribuția** - ai proiectat arhitectura, nu doar features
-- ❌ **Nu arăți cod neprezentat** - rămâi la ce ai pregătit
+- **Nu improviza răspunsuri la domeniu** - respectă NDA strict
+- **Nu te scuzi pentru anonimizare** - e profesionalism, nu slăbiciune
+- **Nu minimalizezi contribuția** - ai proiectat arhitectura, nu doar features
+- **Nu arăți cod neprezentat** - rămâi la ce ai pregătit
 
 ---
 
-## 📞 Contact
+## Contact
 
 Dacă ai întrebări despre acest repository:
 
@@ -201,6 +201,6 @@ Dacă ai întrebări despre acest repository:
 
 ---
 
-**Succes la interviuri!** 🎯
+**Succes la interviuri!**
 
 *Remember: Focus on architecture, not domain. Show HOW, not WHAT.*

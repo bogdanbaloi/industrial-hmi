@@ -4,75 +4,97 @@ Cross-platform industrial Human-Machine Interface built with C++20 and GTK4.
 Designed for equipment monitoring, quality control, and product management
 in manufacturing environments.
 
-## Screenshots
-
-### Dashboard - Equipment Monitoring
-![Dashboard](docs/screenshots/dashboard-dark.png)
-
-### Products Database - CRUD Operations
-![Products](docs/screenshots/products-dark.png)
+[![Build Ubuntu](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml/badge.svg)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml)
 
 ## Features
 
-- **Dashboard** with real-time equipment status, quality checkpoints, and control panel
-- **Products Database** with full CRUD operations (Create, Read, Update, Delete)
-- **Dark/Light theme** switching with Adwaita design tokens
-- **Live data simulation** with configurable auto-refresh from background I/O thread
-- **Log panel** with real-time log viewing (verbose logging toggle)
-- **Fullscreen/windowed** mode with F11/ESC keyboard shortcuts
-- **Cross-platform** builds on Linux (GCC) and Windows (Clang/MSYS2)
-- **CI/CD pipeline** with GitHub Actions (Ubuntu + Windows MSYS2)
+- **Dashboard** with real-time equipment status, quality checkpoints (dynamic Cairo gauges), and control panel
+- **Products Database** with full CRUD operations via async SQLite
+- **Internationalization (i18n)** supporting 10 languages with in-app language selector and config persistence
+- **Dark / Light themes** with Adwaita design tokens, theme-aware gauge rendering
+- **Live simulation** with configurable auto-refresh from background Boost.Asio I/O thread
+- **Cross-platform** builds on Linux (GCC) and Windows (Clang / MSYS2)
+- **77+ unit tests** with GoogleTest / gmock across 8 test binaries
+- **CI/CD pipeline** with GitHub Actions: build, test, coverage report, static analysis
 
 ## Architecture
 
-Model-View-Presenter (MVP) with dependency injection and observer pattern.
+Model-View-Presenter (MVP) with dependency injection, observer pattern, and interface-based testing.
 
 ```
 src/
-  core/           Application lifecycle, logging, error handling
-    Application.h/cpp     Init/teardown, config-driven logging
-    LoggerBase.h          Abstract logger with std::vformat
-    LoggerImpl.h          Console, File (rotating), Callback loggers
-    config_defaults.h     Constexpr configuration defaults
-    Result.h              Monadic Result<T,E> error handling
+  core/               Application lifecycle, logging, error handling
+    Application         Config-driven init, GTK bootstrap, shutdown
+    LoggerBase/Impl     Abstract logger with C++20 std::vformat
+    Result<T,E>         Monadic error handling (Rust-inspired)
+    i18n                gettext integration, locale detection
 
-  config/          JSON configuration with fallback defaults
-    ConfigManager.h       Singleton, value_or pattern
-    config_defaults.h     Compile-time constants
+  config/              JSON configuration with compile-time defaults
+    ConfigManager       Singleton with language persistence
+    config_defaults.h   constexpr fallback values
 
-  model/           Data layer and async I/O
-    DatabaseManager.h     SQLite CRUD with prepared statements
-    SimulatedModel.h      Equipment/quality simulation
-    ModelContext.h         Boost.Asio background thread
+  model/               Data layer and abstractions
+    DatabaseManager     SQLite CRUD (implements ProductsRepository)
+    SimulatedModel      Equipment/quality simulation (implements ProductionModel)
+    ProductsRepository  Read-side interface for product queries
+    ProductionModel     Interface for dashboard model operations
+    ModelContext         Boost.Asio background I/O thread
 
-  presenter/       MVP orchestration
-    DashboardPresenter    Equipment + quality ViewModel builders
-    ProductsPresenter     Product CRUD coordination
-    ViewObserver.h        Observer interface for View updates
+  presenter/           MVP orchestration (unit-testable, no GTK dependency)
+    DashboardPresenter  Signal subscription, ViewModel builders, state machine
+    ProductsPresenter   Product CRUD coordination, search routing
+    BasePresenter       Thread-safe observer registration
+    ViewObserver        Callback interface for View updates
 
-  gtk/view/        GTK4 UI layer
-    MainWindow            Window management, theme, signals
-    DashboardPage         Equipment cards, quality gauges, controls
-    ProductsPage          Product table, dialogs, search
-    ThemeManager           Dark/light theme with CSS classes
-    DialogManager          Themed dialog factory with DI
+  gtk/view/            GTK4 UI layer
+    MainWindow          Window management, theme, sidebar, language selector
+    DashboardPage       Equipment cards, quality gauges, control panel
+    ProductsPage        ColumnView, dialogs, search
+    DialogManager       Themed dialog factory (virtual methods for mocking)
+    QualityGauge        Cairo-drawn arc gauge with theme-aware colors
+```
+
+### Dependency Injection
+
+Both presenter classes accept their model dependency through the constructor.
+Production wiring uses the singleton; tests inject gmock-backed mocks.
+
+```cpp
+// Production (default constructor)
+auto presenter = std::make_shared<ProductsPresenter>();
+
+// Test (injected mock)
+MockProductsRepository repo;
+auto presenter = std::make_shared<ProductsPresenter>(repo);
+EXPECT_CALL(repo, getAllProducts()).WillOnce(Return(...));
 ```
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
-| Language | C++20 (concepts, std::format, std::jthread, std::source_location) |
-| UI Framework | GTK4 / gtkmm-4.0 |
+| Language | C++20 (concepts, format, jthread, source_location) |
+| UI | GTK4 / gtkmm-4.0, Cairo for custom widgets |
 | Database | SQLite3 (in-memory, prepared statements) |
 | Async I/O | Boost.Asio io_context with work guard |
+| i18n | GNU gettext, glibmm i18n macros |
+| Testing | GoogleTest + gmock (8 binaries, 77+ tests) |
 | Build | CMake 3.20+ with presets, Ninja |
-| CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2) |
-| Static Analysis | cppcheck, clang-tidy |
+| CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 Clang64) |
+| Coverage | gcovr with HTML report artifact |
+| Static Analysis | cppcheck |
+
+## Supported Languages
+
+English, Deutsch, Espanol, Espanol (Mexico), Suomi, Francais, Gaeilge,
+Italiano, Portugues, Portugues (Brasil), Svenska.
+
+Language is selectable from the sidebar dropdown and persists across restarts
+via `config/app-config.json`. The `"auto"` setting respects the OS locale.
 
 ## Building
 
-### Linux (Ubuntu 22.04+)
+### Linux (Ubuntu 24.04+)
 
 ```bash
 sudo apt install cmake ninja-build g++ \
@@ -86,12 +108,7 @@ cmake --build build/release -- -j$(nproc)
 ### Windows (MSYS2 Clang64)
 
 ```bash
-pacman -S mingw-w64-clang-x86_64-toolchain \
-    mingw-w64-clang-x86_64-cmake \
-    mingw-w64-clang-x86_64-ninja \
-    mingw-w64-clang-x86_64-gtkmm-4.0 \
-    mingw-w64-clang-x86_64-sqlite3 \
-    mingw-w64-clang-x86_64-boost
+pacman -S mingw-w64-clang-x86_64-{toolchain,cmake,ninja,gtkmm-4.0,sqlite3,boost,gettext,gtest}
 
 ./build-windows.sh
 ./build/debug/industrial-hmi.exe
@@ -99,50 +116,70 @@ pacman -S mingw-w64-clang-x86_64-toolchain \
 
 See [BUILD.md](BUILD.md) for detailed instructions including packaging.
 
+## Testing
+
+```bash
+# Configure with tests enabled
+cmake --preset debug -DBUILD_TESTS=ON
+
+# Build and run
+cmake --build build/debug
+cd build/debug && ctest --output-on-failure
+```
+
+Test suites:
+
+| Binary | Scope | Tests |
+|--------|-------|-------|
+| test_result | Result\<T,E\> monadic operations | 21 |
+| test_config_manager | Config load, language get/set/persist | 9 |
+| test_database_manager | SQLite CRUD, search, soft delete | 11 |
+| test_base_presenter | Observer add/remove/notify dispatch | 7 |
+| test_products_presenter | Mock repository, ViewModel mapping | 8 |
+| test_dashboard_presenter | Mock model, signal routing, state machine | 21 |
+| test_dashboard_page | Confirm dialogs, presenter forwarding | 7 |
+| test_products_page | Delete confirmation, soft-delete flow | 4 |
+
+Coverage reports are generated automatically in CI and available as
+downloadable artifacts on each GitHub Actions run.
+
 ## Configuration
 
-Application settings are loaded from `config/app-config.json` with fallback
-to compile-time defaults in `config_defaults.h`. If the config file is missing,
-the application starts with default values.
+Settings are loaded from `config/app-config.json` with fallback to
+compile-time defaults in `config_defaults.h`.
 
 ```json
 {
+  "i18n": { "language": "auto" },
   "logging": {
     "level": "INFO",
     "file": "logs/app.log",
-    "max_file_size_mb": 5,
-    "max_files": 3,
-    "console": true
+    "max_file_size_mb": 5
   }
 }
 ```
 
 ## Design Decisions
 
-**Custom logging over spdlog** - Demonstrates C++20 std::vformat, SOLID
-principles (LoggerBase abstraction, CompositeLogger, CallbackLogger),
-and production patterns (rotation, flush, shutdown lifecycle).
+**MVP over MVC** - Presenters have no GTK dependency and can be fully unit
+tested with mock observers and mock model interfaces.
 
-**Custom JSON parser over nlohmann/json** - Shows understanding of parsing
-fundamentals. Production deployment would use a proven library.
+**Interface-based DI** - ProductsRepository and ProductionModel abstractions
+decouple presenters from singletons. Tests inject gmock mocks; production
+wiring uses the default constructor.
 
-**MVP over MVC** - Better testability. Presenters have no GTK dependency
-and can be unit tested with mock observers.
+**gettext for i18n** - Industry standard, integrates with GtkBuilder's
+`translatable="yes"` attribute, ships compiled `.mo` catalogs via CMake.
 
-**Singleton for global services** - ConfigManager, DatabaseManager,
-SimulatedModel use Meyer's singleton. Application class manages
-initialization order and shutdown sequence.
+**Cairo gauges over static SVGs** - Dynamic arc length reflects real pass-rate
+percentage. Track color adapts to dark/light theme at draw time.
 
-**Config defaults in constexpr header** - Single source of truth for
-fallback values. No magic strings scattered across getters.
-
-## Known Limitations
-
-- ViewObserver interface is broad (16 methods) - could be split per page
-- Presenters access model singletons directly - could use injected interfaces
-- SimulatedModel combines multiple responsibilities - could be split
-- CSS theme support has minor GTK4 compatibility gaps on some properties
+**Custom logging over spdlog** - Demonstrates C++20 std::vformat and SOLID
+principles. Production deployment could swap to spdlog via the LoggerBase
+abstraction.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE)
+Proprietary - All Rights Reserved. See [LICENSE](LICENSE).
+
+This source code may be viewed for interview evaluation purposes only.
