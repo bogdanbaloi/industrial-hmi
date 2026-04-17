@@ -322,3 +322,32 @@ msgstr "Produkter exporterade till:\n%1"
 
 msgid "Could not write the CSV file."
 msgstr "Det gick inte att skriva CSV-filen."
+
+# About dialog
+
+msgid "About"
+msgstr "Om"
+
+msgid "Version %1"
+msgstr "Version %1"
+
+msgid "Architecture"
+msgstr "Arkitektur"
+
+msgid "Build Info"
+msgstr "Bygginformation"
+
+msgid "Supported Languages"
+msgstr "Språk som stöds"
+
+msgid "Quality Assurance"
+msgstr "Kvalitetssäkring"
+
+msgid "86+ unit tests (GoogleTest + gmock)\n9 test binaries, CI/CD with coverage reporting"
+msgstr "86+ enhetstester (GoogleTest + gmock)\n9 testbinärer, CI/CD med täckningsrapportering"
+
+msgid "Proprietary - All Rights Reserved.\nFor interview evaluation purposes only."
+msgstr "Proprietär - Alla rättigheter förbehållna.\nEndast för utvärdering vid anställningsintervju."
+
+msgid "QUALITY TRENDS"
+msgstr "KVALITETSTRENDER"

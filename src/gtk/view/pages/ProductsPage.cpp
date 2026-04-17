@@ -183,8 +183,9 @@ void ProductsPage::buildProductsList() {
     columnView_->signal_activate().connect(
         sigc::mem_fun(*this, &ProductsPage::onProductActivated));
 
-    // ScrolledWindow
+    // ScrolledWindow — CSS class for scoped dark/light styling
     scrolledWindow_ = Gtk::make_managed<Gtk::ScrolledWindow>();
+    scrolledWindow_->add_css_class("products-table");
     scrolledWindow_->set_child(*columnView_);
     scrolledWindow_->set_policy(Gtk::PolicyType::AUTOMATIC, Gtk::PolicyType::AUTOMATIC);
     scrolledWindow_->set_vexpand(true);

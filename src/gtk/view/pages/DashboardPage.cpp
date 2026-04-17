@@ -32,6 +32,9 @@ void DashboardPage::refreshThemedWidgets() {
     for (auto& card : qualityCards_) {
         if (card.gauge) card.gauge->queue_draw();
     }
+    for (auto* chart : trendCharts_) {
+        if (chart) chart->queue_draw();
+    }
 }
 
 // ============================================================================
@@ -78,23 +81,16 @@ void DashboardPage::onError(const std::string& errorMessage) {
 // ============================================================================
 
 void DashboardPage::buildUI() {
-    set_spacing(12);
-    set_margin_start(40);
-    set_margin_end(40);
-    set_margin_top(8);
-    set_margin_bottom(8);
+    set_spacing(8);
+    set_margin_start(32);
+    set_margin_end(32);
+    set_margin_top(6);
+    set_margin_bottom(4);
 
     buildStatusZone();
     buildWorkUnitSection();
     buildEquipmentSection();
     buildQualitySection();
-
-    // Absorb leftover vertical space so the Control Panel sits at the bottom
-    // instead of floating below the Quality section with a visible empty band.
-    auto* spacer = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL);
-    spacer->set_vexpand(true);
-    append(*spacer);
-
     buildControlPanelSection();
 }
 
@@ -181,7 +177,7 @@ void DashboardPage::buildEquipmentSection() {
     header->add_css_class("section-header");
     append(*header);
     
-    // Cards container
+    // Cards container (fixed height — equipment cards don't need to grow)
     auto* grid = Gtk::make_managed<Gtk::Grid>();
     grid->set_margin_top(4);
     grid->set_margin_bottom(4);
@@ -252,11 +248,12 @@ void DashboardPage::buildQualitySection() {
     header->add_css_class("section-header");
     append(*header);
 
-    // Cards container - 3 quality checkpoints in a row
+    // Cards container — vexpand shares leftover vertical space with equipment
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 16);
     box->set_margin_top(4);
     box->set_margin_bottom(4);
     box->set_homogeneous(true);
+    box->set_vexpand(true);
     
     // Create 3 quality checkpoint cards
     for (uint32_t i = 0; i < 3; ++i) {
@@ -304,7 +301,14 @@ void DashboardPage::buildQualitySection() {
         card.lastDefectLabel->set_xalign(0.5);
         card.lastDefectLabel->add_css_class("defect-info");
         card.cardBox->append(*card.lastDefectLabel);
-        
+
+        // Inline trend chart fills remaining card space (vexpand)
+        auto* chart = Gtk::make_managed<TrendChart>("", 85.0f, 100.0f, 60);
+        chart->set_content_height(60);
+        chart->set_vexpand(true);
+        card.cardBox->append(*chart);
+        trendCharts_.push_back(chart);
+
         box->append(*card.cardBox);
         qualityCards_.push_back(card);
     }
@@ -546,6 +550,11 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     
     // Update gauge: arc length reflects real pass rate, color follows status
     card.gauge->setValue(vm.passRate, vm.status);
+
+    // Feed the trend chart for this checkpoint (if present)
+    if (vm.checkpointId < trendCharts_.size() && trendCharts_[vm.checkpointId]) {
+        trendCharts_[vm.checkpointId]->addPoint(vm.passRate);
+    }
     
     // Update pass rate - large and prominent
     char passRateText[32];

@@ -316,3 +316,32 @@ msgstr ""
 
 msgid "Could not write the CSV file."
 msgstr ""
+
+# About dialog
+
+msgid "About"
+msgstr ""
+
+msgid "Version %1"
+msgstr ""
+
+msgid "Architecture"
+msgstr ""
+
+msgid "Build Info"
+msgstr ""
+
+msgid "Supported Languages"
+msgstr ""
+
+msgid "Quality Assurance"
+msgstr ""
+
+msgid "86+ unit tests (GoogleTest + gmock)\n9 test binaries, CI/CD with coverage reporting"
+msgstr ""
+
+msgid "Proprietary - All Rights Reserved.\nFor interview evaluation purposes only."
+msgstr ""
+
+msgid "QUALITY TRENDS"
+msgstr ""

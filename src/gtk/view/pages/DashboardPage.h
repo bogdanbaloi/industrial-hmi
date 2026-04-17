@@ -3,6 +3,7 @@
 #include "src/presenter/ViewObserver.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/gtk/view/widgets/QualityGauge.h"
+#include "src/gtk/view/widgets/TrendChart.h"
 #include <gtkmm.h>
 #include <memory>
 
@@ -86,6 +87,9 @@ private:
         Gtk::Label* lastDefectLabel{nullptr};
     };
     std::vector<QualityCard> qualityCards_;
+
+    /// Sparkline trend charts (one per checkpoint, thin strip below quality)
+    std::vector<TrendChart*> trendCharts_;
 
     /// Control panel buttons
     struct ControlPanelWidgets {
