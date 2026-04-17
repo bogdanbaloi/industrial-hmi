@@ -1,6 +1,6 @@
 #include "src/core/CsvSerializer.h"
 
-#include <cstdio>
+#include <format>
 
 namespace app::core {
 
@@ -49,9 +49,7 @@ std::string CsvSerializer::escapeField(const std::string& field) {
 }
 
 std::string CsvSerializer::fmtRate(float rate) {
-    char buf[16];
-    std::snprintf(buf, sizeof(buf), "%.1f", rate);
-    return buf;
+    return std::vformat("{:.1f}", std::make_format_args(rate));
 }
 
 }  // namespace app::core
