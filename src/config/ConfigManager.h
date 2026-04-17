@@ -184,8 +184,8 @@ public:
 
     std::size_t getLogMaxFileSize() const {
         auto mb = getInt("logging.max_file_size_mb",
-                         static_cast<int>(defaults::kLogMaxFileSize / (1024 * 1024)));
-        return static_cast<std::size_t>(mb) * 1024 * 1024;
+                         static_cast<int>(defaults::kLogMaxFileSizeMB));
+        return static_cast<std::size_t>(mb) * defaults::kBytesPerMegabyte;
     }
 
     int getLogMaxFiles() const {

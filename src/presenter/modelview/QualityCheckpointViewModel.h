@@ -1,5 +1,7 @@
 #pragma once
 
+#include "src/config/config_defaults.h"
+
 #include <cstdint>
 #include <string>
 
@@ -24,7 +26,7 @@ struct QualityCheckpointViewModel {
     int unitsInspected{0};              // Total units checked today
     int defectsFound{0};                // Defects detected
     float passRate{100.0f};             // Percentage (0-100)
-    float targetPassRate{95.0f};        // Target threshold
+    float targetPassRate{config::defaults::kQualityPassThreshold};
     
     std::string lastDefect;             // Description of last defect found
     

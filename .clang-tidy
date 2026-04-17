@@ -37,7 +37,24 @@ Checks: >
   -google-runtime-references,
 
   # Fuchsia's ban on default arguments / multiple inheritance we use heavily:
-  -cert-dcl21-cpp
+  -cert-dcl21-cpp,
+
+  # Too zealous / low signal checks we opt out of project-wide:
+  -cppcoreguidelines-special-member-functions,
+  -hicpp-special-member-functions,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-missing-std-forward,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-pro-type-vararg,
+  -hicpp-vararg,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -hicpp-no-array-decay,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -bugprone-easily-swappable-parameters,
+  -performance-enum-size,
+  -readability-redundant-member-init
 
 # Warning-as-error (optional - comment out if too strict)
 WarningsAsErrors: ''
@@ -65,12 +82,33 @@ CheckOptions:
     value: camelBack
   - key: readability-identifier-naming.PrivateMemberSuffix
     value: '_'
+  # Project style: namespace-scope constants are kCamelCase (e.g., kWindowTitle).
+  # Enum values stay CamelCase (e.g., SystemState::Running).
   - key: readability-identifier-naming.ConstantCase
-    value: UPPER_CASE
-  - key: readability-identifier-naming.EnumConstantCase
     value: CamelCase
+  - key: readability-identifier-naming.ConstantPrefix
+    value: 'k'
   - key: readability-identifier-naming.GlobalConstantCase
-    value: UPPER_CASE
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: 'k'
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantPrefix
+    value: 'k'
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: 'k'
+  # Local const values (inside functions) often hold scratch data and don't
+  # benefit from a prefix — allow plain camelBack.
+  - key: readability-identifier-naming.LocalConstantCase
+    value: camelBack
+  # Project uses a mix: ProductionTypes/Logger use UPPER_CASE enumerators
+  # (matches C idiom / legacy API), while newer ViewModel enums use CamelCase.
+  # Accept both to avoid a massive rename cascade.
+  - key: readability-identifier-naming.EnumConstantCase
+    value: aNy_CasE
   
   # Function Length
   - key: readability-function-size.LineThreshold
@@ -115,6 +153,21 @@ CheckOptions:
   - key: readability-simplify-boolean-expr.ChainedConditionalReturn
     value: 'true'
   - key: readability-simplify-boolean-expr.ChainedConditionalAssignment
+    value: 'true'
+
+  # Magic Numbers - allow small positional values (SQLite bind indices,
+  # Cairo RGBA components, small loop steps, clamp bounds)
+  - key: readability-magic-numbers.IgnoredIntegerValues
+    value: '1;2;3;4;5;6;7;8;9;10;100'
+  - key: readability-magic-numbers.IgnoredFloatingPointValues
+    value: '0.0;0.5;1.0;2.0;100.0;255.0'
+  - key: readability-magic-numbers.IgnorePowersOf2IntegerValues
+    value: 'true'
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnoredIntegerValues
+    value: '1;2;3;4;5;6;7;8;9;10;100'
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnoredFloatingPointValues
+    value: '0.0;0.5;1.0;2.0;100.0;255.0'
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnorePowersOf2IntegerValues
     value: 'true'
 
 ...

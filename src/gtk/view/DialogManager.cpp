@@ -1,8 +1,16 @@
 #include "DialogManager.h"
 #include "ThemeManager.h"
 #include "src/core/i18n.h"
+#include "src/gtk/view/ui_sizes.h"
 
 namespace app::view {
+
+namespace {
+using namespace app::view::sizes;
+// Per-row height used to grow the form dialog with the number of fields.
+constexpr int kFormDialogBaseHeight = 100;
+constexpr int kFormDialogRowHeight  = 50;
+}  // namespace
 
 void DialogManager::showInfo(const std::string& title, 
                              const std::string& message,
@@ -91,13 +99,13 @@ std::pair<bool, std::string> DialogManager::showInput(const std::string& title,
     auto* dialog = parentWindow
         ? new Gtk::Dialog(title, *parentWindow)
         : new Gtk::Dialog(title);
-    dialog->set_default_size(400, 150);
+    dialog->set_default_size(kConfirmDialogWidth, kConfirmDialogHeight);
     dialog->set_modal(true);
     ThemeManager::instance().applyToDialog(dialog);
 
     // Content
-    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 12);
-    box->set_margin(20);
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, kSpacingMedium);
+    box->set_margin(kSpacingLarge);
     
     auto* label = Gtk::make_managed<Gtk::Label>(message);
     label->set_xalign(0);
@@ -141,16 +149,18 @@ DialogManager::showForm(const std::string& title,
     auto* dialog = parentWindow
         ? new Gtk::Dialog(title, *parentWindow)
         : new Gtk::Dialog(title);
-    dialog->set_default_size(400, 100 + fields.size() * 50);
+    dialog->set_default_size(
+        kFormDialogWidth,
+        static_cast<int>(kFormDialogBaseHeight + fields.size() * kFormDialogRowHeight));
     dialog->set_modal(true);
     ThemeManager::instance().applyToDialog(dialog);
 
 
     // Grid for form fields
     auto* grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_row_spacing(12);
-    grid->set_column_spacing(12);
-    grid->set_margin(20);
+    grid->set_row_spacing(kSpacingMedium);
+    grid->set_column_spacing(kSpacingMedium);
+    grid->set_margin(kSpacingLarge);
     
     std::vector<Gtk::Entry*> entries;
     

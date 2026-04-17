@@ -62,10 +62,13 @@ private:
  */
 class FileLogger : public LoggerBase {
 public:
+    static constexpr std::size_t kDefaultMaxFileSize = 5 * 1024 * 1024;  // 5 MB
+    static constexpr int kDefaultMaxFiles = 3;
+
     explicit FileLogger(const std::string& filename,
                        LogLevel minLevel = LogLevel::INFO,
-                       std::size_t maxFileSize = 5 * 1024 * 1024,
-                       int maxFiles = 3)
+                       std::size_t maxFileSize = kDefaultMaxFileSize,
+                       int maxFiles = kDefaultMaxFiles)
         : minLevel_(minLevel),
           filePath_(filename),
           maxFileSize_(maxFileSize),
