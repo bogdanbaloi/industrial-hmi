@@ -17,6 +17,7 @@
 #include "src/core/Application.h"
 #include "src/core/ExceptionHandler.h"
 #include "src/core/i18n.h"
+#include "src/gtk/view/AboutDialog.h"
 #include <fstream>
 
 
@@ -322,12 +323,23 @@ void MainWindow::onShowLogsToggled() {
 }
 
 bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
+    // F1: About dialog
+    if (keyval == GDK_KEY_F1) {
+        auto* about = new app::view::AboutDialog(*this);
+        about->signal_close_request().connect([about]() {
+            delete about;
+            return false;
+        }, false);
+        about->present();
+        return true;
+    }
+
     // F11: Toggle fullscreen
     if (keyval == GDK_KEY_F11) {
         toggleFullscreen();
         return true;
     }
-    
+
     // ESC: Exit fullscreen
     if (keyval == GDK_KEY_Escape && isFullscreen_) {
         unfullscreen();
@@ -337,7 +349,7 @@ bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
         }
         return true;
     }
-    
+
     return false;
 }
 

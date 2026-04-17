@@ -322,3 +322,32 @@ msgstr "Tuotteet viety kohteeseen:\n%1"
 
 msgid "Could not write the CSV file."
 msgstr "CSV-tiedostoa ei voitu kirjoittaa."
+
+# About dialog
+
+msgid "About"
+msgstr "Tietoja"
+
+msgid "Version %1"
+msgstr "Versio %1"
+
+msgid "Architecture"
+msgstr "Arkkitehtuuri"
+
+msgid "Build Info"
+msgstr "Käännöstiedot"
+
+msgid "Supported Languages"
+msgstr "Tuetut kielet"
+
+msgid "Quality Assurance"
+msgstr "Laadunvarmistus"
+
+msgid "86+ unit tests (GoogleTest + gmock)\n9 test binaries, CI/CD with coverage reporting"
+msgstr "86+ yksikkötestiä (GoogleTest + gmock)\n9 testibinääriä, CI/CD kattavuusraportoinnilla"
+
+msgid "Proprietary - All Rights Reserved.\nFor interview evaluation purposes only."
+msgstr "Omistusoikeudellinen – Kaikki oikeudet pidätetään.\nVain haastatteluarviointia varten."
+
+msgid "QUALITY TRENDS"
+msgstr "LAATUTRENDIT"

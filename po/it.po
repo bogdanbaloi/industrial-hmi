@@ -322,3 +322,32 @@ msgstr "Prodotti esportati in:\n%1"
 
 msgid "Could not write the CSV file."
 msgstr "Impossibile scrivere il file CSV."
+
+# About dialog
+
+msgid "About"
+msgstr "Informazioni"
+
+msgid "Version %1"
+msgstr "Versione %1"
+
+msgid "Architecture"
+msgstr "Architettura"
+
+msgid "Build Info"
+msgstr "Informazioni di build"
+
+msgid "Supported Languages"
+msgstr "Lingue supportate"
+
+msgid "Quality Assurance"
+msgstr "Garanzia di qualità"
+
+msgid "86+ unit tests (GoogleTest + gmock)\n9 test binaries, CI/CD with coverage reporting"
+msgstr "86+ unit test (GoogleTest + gmock)\n9 binari di test, CI/CD con report di copertura"
+
+msgid "Proprietary - All Rights Reserved.\nFor interview evaluation purposes only."
+msgstr "Proprietario - Tutti i diritti riservati.\nSolo per scopi di valutazione del colloquio."
+
+msgid "QUALITY TRENDS"
+msgstr "TENDENZE QUALITÀ"

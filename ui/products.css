@@ -28,7 +28,7 @@
     color: #b0bec5;
 }
 
-/* Light mode overrides */
+/* Light mode toolbar/title overrides */
 window.light-mode .page-title {
     color: #263238;
 }
@@ -45,4 +45,83 @@ window.light-mode .toolbar-button {
 
 window.light-mode .toolbar-button:hover {
     background: #d2d5d9;
+}
+
+/* ============================================
+   Products table (ColumnView) — scoped to .products-table
+   so other scrolledwindows in the app aren't affected.
+   ============================================ */
+
+/* Dark mode — every layer gets explicit dark background */
+.products-table,
+.products-table viewport,
+.products-table columnview,
+.products-table columnview > listview {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+.products-table columnview > listview > row {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+.products-table columnview > listview > row > cell {
+    background-color: transparent;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.products-table columnview > listview > row:selected {
+    background-color: #1976D2;
+    color: #ffffff;
+}
+
+.products-table columnview > listview > row:hover:not(:selected) {
+    background-color: #2a2a2a;
+}
+
+/* Column headers */
+.products-table columnview > header > button {
+    background-color: #2c2c2c;
+    color: #b0bec5;
+    border-bottom: 1px solid #3a3a3a;
+    border-right: 1px solid #3a3a3a;
+    padding: 6px 8px;
+    font-weight: 600;
+}
+
+/* ---- Light mode ---- */
+window.light-mode .products-table,
+window.light-mode .products-table viewport,
+window.light-mode .products-table columnview,
+window.light-mode .products-table columnview > listview {
+    background-color: #f8f9fa;
+    color: #202124;
+}
+
+window.light-mode .products-table columnview > listview > row {
+    background-color: #ffffff;
+    color: #202124;
+}
+
+window.light-mode .products-table columnview > listview > row > cell {
+    border-right: 1px solid #e8eaed;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+window.light-mode .products-table columnview > listview > row:selected {
+    background-color: #1a73e8;
+    color: #ffffff;
+}
+
+window.light-mode .products-table columnview > listview > row:hover:not(:selected) {
+    background-color: #f1f3f4;
+}
+
+window.light-mode .products-table columnview > header > button {
+    background-color: #f8f9fa;
+    color: #5f6368;
+    border-bottom: 1px solid #e0e0e0;
+    border-right: 1px solid #e0e0e0;
 }
