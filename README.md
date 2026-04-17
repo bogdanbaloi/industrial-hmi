@@ -51,7 +51,40 @@ src/
     DashboardPage       Equipment cards, quality gauges, control panel
     ProductsPage        ColumnView, dialogs, search
     DialogManager       Themed dialog factory (virtual methods for mocking)
-    QualityGauge        Cairo-drawn arc gauge with theme-aware colors
+    AboutDialog         App metadata dialog (F1)
+    widgets/
+      QualityGauge      Cairo-drawn arc gauge, theme-aware
+      TrendChart        Cairo-drawn line chart with circular buffer
+
+assets/
+  ui/                  GtkBuilder XML layouts
+    main-window.ui     Sidebar, notebook, log panel
+    dashboard-page.ui  Work unit, equipment, quality, control panel
+    products-page.ui   Toolbar, search, table container, action buttons
+  styles/              CSS stylesheets
+    adwaita-theme.css  Core theme tokens, dark/light variants
+    sidebar.css        Sidebar layout + controls
+    dashboard.css      Dashboard card styling
+    products.css       ColumnView + table styling
+  icons/               Application icons
+  images/              Logos and illustrations
+
+po/                    gettext translation catalogs (11 languages)
+config/                app-config.json + runtime overrides
+tests/                 GoogleTest/gmock suites (9 binaries, ~95 tests)
+```
+
+### UI Layout: GtkBuilder + Inline Widgets
+
+Static layout lives in `assets/ui/*.ui` (GtkBuilder XML) so designers
+can iterate without rebuilding. Dynamic widgets (Cairo-drawn gauges,
+trend charts, GtkColumnView with SignalListItemFactory) are injected
+into named containers from code at runtime.
+
+```cpp
+auto builder = Gtk::Builder::create_from_file(kDashboardPageUI);
+auto* gaugeContainer = builder->get_widget<Gtk::Box>("qc_gauge_container_0");
+gaugeContainer->append(*Gtk::make_managed<QualityGauge>());
 ```
 
 ### Dependency Injection
