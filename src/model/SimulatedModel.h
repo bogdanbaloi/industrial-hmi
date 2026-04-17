@@ -22,33 +22,45 @@ namespace app::model {
 /// singleton.
 class SimulatedModel : public ProductionModel {
 public:
+    // Simulation parameters (not business logic — just demo noise shaping)
+    static constexpr std::size_t kEquipmentCount = 4;
+    static constexpr float kQualityRateJitter = 0.3f;
+    static constexpr int kMinUnitsPerTick = 1;
+    static constexpr int kMaxUnitsPerTick = 3;
+    static constexpr float kQualityRateMin = 85.0f;
+    static constexpr float kQualityRateMax = 100.0f;
+    static constexpr int kEquipmentStatusProcessing = 2;
+    static constexpr int kEquipmentStatusOnline = 1;
+    static constexpr int kEquipmentStatusOffline = 0;
+    static constexpr std::uint_fast32_t kRngSeed = 42;
+
     static SimulatedModel& instance() {
         static SimulatedModel inst;
         return inst;
     }
 
     void onEquipmentStatusChanged(EquipmentCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         equipmentCallbacks_.push_back(cb);
     }
 
     void onActuatorStatusChanged(ActuatorCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         actuatorCallbacks_.push_back(cb);
     }
 
     void onQualityCheckpointChanged(QualityCheckpointCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         qualityCallbacks_.push_back(cb);
     }
 
     void onWorkUnitChanged(WorkUnitCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         workUnitCallbacks_.push_back(cb);
     }
 
     void onSystemStateChanged(StateCallback cb) override {
-        std::lock_guard<std::mutex> lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         stateCallbacks_.push_back(cb);
     }
 
@@ -78,8 +90,9 @@ public:
 
     void setEquipmentEnabled(uint32_t equipmentId, bool enabled) override {
         // Simulate enable/disable
-        if (equipmentId < 4) {
-            equipmentStatuses_[equipmentId].status = enabled ? 1 : 0;
+        if (equipmentId < kEquipmentCount) {
+            equipmentStatuses_[equipmentId].status =
+                enabled ? kEquipmentStatusOnline : kEquipmentStatusOffline;
             notifyEquipmentChange(equipmentId);
         }
     }
@@ -95,12 +108,13 @@ public:
     /// Advance simulation by one tick (called by auto refresh timer)
     void tickSimulation() {
         {
-            std::lock_guard<std::mutex> lock(mutex_);
-            std::uniform_real_distribution<float> rateDist(-0.3f, 0.3f);
-            std::uniform_int_distribution<int> unitDist(1, 3);
+            const std::scoped_lock lock(mutex_);
+            std::uniform_real_distribution<float> rateDist(-kQualityRateJitter, kQualityRateJitter);
+            std::uniform_int_distribution<int> unitDist(kMinUnitsPerTick, kMaxUnitsPerTick);
 
             for (auto& [id, cp] : qualityCheckpoints_) {
-                cp.passRate = std::clamp(cp.passRate + rateDist(rng_), 85.0f, 100.0f);
+                cp.passRate = std::clamp(cp.passRate + rateDist(rng_),
+                                         kQualityRateMin, kQualityRateMax);
                 cp.unitsInspected += unitDist(rng_);
             }
 
@@ -121,7 +135,7 @@ public:
         std::vector<QualityCheckpointCallback> cbs;
         QualityCheckpoint cp;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             cbs = qualityCallbacks_;
             cp = qualityCheckpoints_[id];
         }
@@ -132,7 +146,7 @@ public:
         std::vector<WorkUnitCallback> cbs;
         WorkUnit wu;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             cbs = workUnitCallbacks_;
             wu = currentWorkUnit_;
         }
@@ -140,6 +154,9 @@ public:
     }
     
     // Initialize with demo data
+    // Demo-data literals (batch IDs, counts, pass rates, etc.) are data,
+    // not behavior — suppress magic-number lint for this block.
+    // NOLINTBEGIN(readability-magic-numbers,cppcoreguidelines-avoid-magic-numbers)
     void initializeDemoData() {
         // Equipment statuses (3 lines: A-LINE, B-LINE, C-LINE)
         equipmentStatuses_[0] = {0, 2, 85, "85K tablets/hr"};  // A-LINE (Processing)
@@ -179,6 +196,7 @@ public:
         notifyWorkUnitChange();
         notifyStateChange();
     }
+    // NOLINTEND(readability-magic-numbers,cppcoreguidelines-avoid-magic-numbers)
 
     SimulatedModel(const SimulatedModel&) = delete;
     SimulatedModel& operator=(const SimulatedModel&) = delete;
@@ -192,7 +210,7 @@ private:
         std::vector<EquipmentCallback> cbs;
         EquipmentStatus es;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             if (!equipmentStatuses_.count(equipmentId)) return;
             cbs = equipmentCallbacks_;
             es = equipmentStatuses_[equipmentId];
@@ -204,7 +222,7 @@ private:
         std::vector<ActuatorCallback> cbs;
         ActuatorStatus as;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             if (!actuatorStatuses_.count(actuatorId)) return;
             cbs = actuatorCallbacks_;
             as = actuatorStatuses_[actuatorId];
@@ -216,7 +234,7 @@ private:
         std::vector<StateCallback> cbs;
         SystemState state;
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            const std::scoped_lock lock(mutex_);
             cbs = stateCallbacks_;
             state = currentState_;
         }
@@ -228,10 +246,11 @@ private:
         if (currentWorkUnit_.completedOperations < currentWorkUnit_.totalOperations) {
             currentWorkUnit_.completedOperations++;
             notifyWorkUnitChange();
-            
+
             // Update equipment to "processing"
-            equipmentStatuses_[1].status = 2;
-            notifyEquipmentChange(1);
+            constexpr uint32_t kBLineId = 1;
+            equipmentStatuses_[kBLineId].status = kEquipmentStatusProcessing;
+            notifyEquipmentChange(kBLineId);
         }
     }
     
@@ -248,7 +267,7 @@ private:
     std::vector<StateCallback> stateCallbacks_;
     
     mutable std::mutex mutex_;
-    std::mt19937 rng_{42};
+    std::mt19937 rng_{kRngSeed};
 };
 
 }  // namespace app::model

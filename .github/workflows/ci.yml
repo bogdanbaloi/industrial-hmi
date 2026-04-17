@@ -120,6 +120,57 @@ jobs:
           --inline-suppr \
           src/
 
+  clang-tidy:
+    name: Clang-Tidy
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
+          libgtest-dev libgmock-dev \
+          clang-tidy
+
+    # Configure only — we don't need a full build, just the
+    # compile_commands.json database so clang-tidy can resolve includes.
+    - name: Configure (generate compile_commands.json)
+      run: |
+        cmake -S . -B build/tidy -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    - name: Run clang-tidy on src/
+      run: |
+        # -quiet suppresses the progress lines so only diagnostics remain.
+        # -header-filter restricts warnings to our headers (ignores gtkmm etc.).
+        find src -name '*.cpp' -print0 | \
+          xargs -0 clang-tidy \
+            -p build/tidy \
+            -quiet \
+            -header-filter='src/.*' \
+            2>&1 | tee clang-tidy-report.txt
+
+        # Fail the job if any warning/error was produced
+        if grep -qE '^\S+:[0-9]+:[0-9]+: (warning|error):' clang-tidy-report.txt; then
+          echo "::error::clang-tidy reported issues — see report above"
+          exit 1
+        fi
+
+    - name: Upload report as artifact
+      if: always()
+      uses: actions/upload-artifact@v5
+      with:
+        name: clang-tidy-report-${{ github.sha }}
+        path: clang-tidy-report.txt
+        retention-days: 30
+
   coverage:
     name: Test Coverage
     runs-on: ubuntu-24.04
@@ -212,7 +263,7 @@ jobs:
   summary:
     name: Pipeline Summary
     runs-on: ubuntu-24.04
-    needs: [build-ubuntu, build-windows, code-quality, coverage, documentation]
+    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, documentation]
     if: always()
 
     steps:
@@ -224,5 +275,6 @@ jobs:
         echo "| Build Ubuntu | ${{ needs.build-ubuntu.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Build Windows | ${{ needs.build-windows.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Code Quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Clang-Tidy | ${{ needs.clang-tidy.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Coverage | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY

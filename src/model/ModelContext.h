@@ -33,7 +33,7 @@ public:
     /// @return true if posted, false if queue full (backpressure)
     template<typename Handler>
     bool post(Handler&& handler) {
-        if (pendingOperations_ >= MAX_PENDING_OPERATIONS) {
+        if (pendingOperations_ >= kMaxPendingOperations) {
             if (logger_) logger_->warn("I/O queue full ({} pending), rejecting operation",
                                         pendingOperations_.load());
             return false;
@@ -69,7 +69,7 @@ public:
     }
 
     [[nodiscard]] bool isHealthy() const noexcept {
-        return !ioContext_.stopped() && pendingOperations_ < MAX_PENDING_OPERATIONS;
+        return !ioContext_.stopped() && pendingOperations_ < kMaxPendingOperations;
     }
 
     ModelContext(const ModelContext&) = delete;
@@ -103,7 +103,7 @@ private:
         })
     {}
 
-    static constexpr std::size_t MAX_PENDING_OPERATIONS = 1000;
+    static constexpr std::size_t kMaxPendingOperations = 1000;
 
     boost::asio::io_context ioContext_;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_;

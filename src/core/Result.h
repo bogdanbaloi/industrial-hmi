@@ -35,11 +35,13 @@ namespace app::core {
 template<typename E>
 concept ErrorType = std::is_enum_v<E>;
 
-// Helper tags for construction
+// Helper tags for construction. These are Rust-inspired sentinels used at
+// call sites (`Result(Ok, value)`) — the short, prefix-free names are part of
+// the public API, so we opt out of the project-wide k-prefix naming rule.
 struct OkTag {};
 struct ErrTag {};
-constexpr OkTag Ok{};
-constexpr ErrTag Err{};
+constexpr OkTag  Ok{};   // NOLINT(readability-identifier-naming)
+constexpr ErrTag Err{};  // NOLINT(readability-identifier-naming)
 
 /**
  * Result<T, E> - Success (T) or Error (E)

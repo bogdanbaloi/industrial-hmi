@@ -114,22 +114,22 @@ public:
     // Public API - source_location captured automatically
     template<typename... Args>
     void info(std::format_string<Args...> fmt, Args&&... args) {
-        info_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+        infoImpl(std::source_location::current(), fmt, std::forward<Args>(args)...);
     }
     
     template<typename... Args>
     void warn(std::format_string<Args...> fmt, Args&&... args) {
-        warn_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+        warnImpl(std::source_location::current(), fmt, std::forward<Args>(args)...);
     }
     
     template<typename... Args>
     void error(std::format_string<Args...> fmt, Args&&... args) {
-        error_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+        errorImpl(std::source_location::current(), fmt, std::forward<Args>(args)...);
     }
     
     template<typename... Args>
     void critical(std::format_string<Args...> fmt, Args&&... args) {
-        critical_impl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+        criticalImpl(std::source_location::current(), fmt, std::forward<Args>(args)...);
     }
 
     void flush() { impl_->flush(); }
@@ -140,28 +140,28 @@ public:
 private:
     // Implementation - source_location as first parameter
     template<typename... Args>
-    void info_impl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
+    void infoImpl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::INFO)) return;
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::INFO, msg, loc);
     }
     
     template<typename... Args>
-    void warn_impl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
+    void warnImpl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::WARN)) return;
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::WARN, msg, loc);
     }
     
     template<typename... Args>
-    void error_impl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
+    void errorImpl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::ERROR)) return;
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::ERROR, msg, loc);
     }
     
     template<typename... Args>
-    void critical_impl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
+    void criticalImpl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::CRITICAL)) return;
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::CRITICAL, msg, loc);
@@ -186,10 +186,11 @@ inline const char* levelToString(LogLevel level) {
 }
 
 inline std::string formatTimestamp() {
+    constexpr int kMillisPerSecond = 1000;
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()) % 1000;
+        now.time_since_epoch()) % kMillisPerSecond;
     
     std::tm localTime{};
 #ifdef _WIN32

@@ -2,6 +2,7 @@
 #include "src/gtk/view/DialogManager.h"
 #include "src/gtk/view/ThemeManager.h"
 #include "src/gtk/view/css_classes.h"
+#include "src/gtk/view/ui_sizes.h"
 #include "src/config/config_defaults.h"
 #include "src/core/i18n.h"
 #include "src/core/CsvSerializer.h"
@@ -10,6 +11,10 @@
 #include <fstream>
 
 namespace app::view {
+
+namespace {
+using namespace app::view::sizes;
+}  // namespace
 
 ProductsPage::ProductsPage(DialogManager& dialogManager)
     : Gtk::Box(Gtk::Orientation::VERTICAL)
@@ -86,8 +91,8 @@ void ProductsPage::buildUI() {
         factory->signal_setup().connect([](const Glib::RefPtr<Gtk::ListItem>& item) {
             auto* label = Gtk::make_managed<Gtk::Label>();
             label->set_xalign(0.0);
-            label->set_margin_start(8);
-            label->set_margin_end(8);
+            label->set_margin_start(kSpacingSmall);
+            label->set_margin_end(kSpacingSmall);
             item->set_child(*label);
         });
         factory->signal_bind().connect([getter](const Glib::RefPtr<Gtk::ListItem>& item) {
@@ -102,11 +107,11 @@ void ProductsPage::buildUI() {
         return column;
     };
 
-    columnView_->append_column(makeColumn(_("Product Code"), 120, false,
+    columnView_->append_column(makeColumn(_("Product Code"), kProductsColumnCodeWidth, false,
         [](const Glib::RefPtr<ProductObject>& p) { return p->getProductCode(); }));
     columnView_->append_column(makeColumn(_("Name"), 0, true,
         [](const Glib::RefPtr<ProductObject>& p) { return p->getName(); }));
-    columnView_->append_column(makeColumn(_("Status"), 120, false,
+    columnView_->append_column(makeColumn(_("Status"), kProductsColumnCodeWidth, false,
         [](const Glib::RefPtr<ProductObject>& p) -> Glib::ustring {
             const auto& s = p->getStatus();
             if (s == config::defaults::kStatusActive)   return _("Active");
@@ -114,9 +119,9 @@ void ProductsPage::buildUI() {
             if (s == config::defaults::kStatusLowStock) return _("Low Stock");
             return s;
         }));
-    columnView_->append_column(makeColumn(_("Stock"), 80, false,
+    columnView_->append_column(makeColumn(_("Stock"), kProductsColumnStockWidth, false,
         [](const Glib::RefPtr<ProductObject>& p) { return std::to_string(p->getStock()); }));
-    columnView_->append_column(makeColumn(_("Quality %"), 100, false,
+    columnView_->append_column(makeColumn(_("Quality %"), kProductsColumnQualityWidth, false,
         [](const Glib::RefPtr<ProductObject>& p) {
             const float rate = p->getQualityRate();
             return Glib::ustring(
@@ -241,14 +246,14 @@ int ProductsPage::getSelectedProductId() {
 
 void ProductsPage::showAddProductDialog() {
     auto* dialog = new Gtk::Dialog(_("Add New Product"), *dynamic_cast<Gtk::Window*>(get_root()));
-    dialog->set_default_size(400, 350);
+    dialog->set_default_size(kFormDialogWidth, kFormDialogHeight);
     dialog->set_modal(true);
     app::view::ThemeManager::instance().applyToDialog(dialog);
-    
+
     auto* grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_row_spacing(12);
-    grid->set_column_spacing(12);
-    grid->set_margin(20);
+    grid->set_row_spacing(kSpacingMedium);
+    grid->set_column_spacing(kSpacingMedium);
+    grid->set_margin(kSpacingLarge);
     
     // Product Code
     auto* codeLabel = Gtk::make_managed<Gtk::Label>(_("Product Code:"));
@@ -283,9 +288,10 @@ void ProductsPage::showAddProductDialog() {
     auto* stockLabel = Gtk::make_managed<Gtk::Label>(_("Stock (units):"));
     stockLabel->set_xalign(0);
     auto* stockSpin = Gtk::make_managed<Gtk::SpinButton>();
-    stockSpin->set_range(0, 10000);
-    stockSpin->set_increments(10, 100);
-    stockSpin->set_value(100);
+    stockSpin->set_range(kStockSpinMin, kStockSpinMax);
+    stockSpin->set_increments(kStockSpinStep, kStockSpinStep * kStockSpinStep);
+    constexpr int kAddDialogDefaultStock = 100;
+    stockSpin->set_value(kAddDialogDefaultStock);
     stockSpin->set_hexpand(true);
     grid->attach(*stockLabel, 0, 3);
     grid->attach(*stockSpin, 1, 3);
@@ -294,10 +300,10 @@ void ProductsPage::showAddProductDialog() {
     auto* qualityLabel = Gtk::make_managed<Gtk::Label>(_("Quality (%):"));
     qualityLabel->set_xalign(0);
     auto* qualitySpin = Gtk::make_managed<Gtk::SpinButton>();
-    qualitySpin->set_range(0.0, 100.0);
+    qualitySpin->set_range(kQualitySpinMin, kQualitySpinMax);
     qualitySpin->set_digits(1);
-    qualitySpin->set_increments(0.1, 1.0);
-    qualitySpin->set_value(95.0);
+    qualitySpin->set_increments(kQualitySpinStep, 1.0);
+    qualitySpin->set_value(config::defaults::kQualityPassThreshold);
     qualitySpin->set_hexpand(true);
     grid->attach(*qualityLabel, 0, 4);
     grid->attach(*qualitySpin, 1, 4);
@@ -367,14 +373,14 @@ void ProductsPage::showDeleteConfirmDialog(int productId, const std::string& pro
 
 void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& product) {
     auto* dialog = new Gtk::Dialog(_("Edit Product"), *dynamic_cast<Gtk::Window*>(get_root()));
-    dialog->set_default_size(400, 350);
+    dialog->set_default_size(kFormDialogWidth, kFormDialogHeight);
     dialog->set_modal(true);
     app::view::ThemeManager::instance().applyToDialog(dialog);
-    
+
     auto* grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_row_spacing(12);
-    grid->set_column_spacing(12);
-    grid->set_margin(20);
+    grid->set_row_spacing(kSpacingMedium);
+    grid->set_column_spacing(kSpacingMedium);
+    grid->set_margin(kSpacingLarge);
     
     // Product Code (read-only display)
     auto* codeLabel = Gtk::make_managed<Gtk::Label>(_("Product Code:"));
@@ -411,8 +417,8 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
     auto* stockLabel = Gtk::make_managed<Gtk::Label>(_("Stock (units):"));
     stockLabel->set_xalign(0);
     auto* stockSpin = Gtk::make_managed<Gtk::SpinButton>();
-    stockSpin->set_range(0, 10000);
-    stockSpin->set_increments(10, 100);
+    stockSpin->set_range(kStockSpinMin, kStockSpinMax);
+    stockSpin->set_increments(kStockSpinStep, kStockSpinStep * kStockSpinStep);
     stockSpin->set_value(product.stock);
     stockSpin->set_hexpand(true);
     grid->attach(*stockLabel, 0, 3);
@@ -422,9 +428,9 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
     auto* qualityLabel = Gtk::make_managed<Gtk::Label>(_("Quality (%):"));
     qualityLabel->set_xalign(0);
     auto* qualitySpin = Gtk::make_managed<Gtk::SpinButton>();
-    qualitySpin->set_range(0.0, 100.0);
+    qualitySpin->set_range(kQualitySpinMin, kQualitySpinMax);
     qualitySpin->set_digits(1);
-    qualitySpin->set_increments(0.1, 1.0);
+    qualitySpin->set_increments(kQualitySpinStep, 1.0);
     qualitySpin->set_value(product.qualityRate);
     qualitySpin->set_hexpand(true);
     grid->attach(*qualityLabel, 0, 4);

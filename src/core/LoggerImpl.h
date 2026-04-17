@@ -25,9 +25,9 @@ public:
     void log(LogLevel level,
             std::string_view message,
             const std::source_location& loc) override {
-        
-        std::lock_guard lock(mutex_);
-        
+
+        const std::scoped_lock lock(mutex_);
+
         auto& stream = (level >= LogLevel::ERROR) ? std::cerr : std::cout;
         
         stream << std::format("[{}] [{}] [{}:{}] {}\n",
@@ -47,7 +47,7 @@ public:
     }
 
     void flush() override {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         std::cout.flush();
         std::cerr.flush();
     }
@@ -62,10 +62,13 @@ private:
  */
 class FileLogger : public LoggerBase {
 public:
+    static constexpr std::size_t kDefaultMaxFileSize = 5 * 1024 * 1024;  // 5 MB
+    static constexpr int kDefaultMaxFiles = 3;
+
     explicit FileLogger(const std::string& filename,
                        LogLevel minLevel = LogLevel::INFO,
-                       std::size_t maxFileSize = 5 * 1024 * 1024,
-                       int maxFiles = 3)
+                       std::size_t maxFileSize = kDefaultMaxFileSize,
+                       int maxFiles = kDefaultMaxFiles)
         : minLevel_(minLevel),
           filePath_(filename),
           maxFileSize_(maxFileSize),
@@ -85,7 +88,7 @@ public:
     }
 
     ~FileLogger() {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         if (file_.is_open()) {
             file_.close();
         }
@@ -95,7 +98,7 @@ public:
             std::string_view message,
             const std::source_location& loc) override {
 
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
 
         if (!file_.is_open()) return;
 
@@ -123,12 +126,12 @@ public:
     }
 
     void flush() override {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         if (file_.is_open()) file_.flush();
     }
 
     void shutdown() override {
-        std::lock_guard lock(mutex_);
+        const std::scoped_lock lock(mutex_);
         if (file_.is_open()) {
             file_.flush();
             file_.close();

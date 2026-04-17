@@ -37,6 +37,34 @@ inline constexpr int kControlButtonWidth  = 100;
 inline constexpr int kControlButtonHeight = 40;
 
 // ----------------------------------------------------------------------------
+// Dialog sizing (About / Add Product / Edit Product / Delete Confirm).
+// ----------------------------------------------------------------------------
+inline constexpr int kAboutDialogWidth    = 420;
+inline constexpr int kAboutDialogHeight   = 480;
+inline constexpr int kFormDialogWidth     = 400;
+inline constexpr int kFormDialogHeight    = 350;
+inline constexpr int kConfirmDialogWidth  = 400;
+inline constexpr int kConfirmDialogHeight = 150;
+
+// ----------------------------------------------------------------------------
+// ProductsPage ColumnView fixed column widths.
+// ----------------------------------------------------------------------------
+inline constexpr int kProductsColumnCodeWidth    = 120;
+inline constexpr int kProductsColumnStatusWidth  = 100;
+inline constexpr int kProductsColumnStockWidth   = 80;
+inline constexpr int kProductsColumnQualityWidth = 100;
+
+// ----------------------------------------------------------------------------
+// Spin-button ranges for product form.
+// ----------------------------------------------------------------------------
+inline constexpr int    kStockSpinMin  = 0;
+inline constexpr int    kStockSpinMax  = 10000;
+inline constexpr int    kStockSpinStep = 10;
+inline constexpr double kQualitySpinMin  = 0.0;
+inline constexpr double kQualitySpinMax  = 100.0;
+inline constexpr double kQualitySpinStep = 0.1;
+
+// ----------------------------------------------------------------------------
 // Format buffer guidance (we now use std::vformat which returns std::string,
 // so these are advisory for legacy read-only sites if any remain).
 // ----------------------------------------------------------------------------

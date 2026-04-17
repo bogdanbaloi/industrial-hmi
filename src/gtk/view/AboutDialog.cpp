@@ -1,27 +1,34 @@
 #include "AboutDialog.h"
 #include "src/core/i18n.h"
 #include "src/config/config_defaults.h"
+#include "src/gtk/view/ui_sizes.h"
 
 namespace app::view {
+
+namespace {
+using namespace app::view::sizes;
+constexpr int kContentSpacing = kSpacingMedium + kSpacingTiny;   // 16
+constexpr int kFrameMargin    = kSpacingXL;                      // 24
+}  // namespace
 
 AboutDialog::AboutDialog(Gtk::Window& parent) {
     set_title(_("About"));
     set_transient_for(parent);
     set_modal(true);
-    set_default_size(420, 480);
+    set_default_size(kAboutDialogWidth, kAboutDialogHeight);
     set_resizable(false);
 
     buildUI();
 }
 
 void AboutDialog::buildUI() {
-    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 16);
-    box->set_margin(24);
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, kContentSpacing);
+    box->set_margin(kFrameMargin);
 
     // App name
     auto* titleLabel = Gtk::make_managed<Gtk::Label>();
     titleLabel->set_markup("<b><big>[BB] Industrial HMI</big></b>");
-    titleLabel->set_margin_bottom(4);
+    titleLabel->set_margin_bottom(kSpacingTiny);
     box->append(*titleLabel);
 
     // Version
@@ -32,8 +39,8 @@ void AboutDialog::buildUI() {
 
     // Separator
     auto* sep1 = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::HORIZONTAL);
-    sep1->set_margin_top(8);
-    sep1->set_margin_bottom(8);
+    sep1->set_margin_top(kSpacingSmall);
+    sep1->set_margin_bottom(kSpacingSmall);
     box->append(*sep1);
 
     // Architecture section
@@ -47,31 +54,31 @@ void AboutDialog::buildUI() {
         "Dependency Injection + Observer Pattern\n"
         "C++20 / GTK4 / SQLite / Boost.Asio");
     archLabel->set_xalign(0);
-    archLabel->set_margin_start(8);
+    archLabel->set_margin_start(kSpacingSmall);
     box->append(*archLabel);
 
     // Build info section
     auto* buildHeader = Gtk::make_managed<Gtk::Label>();
     buildHeader->set_markup(Glib::ustring::compose("<b>%1</b>", _("Build Info")));
     buildHeader->set_xalign(0);
-    buildHeader->set_margin_top(12);
+    buildHeader->set_margin_top(kSpacingMedium);
     box->append(*buildHeader);
 
     auto* buildLabel = Gtk::make_managed<Gtk::Label>(buildInfoText());
     buildLabel->set_xalign(0);
-    buildLabel->set_margin_start(8);
+    buildLabel->set_margin_start(kSpacingSmall);
     box->append(*buildLabel);
 
     // Languages section
     auto* langHeader = Gtk::make_managed<Gtk::Label>();
     langHeader->set_markup(Glib::ustring::compose("<b>%1</b>", _("Supported Languages")));
     langHeader->set_xalign(0);
-    langHeader->set_margin_top(12);
+    langHeader->set_margin_top(kSpacingMedium);
     box->append(*langHeader);
 
     auto* langLabel = Gtk::make_managed<Gtk::Label>(languageList());
     langLabel->set_xalign(0);
-    langLabel->set_margin_start(8);
+    langLabel->set_margin_start(kSpacingSmall);
     langLabel->set_wrap(true);
     box->append(*langLabel);
 
@@ -79,20 +86,20 @@ void AboutDialog::buildUI() {
     auto* testHeader = Gtk::make_managed<Gtk::Label>();
     testHeader->set_markup(Glib::ustring::compose("<b>%1</b>", _("Quality Assurance")));
     testHeader->set_xalign(0);
-    testHeader->set_margin_top(12);
+    testHeader->set_margin_top(kSpacingMedium);
     box->append(*testHeader);
 
     auto* testLabel = Gtk::make_managed<Gtk::Label>(
         _("86+ unit tests (GoogleTest + gmock)\n"
           "9 test binaries, CI/CD with coverage reporting"));
     testLabel->set_xalign(0);
-    testLabel->set_margin_start(8);
+    testLabel->set_margin_start(kSpacingSmall);
     box->append(*testLabel);
 
     // Separator
     auto* sep2 = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::HORIZONTAL);
-    sep2->set_margin_top(12);
-    sep2->set_margin_bottom(4);
+    sep2->set_margin_top(kSpacingMedium);
+    sep2->set_margin_bottom(kSpacingTiny);
     box->append(*sep2);
 
     // License

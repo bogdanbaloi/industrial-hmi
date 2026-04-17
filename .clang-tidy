@@ -1,6 +1,48 @@
 ---
 # Industrial HMI - Clang-Tidy Configuration
-# Static analysis for industrial C++ code quality
+# IMPORTANT: Inside the `Checks:` folded scalar (`>`), lines starting with `#`
+# are LITERAL text, not YAML comments — they poison the glob list. Keep all
+# explanatory notes OUTSIDE the `Checks:` value.
+
+# Categories we keep enabled: bugprone-*, cert-*, clang-analyzer-*,
+# concurrency-*, cppcoreguidelines-* (minus the noise below), misc-*,
+# modernize-*, performance-*, portability-*, readability-*, hicpp-*, google-*.
+
+# Categories / checks we disable:
+# - Whole namespaces that don't apply (abseil, altera, android, darwin,
+#   fuchsia, llvm*, zircon).
+# - Opinionated style we don't follow (trailing return types, nodiscard spam,
+#   brace-around-every-statement, implicit-bool-conversion).
+# - misc-include-cleaner: floods us because gtkmm is an umbrella header.
+# - cppcoreguidelines-special-member-functions / hicpp-special-member-
+#   functions: require all 5 SMFs even when a destructor is = default.
+# - cppcoreguidelines-owning-memory: we don't use GSL.
+# - cppcoreguidelines-missing-std-forward: noisy in generic templates.
+# - cppcoreguidelines-avoid-do-while, pro-type-vararg, pro-bounds-*,
+#   avoid-const-or-ref-data-members: incompatible with our code shape.
+# - bugprone-easily-swappable-parameters: not actionable without large
+#   refactor.
+# - performance-enum-size: we prefer platform-default enum size.
+# - performance-unnecessary-value-param: we pass std::function by value
+#   deliberately (ownership).
+# - google-default-arguments: DialogManager uses default args on virtuals;
+#   matches gtkmm conventions.
+# - google-explicit-constructor / hicpp-explicit-conversions: Result<>
+#   tag-based ctors are explicit by API.
+# - bugprone-narrowing-conversions / cppcoreguidelines-narrowing-conversions:
+#   too noisy with Gtk::Grid::attach(int,int) and size_t loop indices.
+# - cppcoreguidelines-pro-type-reinterpret-cast: required for sqlite3_column_text.
+# - cppcoreguidelines-init-variables: we default-init to use GTK widget return.
+# - modernize-pass-by-value: opinionated, not actionable for 3-5 string ctors.
+# - readability-function-cognitive-complexity: parseJSON is bounded legacy code.
+# - performance-inefficient-string-concatenation, performance-faster-string-find:
+#   parser hot path, readability > micro-opt here.
+# - cert-err33-c: ignoring setlocale/remove returns is intentional.
+# - bugprone-exception-escape in ~Dtor: destructors are noexcept(false) by
+#   intent for ModelContext/Application (they log).
+# - cert-msc32-c / cert-msc51-cpp: SimulatedModel uses a seeded RNG for
+#   reproducible demo data by design.
+# - concurrency-mt-unsafe: one-shot setenv/setlocale during init.
 
 Checks: >
   *,
@@ -13,19 +55,86 @@ Checks: >
   -llvmlibc-*,
   -zircon-*,
   -google-readability-todo,
+  -google-readability-namespace-comments,
+  -google-build-using-namespace,
+  -google-runtime-references,
+  -google-default-arguments,
+  -google-explicit-constructor,
+  -hicpp-explicit-conversions,
   -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -modernize-pass-by-value,
+  -modernize-return-braced-init-list,
   -readability-identifier-length,
+  -readability-braces-around-statements,
+  -hicpp-braces-around-statements,
+  -google-readability-braces-around-statements,
+  -readability-uppercase-literal-suffix,
+  -hicpp-uppercase-literal-suffix,
+  -readability-implicit-bool-conversion,
+  -readability-function-cognitive-complexity,
+  -readability-redundant-member-init,
+  -readability-redundant-access-specifiers,
+  -readability-convert-member-functions-to-static,
+  -readability-make-member-function-const,
+  -readability-named-parameter,
+  -hicpp-named-parameter,
   -misc-non-private-member-variables-in-classes,
-  -cppcoreguidelines-non-private-member-variables-in-classes
+  -misc-include-cleaner,
+  -misc-const-correctness,
+  -misc-unused-parameters,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-special-member-functions,
+  -hicpp-special-member-functions,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-missing-std-forward,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-pro-type-vararg,
+  -hicpp-vararg,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -hicpp-no-array-decay,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-avoid-c-arrays,
+  -hicpp-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-init-variables,
+  -cppcoreguidelines-pro-type-member-init,
+  -hicpp-member-init,
+  -cppcoreguidelines-prefer-member-initializer,
+  -cppcoreguidelines-macro-usage,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -cppcoreguidelines-narrowing-conversions,
+  -bugprone-exception-escape,
+  -bugprone-unused-local-non-trivial-variable,
+  -bugprone-switch-missing-default-case,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -hicpp-multiway-paths-covered,
+  -performance-enum-size,
+  -performance-unnecessary-value-param,
+  -performance-inefficient-string-concatenation,
+  -performance-faster-string-find,
+  -cert-err33-c,
+  -cert-msc32-c,
+  -cert-msc51-cpp,
+  -cert-dcl21-cpp,
+  -concurrency-mt-unsafe,
+  -portability-avoid-pragma-once,
+  -hicpp-use-equals-delete,
+  -modernize-use-equals-delete,
+  -readability-container-contains,
+  -cppcoreguidelines-explicit-virtual-functions,
+  -hicpp-use-override,
+  -modernize-use-override
 
-# Warning-as-error (optional - comment out if too strict)
 WarningsAsErrors: ''
 
-# Header filter - only check our headers
 HeaderFilterRegex: '.*/(src|include)/.*\.(h|hpp)$'
 
 CheckOptions:
-  # Naming Conventions
   - key: readability-identifier-naming.NamespaceCase
     value: lower_case
   - key: readability-identifier-naming.ClassCase
@@ -44,14 +153,31 @@ CheckOptions:
     value: camelBack
   - key: readability-identifier-naming.PrivateMemberSuffix
     value: '_'
+  - key: readability-identifier-naming.ProtectedMemberSuffix
+    value: '_'
+  # Namespace-scope constants are kCamelCase; function-local const values
+  # stay plain camelBack. Enum values can be any case (see notes above).
   - key: readability-identifier-naming.ConstantCase
-    value: UPPER_CASE
-  - key: readability-identifier-naming.EnumConstantCase
     value: CamelCase
+  - key: readability-identifier-naming.ConstantPrefix
+    value: 'k'
   - key: readability-identifier-naming.GlobalConstantCase
-    value: UPPER_CASE
-  
-  # Function Length
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: 'k'
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantPrefix
+    value: 'k'
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: 'k'
+  - key: readability-identifier-naming.LocalConstantCase
+    value: camelBack
+  - key: readability-identifier-naming.EnumConstantCase
+    value: aNy_CasE
+
   - key: readability-function-size.LineThreshold
     value: '150'
   - key: readability-function-size.StatementThreshold
@@ -60,40 +186,43 @@ CheckOptions:
     value: '20'
   - key: readability-function-size.ParameterThreshold
     value: '8'
-  
-  # Cognitive Complexity
+
   - key: readability-function-cognitive-complexity.Threshold
     value: '25'
-  
-  # Modern C++
+
   - key: modernize-use-nullptr.NullMacros
     value: 'NULL'
   - key: modernize-use-auto.MinTypeNameLength
     value: '5'
-  
-  # C++20 Features (encouraged)
   - key: modernize-use-nodiscard.ReplacementString
     value: '[[nodiscard]]'
-  
-  # Const Correctness (clang-tidy recommendations)
+
   - key: readability-const-return-type.CheckTemplates
     value: 'true'
   - key: readability-make-member-function-const.IgnoreMacros
     value: 'false'
-  
-  # Prefer std::scoped_lock over std::lock_guard (C++17+)
-  # Note: No direct check, but encouraged in cppcoreguidelines-prefer-member-initializer
-  
-  # Performance
+
   - key: performance-move-const-arg.CheckTriviallyCopyableMove
     value: 'true'
   - key: performance-unnecessary-value-param.AllowedTypes
     value: 'Glib::ustring;Glib::RefPtr'
-  
-  # Readability
+
   - key: readability-simplify-boolean-expr.ChainedConditionalReturn
     value: 'true'
   - key: readability-simplify-boolean-expr.ChainedConditionalAssignment
+    value: 'true'
+
+  - key: readability-magic-numbers.IgnoredIntegerValues
+    value: '1;2;3;4;5;6;7;8;9;10;100'
+  - key: readability-magic-numbers.IgnoredFloatingPointValues
+    value: '0.0;0.5;1.0;2.0;100.0;255.0'
+  - key: readability-magic-numbers.IgnorePowersOf2IntegerValues
+    value: 'true'
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnoredIntegerValues
+    value: '1;2;3;4;5;6;7;8;9;10;100'
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnoredFloatingPointValues
+    value: '0.0;0.5;1.0;2.0;100.0;255.0'
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnorePowersOf2IntegerValues
     value: 'true'
 
 ...

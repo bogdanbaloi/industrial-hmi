@@ -43,7 +43,7 @@ namespace app {
 ///        }
 ///        
 ///        void notifyControlPanelChanged(const ControlPanelViewModel& vm) {
-///            std::lock_guard<std::mutex> lock(observersMutex_);
+///            const std::scoped_lock lock(observersMutex_);
 ///            for (auto* observer : observers_) {
 ///                if (observer) {
 ///                    observer->onControlPanelChanged(vm);
@@ -74,9 +74,9 @@ public:
     ///       Call removeObserver() before destroying the observer
     virtual void addObserver(ViewObserver* observer) {
         if (!observer) return;
-        
-        std::lock_guard<std::mutex> lock(observersMutex_);
-        
+
+        const std::scoped_lock lock(observersMutex_);
+
         // Avoid duplicate registration
         auto it = std::find(observers_.begin(), observers_.end(), observer);
         if (it == observers_.end()) {
@@ -90,9 +90,9 @@ public:
     /// @note Safe to call even if observer was never registered
     virtual void removeObserver(ViewObserver* observer) {
         if (!observer) return;
-        
-        std::lock_guard<std::mutex> lock(observersMutex_);
-        
+
+        const std::scoped_lock lock(observersMutex_);
+
         auto it = std::find(observers_.begin(), observers_.end(), observer);
         if (it != observers_.end()) {
             observers_.erase(it);
@@ -105,10 +105,10 @@ protected:
     std::vector<ViewObserver*> observers_;
 
     /// Mutex protecting observer list
-    /// @design Use std::lock_guard for RAII-style locking:
+    /// @design Use std::scoped_lock for RAII-style locking:
     ///         ```cpp
     ///         {
-    ///             std::lock_guard<std::mutex> lock(observersMutex_);
+    ///             const std::scoped_lock lock(observersMutex_);
     ///             // Access observers_ here
     ///         }  // Mutex automatically released
     ///         ```
@@ -136,20 +136,20 @@ protected:
     // Overload 1: Pointer-to-member function
     template<typename MethodPtr, typename... Args>
     void notifyAll(MethodPtr method, Args&&... args) {
-        std::lock_guard<std::mutex> lock(observersMutex_);
-        
+        const std::scoped_lock lock(observersMutex_);
+
         for (auto* observer : observers_) {
             if (observer) {
                 (observer->*method)(std::forward<Args>(args)...);
             }
         }
     }
-    
+
     // Overload 2: Callable (lambda, function object, etc.)
     template<typename Callable>
     void notifyAll(Callable&& func) {
-        std::lock_guard<std::mutex> lock(observersMutex_);
-        
+        const std::scoped_lock lock(observersMutex_);
+
         for (auto* observer : observers_) {
             if (observer) {
                 func(observer);

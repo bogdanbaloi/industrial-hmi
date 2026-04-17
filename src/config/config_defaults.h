@@ -30,7 +30,10 @@ constexpr const char* kCancelButton = "Cancel";
 // Logging
 constexpr const char* kLogFile = "logs/app.log";
 constexpr const char* kLogLevel = "INFO";
-constexpr std::size_t kLogMaxFileSize = 5 * 1024 * 1024;  // 5 MB
+constexpr std::size_t kBytesPerKilobyte = 1024;
+constexpr std::size_t kBytesPerMegabyte = kBytesPerKilobyte * kBytesPerKilobyte;
+constexpr std::size_t kLogMaxFileSizeMB = 5;
+constexpr std::size_t kLogMaxFileSize = kLogMaxFileSizeMB * kBytesPerMegabyte;
 constexpr int kLogMaxFiles = 3;
 constexpr bool kLogConsoleEnabled = true;
 
