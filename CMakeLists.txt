@@ -191,6 +191,8 @@ target_sources(objectsModel
             src/model/ModelContext.h
             src/model/Product.h
             src/model/ProductsRepository.h
+            src/model/ProductionTypes.h
+            src/model/ProductionModel.h
 )
 target_link_libraries(objectsModel
     PUBLIC
