@@ -9,4 +9,6 @@ src/gtk/view/pages/DashboardPage.cpp
 src/gtk/view/pages/ProductsPage.cpp
 
 # GtkBuilder UI files
-[type: gettext/glade]ui/main-window.ui
+[type: gettext/glade]assets/ui/main-window.ui
+[type: gettext/glade]assets/ui/dashboard-page.ui
+[type: gettext/glade]assets/ui/products-page.ui

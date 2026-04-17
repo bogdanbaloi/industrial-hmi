@@ -47,7 +47,7 @@ enum class EquipmentCardStatus {
 ///    vm.status = EquipmentCardStatus::Online;
 ///    vm.consumables = "Supply level: 85%";
 ///    vm.messageStatus = "Ready";
-///    vm.imagePath = "assets/img/equipment/station-good.svg";
+///    vm.imagePath = "assets/images/equipment/station-good.svg";
 ///    vm.enabled = true;
 ///    
 ///    // Pass to view via observer
@@ -70,7 +70,7 @@ struct EquipmentCardViewModel {
 
     /// Filesystem path to status indicator image/icon
     /// @note Images change based on status: good.svg, moderate.svg, bad.svg, offline.svg
-    /// @example "assets/img/equipment/station-good.svg"
+    /// @example "assets/images/equipment/station-good.svg"
     std::string imagePath;
 
     /// Whether operator has enabled this equipment via UI toggle switch
