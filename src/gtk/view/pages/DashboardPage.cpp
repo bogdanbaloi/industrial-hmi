@@ -1,7 +1,11 @@
 #include "DashboardPage.h"
 #include "src/gtk/view/DialogManager.h"
+#include "src/gtk/view/css_classes.h"
+#include "src/gtk/view/ui_sizes.h"
 #include "src/config/config_defaults.h"
 #include "src/core/i18n.h"
+
+#include <format>
 
 namespace app::view {
 
@@ -139,14 +143,16 @@ void DashboardPage::buildUI() {
         // Inject dynamic Cairo gauge into the container defined in XML
         auto* gaugeContainer = builder->get_widget<Gtk::Box>("qc_gauge_container_" + id);
         card.gauge = Gtk::make_managed<QualityGauge>();
-        card.gauge->set_margin_top(8);
-        card.gauge->set_margin_bottom(8);
+        card.gauge->set_margin_top(sizes::kSpacingSmall);
+        card.gauge->set_margin_bottom(sizes::kSpacingSmall);
         gaugeContainer->append(*card.gauge);
 
         // Inject dynamic trend chart into the container defined in XML
         auto* trendContainer = builder->get_widget<Gtk::Box>("qc_trend_container_" + id);
-        auto* chart = Gtk::make_managed<TrendChart>("", 85.0f, 100.0f, 60);
-        chart->set_content_height(60);
+        auto* chart = Gtk::make_managed<TrendChart>(
+            "", sizes::kTrendChartMinY, sizes::kTrendChartMaxY,
+            sizes::kTrendChartCapacity);
+        chart->set_content_height(sizes::kTrendChartInlineHeight);
         chart->set_vexpand(true);
         chart->set_hexpand(true);
         trendContainer->append(*chart);
@@ -164,10 +170,10 @@ void DashboardPage::buildUI() {
 
     // GTK4 Builder parses css-classes with spaces inconsistently across
     // versions, so we add the per-button color classes from code.
-    controlPanelWidgets_.startButton->add_css_class("start-button");
-    controlPanelWidgets_.stopButton->add_css_class("stop-button");
-    controlPanelWidgets_.resetButton->add_css_class("reset-button");
-    controlPanelWidgets_.calibrationButton->add_css_class("calibration-button");
+    controlPanelWidgets_.startButton->add_css_class(css::kStartButton);
+    controlPanelWidgets_.stopButton->add_css_class(css::kStopButton);
+    controlPanelWidgets_.resetButton->add_css_class(css::kResetButton);
+    controlPanelWidgets_.calibrationButton->add_css_class(css::kCalibrationButton);
 
     controlPanelWidgets_.startButton->signal_clicked().connect(
         sigc::mem_fun(*this, &DashboardPage::onStartButtonClicked));
@@ -253,9 +259,9 @@ void DashboardPage::updateWorkUnitWidgets(const presenter::WorkUnitViewModel& vm
     
     // Update styling based on error state
     if (vm.hasErrors) {
-        workUnitWidgets_.statusLabel->add_css_class("error-status");
+        workUnitWidgets_.statusLabel->add_css_class(css::kErrorStatus);
     } else {
-        workUnitWidgets_.statusLabel->remove_css_class("error-status");
+        workUnitWidgets_.statusLabel->remove_css_class(css::kErrorStatus);
     }
 }
 
@@ -270,30 +276,20 @@ void DashboardPage::updateEquipmentCard(const presenter::EquipmentCardViewModel&
     auto& card = *it;
     
     // Update status dot color based on status
-    std::string dotColor;
+    const char* dotColor = css::kEquipmentOffline;
     switch (vm.status) {
-        case presenter::EquipmentCardStatus::Online:
-            dotColor = "equipment-online";
-            break;
-        case presenter::EquipmentCardStatus::Processing:
-            dotColor = "equipment-processing";
-            break;
-        case presenter::EquipmentCardStatus::Error:
-            dotColor = "equipment-error";
-            break;
-        case presenter::EquipmentCardStatus::Offline:
-            dotColor = "equipment-offline";
-            break;
-        default:
-            dotColor = "equipment-offline";
-            break;
+        case presenter::EquipmentCardStatus::Online:     dotColor = css::kEquipmentOnline; break;
+        case presenter::EquipmentCardStatus::Processing: dotColor = css::kEquipmentProcessing; break;
+        case presenter::EquipmentCardStatus::Error:      dotColor = css::kEquipmentError; break;
+        case presenter::EquipmentCardStatus::Offline:    dotColor = css::kEquipmentOffline; break;
+        default: break;
     }
-    
+
     // Remove old status classes and add new one
-    card.statusDot->remove_css_class("equipment-online");
-    card.statusDot->remove_css_class("equipment-processing");
-    card.statusDot->remove_css_class("equipment-error");
-    card.statusDot->remove_css_class("equipment-offline");
+    card.statusDot->remove_css_class(css::kEquipmentOnline);
+    card.statusDot->remove_css_class(css::kEquipmentProcessing);
+    card.statusDot->remove_css_class(css::kEquipmentError);
+    card.statusDot->remove_css_class(css::kEquipmentOffline);
     card.statusDot->add_css_class(dotColor);
     
     // Update status text
@@ -323,23 +319,17 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     card.nameLabel->set_text(vm.checkpointName);
     
     // Update status dot color based on status
-    std::string dotColor;
+    const char* dotColor = css::kQualityPassing;
     switch (vm.status) {
-        case presenter::QualityCheckpointStatus::Passing:
-            dotColor = "quality-passing";
-            break;
-        case presenter::QualityCheckpointStatus::Warning:
-            dotColor = "quality-warning";
-            break;
-        case presenter::QualityCheckpointStatus::Critical:
-            dotColor = "quality-critical";
-            break;
+        case presenter::QualityCheckpointStatus::Passing:  dotColor = css::kQualityPassing; break;
+        case presenter::QualityCheckpointStatus::Warning:  dotColor = css::kQualityWarning; break;
+        case presenter::QualityCheckpointStatus::Critical: dotColor = css::kQualityCritical; break;
     }
-    
+
     // Remove old status classes and add new one
-    card.statusDot->remove_css_class("quality-passing");
-    card.statusDot->remove_css_class("quality-warning");
-    card.statusDot->remove_css_class("quality-critical");
+    card.statusDot->remove_css_class(css::kQualityPassing);
+    card.statusDot->remove_css_class(css::kQualityWarning);
+    card.statusDot->remove_css_class(css::kQualityCritical);
     card.statusDot->add_css_class(dotColor);
     
     // Update gauge: arc length reflects real pass rate, color follows status
@@ -351,9 +341,8 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     }
     
     // Update pass rate - large and prominent
-    char passRateText[32];
-    snprintf(passRateText, sizeof(passRateText), "%.1f%%", vm.passRate);
-    card.passRateLabel->set_text(passRateText);
+    card.passRateLabel->set_text(
+        std::vformat("{:.1f}%", std::make_format_args(vm.passRate)));
     
     // Update stats - inspected • defects
     card.statsLabel->set_text(
@@ -407,22 +396,15 @@ void DashboardPage::updateStatusZone(const presenter::StatusZoneViewModel& vm) {
     statusZoneWidgets_.messageLabel->set_text(vm.message);
     
     // Apply CSS class based on severity
-    statusZoneWidgets_.bannerBox->remove_css_class("severity-info");
-    statusZoneWidgets_.bannerBox->remove_css_class("severity-warning");
-    statusZoneWidgets_.bannerBox->remove_css_class("severity-error");
-    
+    statusZoneWidgets_.bannerBox->remove_css_class(css::kSeverityInfo);
+    statusZoneWidgets_.bannerBox->remove_css_class(css::kSeverityWarning);
+    statusZoneWidgets_.bannerBox->remove_css_class(css::kSeverityError);
+
     switch (vm.severity) {
-        case Severity::INFO:
-            statusZoneWidgets_.bannerBox->add_css_class("severity-info");
-            break;
-        case Severity::WARNING:
-            statusZoneWidgets_.bannerBox->add_css_class("severity-warning");
-            break;
-        case Severity::ERROR:
-            statusZoneWidgets_.bannerBox->add_css_class("severity-error");
-            break;
-        default:
-            break;
+        case Severity::INFO:    statusZoneWidgets_.bannerBox->add_css_class(css::kSeverityInfo); break;
+        case Severity::WARNING: statusZoneWidgets_.bannerBox->add_css_class(css::kSeverityWarning); break;
+        case Severity::ERROR:   statusZoneWidgets_.bannerBox->add_css_class(css::kSeverityError); break;
+        default: break;
     }
 }
 

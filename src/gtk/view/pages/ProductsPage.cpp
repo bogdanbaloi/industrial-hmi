@@ -1,10 +1,12 @@
 #include "ProductsPage.h"
 #include "src/gtk/view/DialogManager.h"
 #include "src/gtk/view/ThemeManager.h"
+#include "src/gtk/view/css_classes.h"
 #include "src/config/config_defaults.h"
 #include "src/core/i18n.h"
 #include "src/core/CsvSerializer.h"
 
+#include <format>
 #include <fstream>
 
 namespace app::view {
@@ -116,9 +118,9 @@ void ProductsPage::buildUI() {
         [](const Glib::RefPtr<ProductObject>& p) { return std::to_string(p->getStock()); }));
     columnView_->append_column(makeColumn(_("Quality %"), 100, false,
         [](const Glib::RefPtr<ProductObject>& p) {
-            char buf[16];
-            snprintf(buf, sizeof(buf), "%.1f%%", p->getQualityRate());
-            return Glib::ustring(buf);
+            const float rate = p->getQualityRate();
+            return Glib::ustring(
+                std::vformat("{:.1f}%", std::make_format_args(rate)));
         }));
 
     columnView_->signal_activate().connect(
@@ -379,7 +381,7 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
     codeLabel->set_xalign(0);
     auto* codeDisplay = Gtk::make_managed<Gtk::Label>(product.productCode);
     codeDisplay->set_xalign(0);
-    codeDisplay->add_css_class("dim-label");
+    codeDisplay->add_css_class(css::kDimLabel);
     grid->attach(*codeLabel, 0, 0);
     grid->attach(*codeDisplay, 1, 0);
 

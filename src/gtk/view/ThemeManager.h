@@ -3,6 +3,7 @@
 #include <gtkmm.h>
 #include <string>
 #include "src/config/config_defaults.h"
+#include "src/gtk/view/css_classes.h"
 
 namespace app::view {
 
@@ -71,19 +72,14 @@ public:
     /// Apply current theme CSS class to a dialog window
     void applyToDialog(Gtk::Window* dialog) {
         if (!dialog) return;
-        if (currentTheme_ == Theme::LIGHT) {
-            dialog->add_css_class("light-mode");
-        } else {
-            dialog->add_css_class("dark-mode");
-        }
+        dialog->add_css_class(currentTheme_ == Theme::LIGHT
+                              ? css::kLightMode : css::kDarkMode);
 
         // Custom titlebar that respects our theme
         auto* titlebar = Gtk::make_managed<Gtk::HeaderBar>();
-        if (currentTheme_ == Theme::LIGHT) {
-            titlebar->add_css_class("dialog-titlebar-light");
-        } else {
-            titlebar->add_css_class("dialog-titlebar-dark");
-        }
+        titlebar->add_css_class(currentTheme_ == Theme::LIGHT
+                                ? css::kDialogTitlebarLight
+                                : css::kDialogTitlebarDark);
         dialog->set_titlebar(*titlebar);
     }
 
@@ -120,16 +116,11 @@ private:
             return;
         }
 
-        if (theme == Theme::LIGHT) {
-            mainWindow_->remove_css_class("dark-mode");
-            if (!mainWindow_->has_css_class("light-mode")) {
-                mainWindow_->add_css_class("light-mode");
-            }
-        } else {
-            mainWindow_->remove_css_class("light-mode");
-            if (!mainWindow_->has_css_class("dark-mode")) {
-                mainWindow_->add_css_class("dark-mode");
-            }
+        const auto* adding   = theme == Theme::LIGHT ? css::kLightMode : css::kDarkMode;
+        const auto* removing = theme == Theme::LIGHT ? css::kDarkMode : css::kLightMode;
+        mainWindow_->remove_css_class(removing);
+        if (!mainWindow_->has_css_class(adding)) {
+            mainWindow_->add_css_class(adding);
         }
     }
     
