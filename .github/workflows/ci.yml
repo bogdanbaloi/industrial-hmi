@@ -25,7 +25,8 @@ jobs:
         sudo apt-get install -y \
           build-essential cmake ninja-build \
           libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
-          libgtest-dev libgmock-dev
+          libgtest-dev libgmock-dev \
+          xvfb
 
     - name: Configure
       run: cmake --preset release -DBUILD_TESTS=ON
@@ -35,7 +36,7 @@ jobs:
 
     - name: Test
       working-directory: build/release
-      run: ctest --output-on-failure --no-tests=error
+      run: xvfb-run ctest --output-on-failure --no-tests=error
 
     - name: Verify
       run: test -f build/release/industrial-hmi
@@ -135,7 +136,7 @@ jobs:
           build-essential cmake ninja-build \
           libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
           libgtest-dev libgmock-dev \
-          gcovr
+          gcovr xvfb
 
     # Debug + ENABLE_COVERAGE adds --coverage / -fprofile-arcs / -ftest-coverage
     # to the existing compile and link options. Sanitizers are deliberately
@@ -154,7 +155,7 @@ jobs:
 
     - name: Run tests
       working-directory: build/coverage
-      run: ctest --output-on-failure --no-tests=error
+      run: xvfb-run ctest --output-on-failure --no-tests=error
 
     # Generate report from the .gcda files dropped by the test runs.
     # --filter src/ keeps third-party headers (gtest, gtkmm, boost) and the

@@ -136,10 +136,57 @@ target_link_libraries(test_dashboard_presenter PRIVATE
 
 add_test(NAME DashboardPresenterTest COMMAND test_dashboard_presenter)
 
+# ============================================================================
+# View-layer tests (require GTK initialised via custom main)
+# ============================================================================
+# These binaries use ViewTestMain.cpp instead of gtest_main, because
+# gtk_init() must run before any widget is constructed. On Linux CI the
+# test command is prefixed with xvfb-run (see ci.yml).
+
+set(VIEW_COMMON_LIBS
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsView
+    objectsPresenter
+    objectsModel
+    objectsCore
+    objectsConfig
+    Threads::Threads
+)
+
+# --- View: DashboardPage --------------------------------------------------
+add_executable(test_dashboard_page
+    DashboardPageTest.cpp
+    ViewTestMain.cpp          # custom main with gtk_init()
+)
+target_include_directories(test_dashboard_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_dashboard_page PRIVATE ${VIEW_COMMON_LIBS})
+# Remove gtest_main since we supply our own main()
+target_link_libraries(test_dashboard_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME DashboardPageTest COMMAND test_dashboard_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+# --- View: ProductsPage ---------------------------------------------------
+add_executable(test_products_page
+    ProductsPageTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_products_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_products_page PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_products_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME ProductsPageTest COMMAND test_products_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
 # Boost.Asio on Windows references WSAStartup / WSACleanup from Winsock;
 # every objectsModel-linked target needs ws2_32.
 if(WIN32)
-    target_link_libraries(test_database_manager   PRIVATE ws2_32)
-    target_link_libraries(test_products_presenter PRIVATE ws2_32)
+    target_link_libraries(test_database_manager    PRIVATE ws2_32)
+    target_link_libraries(test_products_presenter  PRIVATE ws2_32)
     target_link_libraries(test_dashboard_presenter PRIVATE ws2_32)
+    target_link_libraries(test_dashboard_page      PRIVATE ws2_32)
+    target_link_libraries(test_products_page       PRIVATE ws2_32)
 endif()

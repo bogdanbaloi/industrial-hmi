@@ -8,6 +8,8 @@
 #include <giomm.h>
 #include <memory>
 
+class ProductsPageTest;  // forward-declare the gtest fixture
+
 namespace app::view {
 
 class DialogManager;
@@ -17,6 +19,7 @@ class DialogManager;
 /// Uses ColumnView + Gio::ListStore + SignalListItemFactory for
 /// efficient rendering - only visible rows have allocated widgets.
 class ProductsPage : public Gtk::Box, public ViewObserver {
+    friend class ::ProductsPageTest;  // test access to private handlers
 public:
     explicit ProductsPage(DialogManager& dialogManager);
     ~ProductsPage() override;

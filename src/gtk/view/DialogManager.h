@@ -40,8 +40,8 @@ public:
     DialogManager(DialogManager&&) = default;
     DialogManager& operator=(DialogManager&&) = default;
     
-    ~DialogManager() = default;
-    
+    virtual ~DialogManager() = default;
+
     /// Dialog types for consistent styling
     enum class Type {
         INFO,       ///< Information message (blue icon)
@@ -49,70 +49,48 @@ public:
         ERROR,      ///< Error message (red icon)
         QUESTION    ///< Question/Confirm (gray icon)
     };
-    
+
     /// Show information dialog
-    /// @param title Dialog title
-    /// @param message Dialog message
-    /// @param parent Parent window (nullptr = find root)
-    void showInfo(const std::string& title, 
-                  const std::string& message,
-                  Gtk::Window* parent = nullptr);
-    
+    virtual void showInfo(const std::string& title,
+                          const std::string& message,
+                          Gtk::Window* parent = nullptr);
+
     /// Show warning dialog
-    /// @param title Dialog title
-    /// @param message Dialog message
-    /// @param parent Parent window (nullptr = find root)
-    void showWarning(const std::string& title,
-                     const std::string& message,
-                     Gtk::Window* parent = nullptr);
-    
+    virtual void showWarning(const std::string& title,
+                             const std::string& message,
+                             Gtk::Window* parent = nullptr);
+
     /// Show error dialog
-    /// @param title Dialog title
-    /// @param message Dialog message
-    /// @param parent Parent window (nullptr = find root)
-    void showError(const std::string& title,
-                   const std::string& message,
-                   Gtk::Window* parent = nullptr);
-    
+    virtual void showError(const std::string& title,
+                           const std::string& message,
+                           Gtk::Window* parent = nullptr);
+
     /// Show confirmation dialog (blocking)
-    /// @param title Dialog title
-    /// @param message Dialog message
-    /// @param parent Parent window (nullptr = find root)
-    /// @return true if user clicked OK/Yes, false if Cancel/No
-    [[nodiscard]] bool showConfirm(const std::string& title,
-                     const std::string& message,
-                     Gtk::Window* parent = nullptr);
-    
+    [[nodiscard]]
+    virtual bool showConfirm(const std::string& title,
+                             const std::string& message,
+                             Gtk::Window* parent = nullptr);
+
     /// Show confirmation dialog (async with callback)
-    /// @param title Dialog title
-    /// @param message Dialog message
-    /// @param callback Called with true if OK, false if Cancel
-    /// @param parent Parent window (nullptr = find root)
-    void showConfirmAsync(const std::string& title,
-                         const std::string& message,
-                         std::function<void(bool)> callback,
-                         Gtk::Window* parent = nullptr);
-    
+    virtual void showConfirmAsync(const std::string& title,
+                                  const std::string& message,
+                                  std::function<void(bool)> callback,
+                                  Gtk::Window* parent = nullptr);
+
     /// Show custom input dialog
-    /// @param title Dialog title
-    /// @param message Dialog prompt message
-    /// @param defaultValue Default input value
-    /// @param parent Parent window (nullptr = find root)
-    /// @return Pair of (ok_clicked, input_value)
-    [[nodiscard]] std::pair<bool, std::string> showInput(const std::string& title,
-                                          const std::string& message,
-                                          const std::string& defaultValue = "",
-                                          Gtk::Window* parent = nullptr);
-    
+    [[nodiscard]]
+    virtual std::pair<bool, std::string> showInput(
+        const std::string& title,
+        const std::string& message,
+        const std::string& defaultValue = "",
+        Gtk::Window* parent = nullptr);
+
     /// Show custom form dialog with multiple fields
-    /// @param title Dialog title
-    /// @param fields Vector of (label, default_value) pairs
-    /// @param parent Parent window (nullptr = find root)
-    /// @return Pair of (ok_clicked, field_values)
-    [[nodiscard]] std::pair<bool, std::vector<std::string>>
-    showForm(const std::string& title,
-             const std::vector<std::pair<std::string, std::string>>& fields,
-             Gtk::Window* parent = nullptr);
+    [[nodiscard]]
+    virtual std::pair<bool, std::vector<std::string>> showForm(
+        const std::string& title,
+        const std::vector<std::pair<std::string, std::string>>& fields,
+        Gtk::Window* parent = nullptr);
 
 private:
     
