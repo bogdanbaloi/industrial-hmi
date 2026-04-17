@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+
+  <!-- Root vertical box - becomes DashboardPage's child -->
+  <object class="GtkBox" id="dashboard_root">
+    <property name="orientation">vertical</property>
+    <property name="spacing">8</property>
+    <property name="margin-start">32</property>
+    <property name="margin-end">32</property>
+    <property name="margin-top">6</property>
+    <property name="margin-bottom">4</property>
+
+    <!-- ============================================================ -->
+    <!-- STATUS ZONE (hidden banner at top)                           -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkBox" id="status_banner">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">10</property>
+        <property name="margin-start">10</property>
+        <property name="margin-end">10</property>
+        <property name="margin-top">10</property>
+        <property name="margin-bottom">10</property>
+        <property name="css-classes">status-banner</property>
+        <property name="visible">false</property>
+        <child>
+          <object class="GtkLabel" id="status_message">
+            <property name="label"></property>
+            <property name="wrap">true</property>
+            <property name="xalign">0</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- WORK UNIT                                                    -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkLabel">
+        <property name="label" translatable="yes">WORK UNIT</property>
+        <property name="xalign">0</property>
+        <property name="css-classes">section-header</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkFrame" id="work_unit_frame">
+        <property name="margin-top">4</property>
+        <property name="margin-bottom">4</property>
+        <property name="css-classes">work-unit-card</property>
+        <property name="vexpand">false</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">15</property>
+            <property name="margin-start">25</property>
+            <property name="margin-end">25</property>
+            <property name="margin-top">25</property>
+            <property name="margin-bottom">25</property>
+
+            <!-- IDs row -->
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">30</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">10</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Work Unit:</property>
+                        <property name="css-classes">field-label</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="wu_id_label">
+                        <property name="label">-</property>
+                        <property name="css-classes">field-value-large</property>
+                        <property name="selectable">true</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">•</property>
+                    <property name="css-classes">separator-dot</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">10</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Product:</property>
+                        <property name="css-classes">field-label</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="wu_product_label">
+                        <property name="label">-</property>
+                        <property name="css-classes">field-value</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- Description -->
+            <child>
+              <object class="GtkLabel" id="wu_desc_label">
+                <property name="label"></property>
+                <property name="wrap">true</property>
+                <property name="xalign">0</property>
+                <property name="css-classes">description-text</property>
+              </object>
+            </child>
+
+            <!-- Progress -->
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">8</property>
+                <property name="margin-top">4</property>
+                <child>
+                  <object class="GtkProgressBar" id="wu_progress">
+                    <property name="show-text">true</property>
+                    <property name="css-classes">progress-bar-large</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="wu_status">
+                    <property name="label" translatable="yes">Ready</property>
+                    <property name="css-classes">status-message</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- EQUIPMENT STATIONS                                           -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkLabel">
+        <property name="label" translatable="yes">EQUIPMENT STATIONS</property>
+        <property name="xalign">0</property>
+        <property name="css-classes">section-header</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkGrid" id="equipment_grid">
+        <property name="margin-top">4</property>
+        <property name="margin-bottom">4</property>
+        <property name="column-spacing">16</property>
+        <property name="column-homogeneous">true</property>
+
+        <!-- A-LINE (column 0) -->
+        <child>
+          <object class="GtkBox" id="eq_card_0">
+            <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
+            <property name="hexpand">true</property>
+            <property name="css-classes">equipment-card</property>
+            <layout><property name="column">0</property><property name="row">0</property></layout>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <child><object class="GtkLabel"><property name="label">A-LINE</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel" id="eq_dot_0"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
+              </object>
+            </child>
+            <child><object class="GtkLabel" id="eq_status_0"><property name="label" translatable="yes">OFFLINE</property><property name="css-classes">equipment-status</property></object></child>
+            <child><object class="GtkLabel" id="eq_info_0"><property name="label">-</property><property name="css-classes">equipment-info</property><property name="ellipsize">end</property></object></child>
+            <child><object class="GtkSwitch" id="eq_switch_0"><property name="halign">center</property><property name="margin-top">10</property></object></child>
+          </object>
+        </child>
+
+        <!-- B-LINE (column 1) -->
+        <child>
+          <object class="GtkBox" id="eq_card_1">
+            <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
+            <property name="hexpand">true</property>
+            <property name="css-classes">equipment-card</property>
+            <layout><property name="column">1</property><property name="row">0</property></layout>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <child><object class="GtkLabel"><property name="label">B-LINE</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel" id="eq_dot_1"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
+              </object>
+            </child>
+            <child><object class="GtkLabel" id="eq_status_1"><property name="label" translatable="yes">OFFLINE</property><property name="css-classes">equipment-status</property></object></child>
+            <child><object class="GtkLabel" id="eq_info_1"><property name="label">-</property><property name="css-classes">equipment-info</property><property name="ellipsize">end</property></object></child>
+            <child><object class="GtkSwitch" id="eq_switch_1"><property name="halign">center</property><property name="margin-top">10</property></object></child>
+          </object>
+        </child>
+
+        <!-- C-LINE (column 2) -->
+        <child>
+          <object class="GtkBox" id="eq_card_2">
+            <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
+            <property name="hexpand">true</property>
+            <property name="css-classes">equipment-card</property>
+            <layout><property name="column">2</property><property name="row">0</property></layout>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <child><object class="GtkLabel"><property name="label">C-LINE</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel" id="eq_dot_2"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
+              </object>
+            </child>
+            <child><object class="GtkLabel" id="eq_status_2"><property name="label" translatable="yes">OFFLINE</property><property name="css-classes">equipment-status</property></object></child>
+            <child><object class="GtkLabel" id="eq_info_2"><property name="label">-</property><property name="css-classes">equipment-info</property><property name="ellipsize">end</property></object></child>
+            <child><object class="GtkSwitch" id="eq_switch_2"><property name="halign">center</property><property name="margin-top">10</property></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- QUALITY CHECKPOINTS                                          -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkLabel">
+        <property name="label" translatable="yes">QUALITY CHECKPOINTS</property>
+        <property name="xalign">0</property>
+        <property name="css-classes">section-header</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkBox" id="quality_box">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">16</property>
+        <property name="margin-top">4</property>
+        <property name="margin-bottom">4</property>
+        <property name="homogeneous">true</property>
+        <property name="vexpand">true</property>
+
+        <!-- Checkpoint 0 -->
+        <child>
+          <object class="GtkBox" id="qc_card_0">
+            <property name="orientation">vertical</property>
+            <property name="spacing">10</property>
+            <property name="css-classes">quality-card</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <child><object class="GtkLabel" id="qc_name_0"><property name="label">Checkpoint 1</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel" id="qc_dot_0"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
+              </object>
+            </child>
+            <!-- Gauge injected here from code -->
+            <child><object class="GtkBox" id="qc_gauge_container_0"><property name="halign">center</property><property name="hexpand">true</property></object></child>
+            <child><object class="GtkLabel" id="qc_rate_0"><property name="label">---%</property><property name="css-classes">pass-rate-large</property></object></child>
+            <child><object class="GtkLabel" id="qc_stats_0"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property></object></child>
+            <child><object class="GtkLabel" id="qc_defect_0"><property name="label">-</property><property name="css-classes">defect-info</property><property name="ellipsize">end</property></object></child>
+            <!-- Trend chart injected here from code -->
+            <child><object class="GtkBox" id="qc_trend_container_0"><property name="vexpand">true</property><property name="hexpand">true</property></object></child>
+          </object>
+        </child>
+
+        <!-- Checkpoint 1 -->
+        <child>
+          <object class="GtkBox" id="qc_card_1">
+            <property name="orientation">vertical</property>
+            <property name="spacing">10</property>
+            <property name="css-classes">quality-card</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <child><object class="GtkLabel" id="qc_name_1"><property name="label">Checkpoint 2</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel" id="qc_dot_1"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
+              </object>
+            </child>
+            <child><object class="GtkBox" id="qc_gauge_container_1"><property name="halign">center</property><property name="hexpand">true</property></object></child>
+            <child><object class="GtkLabel" id="qc_rate_1"><property name="label">---%</property><property name="css-classes">pass-rate-large</property></object></child>
+            <child><object class="GtkLabel" id="qc_stats_1"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property></object></child>
+            <child><object class="GtkLabel" id="qc_defect_1"><property name="label">-</property><property name="css-classes">defect-info</property><property name="ellipsize">end</property></object></child>
+            <child><object class="GtkBox" id="qc_trend_container_1"><property name="vexpand">true</property><property name="hexpand">true</property></object></child>
+          </object>
+        </child>
+
+        <!-- Checkpoint 2 -->
+        <child>
+          <object class="GtkBox" id="qc_card_2">
+            <property name="orientation">vertical</property>
+            <property name="spacing">10</property>
+            <property name="css-classes">quality-card</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <child><object class="GtkLabel" id="qc_name_2"><property name="label">Checkpoint 3</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel" id="qc_dot_2"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
+              </object>
+            </child>
+            <child><object class="GtkBox" id="qc_gauge_container_2"><property name="halign">center</property><property name="hexpand">true</property></object></child>
+            <child><object class="GtkLabel" id="qc_rate_2"><property name="label">---%</property><property name="css-classes">pass-rate-large</property></object></child>
+            <child><object class="GtkLabel" id="qc_stats_2"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property></object></child>
+            <child><object class="GtkLabel" id="qc_defect_2"><property name="label">-</property><property name="css-classes">defect-info</property><property name="ellipsize">end</property></object></child>
+            <child><object class="GtkBox" id="qc_trend_container_2"><property name="vexpand">true</property><property name="hexpand">true</property></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- CONTROL PANEL                                                -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="GtkFrame">
+        <property name="label" translatable="yes">Control Panel</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">15</property>
+            <property name="margin-start">8</property>
+            <property name="margin-end">8</property>
+            <property name="margin-top">8</property>
+            <property name="margin-bottom">8</property>
+            <property name="halign">center</property>
+
+            <child><object class="GtkLabel" id="cp_indicator"><property name="label" translatable="yes">System Idle</property><property name="css-classes">active-indicator</property></object></child>
+            <child><object class="GtkButton" id="cp_start"><property name="label" translatable="yes">START</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
+            <child><object class="GtkButton" id="cp_stop"><property name="label" translatable="yes">STOP</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
+            <child><object class="GtkButton" id="cp_reset"><property name="label" translatable="yes">RESET</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
+            <child><object class="GtkButton" id="cp_calibration"><property name="label" translatable="yes">CALIBRATION</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+  </object>
+</interface>

@@ -17,7 +17,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install Dependencies
       run: |
@@ -51,7 +51,7 @@ jobs:
         tar -czf industrial-hmi-linux.tar.gz -C dist .
 
     - name: Upload
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: industrial-hmi-linux-${{ github.sha }}
         path: industrial-hmi-linux.tar.gz
@@ -81,7 +81,7 @@ jobs:
           mingw-w64-clang-x86_64-gtest
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Configure
       run: cmake --preset windows-msys2-release -DBUILD_TESTS=ON
@@ -102,7 +102,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install Tools
       run: |
@@ -127,7 +127,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install Dependencies
       run: |
@@ -183,7 +183,7 @@ jobs:
         echo '```' >> $GITHUB_STEP_SUMMARY
 
     - name: Upload HTML report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: coverage-html-${{ github.sha }}
         path: coverage/
@@ -195,7 +195,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Verify
       run: |
