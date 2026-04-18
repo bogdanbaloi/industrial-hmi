@@ -5,10 +5,13 @@
 # C++ sources
 src/gtk/view/MainWindow.cpp
 src/gtk/view/DialogManager.cpp
+src/gtk/view/AboutDialog.cpp
 src/gtk/view/pages/DashboardPage.cpp
 src/gtk/view/pages/ProductsPage.cpp
+src/gtk/view/pages/SettingsPage.cpp
 
 # GtkBuilder UI files
 [type: gettext/glade]assets/ui/main-window.ui
 [type: gettext/glade]assets/ui/dashboard-page.ui
 [type: gettext/glade]assets/ui/products-page.ui
+[type: gettext/glade]assets/ui/settings-page.ui

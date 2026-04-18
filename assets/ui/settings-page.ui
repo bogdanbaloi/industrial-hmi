@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+
+  <!--
+    Settings Page - root is a GtkBox.
+    SettingsPage.cpp loads this file, grabs widget refs by id, and wires
+    them to ConfigManager + Application services. Listed controls cover:
+      - General: Language, Theme
+      - Display: Fullscreen / Windowed
+      - Data:    Auto Refresh + Refresh Interval
+      - Logging: Log Level + Verbose Logging (log panel toggle)
+  -->
+  <object class="GtkScrolledWindow" id="settings_root">
+    <property name="hexpand">true</property>
+    <property name="vexpand">true</property>
+    <property name="hscrollbar-policy">never</property>
+
+    <child>
+      <object class="GtkBox" id="settings_content">
+        <property name="orientation">vertical</property>
+        <property name="spacing">24</property>
+        <property name="margin-top">32</property>
+        <property name="margin-bottom">32</property>
+        <property name="margin-start">32</property>
+        <property name="margin-end">32</property>
+        <property name="halign">center</property>
+        <property name="width-request">640</property>
+
+        <child>
+          <object class="GtkLabel" id="settings_title">
+            <property name="label" translatable="yes">Settings</property>
+            <property name="xalign">0</property>
+            <property name="css-classes">section-header</property>
+          </object>
+        </child>
+
+        <!-- ================= General ================= -->
+        <child>
+          <object class="GtkFrame">
+            <property name="label" translatable="yes">General</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">12</property>
+                <property name="margin-start">16</property>
+                <property name="margin-end">16</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Language:</property>
+                        <property name="xalign">0</property>
+                        <property name="width-chars">18</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="settings_language_combo">
+                        <property name="hexpand">true</property>
+                        <items>
+                          <item id="auto" translatable="yes">Auto (System)</item>
+                          <item id="en">English</item>
+                          <item id="de">Deutsch</item>
+                          <item id="es">Español</item>
+                          <item id="es_MX">Español (México)</item>
+                          <item id="fi">Suomi</item>
+                          <item id="fr">Français</item>
+                          <item id="ga">Gaeilge</item>
+                          <item id="it">Italiano</item>
+                          <item id="pt">Português</item>
+                          <item id="pt_BR">Português (Brasil)</item>
+                          <item id="sv">Svenska</item>
+                        </items>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Theme:</property>
+                        <property name="xalign">0</property>
+                        <property name="width-chars">18</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">16</property>
+                        <child>
+                          <object class="GtkCheckButton" id="settings_radio_dark">
+                            <property name="label" translatable="yes">Dark</property>
+                            <property name="active">true</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkCheckButton" id="settings_radio_light">
+                            <property name="label" translatable="yes">Light</property>
+                            <property name="group">settings_radio_dark</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- ================= Display ================= -->
+        <child>
+          <object class="GtkFrame">
+            <property name="label" translatable="yes">Display</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">12</property>
+                <property name="margin-start">16</property>
+                <property name="margin-end">16</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Display mode:</property>
+                        <property name="xalign">0</property>
+                        <property name="width-chars">18</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">16</property>
+                        <child>
+                          <object class="GtkCheckButton" id="settings_radio_fullscreen">
+                            <property name="label" translatable="yes">Fullscreen</property>
+                            <property name="active">true</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkCheckButton" id="settings_radio_windowed">
+                            <property name="label" translatable="yes">Windowed</property>
+                            <property name="group">settings_radio_fullscreen</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- ================= Data ================= -->
+        <child>
+          <object class="GtkFrame">
+            <property name="label" translatable="yes">Data</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">12</property>
+                <property name="margin-start">16</property>
+                <property name="margin-end">16</property>
+
+                <child>
+                  <object class="GtkCheckButton" id="settings_check_auto_refresh">
+                    <property name="label" translatable="yes">Auto refresh simulation</property>
+                    <property name="active">true</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Refresh interval (ms):</property>
+                        <property name="xalign">0</property>
+                        <property name="width-chars">22</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSpinButton" id="settings_interval_spin">
+                        <property name="hexpand">true</property>
+                        <property name="numeric">true</property>
+                        <property name="snap-to-ticks">true</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- ================= Logging ================= -->
+        <child>
+          <object class="GtkFrame">
+            <property name="label" translatable="yes">Logging</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">12</property>
+                <property name="margin-start">16</property>
+                <property name="margin-end">16</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Log level:</property>
+                        <property name="xalign">0</property>
+                        <property name="width-chars">18</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="settings_loglevel_combo">
+                        <property name="hexpand">true</property>
+                        <items>
+                          <item id="TRACE">TRACE</item>
+                          <item id="DEBUG">DEBUG</item>
+                          <item id="INFO">INFO</item>
+                          <item id="WARN">WARN</item>
+                          <item id="ERROR">ERROR</item>
+                          <item id="CRITICAL">CRITICAL</item>
+                        </items>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkCheckButton" id="settings_check_show_logs">
+                    <property name="label" translatable="yes">Show log panel at the bottom of the window</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+      </object>
+    </child>
+  </object>
+</interface>

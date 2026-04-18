@@ -96,6 +96,15 @@ void Application::shutdown() {
 }
 
 Logger& Application::logger() {
+    // Tests instantiate Presenters directly without ever calling
+    // Application::initialize(). Those Presenters now emit debug/trace
+    // messages during normal flow — if `logger_` is null we'd crash on
+    // the first log call. Fall back to a lazy-constructed NullLogger so
+    // unit tests stay hermetic.
+    if (!logger_) {
+        static Logger nullLogger{std::make_unique<NullLogger>()};
+        return nullLogger;
+    }
     return *logger_;
 }
 

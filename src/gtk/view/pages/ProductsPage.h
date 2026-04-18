@@ -1,5 +1,6 @@
 #pragma once
 
+#include "src/gtk/view/pages/Page.h"
 #include "src/presenter/ViewObserver.h"
 #include "src/presenter/ProductsPresenter.h"
 #include "src/model/DatabaseManager.h"
@@ -18,13 +19,16 @@ class DialogManager;
 ///
 /// Uses ColumnView + Gio::ListStore + SignalListItemFactory for
 /// efficient rendering - only visible rows have allocated widgets.
-class ProductsPage : public Gtk::Box, public ViewObserver {
+class ProductsPage : public Page, public ViewObserver {
     friend class ::ProductsPageTest;  // test access to private handlers
 public:
     explicit ProductsPage(DialogManager& dialogManager);
     ~ProductsPage() override;
 
     void initialize(std::shared_ptr<ProductsPresenter> presenter);
+
+    // Page overrides
+    [[nodiscard]] Glib::ustring pageTitle() const override;
 
     // ViewObserver interface
     void onProductsLoaded(const presenter::ProductsViewModel& vm) override;
@@ -68,8 +72,6 @@ private:
     Glib::RefPtr<Gio::ListStore<ProductObject>> listStore_;
     Glib::RefPtr<Gtk::SingleSelection> selectionModel_;
 
-    // Injected dependencies
-    DialogManager& dialogManager_;
     std::shared_ptr<ProductsPresenter> presenter_;
 
     // CSS

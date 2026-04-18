@@ -2,6 +2,7 @@
 
 #include "src/model/ProductionModel.h"
 #include "src/model/ProductionTypes.h"
+#include "src/core/Application.h"
 
 #include <string>
 #include <functional>
@@ -64,19 +65,43 @@ public:
         stateCallbacks_.push_back(cb);
     }
 
+    /// Drop every subscription. Used by MainWindow during a language
+    /// rebuild: after this returns, no callback references an old (about
+    /// to be destroyed) presenter, so rebuilding the page + presenter
+    /// graph does not leave dangling lambdas behind.
+    void clearCallbacks() {
+        const std::scoped_lock lock(mutex_);
+        app::core::Application::instance().logger().debug(
+            "Model: clearing callbacks (eq={}, act={}, qc={}, wu={}, st={})",
+            equipmentCallbacks_.size(), actuatorCallbacks_.size(),
+            qualityCallbacks_.size(), workUnitCallbacks_.size(),
+            stateCallbacks_.size());
+        equipmentCallbacks_.clear();
+        actuatorCallbacks_.clear();
+        qualityCallbacks_.clear();
+        workUnitCallbacks_.clear();
+        stateCallbacks_.clear();
+    }
+
     // User commands
     void startProduction() override {
+        app::core::Application::instance().logger().info(
+            "Model: state IDLE -> RUNNING (production started)");
         currentState_ = SystemState::RUNNING;
         notifyStateChange();
         simulateProductionCycle();
     }
 
     void stopProduction() override {
+        app::core::Application::instance().logger().info(
+            "Model: state -> IDLE (production stopped)");
         currentState_ = SystemState::IDLE;
         notifyStateChange();
     }
 
     void resetSystem() override {
+        app::core::Application::instance().logger().info(
+            "Model: reset system - clearing work unit progress");
         currentState_ = SystemState::IDLE;
         currentWorkUnit_.completedOperations = 0;
         notifyStateChange();
@@ -84,17 +109,24 @@ public:
     }
 
     void startCalibration() override {
+        app::core::Application::instance().logger().info(
+            "Model: state -> CALIBRATION");
         currentState_ = SystemState::CALIBRATION;
         notifyStateChange();
     }
 
     void setEquipmentEnabled(uint32_t equipmentId, bool enabled) override {
-        // Simulate enable/disable
-        if (equipmentId < kEquipmentCount) {
-            equipmentStatuses_[equipmentId].status =
-                enabled ? kEquipmentStatusOnline : kEquipmentStatusOffline;
-            notifyEquipmentChange(equipmentId);
+        auto& logger = app::core::Application::instance().logger();
+        if (equipmentId >= kEquipmentCount) {
+            logger.warn("Model: setEquipmentEnabled out of range (id={}, max={})",
+                        equipmentId, kEquipmentCount);
+            return;
         }
+        logger.debug("Model: equipment {} -> {}",
+                     equipmentId, enabled ? "online" : "offline");
+        equipmentStatuses_[equipmentId].status =
+            enabled ? kEquipmentStatusOnline : kEquipmentStatusOffline;
+        notifyEquipmentChange(equipmentId);
     }
 
     [[nodiscard]] SystemState getState() const override { return currentState_; }
@@ -107,6 +139,7 @@ public:
 
     /// Advance simulation by one tick (called by auto refresh timer)
     void tickSimulation() {
+        app::core::Application::instance().logger().trace("Model: simulation tick");
         {
             const std::scoped_lock lock(mutex_);
             std::uniform_real_distribution<float> rateDist(-kQualityRateJitter, kQualityRateJitter);
@@ -158,6 +191,8 @@ public:
     // not behavior — suppress magic-number lint for this block.
     // NOLINTBEGIN(readability-magic-numbers,cppcoreguidelines-avoid-magic-numbers)
     void initializeDemoData() {
+        app::core::Application::instance().logger().info(
+            "Model: initializing demo data (3 equipment lines, 3 quality checkpoints)");
         // Equipment statuses (3 lines: A-LINE, B-LINE, C-LINE)
         equipmentStatuses_[0] = {0, 2, 85, "85K tablets/hr"};  // A-LINE (Processing)
         equipmentStatuses_[1] = {1, 1, 95, "Film coating"};     // B-LINE (Online)

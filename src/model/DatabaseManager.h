@@ -130,64 +130,82 @@ public:
     }
     
     /// Add new product
-    bool addProduct(const std::string& productCode, const std::string& name, 
+    bool addProduct(const std::string& productCode, const std::string& name,
                     const std::string& status, int stock, float qualityRate) {
+        if (logger_) {
+            logger_->trace("DB: addProduct(code={}, name={})", productCode, name);
+        }
         const char* sql = "INSERT INTO products (product_code, name, status, stock, quality_rate) "
                          "VALUES (?, ?, ?, ?, ?)";
-        
+
         sqlite3_stmt* stmt;
         bool success = false;
-        
+
         if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
             sqlite3_bind_text(stmt, 1, productCode.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_text(stmt, 2, name.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_text(stmt, 3, status.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_int(stmt, 4, stock);
             sqlite3_bind_double(stmt, 5, qualityRate);
-            
+
             success = (sqlite3_step(stmt) == SQLITE_DONE);
             sqlite3_finalize(stmt);
+        } else if (logger_) {
+            logger_->error("DB: prepare INSERT failed: {}", sqlite3_errmsg(db_));
         }
-        
+
+        if (logger_ && !success) {
+            logger_->warn("DB: addProduct failed for code={} (likely duplicate)", productCode);
+        }
         return success;
     }
-    
+
     /// Soft delete product (set deleted_at timestamp)
     bool deleteProduct(int id) {
+        if (logger_) {
+            logger_->trace("DB: deleteProduct(id={})", id);
+        }
         const char* sql = "UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?";
-        
+
         sqlite3_stmt* stmt;
         bool success = false;
-        
+
         if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
             sqlite3_bind_int(stmt, 1, id);
             success = (sqlite3_step(stmt) == SQLITE_DONE);
             sqlite3_finalize(stmt);
+        } else if (logger_) {
+            logger_->error("DB: prepare DELETE failed: {}", sqlite3_errmsg(db_));
         }
-        
+
         return success;
     }
-    
+
     /// Update product
-    bool updateProduct(int id, const std::string& name, const std::string& status, 
+    bool updateProduct(int id, const std::string& name, const std::string& status,
                       int stock, float qualityRate) {
+        if (logger_) {
+            logger_->trace("DB: updateProduct(id={})", id);
+        }
         const char* sql = "UPDATE products SET name = ?, status = ?, stock = ?, quality_rate = ? "
                          "WHERE id = ? AND deleted_at IS NULL";
-        
+
         sqlite3_stmt* stmt;
         bool success = false;
-        
+
         if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
             sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_text(stmt, 2, status.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_int(stmt, 3, stock);
             sqlite3_bind_double(stmt, 4, qualityRate);
             sqlite3_bind_int(stmt, 5, id);
-            
+
             success = (sqlite3_step(stmt) == SQLITE_DONE);
             sqlite3_finalize(stmt);
+        } else if (logger_) {
+            logger_->error("DB: prepare UPDATE failed: {}", sqlite3_errmsg(db_));
         }
-        
+
         return success;
     }
     

@@ -1,8 +1,15 @@
 #include "DashboardPresenter.h"
 #include "src/model/SimulatedModel.h"
 #include "src/config/config_defaults.h"
+#include "src/core/Application.h"
 
 namespace app {
+
+namespace {
+inline app::core::Logger& log() {
+    return app::core::Application::instance().logger();
+}
+}  // namespace
 
 DashboardPresenter::DashboardPresenter()
     : DashboardPresenter(model::SimulatedModel::instance()) {}
@@ -11,6 +18,8 @@ DashboardPresenter::DashboardPresenter(model::ProductionModel& model)
     : model_(model) {}
 
 void DashboardPresenter::initialize() {
+    log().info("DashboardPresenter initializing - subscribing to model signals");
+
     // Subscribe to Model signals
     model_.onEquipmentStatusChanged([this](const model::EquipmentStatus& status) {
         handleEquipmentStatusUpdate(status.equipmentId, status.status);
@@ -35,47 +44,58 @@ void DashboardPresenter::initialize() {
 
 // User action handlers
 void DashboardPresenter::onStartClicked() {
+    log().info("User action: Start production");
     model_.startProduction();
 }
 
 void DashboardPresenter::onStopClicked() {
+    log().info("User action: Stop production");
     model_.stopProduction();
 }
 
 void DashboardPresenter::onResetRestartClicked() {
+    log().info("User action: Reset system");
     model_.resetSystem();
 }
 
 void DashboardPresenter::onCalibrationClicked() {
+    log().info("User action: Start calibration");
     model_.startCalibration();
 }
 
 void DashboardPresenter::onEquipmentToggled(uint32_t equipmentId, bool enabled) {
+    log().info("User action: Equipment {} toggled -> {}",
+               equipmentId, enabled ? "enabled" : "disabled");
     model_.setEquipmentEnabled(equipmentId, enabled);
 }
 
 // Model signal handlers
 void DashboardPresenter::handleNewWorkUnit(const std::string& workUnitId) {
+    log().trace("Model event: work unit changed ({})", workUnitId);
     auto vm = buildWorkUnitVM(workUnitId);
     notifyWorkUnitChanged(vm);
 }
 
 void DashboardPresenter::handleEquipmentStatusUpdate(uint32_t equipmentId, int status) {
+    log().trace("Model event: equipment {} status -> {}", equipmentId, status);
     auto vm = buildEquipmentVM(equipmentId, status);
     notifyEquipmentCardChanged(vm);
 }
 
 void DashboardPresenter::handleActuatorStatusUpdate(uint32_t actuatorId, int status) {
+    log().trace("Model event: actuator {} status -> {}", actuatorId, status);
     auto vm = buildActuatorVM(actuatorId, status);
     notifyActuatorCardChanged(vm);
 }
 
 void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, int status) {
+    log().trace("Model event: quality checkpoint {} status -> {}", checkpointId, status);
     auto vm = buildQualityCheckpointVM(checkpointId, status);
     notifyQualityCheckpointChanged(vm);
 }
 
 void DashboardPresenter::handleSystemStateChanged(int newState) {
+    log().debug("Model event: system state -> {}", newState);
     auto vm = buildControlPanelVM();
     notifyControlPanelChanged(vm);
 }
@@ -176,12 +196,21 @@ presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpoint
     vm.targetPassRate = config::defaults::kQualityPassThreshold;
     vm.lastDefect = cp.lastDefect;
 
-    if (cp.passRate >= config::defaults::kQualityPassThreshold)
+    // The quality enum is recomputed on every tick, so WARN/ERROR here
+    // would flood the log while a checkpoint stays below threshold. Keep
+    // these as TRACE; the Alert panel is the right surface for
+    // persistently-critical states.
+    if (cp.passRate >= config::defaults::kQualityPassThreshold) {
         vm.status = presenter::QualityCheckpointStatus::Passing;
-    else if (cp.passRate >= config::defaults::kQualityWarningThreshold)
+    } else if (cp.passRate >= config::defaults::kQualityWarningThreshold) {
         vm.status = presenter::QualityCheckpointStatus::Warning;
-    else
+        log().trace("Quality checkpoint {} ({}) WARNING: {:.1f}%",
+                    checkpointId, cp.name, cp.passRate);
+    } else {
         vm.status = presenter::QualityCheckpointStatus::Critical;
+        log().trace("Quality checkpoint {} ({}) CRITICAL: {:.1f}%",
+                    checkpointId, cp.name, cp.passRate);
+    }
 
     return vm;
 }

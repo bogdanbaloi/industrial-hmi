@@ -296,6 +296,7 @@ private:
  * Parse log level from string (case-sensitive)
  */
 inline LogLevel parseLogLevel(std::string_view str) {
+    if (str == "TRACE") return LogLevel::TRACE;
     if (str == "DEBUG") return LogLevel::DEBUG;
     if (str == "WARN") return LogLevel::WARN;
     if (str == "ERROR") return LogLevel::ERROR;

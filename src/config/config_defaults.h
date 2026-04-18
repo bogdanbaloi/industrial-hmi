@@ -21,6 +21,11 @@ constexpr const char* kDefaultTheme = "dark";
 // otherwise: one of the LINGUAS codes (en, de, es, fi, fr, ga, it, pt, sv)
 constexpr const char* kDefaultLanguage = "auto";
 
+// Directory (relative to binary cwd) containing compiled gettext catalogs:
+// <kLocaleDir>/<lang>/LC_MESSAGES/industrial-hmi.mo. Used by initI18n at
+// startup and again by MainWindow::rebuildPages during live reload.
+constexpr const char* kLocaleDir = "locale";
+
 // Dialogs
 constexpr const char* kDialogTitle = "Dialog";
 constexpr const char* kDialogIcon = "dialog-information";
@@ -58,6 +63,7 @@ constexpr const char* kGtkAppId = "com.portfolio.industrial-hmi";
 constexpr const char* kMainWindowUI    = "assets/ui/main-window.ui";
 constexpr const char* kDashboardPageUI = "assets/ui/dashboard-page.ui";
 constexpr const char* kProductsPageUI  = "assets/ui/products-page.ui";
+constexpr const char* kSettingsPageUI  = "assets/ui/settings-page.ui";
 
 // CSS stylesheets
 constexpr const char* kThemeCSS     = "assets/styles/adwaita-theme.css";

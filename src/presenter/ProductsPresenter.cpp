@@ -1,8 +1,15 @@
 #include "ProductsPresenter.h"
 #include "src/model/DatabaseManager.h"
 #include "src/config/config_defaults.h"
+#include "src/core/Application.h"
 
 namespace app {
+
+namespace {
+inline app::core::Logger& log() {
+    return app::core::Application::instance().logger();
+}
+}  // namespace
 
 ProductsPresenter::ProductsPresenter()
     : ProductsPresenter(model::DatabaseManager::instance()) {}
@@ -11,23 +18,26 @@ ProductsPresenter::ProductsPresenter(model::ProductsRepository& repository)
     : repository_(repository) {}
 
 void ProductsPresenter::initialize() {
-    // Load initial products list
+    log().info("ProductsPresenter initializing - loading initial products");
     loadProducts();
 }
 
 void ProductsPresenter::loadProducts() {
+    log().debug("Loading all products (no search filter)");
     currentSearchQuery_.clear();
     auto vm = buildProductsViewModel();
     notifyProductsLoaded(vm);
 }
 
 void ProductsPresenter::searchProducts(const std::string& query) {
+    log().debug("Search products: query=\"{}\"", query);
     currentSearchQuery_ = query;
     auto vm = buildProductsViewModel();
     notifyProductsLoaded(vm);
 }
 
 void ProductsPresenter::viewProduct(int productId) {
+    log().debug("View product requested: id={}", productId);
     auto vm = buildProductDetailViewModel(productId);
     notifyViewProductReady(vm);
 }
@@ -57,6 +67,8 @@ presenter::ProductsViewModel ProductsPresenter::buildProductsViewModel() {
         vm.products.push_back(item);
     }
 
+    log().trace("Built ProductsViewModel with {} rows (query=\"{}\")",
+                vm.products.size(), currentSearchQuery_);
     return vm;
 }
 
@@ -88,33 +100,35 @@ presenter::ViewProductDialogViewModel ProductsPresenter::buildProductDetailViewM
 void ProductsPresenter::addProduct(const std::string& productCode, const std::string& name,
                                    const std::string& status, int stock, float qualityRate,
                                    std::function<void(bool)> callback) {
+    log().info("Add product requested: code={}, name={}, stock={}, quality={:.1f}%",
+               productCode, name, stock, qualityRate);
     auto& db = model::DatabaseManager::instance();
-    
+
     // ASYNC - non-blocking database operation
-    db.addProductAsync(productCode, name, status, stock, qualityRate, [this, callback](bool success) {
-        // This callback runs on GTK main thread (thanks to Glib::signal_idle)
+    db.addProductAsync(productCode, name, status, stock, qualityRate,
+                       [this, productCode, callback](bool success) {
         if (success) {
-            // Reload products list to show new product
+            log().info("Add product succeeded: code={}", productCode);
             loadProducts();
+        } else {
+            log().warn("Add product failed (likely duplicate code): {}", productCode);
         }
-        
-        // Notify caller of result
         callback(success);
     });
 }
 
 void ProductsPresenter::deleteProduct(int productId, std::function<void(bool)> callback) {
+    log().info("Delete product requested: id={}", productId);
     auto& db = model::DatabaseManager::instance();
-    
+
     // ASYNC - non-blocking soft delete
-    db.deleteProductAsync(productId, [this, callback](bool success) {
-        // This callback runs on GTK main thread
+    db.deleteProductAsync(productId, [this, productId, callback](bool success) {
         if (success) {
-            // Reload products list (deleted product won't appear)
+            log().info("Delete product succeeded: id={}", productId);
             loadProducts();
+        } else {
+            log().warn("Delete product failed: id={}", productId);
         }
-        
-        // Notify caller of result
         callback(success);
     });
 }
@@ -122,17 +136,19 @@ void ProductsPresenter::deleteProduct(int productId, std::function<void(bool)> c
 void ProductsPresenter::updateProduct(int productId, const std::string& name,
                                      const std::string& status, int stock, float qualityRate,
                                      std::function<void(bool)> callback) {
+    log().info("Update product requested: id={}, name={}, stock={}, quality={:.1f}%",
+               productId, name, stock, qualityRate);
     auto& db = model::DatabaseManager::instance();
-    
+
     // ASYNC - non-blocking update
-    db.updateProductAsync(productId, name, status, stock, qualityRate, [this, callback](bool success) {
-        // This callback runs on GTK main thread
+    db.updateProductAsync(productId, name, status, stock, qualityRate,
+                          [this, productId, callback](bool success) {
         if (success) {
-            // Reload products list to show updated data
+            log().info("Update product succeeded: id={}", productId);
             loadProducts();
+        } else {
+            log().warn("Update product failed: id={}", productId);
         }
-        
-        // Notify caller of result
         callback(success);
     });
 }
@@ -143,17 +159,21 @@ model::DatabaseManager::Product ProductsPresenter::getProduct(int productId) {
 
 void ProductsPresenter::exportProducts(
         std::function<void(std::vector<model::Product>)> callback) {
+    log().info("Export products requested");
     auto& db = model::DatabaseManager::instance();
     db.getAllProductsAsync(std::move(callback));
 }
 
 void ProductsPresenter::notifyProductsLoaded(const presenter::ProductsViewModel& vm) {
+    log().trace("Notifying {} observers of ProductsViewModel ({} products)",
+                /*cnt*/ 0, vm.products.size());
     notifyAll([&vm](ViewObserver* obs) {
         obs->onProductsLoaded(vm);
     });
 }
 
 void ProductsPresenter::notifyViewProductReady(const presenter::ViewProductDialogViewModel& vm) {
+    log().trace("Notifying observers of ViewProductDialogViewModel ({})", vm.productId);
     notifyAll([&vm](ViewObserver* obs) {
         obs->onViewProductReady(vm);
     });

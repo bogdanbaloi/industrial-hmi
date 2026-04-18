@@ -14,8 +14,23 @@ namespace app::core {
 
 /**
  * Log Levels
+ *
+ * Ordered from most verbose to most severe. Setting the logger to LEVEL
+ * suppresses every message with severity below LEVEL.
+ *
+ * Convention in this codebase:
+ *   TRACE    - per-callback / per-signal / per-VM-build firehose. Used
+ *              to follow the MVP event chain end-to-end during debugging.
+ *   DEBUG    - developer-oriented details: user actions, VM snapshots,
+ *              internal state transitions worth seeing when diagnosing.
+ *   INFO     - production-worthy lifecycle events: init / shutdown,
+ *              explicit user commands (Start / Stop), config changes.
+ *   WARN     - recoverable anomalies; code took a fallback path.
+ *   ERROR    - user-visible failures; an operation did not complete.
+ *   CRITICAL - programmer errors or corruption; investigate immediately.
  */
 enum class LogLevel {
+    TRACE,
     DEBUG,
     INFO,
     WARN,
@@ -105,13 +120,18 @@ public:
     void debug(std::format_string<Args...> fmt, Args&&... args,
               const std::source_location& loc = std::source_location::current()) {
         if (!impl_->isEnabled(LogLevel::DEBUG)) return;
-        
+
         // std::vformat - non-template, no code bloat!
         auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
         impl_->log(LogLevel::DEBUG, msg, loc);
     }
-    
+
     // Public API - source_location captured automatically
+    template<typename... Args>
+    void trace(std::format_string<Args...> fmt, Args&&... args) {
+        traceImpl(std::source_location::current(), fmt, std::forward<Args>(args)...);
+    }
+
     template<typename... Args>
     void info(std::format_string<Args...> fmt, Args&&... args) {
         infoImpl(std::source_location::current(), fmt, std::forward<Args>(args)...);
@@ -139,6 +159,13 @@ public:
 
 private:
     // Implementation - source_location as first parameter
+    template<typename... Args>
+    void traceImpl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
+        if (!impl_->isEnabled(LogLevel::TRACE)) return;
+        auto msg = std::vformat(fmt.get(), std::make_format_args(args...));
+        impl_->log(LogLevel::TRACE, msg, loc);
+    }
+
     template<typename... Args>
     void infoImpl(const std::source_location& loc, std::format_string<Args...> fmt, Args&&... args) {
         if (!impl_->isEnabled(LogLevel::INFO)) return;
@@ -176,6 +203,7 @@ private:
  */
 inline const char* levelToString(LogLevel level) {
     switch (level) {
+        case LogLevel::TRACE:    return "TRACE";
         case LogLevel::DEBUG:    return "DEBUG";
         case LogLevel::INFO:     return "INFO";
         case LogLevel::WARN:     return "WARN";

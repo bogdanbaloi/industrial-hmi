@@ -1,9 +1,11 @@
 #pragma once
 
 #include "ViewObserver.h"
+#include "src/core/Application.h"
 #include <vector>
 #include <algorithm>
 #include <mutex>
+#include <typeinfo>
 
 namespace app {
 
@@ -75,13 +77,20 @@ public:
     virtual void addObserver(ViewObserver* observer) {
         if (!observer) return;
 
-        const std::scoped_lock lock(observersMutex_);
+        std::size_t count = 0;
+        {
+            const std::scoped_lock lock(observersMutex_);
 
-        // Avoid duplicate registration
-        auto it = std::find(observers_.begin(), observers_.end(), observer);
-        if (it == observers_.end()) {
-            observers_.push_back(observer);
+            // Avoid duplicate registration
+            auto it = std::find(observers_.begin(), observers_.end(), observer);
+            if (it == observers_.end()) {
+                observers_.push_back(observer);
+            }
+            count = observers_.size();
         }
+        app::core::Application::instance().logger().debug(
+            "Presenter ({}): observer added (total: {})",
+            typeid(*this).name(), count);
     }
 
     /// Unregister an observer
@@ -91,12 +100,19 @@ public:
     virtual void removeObserver(ViewObserver* observer) {
         if (!observer) return;
 
-        const std::scoped_lock lock(observersMutex_);
+        std::size_t count = 0;
+        {
+            const std::scoped_lock lock(observersMutex_);
 
-        auto it = std::find(observers_.begin(), observers_.end(), observer);
-        if (it != observers_.end()) {
-            observers_.erase(it);
+            auto it = std::find(observers_.begin(), observers_.end(), observer);
+            if (it != observers_.end()) {
+                observers_.erase(it);
+            }
+            count = observers_.size();
         }
+        app::core::Application::instance().logger().debug(
+            "Presenter ({}): observer removed (total: {})",
+            typeid(*this).name(), count);
     }
 
 protected:

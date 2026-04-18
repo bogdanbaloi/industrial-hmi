@@ -6,6 +6,14 @@
 #include <string>
 #include <libintl.h>
 
+// GNU gettext exports this counter; every translation lookup checks it and
+// re-reads the catalog when it changes. Bumping it after re-binding the
+// domain is the standard way to force a live language switch — without it,
+// the first `_()` call caches the old locale and later calls keep returning
+// stale strings even after bindtextdomain/textdomain are invoked again.
+// Available on glibc and on MSYS2's libintl-8 runtime.
+extern "C" int _nl_msg_cat_cntr;
+
 namespace app::core {
 
 namespace {
@@ -62,6 +70,10 @@ void initI18n(const char* localeDir, const char* language) {
     bindtextdomain(GETTEXT_PACKAGE, localeDir);
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
     textdomain(GETTEXT_PACKAGE);
+
+    // Invalidate libintl's per-domain cache so the next _() picks up the
+    // new language. Harmless on first call (it just bumps from 0 to 1).
+    ++_nl_msg_cat_cntr;
 }
 
 }  // namespace app::core
