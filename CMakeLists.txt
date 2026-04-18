@@ -395,6 +395,10 @@ add_custom_target(CopyAssets ALL
 )
 
 add_custom_target(CopyConfig ALL
+    # Nuke the runtime copy first so user-modified fields (e.g. the
+    # last language chosen in Settings) don't survive a rebuild —
+    # every build starts clean from the pristine source config.
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/config
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/config
         ${CMAKE_BINARY_DIR}/config
