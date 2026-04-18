@@ -150,3 +150,56 @@ window.light-mode .sidebar-close-app:hover {
     color: #ffffff;
     border-color: #ea4335;
 }
+
+/* ============================================================
+   Alerts panel (sidebar)
+   ============================================================ */
+
+.alerts-panel {
+    color: #CFD8DC;
+}
+
+.alert-card {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border-left: 3px solid #64B5F6;
+}
+
+.alert-card.alert-info {
+    border-left-color: #64B5F6;
+}
+
+.alert-card.alert-warning {
+    border-left-color: #FFB300;
+    background-color: rgba(255, 179, 0, 0.08);
+}
+
+.alert-card.alert-critical {
+    border-left-color: #EF5350;
+    background-color: rgba(239, 83, 80, 0.10);
+}
+
+.alert-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ECEFF1;
+}
+
+.alert-message {
+    font-size: 11px;
+    color: #B0BEC5;
+}
+
+.alert-timestamp {
+    font-size: 10px;
+}
+
+/* Light-mode variants */
+window.light-mode .alert-card {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+window.light-mode .alert-title    { color: #263238; }
+window.light-mode .alert-message  { color: #455A64; }
+window.light-mode .alert-card.alert-warning  { background-color: rgba(255, 179, 0, 0.12); }
+window.light-mode .alert-card.alert-critical { background-color: rgba(239, 83, 80, 0.14); }

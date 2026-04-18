@@ -12,12 +12,17 @@ namespace app {
     class DashboardPresenter;
     class ProductsPresenter;
 
+    namespace presenter {
+        class AlertCenter;
+    }
+
     namespace view {
         class Page;
         class DashboardPage;
         class ProductsPage;
         class SettingsPage;
         class DialogManager;
+        class AlertsPanel;
     }
 
     namespace core {
@@ -76,6 +81,7 @@ private:
     sigc::connection logRefreshConnection_;
     std::size_t      lastLogSize_{0};
     Gtk::Notebook*   mainNotebook_    = nullptr;
+    Gtk::Box*        alertsContainer_ = nullptr;
 
     // Sidebar labels/buttons that carry translatable text. Kept as
     // members so `rebuildPages()` can reassign the text via `_()` after
@@ -105,6 +111,11 @@ private:
     app::view::ProductsPage*                 productsPage_  = nullptr;
 
     app::view::SettingsPage*                 settingsPage_  = nullptr;
+
+    // Sidebar Alert center + view — owned by the window, shared with
+    // DashboardPresenter which raises/clears alerts on state transitions.
+    std::unique_ptr<app::presenter::AlertCenter> alertCenter_;
+    app::view::AlertsPanel*                      alertsPanel_ = nullptr;
 };
 
 #endif  // MAIN_WINDOW_H

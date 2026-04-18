@@ -394,3 +394,13 @@ msgstr "Lokitaso:"
 
 msgid "Show log panel at the bottom of the window"
 msgstr "Näytä lokipaneeli ikkunan alareunassa"
+
+
+msgid "Alerts"
+msgstr "Hälytykset"
+
+msgid "Clear all"
+msgstr "Tyhjennä kaikki"
+
+msgid "No alerts"
+msgstr "Ei hälytyksiä"

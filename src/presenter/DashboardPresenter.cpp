@@ -118,6 +118,25 @@ void DashboardPresenter::handleEquipmentStatusUpdate(uint32_t equipmentId, int s
            equipmentId, equipmentStatusName(status));
     auto vm = buildEquipmentVM(equipmentId, status);
     notifyEquipmentCardChanged(vm);
+
+    // Raise/clear a sidebar alert for this equipment. Keyed by id so
+    // repeated updates stay at one row in the Alerts panel.
+    if (alertCenter_) {
+        const auto key = std::string("equipment-") + std::to_string(equipmentId);
+        if (status == 0 /* Offline */ || status == 3 /* Error */) {
+            presenter::AlertViewModel a;
+            a.key      = key;
+            a.severity = (status == 3)
+                             ? presenter::AlertSeverity::Critical
+                             : presenter::AlertSeverity::Warning;
+            a.title    = "Equipment " + std::to_string(equipmentId) + " "
+                       + equipmentStatusName(status);
+            a.message  = "Line unavailable for production.";
+            alertCenter_->raise(a);
+        } else {
+            alertCenter_->clear(key);
+        }
+    }
 }
 
 void DashboardPresenter::handleActuatorStatusUpdate(uint32_t actuatorId, int status) {
@@ -132,6 +151,28 @@ void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, in
            checkpointId, qualityStatusName(status));
     auto vm = buildQualityCheckpointVM(checkpointId, status);
     notifyQualityCheckpointChanged(vm);
+
+    // Surface quality deviations in the sidebar. We use the VM we just
+    // built (it already has the derived Passing/Warning/Critical enum +
+    // pass rate) so the alert phrasing stays consistent with the card.
+    if (alertCenter_) {
+        const auto key = std::string("quality-") + std::to_string(checkpointId);
+        using Status = presenter::QualityCheckpointStatus;
+        if (vm.status == Status::Passing) {
+            alertCenter_->clear(key);
+        } else {
+            presenter::AlertViewModel a;
+            a.key      = key;
+            a.severity = (vm.status == Status::Critical)
+                             ? presenter::AlertSeverity::Critical
+                             : presenter::AlertSeverity::Warning;
+            a.title    = vm.checkpointName + " "
+                       + (vm.status == Status::Critical ? "CRITICAL" : "below target");
+            a.message  = "Pass rate " + std::to_string(static_cast<int>(vm.passRate * 10) / 10.0)
+                       + "% (target " + std::to_string(static_cast<int>(vm.targetPassRate)) + "%)";
+            alertCenter_->raise(a);
+        }
+    }
 }
 
 void DashboardPresenter::handleSystemStateChanged(int newState) {

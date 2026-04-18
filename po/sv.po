@@ -394,3 +394,13 @@ msgstr "Loggnivå:"
 
 msgid "Show log panel at the bottom of the window"
 msgstr "Visa loggpanelen längst ned i fönstret"
+
+
+msgid "Alerts"
+msgstr "Varningar"
+
+msgid "Clear all"
+msgstr "Rensa alla"
+
+msgid "No alerts"
+msgstr "Inga varningar"

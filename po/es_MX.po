@@ -394,3 +394,13 @@ msgstr "Nivel de registro:"
 
 msgid "Show log panel at the bottom of the window"
 msgstr "Mostrar el panel de registro en la parte inferior de la ventana"
+
+
+msgid "Alerts"
+msgstr "Alertas"
+
+msgid "Clear all"
+msgstr "Borrar todo"
+
+msgid "No alerts"
+msgstr "Sin alertas"

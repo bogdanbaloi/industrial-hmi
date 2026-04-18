@@ -394,3 +394,13 @@ msgstr "Livello di log:"
 
 msgid "Show log panel at the bottom of the window"
 msgstr "Mostra il pannello di log in fondo alla finestra"
+
+
+msgid "Alerts"
+msgstr "Allarmi"
+
+msgid "Clear all"
+msgstr "Cancella tutti"
+
+msgid "No alerts"
+msgstr "Nessun allarme"

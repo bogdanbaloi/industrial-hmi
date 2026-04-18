@@ -7,6 +7,7 @@
 #include "src/presenter/modelview/QualityCheckpointViewModel.h"
 #include "src/presenter/modelview/ControlPanelViewModel.h"
 #include "src/presenter/modelview/PlaceholderViewModels.h"
+#include "src/presenter/AlertCenter.h"
 #include "src/model/ProductionModel.h"
 
 #include <memory>
@@ -49,6 +50,13 @@ public:
 
     /// Initialize presenter - subscribe to Model signals
     void initialize() override;
+
+    /// Optional AlertCenter injection (DI, same pattern as setLogger).
+    /// When set, the presenter raises/clears alerts on equipment and
+    /// quality-checkpoint state transitions. Tests leave it null.
+    void setAlertCenter(presenter::AlertCenter& alertCenter) {
+        alertCenter_ = &alertCenter;
+    }
 
     // User action handlers (called from View/UI thread)
     
@@ -159,6 +167,10 @@ private:
 
     /// Injected production model (subscriptions, commands, queries route here).
     model::ProductionModel& model_;
+
+    /// Optional AlertCenter (null when tests instantiate the presenter
+    /// without the full application wiring).
+    presenter::AlertCenter* alertCenter_{nullptr};
 };
 
 }  // namespace app

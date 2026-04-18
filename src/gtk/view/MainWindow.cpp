@@ -9,6 +9,8 @@
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/gtk/view/pages/SettingsPage.h"
+#include "src/gtk/view/widgets/AlertsPanel.h"
+#include "src/presenter/AlertCenter.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/presenter/ProductsPresenter.h"
 #include "src/model/SimulatedModel.h"
@@ -51,11 +53,25 @@ MainWindow::MainWindow()
     // Create DialogManager (injected into pages)
     dialogManager_ = std::make_unique<app::view::DialogManager>(this);
 
+    // AlertCenter lives alongside the window — DashboardPresenter
+    // raises alerts into it from model callbacks, AlertsPanel (in
+    // sidebar) renders the current snapshot.
+    alertCenter_ = std::make_unique<app::presenter::AlertCenter>();
+
     // Build pages + presenters (also registers them with the Notebook)
     createAllPages();
 
     // Hook SettingsPage signals to MainWindow handlers
     wireSettingsSignals();
+
+    // AlertsPanel lives in the sidebar (above Close Application). Created
+    // AFTER createAllPages so DashboardPresenter already has the
+    // AlertCenter hooked up and any initial alerts it raises during
+    // initializeDemoData() show up on first paint.
+    if (alertsContainer_ && alertCenter_) {
+        alertsPanel_ = Gtk::make_managed<app::view::AlertsPanel>(*alertCenter_);
+        alertsContainer_->append(*alertsPanel_);
+    }
 
     // Start in fullscreen (industrial kiosk mode)
     fullscreen();
@@ -88,9 +104,10 @@ void MainWindow::loadUI() {
         set_child(*rootContainer);
     }
 
-    mainNotebook_ = builder->get_widget<Gtk::Notebook>("main_notebook");
-    logPanel_     = builder->get_widget<Gtk::Box>("log_panel");
-    logTextView_  = builder->get_widget<Gtk::TextView>("log_text_view");
+    mainNotebook_    = builder->get_widget<Gtk::Notebook>("main_notebook");
+    logPanel_        = builder->get_widget<Gtk::Box>("log_panel");
+    logTextView_     = builder->get_widget<Gtk::TextView>("log_text_view");
+    alertsContainer_ = builder->get_widget<Gtk::Box>("alerts_container");
 
     // Sidebar widgets we'll re-translate on language switch.
     appTitleLabel_    = builder->get_widget<Gtk::Label>("app_title");
@@ -114,6 +131,7 @@ void MainWindow::refreshSidebarTranslations() {
     if (closeAppButton_)   closeAppButton_->set_label(_("Close Application"));
     if (versionLabel_)     versionLabel_->set_label(_("Version 1.0.0"));
     if (authorLabel_)      authorLabel_->set_label(_("Portfolio Demo"));
+    if (alertsPanel_)      alertsPanel_->refreshTranslations();
 }
 
 void MainWindow::loadSidebarCSS() {
@@ -152,6 +170,9 @@ void MainWindow::createAllPages() {
     // Dashboard
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
     dashboardPresenter_->setLogger(logger);
+    if (alertCenter_) {
+        dashboardPresenter_->setAlertCenter(*alertCenter_);
+    }
     dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
     dashboardPage_->initialize(dashboardPresenter_);
     registerPage(dashboardPage_);

@@ -9,6 +9,7 @@ src/gtk/view/AboutDialog.cpp
 src/gtk/view/pages/DashboardPage.cpp
 src/gtk/view/pages/ProductsPage.cpp
 src/gtk/view/pages/SettingsPage.cpp
+src/gtk/view/widgets/AlertsPanel.h
 
 # GtkBuilder UI files
 [type: gettext/glade]assets/ui/main-window.ui

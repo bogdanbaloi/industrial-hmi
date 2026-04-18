@@ -394,3 +394,13 @@ msgstr "Protokollstufe:"
 
 msgid "Show log panel at the bottom of the window"
 msgstr "Protokoll-Panel am unteren Fensterrand anzeigen"
+
+
+msgid "Alerts"
+msgstr "Benachrichtigungen"
+
+msgid "Clear all"
+msgstr "Alle löschen"
+
+msgid "No alerts"
+msgstr "Keine Benachrichtigungen"

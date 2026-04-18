@@ -58,9 +58,12 @@
           </object>
         </child>
 
-        <!-- Spacer to push footer + Close to bottom -->
+        <!-- AlertsPanel injection point. MainWindow appends the
+             widget here at startup; the GtkBox is vexpand so it fills
+             the remaining sidebar height and pushes Close+footer down. -->
         <child>
-          <object class="GtkBox">
+          <object class="GtkBox" id="alerts_container">
+            <property name="orientation">vertical</property>
             <property name="vexpand">true</property>
           </object>
         </child>
