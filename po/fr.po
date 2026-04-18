@@ -405,6 +405,9 @@ msgstr "Tout effacer"
 msgid "No alerts"
 msgstr "Aucune alerte"
 
+msgid "Dismiss"
+msgstr "Ignorer"
+
 
 msgid "E-STOP"
 msgstr "ARRÊT"
@@ -485,3 +488,18 @@ msgstr "{} sous l'objectif"
 
 msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Taux de réussite {:.1f}% (cible {:.0f}%)"
+
+msgid "History"
+msgstr "Historique"
+
+msgid "Clear history"
+msgstr "Effacer l'historique"
+
+msgid "Show history"
+msgstr "Afficher l'historique"
+
+msgid "Show active alerts"
+msgstr "Afficher les alertes actives"
+
+msgid "No history"
+msgstr "Aucun historique"

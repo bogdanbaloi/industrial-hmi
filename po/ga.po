@@ -405,6 +405,9 @@ msgstr "Glan gach"
 msgid "No alerts"
 msgstr "Gan foláirimh"
 
+msgid "Dismiss"
+msgstr "Ruaig"
+
 
 msgid "E-STOP"
 msgstr "STOP"
@@ -485,3 +488,18 @@ msgstr "{} faoi bhun sprice"
 
 msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Ráta rathúlachta {:.1f}% (sprioc {:.0f}%)"
+
+msgid "History"
+msgstr "Stair"
+
+msgid "Clear history"
+msgstr "Glan an stair"
+
+msgid "Show history"
+msgstr "Taispeáin stair"
+
+msgid "Show active alerts"
+msgstr "Taispeáin foláirimh ghníomhacha"
+
+msgid "No history"
+msgstr "Gan stair"

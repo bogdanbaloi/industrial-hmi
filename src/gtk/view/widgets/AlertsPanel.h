@@ -18,8 +18,14 @@ namespace app::view {
 ///         on whichever thread the signal fires, then marshals back to
 ///         the GTK main thread via Glib::signal_idle.
 ///
-/// @layout Vertical box: a small header with "Alerts" + "Clear all"
-///         button, a ScrolledWindow with per-alert cards underneath.
+///         Two view modes controlled by the header toggle:
+///           Active  — current alerts (AlertCenter::snapshot())
+///           History — last N cleared alerts (AlertCenter::history())
+///         The action button adapts to the active view: Clear-all in
+///         active mode, Clear-history in history mode.
+///
+/// @layout Vertical box: header row (title + toggle + action button),
+///         ScrolledWindow with per-entry cards underneath.
 class AlertsPanel : public Gtk::Box {
 public:
     explicit AlertsPanel(presenter::AlertCenter& alertCenter)
@@ -39,6 +45,10 @@ public:
             [this]() {
                 Glib::signal_idle().connect_once([this]() { refresh(); });
             });
+        alertCenter_.signalHistoryChanged().connect(
+            [this]() {
+                Glib::signal_idle().connect_once([this]() { refresh(); });
+            });
 
         refresh();
     }
@@ -53,8 +63,7 @@ public:
     /// ("Alerts", "Clear all", "No alerts") was cached in the header at
     /// construction time.
     void refreshTranslations() {
-        if (headerLabel_) headerLabel_->set_label(_("Alerts"));
-        if (clearButton_) clearButton_->set_label(_("Clear all"));
+        updateHeaderLabels();
         refresh();
     }
 
@@ -62,19 +71,51 @@ private:
     void buildHeader() {
         auto* header = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 8);
 
-        headerLabel_ = Gtk::make_managed<Gtk::Label>(_("Alerts"));
+        headerLabel_ = Gtk::make_managed<Gtk::Label>();
         headerLabel_->set_xalign(0);
         headerLabel_->set_hexpand(true);
         headerLabel_->add_css_class("section-header");
         header->append(*headerLabel_);
 
-        clearButton_ = Gtk::make_managed<Gtk::Button>(_("Clear all"));
+        historyToggle_ = Gtk::make_managed<Gtk::ToggleButton>();
+        historyToggle_->set_icon_name("document-open-recent-symbolic");
+        historyToggle_->add_css_class("flat");
+        historyToggle_->set_valign(Gtk::Align::CENTER);
+        historyToggle_->signal_toggled().connect(
+            [this]() {
+                showingHistory_ = historyToggle_->get_active();
+                updateHeaderLabels();
+                refresh();
+            });
+        header->append(*historyToggle_);
+
+        clearButton_ = Gtk::make_managed<Gtk::Button>();
         clearButton_->add_css_class("flat");
         clearButton_->signal_clicked().connect(
-            [this]() { alertCenter_.clearAll(); });
+            [this]() {
+                if (showingHistory_) alertCenter_.clearHistory();
+                else                 alertCenter_.clearAll();
+            });
         header->append(*clearButton_);
 
         append(*header);
+        updateHeaderLabels();
+    }
+
+    // Keep header text in sync with the current view mode + locale.
+    void updateHeaderLabels() {
+        if (headerLabel_) {
+            headerLabel_->set_label(showingHistory_ ? _("History") : _("Alerts"));
+        }
+        if (clearButton_) {
+            clearButton_->set_label(showingHistory_ ? _("Clear history")
+                                                    : _("Clear all"));
+        }
+        if (historyToggle_) {
+            historyToggle_->set_tooltip_text(
+                showingHistory_ ? _("Show active alerts")
+                                : _("Show history"));
+        }
     }
 
     void buildList() {
@@ -95,24 +136,49 @@ private:
             listBox_->remove(*child);
         }
 
-        const auto alerts = alertCenter_.snapshot();
-        if (alerts.empty()) {
-            auto* empty = Gtk::make_managed<Gtk::Label>(_("No alerts"));
-            empty->add_css_class("dim-label");
-            empty->set_xalign(0);
-            listBox_->append(*empty);
-            return;
-        }
-
-        for (const auto& a : alerts) {
-            listBox_->append(*buildCard(a));
+        if (showingHistory_) {
+            renderHistory();
+        } else {
+            renderActive();
         }
     }
 
-    Gtk::Widget* buildCard(const presenter::AlertViewModel& a) {
+    void renderActive() {
+        const auto alerts = alertCenter_.snapshot();
+        if (alerts.empty()) {
+            appendPlaceholder(_("No alerts"));
+            return;
+        }
+        for (const auto& a : alerts) {
+            listBox_->append(*buildCard(a, /*historyMode*/ false, ""));
+        }
+    }
+
+    void renderHistory() {
+        const auto entries = alertCenter_.history();
+        if (entries.empty()) {
+            appendPlaceholder(_("No history"));
+            return;
+        }
+        for (const auto& e : entries) {
+            listBox_->append(*buildCard(e.alert, /*historyMode*/ true, e.resolvedAt));
+        }
+    }
+
+    void appendPlaceholder(const char* text) {
+        auto* empty = Gtk::make_managed<Gtk::Label>(text);
+        empty->add_css_class("dim-label");
+        empty->set_xalign(0);
+        listBox_->append(*empty);
+    }
+
+    Gtk::Widget* buildCard(const presenter::AlertViewModel& a,
+                           bool historyMode,
+                           const std::string& resolvedAt) {
         auto* card = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 2);
         card->add_css_class("alert-card");
         card->add_css_class(cssForSeverity(a.severity));
+        if (historyMode) card->add_css_class("alert-resolved");
         card->set_margin_bottom(4);
 
         auto* top = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 6);
@@ -124,10 +190,29 @@ private:
         title->add_css_class("alert-title");
         top->append(*title);
 
-        auto* ts = Gtk::make_managed<Gtk::Label>(a.timestamp);
+        // In history mode surface when the alert resolved; in active
+        // mode show when it was raised.
+        auto* ts = Gtk::make_managed<Gtk::Label>(
+            historyMode ? resolvedAt : a.timestamp);
         ts->add_css_class("dim-label");
         ts->add_css_class("alert-timestamp");
         top->append(*ts);
+
+        if (!historyMode) {
+            // Per-alert dismiss. Calls clear(key) — if the underlying
+            // condition still holds, the next presenter tick will re-raise
+            // the alert, which matches typical HMI "acknowledge" semantics.
+            auto* dismiss = Gtk::make_managed<Gtk::Button>();
+            dismiss->set_icon_name("window-close-symbolic");
+            dismiss->set_has_frame(false);
+            dismiss->set_valign(Gtk::Align::CENTER);
+            dismiss->add_css_class("alert-dismiss");
+            dismiss->set_tooltip_text(_("Dismiss"));
+            const std::string key = a.key;
+            dismiss->signal_clicked().connect(
+                [this, key]() { alertCenter_.clear(key); });
+            top->append(*dismiss);
+        }
 
         card->append(*top);
 
@@ -154,9 +239,11 @@ private:
     presenter::AlertCenter& alertCenter_;
 
     Gtk::Label*          headerLabel_{nullptr};
+    Gtk::ToggleButton*   historyToggle_{nullptr};
     Gtk::Button*         clearButton_{nullptr};
     Gtk::ScrolledWindow* scroller_{nullptr};
     Gtk::Box*            listBox_{nullptr};
+    bool                 showingHistory_{false};
 };
 
 }  // namespace app::view

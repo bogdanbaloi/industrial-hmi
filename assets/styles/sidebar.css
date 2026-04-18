@@ -180,6 +180,14 @@ window.light-mode .sidebar-close-app:hover {
     background-color: rgba(239, 83, 80, 0.10);
 }
 
+/* History mode: cards visually de-emphasized since the condition is
+   already resolved. Same severity accent on the border, but the fill
+   fades to the neutral card background. */
+.alert-card.alert-resolved {
+    background-color: rgba(255, 255, 255, 0.02);
+    opacity: 0.7;
+}
+
 .alert-title {
     font-size: 12px;
     font-weight: 600;
@@ -193,6 +201,36 @@ window.light-mode .sidebar-close-app:hover {
 
 .alert-timestamp {
     font-size: 10px;
+}
+
+/* Per-alert dismiss button: small, flat, fades in on card hover so the
+   row stays visually clean until the operator actually interacts. */
+button.alert-dismiss {
+    padding: 0 4px;
+    min-width: 18px;
+    min-height: 18px;
+    background: transparent;
+    border: none;
+    color: #90A4AE;
+    opacity: 0.4;
+}
+
+.alert-card:hover button.alert-dismiss {
+    opacity: 1;
+}
+
+button.alert-dismiss:hover {
+    color: #ECEFF1;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+window.light-mode button.alert-dismiss {
+    color: #607D8B;
+}
+
+window.light-mode button.alert-dismiss:hover {
+    color: #263238;
+    background: rgba(0, 0, 0, 0.08);
 }
 
 /* Light-mode variants */

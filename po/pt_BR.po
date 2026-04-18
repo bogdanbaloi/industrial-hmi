@@ -405,6 +405,9 @@ msgstr "Limpar tudo"
 msgid "No alerts"
 msgstr "Sem alertas"
 
+msgid "Dismiss"
+msgstr "Ignorar"
+
 
 msgid "E-STOP"
 msgstr "PARADA"
@@ -485,3 +488,18 @@ msgstr "{} abaixo da meta"
 
 msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Taxa de aprovação {:.1f}% (meta {:.0f}%)"
+
+msgid "History"
+msgstr "Histórico"
+
+msgid "Clear history"
+msgstr "Limpar histórico"
+
+msgid "Show history"
+msgstr "Mostrar histórico"
+
+msgid "Show active alerts"
+msgstr "Mostrar alertas ativos"
+
+msgid "No history"
+msgstr "Sem histórico"

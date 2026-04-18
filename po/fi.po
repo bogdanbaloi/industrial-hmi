@@ -405,6 +405,9 @@ msgstr "Tyhjennä kaikki"
 msgid "No alerts"
 msgstr "Ei hälytyksiä"
 
+msgid "Dismiss"
+msgstr "Hylkää"
+
 
 msgid "E-STOP"
 msgstr "HÄTÄSEIS"
@@ -485,3 +488,18 @@ msgstr "{} alle tavoitteen"
 
 msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Läpäisyaste {:.1f}% (tavoite {:.0f}%)"
+
+msgid "History"
+msgstr "Historia"
+
+msgid "Clear history"
+msgstr "Tyhjennä historia"
+
+msgid "Show history"
+msgstr "Näytä historia"
+
+msgid "Show active alerts"
+msgstr "Näytä aktiiviset hälytykset"
+
+msgid "No history"
+msgstr "Ei historiaa"
