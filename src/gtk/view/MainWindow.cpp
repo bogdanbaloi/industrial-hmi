@@ -334,6 +334,22 @@ bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
         return true;
     }
 
+    // F2 / F3: switch Dashboard / Products tab
+    if (keyval == GDK_KEY_F2 && mainNotebook_) {
+        mainNotebook_->set_current_page(0);
+        return true;
+    }
+    if (keyval == GDK_KEY_F3 && mainNotebook_) {
+        mainNotebook_->set_current_page(1);
+        return true;
+    }
+
+    // F5: manual refresh (advance the simulation one tick)
+    if (keyval == GDK_KEY_F5) {
+        app::model::SimulatedModel::instance().tickSimulation();
+        return true;
+    }
+
     // F11: Toggle fullscreen
     if (keyval == GDK_KEY_F11) {
         toggleFullscreen();
