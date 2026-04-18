@@ -405,6 +405,9 @@ msgstr "Rensa alla"
 msgid "No alerts"
 msgstr "Inga varningar"
 
+msgid "Dismiss"
+msgstr "Avfärda"
+
 
 msgid "E-STOP"
 msgstr "NÖDSTOPP"
@@ -485,3 +488,18 @@ msgstr "{} under mål"
 
 msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Godkänd andel {:.1f}% (mål {:.0f}%)"
+
+msgid "History"
+msgstr "Historik"
+
+msgid "Clear history"
+msgstr "Rensa historik"
+
+msgid "Show history"
+msgstr "Visa historik"
+
+msgid "Show active alerts"
+msgstr "Visa aktiva varningar"
+
+msgid "No history"
+msgstr "Ingen historik"

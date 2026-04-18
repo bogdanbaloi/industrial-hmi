@@ -405,6 +405,9 @@ msgstr "Cancella tutti"
 msgid "No alerts"
 msgstr "Nessun allarme"
 
+msgid "Dismiss"
+msgstr "Ignora"
+
 
 msgid "E-STOP"
 msgstr "ARRESTO"
@@ -485,3 +488,18 @@ msgstr "{} sotto soglia"
 
 msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Tasso di successo {:.1f}% (obiettivo {:.0f}%)"
+
+msgid "History"
+msgstr "Cronologia"
+
+msgid "Clear history"
+msgstr "Cancella cronologia"
+
+msgid "Show history"
+msgstr "Mostra cronologia"
+
+msgid "Show active alerts"
+msgstr "Mostra allarmi attivi"
+
+msgid "No history"
+msgstr "Nessuna cronologia"

@@ -126,6 +126,18 @@ target_link_libraries(test_base_presenter PRIVATE
 )
 add_test(NAME BasePresenterTest COMMAND test_base_presenter)
 
+# --- Presenter: AlertCenter (header-only, sigc++ provides the signal) ----
+# Pulls GTKMM's include dirs to find <sigc++/signal.h>; GTKMM transitively
+# re-exports sigc++-3.0 headers so we don't need a separate find_package.
+add_executable(test_alert_center AlertCenterTest.cpp)
+target_link_libraries(test_alert_center PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    ${GTKMM_LIBRARIES}
+)
+target_include_directories(test_alert_center PRIVATE ${GTKMM_INCLUDE_DIRS})
+add_test(NAME AlertCenterTest COMMAND test_alert_center)
+
 # --- Presenter: ProductsPresenter (with mock repository) ------------------
 # ProductsPresenter.cpp lives in objectsPresenter; MockProductsRepository
 # is a header in tests/mocks. The test target needs the source root on its

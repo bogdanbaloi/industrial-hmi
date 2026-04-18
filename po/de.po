@@ -405,6 +405,9 @@ msgstr "Alle löschen"
 msgid "No alerts"
 msgstr "Keine Benachrichtigungen"
 
+msgid "Dismiss"
+msgstr "Verwerfen"
+
 
 msgid "E-STOP"
 msgstr "NOT-STOP"
@@ -485,3 +488,18 @@ msgstr "{} unter Soll"
 
 msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Erfolgsquote {:.1f}% (Soll {:.0f}%)"
+
+msgid "History"
+msgstr "Verlauf"
+
+msgid "Clear history"
+msgstr "Verlauf löschen"
+
+msgid "Show history"
+msgstr "Verlauf anzeigen"
+
+msgid "Show active alerts"
+msgstr "Aktive Benachrichtigungen"
+
+msgid "No history"
+msgstr "Kein Verlauf"

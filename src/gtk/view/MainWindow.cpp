@@ -349,6 +349,11 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     //    page rebuild above.
     refreshSidebarTranslations();
 
+    //    Also re-translate retained alert content (history rows
+    //    especially — active alerts will re-raise on the next model
+    //    tick, but history is frozen until we poke it).
+    if (alertCenter_) alertCenter_->retranslate();
+
     // 9) Re-wire the SystemStatusBadge to the fresh DashboardPresenter.
     //    The previous connection pointed at the now-destroyed instance.
     if (statusBadge_ && dashboardPresenter_) {

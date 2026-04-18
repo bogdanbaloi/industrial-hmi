@@ -13,6 +13,8 @@
 
 #include "src/presenter/DashboardPresenter.h"
 #include "src/presenter/ViewObserver.h"
+#include "src/presenter/AlertCenter.h"
+#include "src/presenter/modelview/AlertViewModel.h"
 #include "src/model/ProductionTypes.h"
 #include "src/config/config_defaults.h"
 #include "mocks/MockProductionModel.h"
@@ -369,4 +371,181 @@ TEST_F(DashboardPresenterStateTest, CalibrationStateMarksCalibrationActive) {
     ASSERT_TRUE(observer.control.has_value());
     EXPECT_EQ(observer.control->activeButton, app::presenter::ActiveControl::Calibration);
     EXPECT_TRUE(observer.control->stopEnabled);
+}
+
+// ============================================================================
+// AlertCenter integration
+//
+// The presenter raises a keyed alert on equipment Offline(0)/Error(3) and
+// clears it once the equipment reports any non-fault state. Quality works
+// the same way but keyed on checkpointId, with Critical/Warning mapping to
+// the AlertSeverity enum and Passing clearing the alert.
+//
+// These tests inject a real AlertCenter (header-only, no deps) and
+// inspect its snapshot after firing the captured model callbacks.
+// ============================================================================
+
+class DashboardPresenterAlertsTest : public DashboardPresenterTest {
+protected:
+    void SetUp() override {
+        DashboardPresenterTest::SetUp();
+        presenter->setAlertCenter(alerts);
+    }
+
+    // Fire all five initialize subscriptions, capturing the equipment and
+    // quality callbacks for the test bodies to invoke.
+    void initializeAndCaptureCallbacks() {
+        EXPECT_CALL(model, onEquipmentStatusChanged(_))
+            .WillOnce(SaveArg<0>(&equipmentCb_));
+        EXPECT_CALL(model, onActuatorStatusChanged(_)).Times(1);
+        EXPECT_CALL(model, onQualityCheckpointChanged(_))
+            .WillOnce(SaveArg<0>(&qualityCb_));
+        EXPECT_CALL(model, onWorkUnitChanged(_)).Times(1);
+        EXPECT_CALL(model, onSystemStateChanged(_)).Times(1);
+        presenter->initialize();
+        ASSERT_TRUE(equipmentCb_);
+        ASSERT_TRUE(qualityCb_);
+    }
+
+    app::presenter::AlertCenter alerts;
+    MockProductionModel::EquipmentCallback equipmentCb_;
+    MockProductionModel::QualityCheckpointCallback qualityCb_;
+};
+
+TEST_F(DashboardPresenterAlertsTest, EquipmentOfflineRaisesWarningAlert) {
+    initializeAndCaptureCallbacks();
+    equipmentCb_(EquipmentStatus{7, 0, 0, ""});  // Offline
+
+    const auto snap = alerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].key, "equipment-7");
+    EXPECT_EQ(snap[0].severity, app::presenter::AlertSeverity::Warning);
+    EXPECT_THAT(snap[0].title, ::testing::HasSubstr("7"));
+    EXPECT_FALSE(snap[0].message.empty());
+}
+
+TEST_F(DashboardPresenterAlertsTest, EquipmentErrorRaisesCriticalAlert) {
+    initializeAndCaptureCallbacks();
+    equipmentCb_(EquipmentStatus{3, 3, 5, ""});  // Error
+
+    const auto snap = alerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].key, "equipment-3");
+    EXPECT_EQ(snap[0].severity, app::presenter::AlertSeverity::Critical);
+}
+
+TEST_F(DashboardPresenterAlertsTest, EquipmentRecoveryClearsAlert) {
+    initializeAndCaptureCallbacks();
+    equipmentCb_(EquipmentStatus{1, 0, 0, ""});    // Offline — raise
+    ASSERT_EQ(alerts.snapshot().size(), 1u);
+
+    equipmentCb_(EquipmentStatus{1, 1, 85, ""});   // Online — clear
+    EXPECT_TRUE(alerts.snapshot().empty());
+}
+
+TEST_F(DashboardPresenterAlertsTest, EquipmentProcessingClearsAlert) {
+    // Status 2 (Processing) is also a non-fault state — must clear.
+    initializeAndCaptureCallbacks();
+    equipmentCb_(EquipmentStatus{2, 3, 12, ""});   // Error — raise
+    ASSERT_EQ(alerts.snapshot().size(), 1u);
+
+    equipmentCb_(EquipmentStatus{2, 2, 60, ""});   // Processing — clear
+    EXPECT_TRUE(alerts.snapshot().empty());
+}
+
+TEST_F(DashboardPresenterAlertsTest, EquipmentAlertDedupesByKey) {
+    initializeAndCaptureCallbacks();
+    equipmentCb_(EquipmentStatus{4, 0, 0, ""});
+    equipmentCb_(EquipmentStatus{4, 0, 0, ""});
+    equipmentCb_(EquipmentStatus{4, 3, 0, ""});    // severity upgrade, same key
+
+    const auto snap = alerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].key, "equipment-4");
+    EXPECT_EQ(snap[0].severity, app::presenter::AlertSeverity::Critical);
+}
+
+TEST_F(DashboardPresenterAlertsTest, DifferentEquipmentIdsCoexist) {
+    initializeAndCaptureCallbacks();
+    equipmentCb_(EquipmentStatus{1, 0, 0, ""});
+    equipmentCb_(EquipmentStatus{2, 3, 0, ""});
+    equipmentCb_(EquipmentStatus{5, 0, 0, ""});
+    EXPECT_EQ(alerts.snapshot().size(), 3u);
+}
+
+TEST_F(DashboardPresenterAlertsTest, QualityCriticalRaisesCriticalAlert) {
+    initializeAndCaptureCallbacks();
+
+    QualityCheckpoint cp{2, "Final", 0, 100, 30, 60.0f, "Coating"};
+    EXPECT_CALL(model, getQualityCheckpoint(2u)).WillOnce(Return(cp));
+
+    qualityCb_(cp);
+
+    const auto snap = alerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].key, "quality-2");
+    EXPECT_EQ(snap[0].severity, app::presenter::AlertSeverity::Critical);
+    EXPECT_THAT(snap[0].title, ::testing::HasSubstr("Final"));
+    EXPECT_THAT(snap[0].message, ::testing::HasSubstr("60"));  // pass rate
+}
+
+TEST_F(DashboardPresenterAlertsTest, QualityWarningRaisesWarningAlert) {
+    initializeAndCaptureCallbacks();
+
+    QualityCheckpoint cp{1, "Hardness", 0, 100, 5, 92.0f, "Soft"};
+    EXPECT_CALL(model, getQualityCheckpoint(1u)).WillOnce(Return(cp));
+
+    qualityCb_(cp);
+
+    const auto snap = alerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].key, "quality-1");
+    EXPECT_EQ(snap[0].severity, app::presenter::AlertSeverity::Warning);
+}
+
+TEST_F(DashboardPresenterAlertsTest, QualityPassingClearsAlert) {
+    initializeAndCaptureCallbacks();
+
+    // First drop below threshold — raise.
+    QualityCheckpoint low{0, "Weight Check", 0, 100, 40, 60.0f, "Over"};
+    EXPECT_CALL(model, getQualityCheckpoint(0u))
+        .WillOnce(Return(low))
+        .WillOnce(Return(QualityCheckpoint{0, "Weight Check", 0, 100, 2, 98.0f, ""}));
+
+    qualityCb_(low);
+    ASSERT_EQ(alerts.snapshot().size(), 1u);
+
+    // Now recover — clear.
+    QualityCheckpoint ok{0, "Weight Check", 0, 100, 2, 98.0f, ""};
+    qualityCb_(ok);
+    EXPECT_TRUE(alerts.snapshot().empty());
+}
+
+TEST_F(DashboardPresenterAlertsTest, QualityAndEquipmentAlertsCoexist) {
+    initializeAndCaptureCallbacks();
+
+    equipmentCb_(EquipmentStatus{0, 3, 0, ""});
+
+    QualityCheckpoint cp{1, "Hardness", 0, 100, 5, 92.0f, "Soft"};
+    EXPECT_CALL(model, getQualityCheckpoint(1u)).WillOnce(Return(cp));
+    qualityCb_(cp);
+
+    EXPECT_EQ(alerts.snapshot().size(), 2u);
+}
+
+// When no AlertCenter is injected the presenter must silently skip alert
+// bookkeeping — this is the production vs test wiring difference.
+TEST_F(DashboardPresenterTest, NoAlertCenterMeansNoCrashOnEquipmentSignal) {
+    MockProductionModel::EquipmentCallback cb;
+    EXPECT_CALL(model, onEquipmentStatusChanged(_)).WillOnce(SaveArg<0>(&cb));
+    EXPECT_CALL(model, onActuatorStatusChanged(_)).Times(1);
+    EXPECT_CALL(model, onQualityCheckpointChanged(_)).Times(1);
+    EXPECT_CALL(model, onWorkUnitChanged(_)).Times(1);
+    EXPECT_CALL(model, onSystemStateChanged(_)).Times(1);
+    presenter->initialize();
+
+    // Must not segfault or throw.
+    cb(EquipmentStatus{0, 3, 0, ""});
+    cb(EquipmentStatus{0, 1, 85, ""});
+    SUCCEED();
 }

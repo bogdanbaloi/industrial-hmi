@@ -132,15 +132,21 @@ void DashboardPresenter::handleEquipmentStatusUpdate(uint32_t equipmentId, int s
             a.severity = (status == 3)
                              ? presenter::AlertSeverity::Critical
                              : presenter::AlertSeverity::Warning;
-            // The title format is translatable via std::vformat so
-            // languages can reorder the numeric id against the status
-            // word if grammar demands it.
-            auto titleFmt = (status == 3)
-                                ? std::string_view{_("Equipment {} error")}
-                                : std::string_view{_("Equipment {} offline")};
-            a.title   = std::vformat(titleFmt,
-                                     std::make_format_args(equipmentId));
-            a.message = _("Line unavailable for production.");
+            // Install a retranslate callback that captures the raw id
+            // and the status-kind flag, so a later language switch can
+            // re-render the title in the new locale (including for rows
+            // that have already moved to history).
+            const bool isError = (status == 3);
+            a.retranslate = [equipmentId, isError](presenter::AlertViewModel& vm) {
+                auto titleFmt = isError
+                                    ? std::string_view{_("Equipment {} error")}
+                                    : std::string_view{_("Equipment {} offline")};
+                vm.title   = std::vformat(titleFmt,
+                                          std::make_format_args(equipmentId));
+                vm.message = _("Line unavailable for production.");
+            };
+            // Initial render with the currently active locale.
+            a.retranslate(a);
             alertCenter_->raise(a);
         } else {
             alertCenter_->clear(key);
@@ -175,18 +181,24 @@ void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, in
             a.severity = (vm.status == Status::Critical)
                              ? presenter::AlertSeverity::Critical
                              : presenter::AlertSeverity::Warning;
-            // `{}` is the checkpoint name (stays as stored in the Model;
-            // translating it would mean adding every simulated name to
-            // the .po files — out of scope for the demo). The surrounding
-            // phrase is translatable.
-            auto titleFmt = (vm.status == Status::Critical)
-                                ? std::string_view{_("{} critical")}
-                                : std::string_view{_("{} below target")};
-            a.title   = std::vformat(titleFmt,
-                                     std::make_format_args(vm.checkpointName));
-            a.message = std::vformat(
-                _("Pass rate {:.1f}% (target {:.0f}%)"),
-                std::make_format_args(vm.passRate, vm.targetPassRate));
+            // Capture the raw numbers + checkpoint name so the callback
+            // can re-render in any future locale (and for history rows).
+            const bool isCritical     = (vm.status == Status::Critical);
+            const std::string cpName  = vm.checkpointName;
+            const float passRate      = vm.passRate;
+            const float targetPassRate = vm.targetPassRate;
+            a.retranslate = [isCritical, cpName, passRate, targetPassRate]
+                            (presenter::AlertViewModel& vmm) {
+                auto titleFmt = isCritical
+                                    ? std::string_view{_("{} critical")}
+                                    : std::string_view{_("{} below target")};
+                vmm.title   = std::vformat(titleFmt,
+                                           std::make_format_args(cpName));
+                vmm.message = std::vformat(
+                    _("Pass rate {:.1f}% (target {:.0f}%)"),
+                    std::make_format_args(passRate, targetPassRate));
+            };
+            a.retranslate(a);
             alertCenter_->raise(a);
         }
     }
