@@ -3,6 +3,7 @@
 #include "src/presenter/AlertCenter.h"
 #include "src/presenter/modelview/AlertViewModel.h"
 #include "src/core/i18n.h"
+#include "src/gtk/view/ui_sizes.h"
 
 #include <gtkmm.h>
 #include <string>
@@ -25,10 +26,10 @@ public:
         : Gtk::Box(Gtk::Orientation::VERTICAL)
         , alertCenter_(alertCenter) {
         set_vexpand(true);
-        set_margin_start(12);
-        set_margin_end(12);
-        set_margin_top(12);
-        set_margin_bottom(12);
+        set_margin_start(sizes::kSpacingMedium);
+        set_margin_end(sizes::kSpacingMedium);
+        set_margin_top(sizes::kSpacingMedium);
+        set_margin_bottom(sizes::kSpacingMedium);
         add_css_class("alerts-panel");
 
         buildHeader();

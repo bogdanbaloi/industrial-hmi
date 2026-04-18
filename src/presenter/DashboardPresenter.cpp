@@ -1,6 +1,9 @@
 #include "DashboardPresenter.h"
 #include "src/model/SimulatedModel.h"
 #include "src/config/config_defaults.h"
+#include "src/core/i18n.h"
+
+#include <format>
 
 // Helper: call a logger method only if the optional logger_ is set.
 // Tests leave it null; production injects via BasePresenter::setLogger.
@@ -129,9 +132,15 @@ void DashboardPresenter::handleEquipmentStatusUpdate(uint32_t equipmentId, int s
             a.severity = (status == 3)
                              ? presenter::AlertSeverity::Critical
                              : presenter::AlertSeverity::Warning;
-            a.title    = "Equipment " + std::to_string(equipmentId) + " "
-                       + equipmentStatusName(status);
-            a.message  = "Line unavailable for production.";
+            // The title format is translatable via std::vformat so
+            // languages can reorder the numeric id against the status
+            // word if grammar demands it.
+            auto titleFmt = (status == 3)
+                                ? std::string_view{_("Equipment {} error")}
+                                : std::string_view{_("Equipment {} offline")};
+            a.title   = std::vformat(titleFmt,
+                                     std::make_format_args(equipmentId));
+            a.message = _("Line unavailable for production.");
             alertCenter_->raise(a);
         } else {
             alertCenter_->clear(key);
@@ -166,10 +175,18 @@ void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, in
             a.severity = (vm.status == Status::Critical)
                              ? presenter::AlertSeverity::Critical
                              : presenter::AlertSeverity::Warning;
-            a.title    = vm.checkpointName + " "
-                       + (vm.status == Status::Critical ? "CRITICAL" : "below target");
-            a.message  = "Pass rate " + std::to_string(static_cast<int>(vm.passRate * 10) / 10.0)
-                       + "% (target " + std::to_string(static_cast<int>(vm.targetPassRate)) + "%)";
+            // `{}` is the checkpoint name (stays as stored in the Model;
+            // translating it would mean adding every simulated name to
+            // the .po files — out of scope for the demo). The surrounding
+            // phrase is translatable.
+            auto titleFmt = (vm.status == Status::Critical)
+                                ? std::string_view{_("{} critical")}
+                                : std::string_view{_("{} below target")};
+            a.title   = std::vformat(titleFmt,
+                                     std::make_format_args(vm.checkpointName));
+            a.message = std::vformat(
+                _("Pass rate {:.1f}% (target {:.0f}%)"),
+                std::make_format_args(vm.passRate, vm.targetPassRate));
             alertCenter_->raise(a);
         }
     }
@@ -179,6 +196,7 @@ void DashboardPresenter::handleSystemStateChanged(int newState) {
     LOG_IF(debug, "Model event: system state -> {}", systemStateName(newState));
     auto vm = buildControlPanelVM();
     notifyControlPanelChanged(vm);
+    signalSystemStateChanged_.emit(newState);
 }
 
 // ViewModel builders

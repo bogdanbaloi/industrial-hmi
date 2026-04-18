@@ -404,3 +404,84 @@ msgstr "Glan gach"
 
 msgid "No alerts"
 msgstr "Gan foláirimh"
+
+
+msgid "E-STOP"
+msgstr "STOP"
+
+
+msgid "Sun"
+msgstr "Domh"
+
+msgid "Mon"
+msgstr "Luan"
+
+msgid "Tue"
+msgstr "Máir"
+
+msgid "Wed"
+msgstr "Céad"
+
+msgid "Thu"
+msgstr "Déar"
+
+msgid "Fri"
+msgstr "Aoin"
+
+msgid "Sat"
+msgstr "Sath"
+
+msgid "Jan"
+msgstr "Ean"
+
+msgid "Feb"
+msgstr "Feabh"
+
+msgid "Mar"
+msgstr "Márta"
+
+msgid "Apr"
+msgstr "Aib"
+
+msgid "May"
+msgstr "Beal"
+
+msgid "Jun"
+msgstr "Meith"
+
+msgid "Jul"
+msgstr "Iúil"
+
+msgid "Aug"
+msgstr "Lún"
+
+msgid "Sep"
+msgstr "MFómh"
+
+msgid "Oct"
+msgstr "DFómh"
+
+msgid "Nov"
+msgstr "Samh"
+
+msgid "Dec"
+msgstr "Nollaig"
+
+
+msgid "Equipment {} offline"
+msgstr "Trealamh {} as líne"
+
+msgid "Equipment {} error"
+msgstr "Trealamh {} in earráid"
+
+msgid "Line unavailable for production."
+msgstr "Líne neamhinfhaighte le haghaidh táirgthe."
+
+msgid "{} critical"
+msgstr "{} criticiúil"
+
+msgid "{} below target"
+msgstr "{} faoi bhun sprice"
+
+msgid "Pass rate {:.1f}% (target {:.0f}%)"
+msgstr "Ráta rathúlachta {:.1f}% (sprioc {:.0f}%)"

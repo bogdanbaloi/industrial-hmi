@@ -58,6 +58,13 @@ public:
         alertCenter_ = &alertCenter;
     }
 
+    /// Signal carrying the raw system-state int (0=IDLE, 1=RUNNING,
+    /// 2=ERROR, 3=CALIBRATION). MainWindow uses this to drive the
+    /// sidebar SystemStatusBadge without implementing ViewObserver.
+    sigc::signal<void(int)>& signalSystemStateChanged() {
+        return signalSystemStateChanged_;
+    }
+
     // User action handlers (called from View/UI thread)
     
     /// Called when user clicks Start button
@@ -171,6 +178,9 @@ private:
     /// Optional AlertCenter (null when tests instantiate the presenter
     /// without the full application wiring).
     presenter::AlertCenter* alertCenter_{nullptr};
+
+    /// System-state change signal; emitted from handleSystemStateChanged.
+    sigc::signal<void(int)> signalSystemStateChanged_;
 };
 
 }  // namespace app

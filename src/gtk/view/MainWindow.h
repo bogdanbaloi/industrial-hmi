@@ -23,6 +23,8 @@ namespace app {
         class SettingsPage;
         class DialogManager;
         class AlertsPanel;
+        class SystemStatusBadge;
+        class LiveClock;
     }
 
     namespace core {
@@ -80,8 +82,11 @@ private:
     Gtk::TextView*   logTextView_     = nullptr;
     sigc::connection logRefreshConnection_;
     std::size_t      lastLogSize_{0};
-    Gtk::Notebook*   mainNotebook_    = nullptr;
-    Gtk::Box*        alertsContainer_ = nullptr;
+    Gtk::Notebook*   mainNotebook_          = nullptr;
+    Gtk::Box*        alertsContainer_       = nullptr;
+    Gtk::Box*        systemStatusContainer_ = nullptr;
+    Gtk::Box*        clockContainer_        = nullptr;
+    Gtk::Button*     estopButton_           = nullptr;
 
     // Sidebar labels/buttons that carry translatable text. Kept as
     // members so `rebuildPages()` can reassign the text via `_()` after
@@ -116,6 +121,8 @@ private:
     // DashboardPresenter which raises/clears alerts on state transitions.
     std::unique_ptr<app::presenter::AlertCenter> alertCenter_;
     app::view::AlertsPanel*                      alertsPanel_ = nullptr;
+    app::view::SystemStatusBadge*                statusBadge_ = nullptr;
+    app::view::LiveClock*                        clock_       = nullptr;
 };
 
 #endif  // MAIN_WINDOW_H

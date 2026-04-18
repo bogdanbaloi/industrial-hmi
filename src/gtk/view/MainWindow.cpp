@@ -10,6 +10,8 @@
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/gtk/view/pages/SettingsPage.h"
 #include "src/gtk/view/widgets/AlertsPanel.h"
+#include "src/gtk/view/widgets/SystemStatusBadge.h"
+#include "src/gtk/view/widgets/LiveClock.h"
 #include "src/presenter/AlertCenter.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/presenter/ProductsPresenter.h"
@@ -73,6 +75,33 @@ MainWindow::MainWindow()
         alertsContainer_->append(*alertsPanel_);
     }
 
+    // System status LED badge — driven by DashboardPresenter's
+    // state-change signal.
+    if (systemStatusContainer_) {
+        statusBadge_ = Gtk::make_managed<app::view::SystemStatusBadge>();
+        systemStatusContainer_->append(*statusBadge_);
+        if (dashboardPresenter_) {
+            dashboardPresenter_->signalSystemStateChanged().connect(
+                [this](int state) {
+                    if (statusBadge_) statusBadge_->setState(state);
+                });
+        }
+    }
+
+    // Live clock in the sidebar footer (above Version / Portfolio Demo).
+    if (clockContainer_) {
+        clock_ = Gtk::make_managed<app::view::LiveClock>();
+        clockContainer_->append(*clock_);
+    }
+
+    // E-STOP button reuses the existing Stop-production command so the
+    // Model state machine stays the single source of truth.
+    if (estopButton_ && dashboardPresenter_) {
+        estopButton_->signal_clicked().connect([this]() {
+            if (dashboardPresenter_) dashboardPresenter_->onStopClicked();
+        });
+    }
+
     // Start in fullscreen (industrial kiosk mode)
     fullscreen();
     isFullscreen_ = true;
@@ -104,10 +133,13 @@ void MainWindow::loadUI() {
         set_child(*rootContainer);
     }
 
-    mainNotebook_    = builder->get_widget<Gtk::Notebook>("main_notebook");
-    logPanel_        = builder->get_widget<Gtk::Box>("log_panel");
-    logTextView_     = builder->get_widget<Gtk::TextView>("log_text_view");
-    alertsContainer_ = builder->get_widget<Gtk::Box>("alerts_container");
+    mainNotebook_          = builder->get_widget<Gtk::Notebook>("main_notebook");
+    logPanel_              = builder->get_widget<Gtk::Box>("log_panel");
+    logTextView_           = builder->get_widget<Gtk::TextView>("log_text_view");
+    alertsContainer_       = builder->get_widget<Gtk::Box>("alerts_container");
+    systemStatusContainer_ = builder->get_widget<Gtk::Box>("system_status_container");
+    clockContainer_        = builder->get_widget<Gtk::Box>("clock_container");
+    estopButton_           = builder->get_widget<Gtk::Button>("estop_button");
 
     // Sidebar widgets we'll re-translate on language switch.
     appTitleLabel_    = builder->get_widget<Gtk::Label>("app_title");
@@ -132,6 +164,9 @@ void MainWindow::refreshSidebarTranslations() {
     if (versionLabel_)     versionLabel_->set_label(_("Version 1.0.0"));
     if (authorLabel_)      authorLabel_->set_label(_("Portfolio Demo"));
     if (alertsPanel_)      alertsPanel_->refreshTranslations();
+    if (statusBadge_)      statusBadge_->refreshTranslations();
+    if (estopButton_)      estopButton_->set_label(_("E-STOP"));
+    if (clock_)            clock_->refreshTranslations();
 }
 
 void MainWindow::loadSidebarCSS() {
@@ -313,6 +348,15 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     //    they were loaded by GtkBuilder at startup, not touched by the
     //    page rebuild above.
     refreshSidebarTranslations();
+
+    // 9) Re-wire the SystemStatusBadge to the fresh DashboardPresenter.
+    //    The previous connection pointed at the now-destroyed instance.
+    if (statusBadge_ && dashboardPresenter_) {
+        dashboardPresenter_->signalSystemStateChanged().connect(
+            [this](int state) {
+                if (statusBadge_) statusBadge_->setState(state);
+            });
+    }
 }
 
 // ----------------------------------------------------------------------------

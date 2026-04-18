@@ -67,13 +67,13 @@ window.light-mode .sidebar button:hover {
 }
 
 .sidebar-version {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 600;
     color: #546E7A;
 }
 
 .sidebar-author {
-    font-size: 10px;
+    font-size: 12px;
     color: #546E7A;
 }
 
@@ -203,3 +203,58 @@ window.light-mode .alert-title    { color: #263238; }
 window.light-mode .alert-message  { color: #455A64; }
 window.light-mode .alert-card.alert-warning  { background-color: rgba(255, 179, 0, 0.12); }
 window.light-mode .alert-card.alert-critical { background-color: rgba(239, 83, 80, 0.14); }
+
+/* ============================================================
+   System status badge
+   ============================================================ */
+.system-status-badge {
+    padding: 4px 0;
+}
+.system-status-dot {
+    font-size: 14px;
+    color: #78909C;
+}
+.system-status-dot.state-idle        { color: #78909C; }
+.system-status-dot.state-running     { color: #4CAF50; }
+.system-status-dot.state-error       { color: #EF5350; }
+.system-status-dot.state-calibration { color: #FFB300; }
+.system-status-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #ECEFF1;
+}
+window.light-mode .system-status-label { color: #263238; }
+
+/* ============================================================
+   E-STOP  (button.sidebar-estop has specificity 0-1-1, tying with
+   .sidebar button so the later rule wins and we get a red button.)
+   ============================================================ */
+button.sidebar-estop {
+    background-color: #B71C1C;
+    background-image: none;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    border: 2px solid #7F0000;
+    min-height: 40px;
+}
+button.sidebar-estop:hover  { background-color: #D32F2F; }
+button.sidebar-estop:active { background-color: #7F0000; }
+
+/* ============================================================
+   Live clock
+   ============================================================ */
+.live-clock-time {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: monospace;
+    color: #ECEFF1;
+}
+.live-clock-date {
+    font-size: 13px;
+    color: #90A4AE;
+}
+window.light-mode .live-clock-time { color: #263238; }
+window.light-mode .live-clock-date { color: #546E7A; }

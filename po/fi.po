@@ -404,3 +404,84 @@ msgstr "Tyhjennä kaikki"
 
 msgid "No alerts"
 msgstr "Ei hälytyksiä"
+
+
+msgid "E-STOP"
+msgstr "HÄTÄSEIS"
+
+
+msgid "Sun"
+msgstr "Su"
+
+msgid "Mon"
+msgstr "Ma"
+
+msgid "Tue"
+msgstr "Ti"
+
+msgid "Wed"
+msgstr "Ke"
+
+msgid "Thu"
+msgstr "To"
+
+msgid "Fri"
+msgstr "Pe"
+
+msgid "Sat"
+msgstr "La"
+
+msgid "Jan"
+msgstr "Tam"
+
+msgid "Feb"
+msgstr "Hel"
+
+msgid "Mar"
+msgstr "Maa"
+
+msgid "Apr"
+msgstr "Huh"
+
+msgid "May"
+msgstr "Tou"
+
+msgid "Jun"
+msgstr "Kes"
+
+msgid "Jul"
+msgstr "Hei"
+
+msgid "Aug"
+msgstr "Elo"
+
+msgid "Sep"
+msgstr "Syy"
+
+msgid "Oct"
+msgstr "Lok"
+
+msgid "Nov"
+msgstr "Mar"
+
+msgid "Dec"
+msgstr "Jou"
+
+
+msgid "Equipment {} offline"
+msgstr "Laite {} offline-tilassa"
+
+msgid "Equipment {} error"
+msgstr "Laite {} virhetilassa"
+
+msgid "Line unavailable for production."
+msgstr "Linja ei käytettävissä tuotantoon."
+
+msgid "{} critical"
+msgstr "{} kriittinen"
+
+msgid "{} below target"
+msgstr "{} alle tavoitteen"
+
+msgid "Pass rate {:.1f}% (target {:.0f}%)"
+msgstr "Läpäisyaste {:.1f}% (tavoite {:.0f}%)"
