@@ -351,3 +351,46 @@ msgstr "Omistusoikeudellinen – Kaikki oikeudet pidätetään.\nVain haastattel
 
 msgid "QUALITY TRENDS"
 msgstr "LAATUTRENDIT"
+
+
+msgid "Settings"
+msgstr "Asetukset"
+
+msgid "General"
+msgstr "Yleiset"
+
+msgid "Language:"
+msgstr "Kieli:"
+
+msgid "Theme:"
+msgstr "Teema:"
+
+msgid "Dark"
+msgstr "Tumma"
+
+msgid "Light"
+msgstr "Vaalea"
+
+msgid "Display"
+msgstr "Näyttö"
+
+msgid "Display mode:"
+msgstr "Näyttötila:"
+
+msgid "Data"
+msgstr "Data"
+
+msgid "Auto refresh simulation"
+msgstr "Päivitä simulaatio automaattisesti"
+
+msgid "Refresh interval (ms):"
+msgstr "Päivitysväli (ms):"
+
+msgid "Logging"
+msgstr "Lokitus"
+
+msgid "Log level:"
+msgstr "Lokitaso:"
+
+msgid "Show log panel at the bottom of the window"
+msgstr "Näytä lokipaneeli ikkunan alareunassa"

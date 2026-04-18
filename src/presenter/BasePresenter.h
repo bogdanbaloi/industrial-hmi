@@ -1,11 +1,10 @@
 #pragma once
 
 #include "ViewObserver.h"
-#include "src/core/Application.h"
+#include "src/core/LoggerBase.h"
 #include <vector>
 #include <algorithm>
 #include <mutex>
-#include <typeinfo>
 
 namespace app {
 
@@ -69,6 +68,13 @@ public:
     /// @note Derived classes override this to subscribe to Model signals
     virtual void initialize() = 0;
 
+    /// Optional logger injection (same DI pattern as DatabaseManager /
+    /// SimulatedModel::setLogger). Keeps BasePresenter header-only-
+    /// linkable from test binaries that don't drag in objectsCore.
+    void setLogger(app::core::Logger& logger) {
+        logger_ = &logger;
+    }
+
     /// Register an observer to receive notifications
     /// @param observer Pointer to ViewObserver implementation (e.g., GTK page widget)
     /// @thread_safety Thread-safe via mutex
@@ -77,20 +83,13 @@ public:
     virtual void addObserver(ViewObserver* observer) {
         if (!observer) return;
 
-        std::size_t count = 0;
-        {
-            const std::scoped_lock lock(observersMutex_);
+        const std::scoped_lock lock(observersMutex_);
 
-            // Avoid duplicate registration
-            auto it = std::find(observers_.begin(), observers_.end(), observer);
-            if (it == observers_.end()) {
-                observers_.push_back(observer);
-            }
-            count = observers_.size();
+        // Avoid duplicate registration
+        auto it = std::find(observers_.begin(), observers_.end(), observer);
+        if (it == observers_.end()) {
+            observers_.push_back(observer);
         }
-        app::core::Application::instance().logger().debug(
-            "Presenter ({}): observer added (total: {})",
-            typeid(*this).name(), count);
     }
 
     /// Unregister an observer
@@ -100,22 +99,20 @@ public:
     virtual void removeObserver(ViewObserver* observer) {
         if (!observer) return;
 
-        std::size_t count = 0;
-        {
-            const std::scoped_lock lock(observersMutex_);
+        const std::scoped_lock lock(observersMutex_);
 
-            auto it = std::find(observers_.begin(), observers_.end(), observer);
-            if (it != observers_.end()) {
-                observers_.erase(it);
-            }
-            count = observers_.size();
+        auto it = std::find(observers_.begin(), observers_.end(), observer);
+        if (it != observers_.end()) {
+            observers_.erase(it);
         }
-        app::core::Application::instance().logger().debug(
-            "Presenter ({}): observer removed (total: {})",
-            typeid(*this).name(), count);
     }
 
 protected:
+    /// Optional logger. Null in unit tests; populated by MainWindow at
+    /// runtime via `setLogger()`. Every log call site must guard on `if
+    /// (logger_)` since tests never inject one.
+    app::core::Logger* logger_{nullptr};
+
     /// List of registered observers
     /// @note Protected by observersMutex_
     std::vector<ViewObserver*> observers_;

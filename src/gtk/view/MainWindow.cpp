@@ -92,11 +92,28 @@ void MainWindow::loadUI() {
     logPanel_     = builder->get_widget<Gtk::Box>("log_panel");
     logTextView_  = builder->get_widget<Gtk::TextView>("log_text_view");
 
-    // Close Application button (sidebar footer)
-    auto* closeAppBtn = builder->get_widget<Gtk::Button>("close_app_button");
-    if (closeAppBtn) {
-        closeAppBtn->signal_clicked().connect([this]() { close(); });
+    // Sidebar widgets we'll re-translate on language switch.
+    appTitleLabel_    = builder->get_widget<Gtk::Label>("app_title");
+    appSubtitleLabel_ = builder->get_widget<Gtk::Label>("app_subtitle");
+    closeAppButton_   = builder->get_widget<Gtk::Button>("close_app_button");
+    versionLabel_     = builder->get_widget<Gtk::Label>("version_label");
+    authorLabel_      = builder->get_widget<Gtk::Label>("author_label");
+
+    if (closeAppButton_) {
+        closeAppButton_->signal_clicked().connect([this]() { close(); });
     }
+}
+
+void MainWindow::refreshSidebarTranslations() {
+    // main-window.ui is only parsed once at startup, so GtkBuilder's
+    // translation machinery doesn't run again after a runtime language
+    // switch. Re-assign the strings manually via `_()` — that hits the
+    // freshly re-bound gettext catalog.
+    if (appTitleLabel_)    appTitleLabel_->set_label(_("[BB] Industrial HMI"));
+    if (appSubtitleLabel_) appSubtitleLabel_->set_label(_("MVP Architecture"));
+    if (closeAppButton_)   closeAppButton_->set_label(_("Close Application"));
+    if (versionLabel_)     versionLabel_->set_label(_("Version 1.0.0"));
+    if (authorLabel_)      authorLabel_->set_label(_("Portfolio Demo"));
 }
 
 void MainWindow::loadSidebarCSS() {
@@ -130,14 +147,18 @@ void MainWindow::registerPage(app::view::Page* page) {
 }
 
 void MainWindow::createAllPages() {
+    auto& logger = app::core::Application::instance().logger();
+
     // Dashboard
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
+    dashboardPresenter_->setLogger(logger);
     dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
     dashboardPage_->initialize(dashboardPresenter_);
     registerPage(dashboardPage_);
 
     // Products
     productsPresenter_ = std::make_shared<app::ProductsPresenter>();
+    productsPresenter_->setLogger(logger);
     productsPage_ = Gtk::make_managed<app::view::ProductsPage>(*dialogManager_);
     productsPage_->initialize(productsPresenter_);
     registerPage(productsPage_);
@@ -230,6 +251,13 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     app::core::initI18n(app::config::defaults::kLocaleDir,
                         std::string(newLanguage).c_str());
 
+    // Diagnostic: does gettext actually return translated strings after
+    // re-init? If "Settings" stays English, libintl is caching the old
+    // catalog (MSYS2 libintl-8 is known to ignore _nl_msg_cat_cntr in
+    // some builds). If it's translated, the issue lives in GtkBuilder.
+    logger.debug("i18n probe (post-init) _(\"Settings\")=\"{}\"", _("Settings"));
+    logger.debug("i18n probe (post-init) _(\"Dashboard\")=\"{}\"", _("Dashboard"));
+
     // 5) Rebuild pages and rewire everything. initializeDemoData() is
     //    called from createAllPages, re-seeding the new presenters.
     createAllPages();
@@ -256,6 +284,11 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
         activeTab < mainNotebook_->get_n_pages()) {
         mainNotebook_->set_current_page(activeTab);
     }
+
+    // 8) Re-translate sidebar widgets (branding + Close Application) —
+    //    they were loaded by GtkBuilder at startup, not touched by the
+    //    page rebuild above.
+    refreshSidebarTranslations();
 }
 
 // ----------------------------------------------------------------------------
@@ -325,8 +358,7 @@ void MainWindow::applyVerboseLogging(bool enabled) {
         app.logger().flush();
         lastLogSize_ = std::filesystem::file_size(logPath);
 
-        app.logger().setLevel(app::core::LogLevel::DEBUG);
-        app.logger().info("Verbose logging enabled");
+        app.logger().info("Log panel: enabled");
 
         // Check for new log content periodically
         logRefreshConnection_ = Glib::signal_timeout().connect([this]() {
@@ -354,13 +386,11 @@ void MainWindow::applyVerboseLogging(bool enabled) {
             return true;
         }, app::config::defaults::kLogPanelRefreshMs);
     } else {
-        app.logger().info("Verbose logging disabled");
+        app.logger().info("Log panel: disabled");
         logRefreshConnection_.disconnect();
         logPanel_->set_visible(false);
-
-        auto level = app::core::parseLogLevel(
-            app::config::ConfigManager::instance().getLogLevel());
-        app.logger().setLevel(level);
+        // The Log Level combo in Settings controls the actual verbosity now;
+        // this checkbox only toggles the panel visibility + live tail.
     }
 }
 

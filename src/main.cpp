@@ -2,6 +2,7 @@
 #include "src/core/i18n.h"
 #include "src/config/ConfigManager.h"
 #include "src/config/config_defaults.h"
+#include "src/model/SimulatedModel.h"
 #include <cstdlib>
 
 int main(int argc, char* argv[]) {
@@ -25,6 +26,13 @@ int main(int argc, char* argv[]) {
     if (!app.initialize(argc, argv)) {
         return 1;
     }
+
+    // Inject the app-wide logger into the SimulatedModel singleton so its
+    // state transitions and tick traces show up in the normal log stream.
+    // Done here (not in Application::initDatabase) because including
+    // SimulatedModel.h there would pull in ProductionTypes::ERROR after
+    // gtkmm has already defined the wingdi.h ERROR=0 macro.
+    app::model::SimulatedModel::instance().setLogger(app.logger());
 
     int result = app.run(argc, argv);
     app.shutdown();

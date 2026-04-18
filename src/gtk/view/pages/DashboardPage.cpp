@@ -65,28 +65,58 @@ void DashboardPage::refreshThemedWidgets() {
 ///       Must use Glib::signal_idle() to update GTK widgets safely.
 
 void DashboardPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) {
-    log().trace("DashboardPage: WorkUnitViewModel received (id={})", vm.workUnitId);
+    log().trace("View received WorkUnitVM: id={} progress={}/{}",
+                vm.workUnitId, vm.completedOperations, vm.totalOperations);
     Glib::signal_idle().connect_once([this, vm]() { updateWorkUnitWidgets(vm); });
 }
 
 void DashboardPage::onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) {
-    log().trace("DashboardPage: EquipmentCardViewModel received (id={})", vm.equipmentId);
+    // status enum → short label for the log
+    const char* s = [&] {
+        using S = presenter::EquipmentCardStatus;
+        switch (vm.status) {
+            case S::Offline:     return "Offline";
+            case S::StartingUp:  return "StartingUp";
+            case S::CheckOutput: return "CheckOutput";
+            case S::Online:      return "Online";
+            case S::Processing:  return "Processing";
+            case S::WarmingUp:   return "WarmingUp";
+            case S::Ready:       return "Ready";
+            case S::Reboot:      return "Reboot";
+            case S::Error:       return "Error";
+            case S::Disabled:    return "Disabled";
+            default:             return "Unknown";
+        }
+    }();
+    log().trace("View received EquipmentCardVM: id={} status={}",
+                vm.equipmentId, s);
     Glib::signal_idle().connect_once([this, vm]() { updateEquipmentCard(vm); });
 }
 
 void DashboardPage::onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) {
-    log().trace("DashboardPage: QualityCheckpointViewModel received (id={}, pass={:.1f}%)",
-                vm.checkpointId, vm.passRate);
+    const char* s = [&] {
+        using S = presenter::QualityCheckpointStatus;
+        switch (vm.status) {
+            case S::Passing:  return "Passing";
+            case S::Warning:  return "Warning";
+            case S::Critical: return "Critical";
+            default:          return "Unknown";
+        }
+    }();
+    log().trace("View received QualityCheckpointVM: id={} status={} pass={:.1f}%",
+                vm.checkpointId, s, vm.passRate);
     Glib::signal_idle().connect_once([this, vm]() { updateQualityCard(vm); });
 }
 
 void DashboardPage::onControlPanelChanged(const presenter::ControlPanelViewModel& vm) {
-    log().trace("DashboardPage: ControlPanelViewModel received");
+    log().trace("View received ControlPanelVM: start={} stop={} reset={} calib={}",
+                vm.startEnabled, vm.stopEnabled,
+                vm.resetRestartEnabled, vm.calibrationEnabled);
     Glib::signal_idle().connect_once([this, vm]() { updateControlPanel(vm); });
 }
 
 void DashboardPage::onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) {
-    log().trace("DashboardPage: StatusZoneViewModel received");
+    log().trace("View received StatusZoneVM");
     Glib::signal_idle().connect_once([this, vm]() { updateStatusZone(vm); });
 }
 

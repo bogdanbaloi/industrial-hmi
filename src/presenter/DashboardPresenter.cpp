@@ -1,13 +1,50 @@
 #include "DashboardPresenter.h"
 #include "src/model/SimulatedModel.h"
 #include "src/config/config_defaults.h"
-#include "src/core/Application.h"
+
+// Helper: call a logger method only if the optional logger_ is set.
+// Tests leave it null; production injects via BasePresenter::setLogger.
+#define LOG_IF(LEVEL, ...) do { if (logger_) logger_->LEVEL(__VA_ARGS__); } while (0)
 
 namespace app {
 
 namespace {
-inline app::core::Logger& log() {
-    return app::core::Application::instance().logger();
+// Decode the raw int status codes flowing in from the Model so trace/
+// debug output reads as "Processing" instead of "2" — saves everyone
+// from cross-referencing ProductionTypes.h when reading the log.
+const char* equipmentStatusName(int s) {
+    switch (s) {
+        case 0: return "Offline";
+        case 1: return "Online";
+        case 2: return "Processing";
+        case 3: return "Error";
+        default: return "Unknown";
+    }
+}
+const char* actuatorStatusName(int s) {
+    switch (s) {
+        case 0: return "Idle";
+        case 1: return "Working";
+        case 2: return "Error";
+        default: return "Unknown";
+    }
+}
+const char* qualityStatusName(int s) {
+    switch (s) {
+        case 0: return "Passing";
+        case 1: return "Warning";
+        case 2: return "Critical";
+        default: return "Unknown";
+    }
+}
+const char* systemStateName(int s) {
+    switch (s) {
+        case 0: return "IDLE";
+        case 1: return "RUNNING";
+        case 2: return "ERROR";
+        case 3: return "CALIBRATION";
+        default: return "UNKNOWN";
+    }
 }
 }  // namespace
 
@@ -18,7 +55,7 @@ DashboardPresenter::DashboardPresenter(model::ProductionModel& model)
     : model_(model) {}
 
 void DashboardPresenter::initialize() {
-    log().info("DashboardPresenter initializing - subscribing to model signals");
+    LOG_IF(info, "DashboardPresenter initializing - subscribing to model signals");
 
     // Subscribe to Model signals
     model_.onEquipmentStatusChanged([this](const model::EquipmentStatus& status) {
@@ -44,58 +81,61 @@ void DashboardPresenter::initialize() {
 
 // User action handlers
 void DashboardPresenter::onStartClicked() {
-    log().info("User action: Start production");
+    LOG_IF(info,"User action: Start production");
     model_.startProduction();
 }
 
 void DashboardPresenter::onStopClicked() {
-    log().info("User action: Stop production");
+    LOG_IF(info,"User action: Stop production");
     model_.stopProduction();
 }
 
 void DashboardPresenter::onResetRestartClicked() {
-    log().info("User action: Reset system");
+    LOG_IF(info,"User action: Reset system");
     model_.resetSystem();
 }
 
 void DashboardPresenter::onCalibrationClicked() {
-    log().info("User action: Start calibration");
+    LOG_IF(info,"User action: Start calibration");
     model_.startCalibration();
 }
 
 void DashboardPresenter::onEquipmentToggled(uint32_t equipmentId, bool enabled) {
-    log().info("User action: Equipment {} toggled -> {}",
+    LOG_IF(info,"User action: Equipment {} toggled -> {}",
                equipmentId, enabled ? "enabled" : "disabled");
     model_.setEquipmentEnabled(equipmentId, enabled);
 }
 
 // Model signal handlers
 void DashboardPresenter::handleNewWorkUnit(const std::string& workUnitId) {
-    log().trace("Model event: work unit changed ({})", workUnitId);
+    LOG_IF(trace,"Model event: work unit changed ({})", workUnitId);
     auto vm = buildWorkUnitVM(workUnitId);
     notifyWorkUnitChanged(vm);
 }
 
 void DashboardPresenter::handleEquipmentStatusUpdate(uint32_t equipmentId, int status) {
-    log().trace("Model event: equipment {} status -> {}", equipmentId, status);
+    LOG_IF(trace, "Model event: equipment {} -> {}",
+           equipmentId, equipmentStatusName(status));
     auto vm = buildEquipmentVM(equipmentId, status);
     notifyEquipmentCardChanged(vm);
 }
 
 void DashboardPresenter::handleActuatorStatusUpdate(uint32_t actuatorId, int status) {
-    log().trace("Model event: actuator {} status -> {}", actuatorId, status);
+    LOG_IF(trace, "Model event: actuator {} -> {}",
+           actuatorId, actuatorStatusName(status));
     auto vm = buildActuatorVM(actuatorId, status);
     notifyActuatorCardChanged(vm);
 }
 
 void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, int status) {
-    log().trace("Model event: quality checkpoint {} status -> {}", checkpointId, status);
+    LOG_IF(trace, "Model event: quality checkpoint {} -> {}",
+           checkpointId, qualityStatusName(status));
     auto vm = buildQualityCheckpointVM(checkpointId, status);
     notifyQualityCheckpointChanged(vm);
 }
 
 void DashboardPresenter::handleSystemStateChanged(int newState) {
-    log().debug("Model event: system state -> {}", newState);
+    LOG_IF(debug, "Model event: system state -> {}", systemStateName(newState));
     auto vm = buildControlPanelVM();
     notifyControlPanelChanged(vm);
 }
@@ -204,11 +244,11 @@ presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpoint
         vm.status = presenter::QualityCheckpointStatus::Passing;
     } else if (cp.passRate >= config::defaults::kQualityWarningThreshold) {
         vm.status = presenter::QualityCheckpointStatus::Warning;
-        log().trace("Quality checkpoint {} ({}) WARNING: {:.1f}%",
+        LOG_IF(trace,"Quality checkpoint {} ({}) WARNING: {:.1f}%",
                     checkpointId, cp.name, cp.passRate);
     } else {
         vm.status = presenter::QualityCheckpointStatus::Critical;
-        log().trace("Quality checkpoint {} ({}) CRITICAL: {:.1f}%",
+        LOG_IF(trace,"Quality checkpoint {} ({}) CRITICAL: {:.1f}%",
                     checkpointId, cp.name, cp.passRate);
     }
 

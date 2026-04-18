@@ -351,3 +351,46 @@ msgstr "Proprietär – Alle Rechte vorbehalten.\nNur zur Bewertung im Vorstellu
 
 msgid "QUALITY TRENDS"
 msgstr "QUALITÄTSTRENDS"
+
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "General"
+msgstr "Allgemein"
+
+msgid "Language:"
+msgstr "Sprache:"
+
+msgid "Theme:"
+msgstr "Design:"
+
+msgid "Dark"
+msgstr "Dunkel"
+
+msgid "Light"
+msgstr "Hell"
+
+msgid "Display"
+msgstr "Anzeige"
+
+msgid "Display mode:"
+msgstr "Anzeigemodus:"
+
+msgid "Data"
+msgstr "Daten"
+
+msgid "Auto refresh simulation"
+msgstr "Simulation automatisch aktualisieren"
+
+msgid "Refresh interval (ms):"
+msgstr "Aktualisierungsintervall (ms):"
+
+msgid "Logging"
+msgstr "Protokollierung"
+
+msgid "Log level:"
+msgstr "Protokollstufe:"
+
+msgid "Show log panel at the bottom of the window"
+msgstr "Protokoll-Panel am unteren Fensterrand anzeigen"

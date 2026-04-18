@@ -2,7 +2,7 @@
 
 #include "src/model/ProductionModel.h"
 #include "src/model/ProductionTypes.h"
-#include "src/core/Application.h"
+#include "src/core/LoggerBase.h"
 
 #include <string>
 #include <functional>
@@ -40,6 +40,13 @@ public:
         return inst;
     }
 
+    /// Optional logger (DI, same pattern as DatabaseManager::setLogger).
+    /// Tests skip this call so SimulatedModel stays header-only-linkable
+    /// without dragging Application into the test target.
+    void setLogger(app::core::Logger& logger) {
+        logger_ = &logger;
+    }
+
     void onEquipmentStatusChanged(EquipmentCallback cb) override {
         const std::scoped_lock lock(mutex_);
         equipmentCallbacks_.push_back(cb);
@@ -71,11 +78,13 @@ public:
     /// graph does not leave dangling lambdas behind.
     void clearCallbacks() {
         const std::scoped_lock lock(mutex_);
-        app::core::Application::instance().logger().debug(
-            "Model: clearing callbacks (eq={}, act={}, qc={}, wu={}, st={})",
-            equipmentCallbacks_.size(), actuatorCallbacks_.size(),
-            qualityCallbacks_.size(), workUnitCallbacks_.size(),
-            stateCallbacks_.size());
+        if (logger_) {
+            logger_->debug(
+                "Model: clearing callbacks (eq={}, act={}, qc={}, wu={}, st={})",
+                equipmentCallbacks_.size(), actuatorCallbacks_.size(),
+                qualityCallbacks_.size(), workUnitCallbacks_.size(),
+                stateCallbacks_.size());
+        }
         equipmentCallbacks_.clear();
         actuatorCallbacks_.clear();
         qualityCallbacks_.clear();
@@ -85,23 +94,20 @@ public:
 
     // User commands
     void startProduction() override {
-        app::core::Application::instance().logger().info(
-            "Model: state IDLE -> RUNNING (production started)");
+        if (logger_) logger_->info("Model: state IDLE -> RUNNING (production started)");
         currentState_ = SystemState::RUNNING;
         notifyStateChange();
         simulateProductionCycle();
     }
 
     void stopProduction() override {
-        app::core::Application::instance().logger().info(
-            "Model: state -> IDLE (production stopped)");
+        if (logger_) logger_->info("Model: state -> IDLE (production stopped)");
         currentState_ = SystemState::IDLE;
         notifyStateChange();
     }
 
     void resetSystem() override {
-        app::core::Application::instance().logger().info(
-            "Model: reset system - clearing work unit progress");
+        if (logger_) logger_->info("Model: reset system - clearing work unit progress");
         currentState_ = SystemState::IDLE;
         currentWorkUnit_.completedOperations = 0;
         notifyStateChange();
@@ -109,21 +115,23 @@ public:
     }
 
     void startCalibration() override {
-        app::core::Application::instance().logger().info(
-            "Model: state -> CALIBRATION");
+        if (logger_) logger_->info("Model: state -> CALIBRATION");
         currentState_ = SystemState::CALIBRATION;
         notifyStateChange();
     }
 
     void setEquipmentEnabled(uint32_t equipmentId, bool enabled) override {
-        auto& logger = app::core::Application::instance().logger();
         if (equipmentId >= kEquipmentCount) {
-            logger.warn("Model: setEquipmentEnabled out of range (id={}, max={})",
-                        equipmentId, kEquipmentCount);
+            if (logger_) {
+                logger_->warn("Model: setEquipmentEnabled out of range (id={}, max={})",
+                              equipmentId, kEquipmentCount);
+            }
             return;
         }
-        logger.debug("Model: equipment {} -> {}",
-                     equipmentId, enabled ? "online" : "offline");
+        if (logger_) {
+            logger_->debug("Model: equipment {} -> {}",
+                           equipmentId, enabled ? "online" : "offline");
+        }
         equipmentStatuses_[equipmentId].status =
             enabled ? kEquipmentStatusOnline : kEquipmentStatusOffline;
         notifyEquipmentChange(equipmentId);
@@ -139,7 +147,7 @@ public:
 
     /// Advance simulation by one tick (called by auto refresh timer)
     void tickSimulation() {
-        app::core::Application::instance().logger().trace("Model: simulation tick");
+        if (logger_) logger_->trace("Model: simulation tick");
         {
             const std::scoped_lock lock(mutex_);
             std::uniform_real_distribution<float> rateDist(-kQualityRateJitter, kQualityRateJitter);
@@ -191,8 +199,10 @@ public:
     // not behavior — suppress magic-number lint for this block.
     // NOLINTBEGIN(readability-magic-numbers,cppcoreguidelines-avoid-magic-numbers)
     void initializeDemoData() {
-        app::core::Application::instance().logger().info(
-            "Model: initializing demo data (3 equipment lines, 3 quality checkpoints)");
+        if (logger_) {
+            logger_->info("Model: initializing demo data "
+                          "(3 equipment lines, 3 quality checkpoints)");
+        }
         // Equipment statuses (3 lines: A-LINE, B-LINE, C-LINE)
         equipmentStatuses_[0] = {0, 2, 85, "85K tablets/hr"};  // A-LINE (Processing)
         equipmentStatuses_[1] = {1, 1, 95, "Film coating"};     // B-LINE (Online)
@@ -303,6 +313,10 @@ private:
     
     mutable std::mutex mutex_;
     std::mt19937 rng_{kRngSeed};
+
+    // Optional logger — null when the test harness exercises the model
+    // without a real Application; set by Application::initDatabase().
+    app::core::Logger* logger_{nullptr};
 };
 
 }  // namespace app::model

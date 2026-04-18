@@ -77,6 +77,17 @@ private:
     std::size_t      lastLogSize_{0};
     Gtk::Notebook*   mainNotebook_    = nullptr;
 
+    // Sidebar labels/buttons that carry translatable text. Kept as
+    // members so `rebuildPages()` can reassign the text via `_()` after
+    // a live language switch — the .ui file is only loaded once at
+    // startup, so GtkBuilder won't re-translate these by itself.
+    Gtk::Label*      appTitleLabel_    = nullptr;
+    Gtk::Label*      appSubtitleLabel_ = nullptr;
+    Gtk::Button*     closeAppButton_   = nullptr;
+    Gtk::Label*      versionLabel_     = nullptr;
+    Gtk::Label*      authorLabel_      = nullptr;
+    void refreshSidebarTranslations();
+
     // Services (injected into pages)
     std::unique_ptr<app::core::ExceptionHandler> exceptionHandler_;
     std::unique_ptr<app::view::DialogManager>    dialogManager_;

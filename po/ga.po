@@ -351,3 +351,46 @@ msgstr "Dílsithe - Gach Ceart Forchoimeádta.\nAr mhaithe le measúnú agallaim
 
 msgid "QUALITY TRENDS"
 msgstr "TREOCHTAÍ CÁILÍOCHTA"
+
+
+msgid "Settings"
+msgstr "Socruithe"
+
+msgid "General"
+msgstr "Ginearálta"
+
+msgid "Language:"
+msgstr "Teanga:"
+
+msgid "Theme:"
+msgstr "Téama:"
+
+msgid "Dark"
+msgstr "Dorcha"
+
+msgid "Light"
+msgstr "Éadrom"
+
+msgid "Display"
+msgstr "Taispeáint"
+
+msgid "Display mode:"
+msgstr "Mód taispeána:"
+
+msgid "Data"
+msgstr "Sonraí"
+
+msgid "Auto refresh simulation"
+msgstr "Athnuaigh an t-insamhaltaí go huathoibríoch"
+
+msgid "Refresh interval (ms):"
+msgstr "Eatramh athnuachana (ms):"
+
+msgid "Logging"
+msgstr "Logáil"
+
+msgid "Log level:"
+msgstr "Leibhéal logála:"
+
+msgid "Show log panel at the bottom of the window"
+msgstr "Taispeáin painéal logála ag bun na fuinneoige"
