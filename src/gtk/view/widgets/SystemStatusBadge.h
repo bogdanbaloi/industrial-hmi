@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/core/i18n.h"
+#include "src/gtk/view/ui_sizes.h"
 
 #include <gtkmm.h>
 
@@ -15,12 +16,12 @@ namespace app::view {
 class SystemStatusBadge : public Gtk::Box {
 public:
     SystemStatusBadge()
-        : Gtk::Box(Gtk::Orientation::HORIZONTAL, 8) {
+        : Gtk::Box(Gtk::Orientation::HORIZONTAL, sizes::kSpacingSmall) {
         add_css_class("system-status-badge");
-        set_margin_start(20);
-        set_margin_end(20);
-        set_margin_top(12);
-        set_margin_bottom(12);
+        set_margin_start(sizes::kSpacingLarge);
+        set_margin_end(sizes::kSpacingLarge);
+        set_margin_top(sizes::kSpacingMedium);
+        set_margin_bottom(sizes::kSpacingMedium);
 
         dot_ = Gtk::make_managed<Gtk::Label>("●");
         dot_->add_css_class("system-status-dot");
@@ -41,8 +42,8 @@ public:
     void setState(int state) {
         // Reset css classes for the dot — Gtk doesn't have a simple
         // "replace" so we remove the known ones before adding the new.
-        for (auto cls : {"state-idle", "state-running",
-                         "state-error", "state-calibration"}) {
+        for (const auto* cls : {"state-idle", "state-running",
+                                 "state-error", "state-calibration"}) {
             dot_->remove_css_class(cls);
         }
         switch (state) {

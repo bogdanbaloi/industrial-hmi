@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/core/i18n.h"
+#include "src/gtk/view/ui_sizes.h"
 
 #include <gtkmm.h>
 #include <glibmm/main.h>
@@ -17,10 +18,10 @@ namespace app::view {
 /// `Glib::signal_timeout` that updates the text.
 class LiveClock : public Gtk::Box {
 public:
-    LiveClock() : Gtk::Box(Gtk::Orientation::VERTICAL, 2) {
+    LiveClock() : Gtk::Box(Gtk::Orientation::VERTICAL, sizes::kSpacingTiny / 2) {
         add_css_class("live-clock");
-        set_margin_start(20);
-        set_margin_end(20);
+        set_margin_start(sizes::kSpacingLarge);
+        set_margin_end(sizes::kSpacingLarge);
 
         time_ = Gtk::make_managed<Gtk::Label>();
         time_->add_css_class("live-clock-time");
