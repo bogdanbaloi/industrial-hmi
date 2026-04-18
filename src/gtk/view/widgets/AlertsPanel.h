@@ -146,15 +146,19 @@ private:
     }
 
     void buildList() {
+        // Minimum height reserved for the scroller so the panel
+        // always shows at least one card row before internal
+        // scrolling kicks in, regardless of how tight the enclosing
+        // layout allocates to it (Blueprint's compact footer is the
+        // worst case — ~100px total for the whole panel).
+        constexpr int kScrollerMinContentHeight = 50;
+        constexpr int kScrollerTopMargin        = 8;
+
         scroller_ = Gtk::make_managed<Gtk::ScrolledWindow>();
         scroller_->set_vexpand(true);
         scroller_->set_policy(Gtk::PolicyType::NEVER, Gtk::PolicyType::AUTOMATIC);
-        // Keeps the scroller non-collapsible so the panel always
-        // shows at least one card row before internal scrolling
-        // kicks in, regardless of how tight the enclosing layout
-        // makes the footer (especially Blueprint's compact footer).
-        scroller_->set_min_content_height(70);
-        scroller_->set_margin_top(8);
+        scroller_->set_min_content_height(kScrollerMinContentHeight);
+        scroller_->set_margin_top(kScrollerTopMargin);
 
         listBox_ = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 6);
         scroller_->set_child(*listBox_);

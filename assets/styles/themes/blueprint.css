@@ -119,29 +119,47 @@ button.alert-dismiss         { color: #4DD0E1; }
 button.alert-dismiss:hover   { color: #F5EFE0; background: rgba(0,188,212,0.08); }
 
 /* ---------- Notebook tabs ------------------------------------------------ */
+/* Taller tab bar so the page content below doesn't visually collide
+   with the selected-tab label (dashboard_root only margins 6px off
+   the top, which is too snug on compact monitors). */
 notebook header {
     background: #0D2847;
     border-bottom: 2px solid #00BCD4;
+    min-height: 40px;
 }
 notebook tab {
     background: transparent;
     color: #C9C0A4;
     border: 1px solid transparent;
-    padding: 8px 18px;
+    padding: 10px 18px;
     letter-spacing: 2px;
     text-transform: uppercase;
     font-weight: 700;
+    min-height: 36px;
 }
 notebook tab:hover   { color: #F5EFE0; background: rgba(0,188,212,0.06); }
 notebook tab:checked { color: #00BCD4; border-color: #00BCD4; border-bottom-color: transparent; }
 
+/* Pad the page container so the first row of page content clears
+   the tab bar even when the notebook is squeezed. */
+notebook stack { padding-top: 8px; }
+
 /* ---------- Dashboard cards & labels ------------------------------------- */
+/* Compact padding: Blueprint's top-bar + footer leaves notebook area
+   tight, so shave ~10px off each card vs the default Industrial look. */
 .work-unit-card,
 .equipment-card,
 .quality-card,
 .actuator-card {
     background: transparent;
     border: 1px solid #18375F;
+    padding: 6px 10px;
+}
+.start-button,
+.stop-button,
+.reset-button,
+.calibration-button {
+    padding: 6px 18px;
 }
 
 .card-title        { color: #F5EFE0; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
