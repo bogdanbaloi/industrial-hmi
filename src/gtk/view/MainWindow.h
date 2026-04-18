@@ -52,6 +52,13 @@ public:
 private:
     // UI initialization
     void loadUI();
+    // Parse the palette-appropriate main-window .ui and assign the
+    // member widget pointers (mainNotebook_, alertsContainer_, etc.)
+    // to the freshly-built subtree WITHOUT installing it via
+    // set_child(). Caller is responsible for calling set_child()
+    // once the new subtree is fully populated — used by reloadLayout
+    // to avoid showing an empty frame between swap and repopulate.
+    Gtk::Box* parseLayoutUI();
     void loadSidebarCSS();
     void setupKeyboardShortcuts();
     void createAllPages();
@@ -59,6 +66,22 @@ private:
     void registerPage(app::view::Page* page);
     void clearPages();
     void rebuildPages(const Glib::ustring& newLanguage);
+
+    // Pick which main-window .ui to parse for the currently-active
+    // palette. Structural palettes (e.g. Blueprint with top-bar
+    // instead of sidebar) return their own path; everything else
+    // returns the default sidebar layout.
+    [[nodiscard]] static const char* chooseMainWindowUI(
+        const std::string& palette);
+    // Build the sidebar/top-bar inhabitants (AlertsPanel, SystemStatusBadge,
+    // LiveClock) and hook up E-STOP + Close handlers. Safe to call
+    // multiple times during a live relayout — callers are expected to
+    // have reset the member pointers to null first.
+    void buildSidebarWidgets();
+    // Tear down + re-parse main-window.ui from disk when switching
+    // between structurally different layouts (e.g. default → Blueprint
+    // top-bar). Keeps the user's active tab and runtime toggles.
+    void reloadLayout();
 
     // Timer / panel helpers (driven by SettingsPage signals)
     void applyDisplayMode(bool fullscreen);
@@ -75,6 +98,13 @@ private:
     bool autoRefreshOn_   = true;
     int  refreshIntervalMs_;
     bool verboseLogging_  = false;
+    // Path of the main-window .ui currently loaded; used to detect
+    // whether a palette change requires a hot relayout.
+    std::string currentLayoutUI_;
+    // Held across parseLayoutUI() + (populate + set_child) so the
+    // builder-owned widgets don't drop their initial ref before a
+    // parent adopts them. Reset immediately after set_child().
+    Glib::RefPtr<Gtk::Builder> pendingBuilder_;
 
     // Widgets from .ui file
     sigc::connection autoRefreshTimer_;

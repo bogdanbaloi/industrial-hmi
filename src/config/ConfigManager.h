@@ -171,6 +171,23 @@ public:
     }
 
     // ========================================================================
+    // UI palette (CSS theme on top of dark/light)
+    // ========================================================================
+
+    /// Current palette id. Empty string = baseline "industrial" look
+    /// (no extra CSS provider, same as a fresh install).
+    std::string getPalette() const {
+        return getValue("ui.palette", "");
+    }
+
+    /// Persist a palette choice. Empty string clears it (back to
+    /// baseline). Any other id maps to `assets/styles/themes/<id>.css`.
+    [[nodiscard]] bool setPalette(const std::string& palette) {
+        config_["ui.palette"] = palette;
+        return persistPalette(palette);
+    }
+
+    // ========================================================================
     // Logging Configuration
     // ========================================================================
 
@@ -332,7 +349,26 @@ private:
      * and writes it back atomically-ish (via a temp file + rename).
      */
     bool persistLanguage(const std::string& language) {
-        // Read entire file
+        const std::string insertion =
+            "\n  \"i18n\": {\n    \"language\": \"" + language + "\"\n  },\n";
+        return persistStringField("language", language, insertion);
+    }
+
+    bool persistPalette(const std::string& palette) {
+        const std::string insertion =
+            "\n  \"ui\": {\n    \"palette\": \"" + palette + "\"\n  },\n";
+        return persistStringField("palette", palette, insertion);
+    }
+
+    /// Swap a top-level `"<key>": "..."` string literal inside the
+    /// config file. Used by setLanguage/setPalette — a targeted
+    /// string replace that avoids bringing in a full JSON library
+    /// and preserves hand-authored comments/formatting in the file.
+    /// `insertionIfMissing` is the JSON fragment inserted right
+    /// after the opening brace when the key doesn't exist yet.
+    bool persistStringField(const std::string& fieldName,
+                            const std::string& value,
+                            const std::string& insertionIfMissing) {
         std::ifstream in(configPath_);
         if (!in.is_open()) return false;
         std::stringstream buffer;
@@ -340,13 +376,10 @@ private:
         in.close();
         std::string content = buffer.str();
 
-        // Try to replace an existing "language": "..." value within the i18n section.
-        // We look for the literal `"language"` key and swap the string that follows.
-        const std::string key = "\"language\"";
+        const std::string key = "\"" + fieldName + "\"";
         size_t keyPos = content.find(key);
         bool replaced = false;
         if (keyPos != std::string::npos) {
-            // Find the colon, then the opening quote of the value
             size_t colon = content.find(':', keyPos + key.size());
             if (colon != std::string::npos) {
                 size_t quoteStart = content.find('"', colon + 1);
@@ -355,23 +388,19 @@ private:
                     if (quoteEnd != std::string::npos) {
                         content.replace(quoteStart + 1,
                                         quoteEnd - quoteStart - 1,
-                                        language);
+                                        value);
                         replaced = true;
                     }
                 }
             }
         }
 
-        // If not found, insert a new i18n block right after the opening brace.
         if (!replaced) {
             size_t brace = content.find('{');
             if (brace == std::string::npos) return false;
-            std::string block =
-                "\n  \"i18n\": {\n    \"language\": \"" + language + "\"\n  },\n";
-            content.insert(brace + 1, block);
+            content.insert(brace + 1, insertionIfMissing);
         }
 
-        // Write atomically via temp file
         std::string tmpPath = configPath_ + ".tmp";
         {
             std::ofstream out(tmpPath, std::ios::binary | std::ios::trunc);

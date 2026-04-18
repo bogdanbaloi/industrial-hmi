@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gtkmm.h>
+#include <filesystem>
 #include <string>
 #include "src/config/config_defaults.h"
 #include "src/gtk/view/css_classes.h"
@@ -69,6 +70,21 @@ public:
         return currentTheme_ == Theme::DARK;
     }
 
+    /// Switch the active color palette. Empty / "industrial" loads no
+    /// extra stylesheet and the app keeps the baseline look; any other
+    /// id loads `assets/styles/themes/<id>.css` at higher priority on
+    /// top of the base CSS so it redefines colors without touching
+    /// layout.
+    void setPalette(const std::string& paletteId) {
+        if (paletteId == currentPalette_) return;
+        currentPalette_ = paletteId;
+        applyPalette();
+    }
+
+    [[nodiscard]] const std::string& getPalette() const {
+        return currentPalette_;
+    }
+
     /// Apply current theme CSS class to a dialog window
     void applyToDialog(Gtk::Window* dialog) {
         if (!dialog) return;
@@ -124,9 +140,53 @@ private:
         }
     }
     
+    // Remove the previous palette provider (if any) and, if the new
+    // palette id is non-empty and has a matching file, load it at a
+    // higher priority than the base sidebar.css so its rules win.
+    void applyPalette() {
+        auto* display = Gdk::Display::get_default().get();
+        if (!display) return;
+
+        if (paletteProvider_) {
+            Gtk::StyleContext::remove_provider_for_display(
+                Gdk::Display::get_default(), paletteProvider_);
+            paletteProvider_.reset();
+        }
+
+        if (currentPalette_.empty() || currentPalette_ == "industrial") {
+            return;  // Baseline look — nothing extra to load.
+        }
+
+        const std::string path =
+            std::string(app::config::defaults::kPaletteDir) + "/"
+            + currentPalette_ + ".css";
+        if (!std::filesystem::exists(path)) {
+            g_warning("Palette '%s' not found at %s — keeping previous look",
+                      currentPalette_.c_str(), path.c_str());
+            currentPalette_.clear();
+            return;
+        }
+
+        paletteProvider_ = Gtk::CssProvider::create();
+        try {
+            paletteProvider_->load_from_path(path);
+            Gtk::StyleContext::add_provider_for_display(
+                Gdk::Display::get_default(),
+                paletteProvider_,
+                GTK_STYLE_PROVIDER_PRIORITY_USER + 1);
+        } catch (const Glib::Error& e) {
+            g_warning("Failed to load palette CSS '%s': %s",
+                      path.c_str(), e.what());
+            paletteProvider_.reset();
+            currentPalette_.clear();
+        }
+    }
+
     Gtk::Window* mainWindow_{nullptr};
     Glib::RefPtr<Gtk::CssProvider> cssProvider_;
+    Glib::RefPtr<Gtk::CssProvider> paletteProvider_;
     Theme currentTheme_{Theme::DARK};  // Default to dark for industrial
+    std::string currentPalette_;       // Empty = baseline industrial
 };
 
 }  // namespace app::view

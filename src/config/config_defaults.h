@@ -61,6 +61,10 @@ constexpr const char* kGtkAppId = "com.portfolio.industrial-hmi";
 
 // UI layout files (GtkBuilder XML)
 constexpr const char* kMainWindowUI    = "assets/ui/main-window.ui";
+// Alternative MainWindow layouts picked by palette at startup. Each
+// must expose the same set of widget IDs as main-window.ui so
+// MainWindow.cpp stays agnostic about which file was loaded.
+constexpr const char* kMainWindowBlueprintUI = "assets/ui/main-window-blueprint.ui";
 constexpr const char* kDashboardPageUI = "assets/ui/dashboard-page.ui";
 constexpr const char* kProductsPageUI  = "assets/ui/products-page.ui";
 constexpr const char* kSettingsPageUI  = "assets/ui/settings-page.ui";
@@ -70,6 +74,12 @@ constexpr const char* kThemeCSS     = "assets/styles/adwaita-theme.css";
 constexpr const char* kSidebarCSS   = "assets/styles/sidebar.css";
 constexpr const char* kDashboardCSS = "assets/styles/dashboard.css";
 constexpr const char* kProductsCSS  = "assets/styles/products.css";
+
+// Palette directory — one .css file per palette, loaded on top of the
+// base stylesheets by ThemeManager. Filename = palette id (e.g.
+// "nord.css"). A palette of "industrial" or "" is a no-op (no
+// extra provider), falling back to the base dark/light look.
+constexpr const char* kPaletteDir   = "assets/styles/themes";
 
 // Timers (milliseconds)
 constexpr int kAutoRefreshIntervalMs = 2000;

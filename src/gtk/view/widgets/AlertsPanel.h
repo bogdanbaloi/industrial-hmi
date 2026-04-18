@@ -31,7 +31,11 @@ public:
     explicit AlertsPanel(presenter::AlertCenter& alertCenter)
         : Gtk::Box(Gtk::Orientation::VERTICAL)
         , alertCenter_(alertCenter) {
-        set_vexpand(true);
+        // No set_vexpand(true) here — the internal ScrolledWindow
+        // already carries vexpand, and adding vexpand to the panel
+        // itself conflicts with a fixed-height footer (Blueprint
+        // layout) where the container's height-request is the
+        // authoritative allocation.
         set_margin_start(sizes::kSpacingMedium);
         set_margin_end(sizes::kSpacingMedium);
         set_margin_top(sizes::kSpacingMedium);
@@ -41,16 +45,24 @@ public:
         buildHeader();
         buildList();
 
+        // Both signals share a coalesced refresh: any number of
+        // rapid-fire raises/clears collapse into a single `refresh()`
+        // on the next GTK idle tick. We use sigc::mem_fun (not a bare
+        // `[this]` lambda) so sigc's trackable machinery — Gtk::Box
+        // inherits from sigc::trackable — auto-disconnects the slot
+        // when AlertsPanel is destroyed. A plain lambda captures
+        // `this` opaquely and would keep firing on a dangling pointer
+        // during a MainWindow relayout.
         alertCenter_.signalAlertsChanged().connect(
-            [this]() {
-                Glib::signal_idle().connect_once([this]() { refresh(); });
-            });
+            sigc::mem_fun(*this, &AlertsPanel::scheduleRefresh));
         alertCenter_.signalHistoryChanged().connect(
-            [this]() {
-                Glib::signal_idle().connect_once([this]() { refresh(); });
-            });
+            sigc::mem_fun(*this, &AlertsPanel::scheduleRefresh));
 
         refresh();
+    }
+
+    ~AlertsPanel() override {
+        pendingRefresh_.disconnect();
     }
 
     AlertsPanel(const AlertsPanel&) = delete;
@@ -68,6 +80,21 @@ public:
     }
 
 private:
+    // Queue a single GTK-thread refresh. Repeated calls while an idle
+    // is already pending collapse into one — cheaper redraw + avoids
+    // a thundering herd when many alerts change in one tick.
+    // connect() (not connect_once) returns a sigc::connection we can
+    // disconnect from ~AlertsPanel() if the widget dies before the
+    // idle fires (relayout / language rebuild).
+    void scheduleRefresh() {
+        if (pendingRefresh_.connected()) return;
+        pendingRefresh_ = Glib::signal_idle().connect([this]() {
+            pendingRefresh_ = sigc::connection{};
+            refresh();
+            return false;  // run once
+        });
+    }
+
     void buildHeader() {
         auto* header = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 8);
 
@@ -119,10 +146,19 @@ private:
     }
 
     void buildList() {
+        // Minimum height reserved for the scroller so the panel
+        // always shows at least one card row before internal
+        // scrolling kicks in, regardless of how tight the enclosing
+        // layout allocates to it (Blueprint's compact footer is the
+        // worst case — ~100px total for the whole panel).
+        constexpr int kScrollerMinContentHeight = 50;
+        constexpr int kScrollerTopMargin        = 8;
+
         scroller_ = Gtk::make_managed<Gtk::ScrolledWindow>();
         scroller_->set_vexpand(true);
         scroller_->set_policy(Gtk::PolicyType::NEVER, Gtk::PolicyType::AUTOMATIC);
-        scroller_->set_margin_top(8);
+        scroller_->set_min_content_height(kScrollerMinContentHeight);
+        scroller_->set_margin_top(kScrollerTopMargin);
 
         listBox_ = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 6);
         scroller_->set_child(*listBox_);
@@ -244,6 +280,7 @@ private:
     Gtk::ScrolledWindow* scroller_{nullptr};
     Gtk::Box*            listBox_{nullptr};
     bool                 showingHistory_{false};
+    sigc::connection     pendingRefresh_;
 };
 
 }  // namespace app::view

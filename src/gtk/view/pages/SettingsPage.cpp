@@ -11,6 +11,8 @@
 #include "src/core/Application.h"
 #include "src/core/i18n.h"
 
+#include <array>
+
 namespace app::view {
 
 namespace {
@@ -20,6 +22,22 @@ namespace {
 constexpr int kRefreshIntervalMinMs  = 500;
 constexpr int kRefreshIntervalMaxMs  = 10000;
 constexpr int kRefreshIntervalStepMs = 500;
+
+// Available palettes shown in the Settings thumbnail picker.
+// NOTE: the `id` field must match:
+//   - ThemeManager::setPalette() — drives which .css file loads
+//   - .swatch-<id>-<0..3> CSS classes in sidebar.css — the color squares
+// Adding a theme = append one entry here + 4 CSS classes + a themes/<id>.css
+struct PaletteInfo {
+    const char* id;
+    const char* label;
+};
+constexpr std::array<PaletteInfo, 4> kPalettes = {{
+    {"industrial", "Industrial"},
+    {"nord",       "Nord"},
+    {"blueprint",  "Blueprint"},
+    {"cockpit",    "Cockpit"},
+}};
 }  // namespace
 
 SettingsPage::SettingsPage(DialogManager& dialogManager)
@@ -45,7 +63,10 @@ void SettingsPage::buildUI() {
     languageCombo_    = builder->get_widget<Gtk::ComboBoxText>("settings_language_combo");
     radioDark_        = builder->get_widget<Gtk::CheckButton>("settings_radio_dark");
     radioLight_       = builder->get_widget<Gtk::CheckButton>("settings_radio_light");
+    paletteThumbs_    = builder->get_widget<Gtk::Box>("settings_palette_thumbs");
     radioFullscreen_  = builder->get_widget<Gtk::CheckButton>("settings_radio_fullscreen");
+
+    buildPaletteThumbnails();
     radioWindowed_    = builder->get_widget<Gtk::CheckButton>("settings_radio_windowed");
     checkAutoRefresh_ = builder->get_widget<Gtk::CheckButton>("settings_check_auto_refresh");
     intervalSpin_     = builder->get_widget<Gtk::SpinButton>("settings_interval_spin");
@@ -69,6 +90,92 @@ void SettingsPage::loadInitialValues() {
 
     if (logLevelCombo_) {
         logLevelCombo_->set_active_id(config.getLogLevel());
+    }
+
+    // Highlight whichever thumbnail matches the saved palette id.
+    // Empty config value maps to the "industrial" baseline card.
+    const auto saved = config.getPalette();
+    highlightSelectedPaletteCard(saved.empty() ? "industrial" : saved);
+}
+
+void SettingsPage::buildPaletteThumbnails() {
+    if (!paletteThumbs_) return;
+
+    // Remove any previous children (refreshTranslations rebuilds ui).
+    while (auto* child = paletteThumbs_->get_first_child()) {
+        paletteThumbs_->remove(*child);
+    }
+    paletteCards_.clear();
+
+    for (const auto& p : kPalettes) {
+        auto* card = Gtk::make_managed<Gtk::Button>();
+        card->add_css_class("palette-card");
+        card->set_has_frame(false);
+
+        auto* content = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 6);
+
+        // 4-swatch color strip — one CSS class per (palette, slot).
+        auto* swatches = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
+        swatches->add_css_class("palette-swatch-row");
+        for (int i = 0; i < 4; ++i) {
+            auto* sw = Gtk::make_managed<Gtk::Box>();
+            sw->add_css_class("palette-swatch");
+            sw->add_css_class(
+                std::string("swatch-") + p.id + "-" + std::to_string(i));
+            swatches->append(*sw);
+        }
+        content->append(*swatches);
+
+        auto* name = Gtk::make_managed<Gtk::Label>(p.label);
+        name->add_css_class("palette-card-name");
+        name->set_xalign(0.5);
+        content->append(*name);
+
+        card->set_child(*content);
+        const std::string id = p.id;
+        card->signal_clicked().connect([this, id]() {
+            if (syncingState_) return;
+            auto& config = app::config::ConfigManager::instance();
+            auto& logger = app::core::Application::instance().logger();
+
+            // "industrial" card -> empty on disk (baseline, no extra CSS).
+            const std::string toStore = (id == "industrial") ? "" : id;
+            if (toStore == config.getPalette()) {
+                // Still refresh highlight in case card is clicked twice
+                highlightSelectedPaletteCard(id);
+                return;
+            }
+
+            // Persist + highlight synchronously — config/card state
+            // is cheap and visible changes are desirable here.
+            if (!config.setPalette(toStore)) {
+                logger.warn("Palette: failed to persist '{}' to config",
+                            id.c_str());
+            }
+            logger.info("Palette: {}", id.c_str());
+            highlightSelectedPaletteCard(id);
+
+            // DO NOT apply the CSS (ThemeManager::setPalette) here.
+            // MainWindow handles that in a single signal_idle pass
+            // alongside any structural relayout, so the user never
+            // sees a "new CSS on old layout" hybrid frame.
+            signalPaletteChanged_.emit(Glib::ustring(id));
+        });
+
+        paletteThumbs_->append(*card);
+        paletteCards_[p.id] = card;
+    }
+}
+
+void SettingsPage::highlightSelectedPaletteCard(const std::string& paletteId) {
+    constexpr auto kSelected = "selected";
+    for (auto& [id, card] : paletteCards_) {
+        if (!card) continue;
+        if (id == paletteId) {
+            if (!card->has_css_class(kSelected)) card->add_css_class(kSelected);
+        } else {
+            card->remove_css_class(kSelected);
+        }
     }
 }
 
@@ -173,6 +280,11 @@ void SettingsPage::onThemeSelected() {
         app::core::Application::instance().logger().info("Theme: light");
         signalThemeChanged_.emit();
     }
+}
+
+void SettingsPage::onPaletteSelected() {
+    // Legacy handler left for the header signature; the thumbnail
+    // picker wires its selection inline in buildPaletteThumbnails().
 }
 
 void SettingsPage::onDisplayModeSelected() {

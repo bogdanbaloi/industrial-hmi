@@ -1,0 +1,366 @@
+/* ============================================================================
+   Cockpit palette — mission control / phosphor CRT / airliner console
+   ============================================================================
+   Pure black surfaces, phosphor green as primary, amber for warn,
+   red for critical. Heavy "instrument bezel" feel on every container.
+   Subtle glow (box-shadow) where the engine allows it. Compressed
+   condensed sans for values; small-caps labels.
+
+   Background: #000000 (pure), #0A0A0A (card), #1A1A1A (inner)
+   Phosphor:   #33FF66 (primary), #66FF99 (hover), #00CC44 (dim)
+   Amber:      #FFAA00 (warn), #FFCC33 (hover)
+   Red:        #FF3333 (critical), #FF6666 (hover)
+   Grey rails: #2A2A2A, #3D3D3D (bezel edges)
+   Text:       #CCCCCC (base), #808080 (secondary)
+   ============================================================================ */
+
+/* ---------- Global typography ---------------------------------------------- */
+window, window * {
+    font-family: "Barlow Condensed", "Roboto Condensed",
+                 "Oswald", "Impact", sans-serif;
+}
+
+/* ---------- Sidebar -- the "console rack" --------------------------------- */
+.sidebar {
+    background-color: #000000;
+    background-image: linear-gradient(180deg, #0A0A0A 0%, #000000 100%);
+    border-right: 2px solid #2A2A2A;
+    padding: 18px;
+}
+
+.sidebar-title {
+    color: #33FF66;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    font-size: 18px;
+}
+.sidebar-subtitle {
+    color: #66FF99;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+.section-header {
+    color: #808080;
+    letter-spacing: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid #2A2A2A;
+}
+
+.sidebar-option {
+    color: #CCCCCC;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+.sidebar-option:hover   { color: #66FF99; }
+.sidebar-option:checked { color: #33FF66; font-weight: 900; }
+
+.sidebar button {
+    background: #0A0A0A;
+    color: #33FF66;
+    border: 1px solid #3D3D3D;
+    padding: 10px 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+.sidebar button:hover {
+    background: #1A1A1A;
+    color: #66FF99;
+    border-color: #33FF66;
+}
+
+.sidebar-version, .sidebar-author {
+    color: #808080;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* ---------- Clock — cockpit timekeeper ----------------------------------- */
+.live-clock-time {
+    color: #33FF66;
+    font-weight: 900;
+    letter-spacing: 4px;
+    font-size: 26px;
+    text-shadow: 0 0 6px rgba(51, 255, 102, 0.4);
+}
+.live-clock-date {
+    color: #808080;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+/* ---------- System status — big LED readout ------------------------------ */
+.system-status-badge {
+    background: #0A0A0A;
+    border: 2px solid #2A2A2A;
+    border-radius: 2px;
+    padding: 8px 12px;
+}
+.system-status-label {
+    color: #CCCCCC;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+.system-status-dot {
+    font-size: 20px;
+}
+.system-status-dot.state-idle        { color: #808080; }
+.system-status-dot.state-running     { color: #33FF66; }
+.system-status-dot.state-error       { color: #FF3333; }
+.system-status-dot.state-calibration { color: #FFAA00; }
+
+/* ---------- E-STOP — the big red mushroom -------------------------------- */
+button.sidebar-estop,
+window .sidebar button.sidebar-estop {
+    background: #FF3333;
+    color: #000000;
+    border: 3px solid #991F1F;
+    padding: 16px 20px;
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    border-radius: 3px;
+}
+button.sidebar-estop:hover,
+window .sidebar button.sidebar-estop:hover {
+    background: #FF6666;
+    border-color: #FF3333;
+}
+
+/* ---------- Alerts — instrument rack rows -------------------------------- */
+.alerts-panel { color: #CCCCCC; }
+
+.alert-card {
+    background: #0A0A0A;
+    border: 1px solid #2A2A2A;
+    border-left: 4px solid #808080;
+    border-radius: 2px;
+    padding: 10px 12px;
+}
+.alert-card.alert-info     { border-left-color: #66FF99; }
+.alert-card.alert-warning  { border-left-color: #FFAA00; background: rgba(255,170,0,0.06); }
+.alert-card.alert-critical { border-left-color: #FF3333; background: rgba(255,51,51,0.08); }
+.alert-card.alert-resolved { opacity: 0.5; }
+
+.alert-title {
+    color: #CCCCCC;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+.alert-message   { color: #808080; letter-spacing: 1px; }
+.alert-timestamp { color: #66FF99; font-weight: 700; letter-spacing: 1.5px; }
+
+button.alert-dismiss {
+    color: #808080;
+    background: transparent;
+}
+button.alert-dismiss:hover {
+    color: #FF3333;
+    background: rgba(255,51,51,0.1);
+}
+
+/* ---------- Main window background — console panel metal ---------------- */
+window {
+    background-color: #000000;
+}
+
+/* ---------- Notebook tabs — instrument selector switches ---------------- */
+notebook header {
+    background: #000000;
+    border-bottom: 2px solid #33FF66;
+}
+notebook tab {
+    background: #0A0A0A;
+    color: #808080;
+    border: 1px solid #2A2A2A;
+    padding: 10px 20px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 700;
+    border-radius: 2px 2px 0 0;
+}
+notebook tab:hover   { color: #66FF99; }
+notebook tab:checked { color: #33FF66; background: #1A1A1A; border-color: #33FF66; border-bottom-color: #1A1A1A; }
+
+/* ---------- Dashboard cards — "instrument bezels" ------------------------ */
+.work-unit-card,
+.equipment-card,
+.quality-card,
+.actuator-card {
+    background: #0A0A0A;
+    border: 2px solid #2A2A2A;
+    border-radius: 2px;
+    padding: 14px;
+}
+
+.card-title        { color: #33FF66; letter-spacing: 3px; text-transform: uppercase; font-weight: 900; }
+.field-label       { color: #808080; letter-spacing: 2.5px; text-transform: uppercase; font-size: 10px; }
+.field-value       { color: #CCCCCC; letter-spacing: 1px; }
+.field-value-large { color: #33FF66; font-weight: 900; letter-spacing: 2px; }
+.description-text  { color: #808080; }
+.separator-dot     { color: #33FF66; }
+.status-message    { color: #808080; letter-spacing: 1.5px; }
+.equipment-status  { color: #33FF66; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; }
+.equipment-info    { color: #808080; }
+
+/* Status dots — big glowing LEDs */
+.status-dot           { font-size: 22px; }
+.equipment-online     { color: #33FF66; }
+.equipment-processing { color: #FFAA00; }
+.equipment-error      { color: #FF3333; }
+.equipment-offline    { color: #3D3D3D; }
+.quality-passing      { color: #33FF66; }
+.quality-warning      { color: #FFAA00; }
+.quality-critical     { color: #FF3333; }
+
+/* Control panel — heavy military switches */
+.start-button,
+.stop-button,
+.reset-button,
+.calibration-button {
+    background: #0A0A0A;
+    color: #CCCCCC;
+    border: 2px solid #3D3D3D;
+    padding: 14px 22px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    border-radius: 2px;
+}
+.start-button       { color: #33FF66; border-color: #33FF66; }
+.start-button:hover { background: rgba(51,255,102,0.12); color: #66FF99; }
+.stop-button        { color: #FF3333; border-color: #FF3333; }
+.stop-button:hover  { background: rgba(255,51,51,0.15); color: #FF6666; }
+.reset-button       { color: #FFAA00; border-color: #FFAA00; }
+.reset-button:hover { background: rgba(255,170,0,0.12); color: #FFCC33; }
+.calibration-button       { color: #66FF99; border-color: #66FF99; }
+.calibration-button:hover { background: rgba(102,255,153,0.10); }
+
+/* Severity banners — alarm strips */
+.severity-info    { background: rgba(51,255,102,0.08);  border-left: 4px solid #33FF66; }
+.severity-warning { background: rgba(255,170,0,0.10);   border-left: 4px solid #FFAA00; }
+.severity-error   { background: rgba(255,51,51,0.12);   border-left: 4px solid #FF3333; }
+
+/* ---------- Progress bars — analog gauges ------------------------------- */
+progressbar trough {
+    background: #0A0A0A;
+    border: 2px solid #2A2A2A;
+    border-radius: 1px;
+    min-height: 10px;
+}
+progressbar progress {
+    background: #33FF66;
+    border-radius: 1px;
+}
+
+/* ---------- Settings page widgets --------------------------------------- */
+frame {
+    background: #0A0A0A;
+    border: 2px solid #2A2A2A;
+    border-radius: 2px;
+}
+frame > label {
+    color: #33FF66;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 900;
+    padding: 0 10px;
+}
+label {
+    color: #CCCCCC;
+}
+.dim-label {
+    color: #808080;
+}
+
+combobox, spinbutton, entry {
+    background: #000000;
+    color: #33FF66;
+    border: 2px solid #3D3D3D;
+    border-radius: 2px;
+    padding: 6px 10px;
+    letter-spacing: 1px;
+}
+combobox:focus-within, spinbutton:focus-within, entry:focus {
+    border-color: #33FF66;
+}
+combobox button {
+    background: transparent;
+    color: #33FF66;
+    border: none;
+}
+combobox arrow { color: #33FF66; }
+popover, popover.background, popover contents {
+    background: #0A0A0A;
+    color: #CCCCCC;
+    border: 2px solid #33FF66;
+    border-radius: 2px;
+}
+popover label { color: #CCCCCC; }
+
+checkbutton check, checkbutton radio {
+    background: #000000;
+    border: 2px solid #3D3D3D;
+    color: #33FF66;
+    border-radius: 2px;
+    min-height: 16px;
+    min-width: 16px;
+}
+checkbutton check:checked, checkbutton radio:checked {
+    background: #33FF66;
+    border-color: #33FF66;
+    color: #000000;
+}
+checkbutton label { color: #CCCCCC; letter-spacing: 1.5px; }
+
+spinbutton button { background: transparent; color: #33FF66; border: none; }
+spinbutton button:hover { color: #66FF99; }
+
+/* ---------- Light mode — "inverted console" (amber-on-cream) ------------ */
+window.light-mode .sidebar {
+    background-color: #F5F0E6;
+    background-image: none;
+    border-right-color: #0A0A0A;
+}
+window.light-mode .sidebar-title    { color: #000000; }
+window.light-mode .sidebar-subtitle { color: #008833; }
+window.light-mode .section-header   { color: #555555; }
+window.light-mode .sidebar-option   { color: #333333; }
+window.light-mode .sidebar-option:checked { color: #008833; }
+
+window.light-mode .sidebar button {
+    background: #FFFFFF;
+    color: #008833;
+    border-color: #0A0A0A;
+}
+window.light-mode .sidebar button:hover {
+    background: #F0F0F0;
+    color: #00AA44;
+}
+
+window.light-mode .sidebar-version,
+window.light-mode .sidebar-author { color: #555555; }
+
+window.light-mode .live-clock-time {
+    color: #008833;
+    text-shadow: none;
+}
+window.light-mode .live-clock-date { color: #555555; }
+
+window.light-mode .alert-card {
+    background: #FFFFFF;
+    border-color: #D4CDBB;
+}
+window.light-mode .alert-title    { color: #000000; }
+window.light-mode .alert-message  { color: #444444; }
+window.light-mode .alert-timestamp { color: #008833; }
