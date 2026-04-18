@@ -22,6 +22,7 @@
 // the first `_()` call caches the old locale and later calls keep returning
 // stale strings even after bindtextdomain/textdomain are invoked again.
 // Available on glibc and on MSYS2's libintl-8 runtime.
+// NOLINTNEXTLINE(readability-identifier-naming) — external C symbol.
 extern "C" int _nl_msg_cat_cntr;
 
 namespace app::core {

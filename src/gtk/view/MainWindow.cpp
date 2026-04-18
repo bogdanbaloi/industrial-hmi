@@ -237,6 +237,9 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     if (mainNotebook_ && mainNotebook_->get_n_pages() > 0) {
         mainNotebook_->set_current_page(0);
     }
+    // GTK_WINDOW is a C macro that expands to a C-style cast through
+    // void*; no way to avoid it without dropping to the raw GObject API.
+    // NOLINTNEXTLINE(bugprone-casting-through-void, cppcoreguidelines-pro-type-cstyle-cast)
     gtk_window_set_focus(GTK_WINDOW(gobj()), nullptr);
 
     // 4) Tear down the Notebook (destroys pages via Gtk::make_managed ref
@@ -255,8 +258,8 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     // re-init? If "Settings" stays English, libintl is caching the old
     // catalog (MSYS2 libintl-8 is known to ignore _nl_msg_cat_cntr in
     // some builds). If it's translated, the issue lives in GtkBuilder.
-    logger.debug("i18n probe (post-init) _(\"Settings\")=\"{}\"", _("Settings"));
-    logger.debug("i18n probe (post-init) _(\"Dashboard\")=\"{}\"", _("Dashboard"));
+    logger.debug(R"(i18n probe (post-init) _("Settings")="{}")", _("Settings"));
+    logger.debug(R"(i18n probe (post-init) _("Dashboard")="{}")", _("Dashboard"));
 
     // 5) Rebuild pages and rewire everything. initializeDemoData() is
     //    called from createAllPages, re-seeding the new presenters.
