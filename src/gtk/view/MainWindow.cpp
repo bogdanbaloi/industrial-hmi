@@ -5,8 +5,10 @@
 #include "MainWindow.h"
 #include "src/gtk/view/DialogManager.h"
 #include "src/gtk/view/ThemeManager.h"
+#include "src/gtk/view/pages/Page.h"
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
+#include "src/gtk/view/pages/SettingsPage.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/presenter/ProductsPresenter.h"
 #include "src/model/SimulatedModel.h"
@@ -21,7 +23,8 @@
 #include <fstream>
 
 
-MainWindow::MainWindow() {
+MainWindow::MainWindow()
+    : refreshIntervalMs_(app::config::defaults::kAutoRefreshIntervalMs) {
     // Get logger from Application (already initialized)
     auto& appLogger = app::core::Application::instance().logger();
 
@@ -32,39 +35,45 @@ MainWindow::MainWindow() {
     auto& config = app::config::ConfigManager::instance();
     set_title(config.getWindowTitle());
     set_icon_name(config.getWindowIconName());
-    
+
     // Load UI layout from .ui file
     loadUI();
-    
+
     // Initialize theme system (Adwaita Dark/Light with Design Tokens)
     app::view::ThemeManager::instance().initialize(this);
-    
-    // Apply custom styling (legacy sidebar CSS - being replaced by adwaita-theme.css)
+
+    // Apply custom styling (legacy sidebar CSS)
     loadSidebarCSS();
-    
-    // Setup keyboard shortcuts (F11, ESC)
+
+    // Setup keyboard shortcuts
     setupKeyboardShortcuts();
-    
-    // Connect sidebar controls to handlers
-    connectSignals();
-    
+
     // Create DialogManager (injected into pages)
     dialogManager_ = std::make_unique<app::view::DialogManager>(this);
-    
-    // Initialize MVP pages
-    initializePages();
 
-    // Start auto refresh after UI is ready (delayed)
-    Glib::signal_timeout().connect_once([this]() {
-        if (checkAutoRefresh_ && checkAutoRefresh_->get_active()) {
-            onAutoRefreshToggled();
-        }
-    }, app::config::defaults::kAutoRefreshStartDelayMs);
+    // Build pages + presenters (also registers them with the Notebook)
+    createAllPages();
+
+    // Hook SettingsPage signals to MainWindow handlers
+    wireSettingsSignals();
 
     // Start in fullscreen (industrial kiosk mode)
     fullscreen();
     isFullscreen_ = true;
-    
+
+    settingsPage_->syncWithRuntimeState(
+        /*fullscreen*/     isFullscreen_,
+        /*darkMode*/       app::view::ThemeManager::instance().isDarkMode(),
+        /*autoRefresh*/    autoRefreshOn_,
+        /*verboseLogging*/ verboseLogging_);
+
+    // Kick off the initial auto-refresh timer (delayed so pages are ready).
+    Glib::signal_timeout().connect_once([this]() {
+        if (autoRefreshOn_) {
+            applyAutoRefresh(true);
+        }
+    }, app::config::defaults::kAutoRefreshStartDelayMs);
+
     appLogger.info("Window initialized - Theme: {}",
         app::view::ThemeManager::instance().isDarkMode() ? "Dark" : "Light");
 }
@@ -72,48 +81,44 @@ MainWindow::MainWindow() {
 MainWindow::~MainWindow() = default;
 
 void MainWindow::loadUI() {
-    // Load UI definition from XML file
     auto builder = Gtk::Builder::create_from_file(app::config::defaults::kMainWindowUI);
-    
-    // Get root container and set as window child
+
     auto* rootContainer = builder->get_widget<Gtk::Box>("root_container");
     if (rootContainer) {
         set_child(*rootContainer);
     }
-    
-    // Get widget references from builder
-    radioFullscreen_ = builder->get_widget<Gtk::CheckButton>("radio_fullscreen");
-    radioWindowed_ = builder->get_widget<Gtk::CheckButton>("radio_windowed");
-    radioDark_ = builder->get_widget<Gtk::CheckButton>("radio_dark");
-    radioLight_ = builder->get_widget<Gtk::CheckButton>("radio_light");
+
     mainNotebook_ = builder->get_widget<Gtk::Notebook>("main_notebook");
-    checkAutoRefresh_ = builder->get_widget<Gtk::CheckButton>("check_auto_refresh");
-    checkShowLogs_ = builder->get_widget<Gtk::CheckButton>("check_show_logs");
-    logPanel_ = builder->get_widget<Gtk::Box>("log_panel");
-    logTextView_ = builder->get_widget<Gtk::TextView>("log_text_view");
-    dashboardContainer_ = builder->get_widget<Gtk::Box>("dashboard_container");
-    productsContainer_ = builder->get_widget<Gtk::Box>("products_container");
-    languageCombo_ = builder->get_widget<Gtk::ComboBoxText>("language_combo");
+    logPanel_     = builder->get_widget<Gtk::Box>("log_panel");
+    logTextView_  = builder->get_widget<Gtk::TextView>("log_text_view");
 
-    // Close Application button (sidebar footer)
-    auto* closeAppBtn = builder->get_widget<Gtk::Button>("close_app_button");
-    if (closeAppBtn) {
-        closeAppBtn->signal_clicked().connect([this]() {
-            close();
-        });
-    }
+    // Sidebar widgets we'll re-translate on language switch.
+    appTitleLabel_    = builder->get_widget<Gtk::Label>("app_title");
+    appSubtitleLabel_ = builder->get_widget<Gtk::Label>("app_subtitle");
+    closeAppButton_   = builder->get_widget<Gtk::Button>("close_app_button");
+    versionLabel_     = builder->get_widget<Gtk::Label>("version_label");
+    authorLabel_      = builder->get_widget<Gtk::Label>("author_label");
 
-    // Reflect the currently saved language in the dropdown
-    if (languageCombo_) {
-        const auto current = app::config::ConfigManager::instance().getLanguage();
-        languageCombo_->set_active_id(current);
+    if (closeAppButton_) {
+        closeAppButton_->signal_clicked().connect([this]() { close(); });
     }
-    
+}
+
+void MainWindow::refreshSidebarTranslations() {
+    // main-window.ui is only parsed once at startup, so GtkBuilder's
+    // translation machinery doesn't run again after a runtime language
+    // switch. Re-assign the strings manually via `_()` — that hits the
+    // freshly re-bound gettext catalog.
+    if (appTitleLabel_)    appTitleLabel_->set_label(_("[BB] Industrial HMI"));
+    if (appSubtitleLabel_) appSubtitleLabel_->set_label(_("MVP Architecture"));
+    if (closeAppButton_)   closeAppButton_->set_label(_("Close Application"));
+    if (versionLabel_)     versionLabel_->set_label(_("Version 1.0.0"));
+    if (authorLabel_)      authorLabel_->set_label(_("Portfolio Demo"));
 }
 
 void MainWindow::loadSidebarCSS() {
     auto cssProvider = Gtk::CssProvider::create();
-    
+
     try {
         cssProvider->load_from_path(app::config::defaults::kSidebarCSS);
         Gtk::StyleContext::add_provider_for_display(
@@ -122,7 +127,8 @@ void MainWindow::loadSidebarCSS() {
             GTK_STYLE_PROVIDER_PRIORITY_USER
         );
     } catch (const Glib::Error& ex) {
-        app::core::Application::instance().logger().error("Failed to load sidebar CSS: {}", ex.what());
+        app::core::Application::instance().logger().error(
+            "Failed to load sidebar CSS: {}", ex.what());
     }
 }
 
@@ -133,49 +139,33 @@ void MainWindow::setupKeyboardShortcuts() {
     add_controller(controller);
 }
 
-void MainWindow::connectSignals() {
-    // Connect sidebar radio buttons to display mode handler
-    if (radioFullscreen_) {
-        radioFullscreen_->signal_toggled().connect(
-            sigc::mem_fun(*this, &MainWindow::onDisplayModeChanged));
-    }
-    
-    // Connect theme radio buttons to theme handler
-    if (radioDark_) {
-        radioDark_->signal_toggled().connect(
-            sigc::mem_fun(*this, &MainWindow::onThemeChanged));
-    }
-    if (radioLight_) {
-        radioLight_->signal_toggled().connect(
-            sigc::mem_fun(*this, &MainWindow::onThemeChanged));
-    }
-    if (checkAutoRefresh_) {
-        checkAutoRefresh_->property_active().signal_changed().connect(
-            sigc::mem_fun(*this, &MainWindow::onAutoRefreshToggled));
-    }
-    if (checkShowLogs_) {
-        checkShowLogs_->property_active().signal_changed().connect(
-            sigc::mem_fun(*this, &MainWindow::onShowLogsToggled));
-    } else {
-        app::core::Application::instance().logger().warn("Show Logs checkbox not found in UI");
-    }
-    if (languageCombo_) {
-        languageCombo_->signal_changed().connect(
-            sigc::mem_fun(*this, &MainWindow::onLanguageChanged));
-    }
+void MainWindow::registerPage(app::view::Page* page) {
+    if (!page || !mainNotebook_) return;
+    auto* label = Gtk::make_managed<Gtk::Label>(page->pageTitle());
+    mainNotebook_->append_page(*page, *label);
+    pages_.push_back(page);
 }
 
-void MainWindow::initializePages() {
+void MainWindow::createAllPages() {
+    auto& logger = app::core::Application::instance().logger();
+
+    // Dashboard
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
+    dashboardPresenter_->setLogger(logger);
     dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
     dashboardPage_->initialize(dashboardPresenter_);
+    registerPage(dashboardPage_);
 
+    // Products
     productsPresenter_ = std::make_shared<app::ProductsPresenter>();
+    productsPresenter_->setLogger(logger);
     productsPage_ = Gtk::make_managed<app::view::ProductsPage>(*dialogManager_);
     productsPage_->initialize(productsPresenter_);
+    registerPage(productsPage_);
 
-    if (dashboardContainer_) dashboardContainer_->append(*dashboardPage_);
-    if (productsContainer_) productsContainer_->append(*productsPage_);
+    // Settings (no presenter — pure view over ConfigManager/ThemeManager/Logger)
+    settingsPage_ = Gtk::make_managed<app::view::SettingsPage>(*dialogManager_);
+    registerPage(settingsPage_);
 
     dashboardPresenter_->initialize();
     productsPresenter_->initialize();
@@ -183,9 +173,134 @@ void MainWindow::initializePages() {
     app::model::SimulatedModel::instance().initializeDemoData();
 }
 
-void MainWindow::onDisplayModeChanged() {
+void MainWindow::clearPages() {
+    if (!mainNotebook_) return;
+
+    // remove_page drops the Notebook's ref; Gtk::make_managed widgets that
+    // nobody else holds a ref to get destroyed here.
+    while (mainNotebook_->get_n_pages() > 0) {
+        mainNotebook_->remove_page(-1);
+    }
+    pages_.clear();
+    dashboardPage_ = nullptr;
+    productsPage_  = nullptr;
+    settingsPage_  = nullptr;
+}
+
+void MainWindow::wireSettingsSignals() {
+    if (!settingsPage_) return;
+
+    settingsPage_->signalDisplayModeChanged().connect(
+        sigc::mem_fun(*this, &MainWindow::applyDisplayMode));
+    settingsPage_->signalThemeChanged().connect(
+        sigc::mem_fun(*this, &MainWindow::onThemeApplied));
+    settingsPage_->signalAutoRefreshToggled().connect(
+        sigc::mem_fun(*this, &MainWindow::applyAutoRefresh));
+    settingsPage_->signalRefreshIntervalChanged().connect(
+        sigc::mem_fun(*this, &MainWindow::applyRefreshInterval));
+    settingsPage_->signalVerboseLoggingToggled().connect(
+        sigc::mem_fun(*this, &MainWindow::applyVerboseLogging));
+    // rebuildPages destroys the SettingsPage that emitted this signal, so
+    // if we called it synchronously the signal emitter would unwind back
+    // into a dead widget (Gtk-CRITICAL: gtk_widget_is_ancestor). Defer to
+    // the next idle so the current handler returns cleanly first.
+    settingsPage_->signalLanguageChangeRequested().connect(
+        [this](Glib::ustring lang) {
+            Glib::signal_idle().connect_once([this, lang]() {
+                rebuildPages(lang);
+            });
+        });
+}
+
+void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     auto& logger = app::core::Application::instance().logger();
-    if (radioFullscreen_ && radioFullscreen_->get_active()) {
+    logger.info("Rebuilding pages for language: {}", std::string(newLanguage));
+
+    const int activeTab = mainNotebook_ ? mainNotebook_->get_current_page() : 0;
+
+    // 1) Stop background activity that would fire into pages we're about to
+    //    destroy.
+    autoRefreshTimer_.disconnect();
+    logRefreshConnection_.disconnect();
+
+    // 2) Drop the Model's callback list so old presenter lambdas can't be
+    //    invoked after the presenters die.
+    app::model::SimulatedModel::instance().clearCallbacks();
+
+    // 3) Move focus out of the SettingsPage before tearing it down. The
+    //    combo box that triggered the rebuild still owns keyboard focus;
+    //    destroying its parent makes GTK's focus tracker walk a dead
+    //    widget chain ("gtk_widget_is_ancestor: GTK_IS_WIDGET failed").
+    //    Switching to tab 0 moves focus into Dashboard content, and the
+    //    C gtk_window_set_focus(NULL) call clears any residual focus
+    //    widget. (gtkmm's set_focus takes Widget&, it can't null-out.)
+    if (mainNotebook_ && mainNotebook_->get_n_pages() > 0) {
+        mainNotebook_->set_current_page(0);
+    }
+    // GTK_WINDOW is a C macro that expands to a C-style cast through
+    // void*; no way to avoid it without dropping to the raw GObject API.
+    // NOLINTNEXTLINE(bugprone-casting-through-void, cppcoreguidelines-pro-type-cstyle-cast)
+    gtk_window_set_focus(GTK_WINDOW(gobj()), nullptr);
+
+    // 4) Tear down the Notebook (destroys pages via Gtk::make_managed ref
+    //    drop) and release the presenters.
+    clearPages();
+    dashboardPresenter_.reset();
+    productsPresenter_.reset();
+
+    // 4) Re-point gettext at the new catalog. After this call, both `_()`
+    //    evaluations and GtkBuilder's `translatable="yes"` processing
+    //    resolve against the new language.
+    app::core::initI18n(app::config::defaults::kLocaleDir,
+                        std::string(newLanguage).c_str());
+
+    // Diagnostic: does gettext actually return translated strings after
+    // re-init? If "Settings" stays English, libintl is caching the old
+    // catalog (MSYS2 libintl-8 is known to ignore _nl_msg_cat_cntr in
+    // some builds). If it's translated, the issue lives in GtkBuilder.
+    logger.debug(R"(i18n probe (post-init) _("Settings")="{}")", _("Settings"));
+    logger.debug(R"(i18n probe (post-init) _("Dashboard")="{}")", _("Dashboard"));
+
+    // 5) Rebuild pages and rewire everything. initializeDemoData() is
+    //    called from createAllPages, re-seeding the new presenters.
+    createAllPages();
+    wireSettingsSignals();
+
+    // 6) Restore runtime state on the new Settings widgets and restart the
+    //    auto-refresh timer if it was on.
+    if (settingsPage_) {
+        settingsPage_->syncWithRuntimeState(
+            /*fullscreen*/     isFullscreen_,
+            /*darkMode*/       app::view::ThemeManager::instance().isDarkMode(),
+            /*autoRefresh*/    autoRefreshOn_,
+            /*verboseLogging*/ verboseLogging_);
+    }
+    if (autoRefreshOn_) {
+        applyAutoRefresh(true);
+    }
+    if (verboseLogging_) {
+        applyVerboseLogging(true);
+    }
+
+    // 7) Stay on whatever tab the user was on.
+    if (mainNotebook_ && activeTab >= 0 &&
+        activeTab < mainNotebook_->get_n_pages()) {
+        mainNotebook_->set_current_page(activeTab);
+    }
+
+    // 8) Re-translate sidebar widgets (branding + Close Application) —
+    //    they were loaded by GtkBuilder at startup, not touched by the
+    //    page rebuild above.
+    refreshSidebarTranslations();
+}
+
+// ----------------------------------------------------------------------------
+// Handlers driven by SettingsPage signals
+// ----------------------------------------------------------------------------
+
+void MainWindow::applyDisplayMode(bool wantFullscreen) {
+    auto& logger = app::core::Application::instance().logger();
+    if (wantFullscreen) {
         fullscreen();
         isFullscreen_ = true;
         logger.info("Display mode: fullscreen");
@@ -196,85 +311,48 @@ void MainWindow::onDisplayModeChanged() {
     }
 }
 
-void MainWindow::onAutoRefreshToggled() {
-    if (!checkAutoRefresh_) return;
-
+void MainWindow::applyAutoRefresh(bool enabled) {
+    autoRefreshOn_ = enabled;
     auto& logger = app::core::Application::instance().logger();
 
-    if (checkAutoRefresh_->get_active()) {
-        logger.info("Auto refresh enabled");
+    autoRefreshTimer_.disconnect();
 
+    if (enabled) {
+        logger.info("Auto refresh enabled ({}ms)", refreshIntervalMs_);
         autoRefreshTimer_ = Glib::signal_timeout().connect([this]() {
+            // Only tick while the Dashboard tab is visible
             if (mainNotebook_ && mainNotebook_->get_current_page() != 0) return true;
             app::model::SimulatedModel::instance().tickSimulation();
             return true;
-        }, app::config::defaults::kAutoRefreshIntervalMs);
+        }, refreshIntervalMs_);
     } else {
         logger.info("Auto refresh disabled");
-        autoRefreshTimer_.disconnect();
     }
 }
 
-void MainWindow::onThemeChanged() {
-    // signal_toggled fires for both deactivation and activation;
-    // only act on the newly active radio button
-    if (radioDark_ && radioDark_->get_active()) {
-        app::view::ThemeManager::instance().setTheme(app::view::ThemeManager::Theme::DARK);
-        app::core::Application::instance().logger().info("Theme: dark");
-    }
-    if (radioLight_ && radioLight_->get_active()) {
-        app::view::ThemeManager::instance().setTheme(app::view::ThemeManager::Theme::LIGHT);
-        app::core::Application::instance().logger().info("Theme: light");
-    }
-
-    // Redraw cairo-painted widgets (gauges) so their theme-aware colors update
-    if (dashboardPage_) {
-        dashboardPage_->refreshThemedWidgets();
+void MainWindow::applyRefreshInterval(int intervalMs) {
+    refreshIntervalMs_ = intervalMs;
+    app::core::Application::instance().logger().info(
+        "Refresh interval set to: {}ms", intervalMs);
+    if (autoRefreshOn_) {
+        applyAutoRefresh(true);  // re-tune timer
     }
 }
 
-void MainWindow::onLanguageChanged() {
-    if (!languageCombo_) return;
-
-    const auto selectedId = languageCombo_->get_active_id();
-    if (selectedId.empty()) return;
-
-    auto& config = app::config::ConfigManager::instance();
-    const auto currentLanguage = config.getLanguage();
-
-    // No-op if the user re-picked the same value (e.g., we just set it in loadUI)
-    if (std::string(selectedId) == currentLanguage) return;
-
-    auto& logger = app::core::Application::instance().logger();
-
-    if (!config.setLanguage(std::string(selectedId))) {
-        logger.error("Failed to persist language preference");
-        dialogManager_->showError(
-            _("Error"),
-            _("Could not save the language preference."),
-            this);
-        return;
+void MainWindow::onThemeApplied() {
+    // Dispatch the theme change to every registered page uniformly.
+    for (auto* page : pages_) {
+        if (page) page->onThemeChanged();
     }
-
-    logger.info("Language preference saved: {}", std::string(selectedId));
-
-    // Language changes take effect after restart — inform the user.
-    // We deliberately do not live-swap translations: widgets cache
-    // their labels at construction time via _(), so a restart is simpler
-    // and less error-prone than rebuilding the entire UI tree.
-    dialogManager_->showInfo(
-        _("Language Changed"),
-        _("The language has been updated.\n\n"
-          "Please restart the application for the change to take effect."),
-        this);
 }
 
-void MainWindow::onShowLogsToggled() {
-    if (!checkShowLogs_ || !logPanel_ || !logTextView_) return;
+void MainWindow::applyVerboseLogging(bool enabled) {
+    verboseLogging_ = enabled;
+    if (!logPanel_ || !logTextView_) return;
 
     auto& app = app::core::Application::instance();
 
-    if (checkShowLogs_->get_active()) {
+    if (enabled) {
         logPanel_->set_visible(true);
         logTextView_->get_buffer()->set_text("");
 
@@ -283,8 +361,7 @@ void MainWindow::onShowLogsToggled() {
         app.logger().flush();
         lastLogSize_ = std::filesystem::file_size(logPath);
 
-        app.logger().setLevel(app::core::LogLevel::DEBUG);
-        app.logger().info("Verbose logging enabled");
+        app.logger().info("Log panel: enabled");
 
         // Check for new log content periodically
         logRefreshConnection_ = Glib::signal_timeout().connect([this]() {
@@ -312,15 +389,17 @@ void MainWindow::onShowLogsToggled() {
             return true;
         }, app::config::defaults::kLogPanelRefreshMs);
     } else {
-        app.logger().info("Verbose logging disabled");
+        app.logger().info("Log panel: disabled");
         logRefreshConnection_.disconnect();
         logPanel_->set_visible(false);
-
-        auto level = app::core::parseLogLevel(
-            app::config::ConfigManager::instance().getLogLevel());
-        app.logger().setLevel(level);
+        // The Log Level combo in Settings controls the actual verbosity now;
+        // this checkbox only toggles the panel visibility + live tail.
     }
 }
+
+// ----------------------------------------------------------------------------
+// Keyboard shortcuts
+// ----------------------------------------------------------------------------
 
 bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
     // F1: About dialog
@@ -334,15 +413,16 @@ bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
         return true;
     }
 
-    // F2 / F3: switch Dashboard / Products tab
-    if (keyval == GDK_KEY_F2 && mainNotebook_) {
-        mainNotebook_->set_current_page(0);
+    // F2 / F3 / F4: jump to the 1st/2nd/3rd registered page (generic)
+    auto switchToPage = [this](int index) -> bool {
+        if (!mainNotebook_) return false;
+        if (index < 0 || index >= mainNotebook_->get_n_pages()) return false;
+        mainNotebook_->set_current_page(index);
         return true;
-    }
-    if (keyval == GDK_KEY_F3 && mainNotebook_) {
-        mainNotebook_->set_current_page(1);
-        return true;
-    }
+    };
+    if (keyval == GDK_KEY_F2) return switchToPage(0);
+    if (keyval == GDK_KEY_F3) return switchToPage(1);
+    if (keyval == GDK_KEY_F4) return switchToPage(2);
 
     // F5: manual refresh (advance the simulation one tick)
     if (keyval == GDK_KEY_F5) {
@@ -356,12 +436,16 @@ bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
         return true;
     }
 
-    // ESC: Exit fullscreen
+    // Esc: Exit fullscreen
     if (keyval == GDK_KEY_Escape && isFullscreen_) {
         unfullscreen();
         isFullscreen_ = false;
-        if (radioWindowed_) {
-            radioWindowed_->set_active(true);
+        if (settingsPage_) {
+            settingsPage_->syncWithRuntimeState(
+                /*fullscreen*/     false,
+                /*darkMode*/       app::view::ThemeManager::instance().isDarkMode(),
+                /*autoRefresh*/    autoRefreshOn_,
+                /*verboseLogging*/ verboseLogging_);
         }
         return true;
     }
@@ -373,14 +457,15 @@ void MainWindow::toggleFullscreen() {
     if (isFullscreen_) {
         unfullscreen();
         isFullscreen_ = false;
-        if (radioWindowed_) {
-            radioWindowed_->set_active(true);
-        }
     } else {
         fullscreen();
         isFullscreen_ = true;
-        if (radioFullscreen_) {
-            radioFullscreen_->set_active(true);
-        }
+    }
+    if (settingsPage_) {
+        settingsPage_->syncWithRuntimeState(
+            /*fullscreen*/     isFullscreen_,
+            /*darkMode*/       app::view::ThemeManager::instance().isDarkMode(),
+            /*autoRefresh*/    autoRefreshOn_,
+            /*verboseLogging*/ verboseLogging_);
     }
 }

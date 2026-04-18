@@ -1,5 +1,6 @@
 #pragma once
 
+#include "src/gtk/view/pages/Page.h"
 #include "src/presenter/ViewObserver.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/gtk/view/widgets/QualityGauge.h"
@@ -29,7 +30,7 @@ class DialogManager;
 ///
 /// @thread_safety All ViewObserver callbacks arrive on Presenter thread.
 ///                Must use Glib::signal_idle() to update GTK widgets safely.
-class DashboardPage : public Gtk::Box, public ViewObserver {
+class DashboardPage : public Page, public ViewObserver {
     friend class ::DashboardPageTest;  // test access to private handlers
 public:
     /// Constructor with dependency injection
@@ -39,6 +40,10 @@ public:
 
     /// Initialize the page - sets up presenter connection
     void initialize(std::shared_ptr<DashboardPresenter> presenter);
+
+    // --- Page overrides ------------------------------------------------------
+    [[nodiscard]] Glib::ustring pageTitle() const override;
+    void onThemeChanged() override;
 
     /// Redraw the dynamically-painted widgets (gauges) after a theme change,
     /// so they pick up the new track/background colors.
@@ -106,9 +111,6 @@ private:
         Gtk::Label* messageLabel{nullptr};
     } statusZoneWidgets_;
 
-    /// Injected dependencies
-    DialogManager& dialogManager_;
-    
     /// Presenter reference
     std::shared_ptr<DashboardPresenter> presenter_;
 

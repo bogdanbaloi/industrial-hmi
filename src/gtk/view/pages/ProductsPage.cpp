@@ -6,6 +6,7 @@
 #include "src/config/config_defaults.h"
 #include "src/core/i18n.h"
 #include "src/core/CsvSerializer.h"
+#include "src/core/Application.h"
 
 #include <format>
 #include <fstream>
@@ -14,11 +15,13 @@ namespace app::view {
 
 namespace {
 using namespace app::view::sizes;
+inline app::core::Logger& log() {
+    return app::core::Application::instance().logger();
+}
 }  // namespace
 
 ProductsPage::ProductsPage(DialogManager& dialogManager)
-    : Gtk::Box(Gtk::Orientation::VERTICAL)
-    , dialogManager_(dialogManager) {
+    : Page(dialogManager) {
     buildUI();
     applyStyles();
 }
@@ -29,7 +32,12 @@ ProductsPage::~ProductsPage() {
     }
 }
 
+Glib::ustring ProductsPage::pageTitle() const {
+    return _("Products Database");
+}
+
 void ProductsPage::initialize(std::shared_ptr<ProductsPresenter> presenter) {
+    log().info("ProductsPage: initialized, registering with presenter");
     presenter_ = presenter;
     presenter_->addObserver(this);
     presenter_->initialize();
@@ -37,14 +45,15 @@ void ProductsPage::initialize(std::shared_ptr<ProductsPresenter> presenter) {
 
 // ViewObserver implementation
 void ProductsPage::onProductsLoaded(const presenter::ProductsViewModel& vm) {
-    // Marshal to GTK thread
+    log().trace("ProductsPage: ProductsViewModel received ({} products)",
+                vm.products.size());
     Glib::signal_idle().connect_once([this, vm]() {
         updateProductsList(vm);
     });
 }
 
 void ProductsPage::onViewProductReady(const presenter::ViewProductDialogViewModel& vm) {
-    // Marshal to GTK thread
+    log().trace("ProductsPage: ViewProductDialogViewModel received ({})", vm.productId);
     Glib::signal_idle().connect_once([this, vm]() {
         showProductDetail(vm);
     });
@@ -152,11 +161,13 @@ void ProductsPage::buildUI() {
 void ProductsPage::onSearchChanged() {
     if (presenter_) {
         std::string query = searchEntry_->get_text();
+        log().trace("ProductsPage: search text changed -> \"{}\"", query);
         presenter_->searchProducts(query);
     }
 }
 
 void ProductsPage::onRefreshClicked() {
+    log().debug("ProductsPage: Refresh button clicked");
     if (presenter_) {
         searchEntry_->set_text("");
         presenter_->loadProducts();
@@ -164,6 +175,7 @@ void ProductsPage::onRefreshClicked() {
 }
 
 void ProductsPage::onProductActivated(guint position) {
+    log().debug("ProductsPage: row activated at position {}", position);
     auto item = listStore_->get_item(position);
     if (item && presenter_) {
         presenter_->viewProduct(item->getId());
@@ -205,11 +217,13 @@ void ProductsPage::showProductDetail(const presenter::ViewProductDialogViewModel
 }
 
 void ProductsPage::onAddProductClicked() {
+    log().debug("ProductsPage: Add button clicked");
     showAddProductDialog();
 }
 
 void ProductsPage::onViewProductClicked() {
     int productId = getSelectedProductId();
+    log().debug("ProductsPage: View button clicked (selected id={})", productId);
     if (productId != config::defaults::kInvalidProductId && presenter_) {
         presenter_->viewProduct(productId);
     }
@@ -217,6 +231,7 @@ void ProductsPage::onViewProductClicked() {
 
 void ProductsPage::onDeleteProductClicked() {
     int productId = getSelectedProductId();
+    log().debug("ProductsPage: Delete button clicked (selected id={})", productId);
     if (productId != config::defaults::kInvalidProductId && presenter_) {
         auto product = presenter_->getProduct(productId);
         if (product.id != config::defaults::kInvalidProductId) {
@@ -227,6 +242,7 @@ void ProductsPage::onDeleteProductClicked() {
 
 void ProductsPage::onEditProductClicked() {
     int productId = getSelectedProductId();
+    log().debug("ProductsPage: Edit button clicked (selected id={})", productId);
     if (productId != config::defaults::kInvalidProductId && presenter_) {
         auto product = presenter_->getProduct(productId);
         if (product.id != config::defaults::kInvalidProductId) {
@@ -472,11 +488,13 @@ void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& 
 }
 
 void ProductsPage::onExportCsvClicked() {
+    log().debug("ProductsPage: Export CSV button clicked");
     if (!presenter_) return;
 
     // Fetch products asynchronously; callback runs on GTK main thread.
     presenter_->exportProducts([this](std::vector<model::Product> products) {
         const std::string path = "products.csv";
+        log().info("ProductsPage: Exporting {} products to {}", products.size(), path);
         exportToCsv(path, products);
     });
 }

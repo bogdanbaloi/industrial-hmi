@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ViewObserver.h"
+#include "src/core/LoggerBase.h"
 #include <vector>
 #include <algorithm>
 #include <mutex>
@@ -67,6 +68,13 @@ public:
     /// @note Derived classes override this to subscribe to Model signals
     virtual void initialize() = 0;
 
+    /// Optional logger injection (same DI pattern as DatabaseManager /
+    /// SimulatedModel::setLogger). Keeps BasePresenter header-only-
+    /// linkable from test binaries that don't drag in objectsCore.
+    void setLogger(app::core::Logger& logger) {
+        logger_ = &logger;
+    }
+
     /// Register an observer to receive notifications
     /// @param observer Pointer to ViewObserver implementation (e.g., GTK page widget)
     /// @thread_safety Thread-safe via mutex
@@ -100,6 +108,11 @@ public:
     }
 
 protected:
+    /// Optional logger. Null in unit tests; populated by MainWindow at
+    /// runtime via `setLogger()`. Every log call site must guard on `if
+    /// (logger_)` since tests never inject one.
+    app::core::Logger* logger_{nullptr};
+
     /// List of registered observers
     /// @note Protected by observersMutex_
     std::vector<ViewObserver*> observers_;

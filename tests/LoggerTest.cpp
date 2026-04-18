@@ -53,6 +53,7 @@ private:
 // ============================================================================
 
 TEST(LoggerHelpersTest, LevelToStringMapsAllLevels) {
+    EXPECT_STREQ(app::core::levelToString(LogLevel::TRACE),    "TRACE");
     EXPECT_STREQ(app::core::levelToString(LogLevel::DEBUG),    "DEBUG");
     EXPECT_STREQ(app::core::levelToString(LogLevel::INFO),     "INFO");
     EXPECT_STREQ(app::core::levelToString(LogLevel::WARN),     "WARN");
@@ -67,9 +68,11 @@ TEST(LoggerHelpersTest, LevelToStringMapsAllLevels) {
 TEST(LoggerHelpersTest, FormatTimestampProducesNonEmptyString) {
     auto ts = app::core::formatTimestamp();
     EXPECT_FALSE(ts.empty());
-    // Should contain date separator and time separator
-    EXPECT_NE(ts.find('-'), std::string::npos);
+    // Format is HH:MM:SS.mmm — colon splits H/M/S, dot before millis.
+    // The date was dropped deliberately to keep the log panel readable;
+    // see formatTimestamp() comment.
     EXPECT_NE(ts.find(':'), std::string::npos);
+    EXPECT_NE(ts.find('.'), std::string::npos);
 }
 
 // ============================================================================
@@ -77,6 +80,7 @@ TEST(LoggerHelpersTest, FormatTimestampProducesNonEmptyString) {
 // ============================================================================
 
 TEST(LoggerHelpersTest, ParseLogLevelMapsStrings) {
+    EXPECT_EQ(app::core::parseLogLevel("TRACE"), LogLevel::TRACE);
     EXPECT_EQ(app::core::parseLogLevel("DEBUG"), LogLevel::DEBUG);
     EXPECT_EQ(app::core::parseLogLevel("INFO"), LogLevel::INFO);
     EXPECT_EQ(app::core::parseLogLevel("WARN"), LogLevel::WARN);

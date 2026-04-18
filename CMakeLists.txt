@@ -299,6 +299,7 @@ target_sources(objectsView
         src/gtk/view/AboutDialog.cpp
         src/gtk/view/pages/DashboardPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
+        src/gtk/view/pages/SettingsPage.cpp
     PRIVATE
         FILE_SET internalHeaders
         TYPE HEADERS
@@ -306,8 +307,10 @@ target_sources(objectsView
             src/gtk/view/MainWindow.h
             src/gtk/view/DialogManager.h
             src/gtk/view/AboutDialog.h
+            src/gtk/view/pages/Page.h
             src/gtk/view/pages/DashboardPage.h
             src/gtk/view/pages/ProductsPage.h
+            src/gtk/view/pages/SettingsPage.h
             src/gtk/view/pages/ProductObject.h
             src/gtk/view/widgets/QualityGauge.h
             src/gtk/view/widgets/TrendChart.h

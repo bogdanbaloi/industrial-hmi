@@ -30,10 +30,14 @@ public:
 
         auto& stream = (level >= LogLevel::ERROR) ? std::cerr : std::cout;
         
-        stream << std::format("[{}] [{}] [{}:{}] {}\n",
+        // Compact one-line format:
+        //   HH:MM:SS.mmm [LEVEL] file.h:line  message
+        // — no absolute path, fixed-width level, double-space before the
+        // message so the header column is easy to skim in the log panel.
+        stream << std::format("{} [{}] {}:{}  {}\n",
                              formatTimestamp(),
-                             levelToString(level),
-                             loc.file_name(),
+                             levelToPaddedString(level),
+                             shortFileName(loc.file_name()),
                              loc.line(),
                              message);
     }
@@ -102,10 +106,10 @@ public:
 
         if (!file_.is_open()) return;
 
-        auto line = std::format("[{}] [{}] [{}:{}] {}\n",
+        auto line = std::format("{} [{}] {}:{}  {}\n",
                                 formatTimestamp(),
-                                levelToString(level),
-                                loc.file_name(),
+                                levelToPaddedString(level),
+                                shortFileName(loc.file_name()),
                                 loc.line(),
                                 message);
         file_ << line;
@@ -296,6 +300,7 @@ private:
  * Parse log level from string (case-sensitive)
  */
 inline LogLevel parseLogLevel(std::string_view str) {
+    if (str == "TRACE") return LogLevel::TRACE;
     if (str == "DEBUG") return LogLevel::DEBUG;
     if (str == "WARN") return LogLevel::WARN;
     if (str == "ERROR") return LogLevel::ERROR;

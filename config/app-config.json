@@ -6,7 +6,7 @@
   },
 
   "i18n": {
-    "language": "auto"
+    "language": "pt"
   },
   
   "assets": {
@@ -239,7 +239,7 @@
   },
 
   "logging": {
-    "level": "INFO",
+    "level": "TRACE",
     "file": "logs/app.log",
     "max_file_size_mb": 5,
     "max_files": 3,
