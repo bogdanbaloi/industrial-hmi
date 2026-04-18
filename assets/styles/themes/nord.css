@@ -1,0 +1,135 @@
+/* ============================================================================
+   Nord palette — cool arctic blues, inspired by https://www.nordtheme.com/
+   ============================================================================
+   Loaded by ThemeManager as a second, higher-priority CSS provider on top
+   of sidebar.css + adwaita-theme.css. Only color tokens are redefined here;
+   layout (paddings, font sizes, borders) inherits from the base stylesheets.
+
+   Polar Night (dark surfaces):  #2E3440 #3B4252 #434C5E #4C566A
+   Snow Storm  (light surfaces): #D8DEE9 #E5E9F0 #ECEFF4
+   Frost       (cool accents):   #8FBCBB #88C0D0 #81A1C1 #5E81AC
+   Aurora      (semantic):       #BF616A #D08770 #EBCB8B #A3BE8C #B48EAD
+   ============================================================================ */
+
+/* ---------- Sidebar ------------------------------------------------------- */
+.sidebar {
+    background-color: #2E3440;
+    border-right: 1px solid #3B4252;
+}
+
+.sidebar-title    { color: #ECEFF4; }
+.sidebar-subtitle { color: #88C0D0; }
+.section-header   { color: #81A1C1; }
+.sidebar-option                 { color: #D8DEE9; }
+.sidebar-option:hover           { color: #ECEFF4; }
+.sidebar-option:checked         { color: #88C0D0; }
+
+.sidebar button {
+    background: #434C5E;
+    color: #ECEFF4;
+    border: 1px solid #4C566A;
+}
+.sidebar button:hover { background: #4C566A; }
+
+.sidebar-version, .sidebar-author { color: #4C566A; }
+
+/* ---------- Clock --------------------------------------------------------- */
+.live-clock-time { color: #88C0D0; }
+.live-clock-date { color: #D8DEE9; }
+
+/* ---------- System status badge ------------------------------------------ */
+.system-status-badge            { color: #D8DEE9; }
+.system-status-label            { color: #D8DEE9; }
+.system-status-dot.state-idle        { color: #D8DEE9; }
+.system-status-dot.state-running     { color: #A3BE8C; }
+.system-status-dot.state-error       { color: #BF616A; }
+.system-status-dot.state-calibration { color: #EBCB8B; }
+
+/* ---------- E-STOP button ------------------------------------------------- */
+button.sidebar-estop,
+window .sidebar button.sidebar-estop {
+    background: #BF616A;
+    color: #ECEFF4;
+    border-color: #A54B55;
+}
+button.sidebar-estop:hover,
+window .sidebar button.sidebar-estop:hover {
+    background: #A54B55;
+}
+
+/* ---------- Alerts panel -------------------------------------------------- */
+.alerts-panel { color: #D8DEE9; }
+
+.alert-card {
+    background-color: #3B4252;
+    border-left: 3px solid #5E81AC;
+}
+.alert-card.alert-info {
+    border-left-color: #88C0D0;
+    background-color: rgba(136, 192, 208, 0.08);
+}
+.alert-card.alert-warning {
+    border-left-color: #EBCB8B;
+    background-color: rgba(235, 203, 139, 0.10);
+}
+.alert-card.alert-critical {
+    border-left-color: #BF616A;
+    background-color: rgba(191, 97, 106, 0.12);
+}
+.alert-card.alert-resolved {
+    background-color: rgba(216, 222, 233, 0.04);
+}
+
+.alert-title     { color: #ECEFF4; }
+.alert-message   { color: #D8DEE9; }
+.alert-timestamp { color: #4C566A; }
+
+button.alert-dismiss         { color: #81A1C1; }
+button.alert-dismiss:hover   { color: #ECEFF4; background: rgba(216,222,233,0.08); }
+
+/* ---------- Light mode variant (invert surfaces, keep Frost accents) ----- */
+window.light-mode .sidebar {
+    background-color: #ECEFF4;
+    border-right: 1px solid #D8DEE9;
+}
+window.light-mode .sidebar-title    { color: #2E3440; }
+window.light-mode .sidebar-subtitle { color: #5E81AC; }
+window.light-mode .section-header   { color: #4C566A; }
+window.light-mode .sidebar-option         { color: #3B4252; }
+window.light-mode .sidebar-option:hover   { color: #2E3440; }
+window.light-mode .sidebar-option:checked { color: #5E81AC; }
+
+window.light-mode .sidebar button {
+    background: #E5E9F0;
+    color: #2E3440;
+    border-color: #D8DEE9;
+}
+window.light-mode .sidebar button:hover { background: #D8DEE9; }
+
+window.light-mode .sidebar-version,
+window.light-mode .sidebar-author { color: #4C566A; }
+
+window.light-mode .live-clock-time { color: #5E81AC; }
+window.light-mode .live-clock-date { color: #3B4252; }
+
+window.light-mode .system-status-label              { color: #3B4252; }
+window.light-mode .system-status-dot.state-idle     { color: #4C566A; }
+window.light-mode .system-status-dot.state-running  { color: #5E8564; }
+window.light-mode .system-status-dot.state-error    { color: #A54B55; }
+window.light-mode .system-status-dot.state-calibration { color: #B5932E; }
+
+window.light-mode .alert-card {
+    background-color: rgba(46, 52, 64, 0.05);
+    border-left-color: #5E81AC;
+}
+window.light-mode .alert-card.alert-warning {
+    background-color: rgba(235, 203, 139, 0.18);
+    border-left-color: #D6A55A;
+}
+window.light-mode .alert-card.alert-critical {
+    background-color: rgba(191, 97, 106, 0.15);
+    border-left-color: #A54B55;
+}
+window.light-mode .alert-title    { color: #2E3440; }
+window.light-mode .alert-message  { color: #434C5E; }
+window.light-mode .alert-timestamp { color: #4C566A; }

@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+
+  <!--
+    Blueprint layout — drafting-paper / schematic style.
+
+    Sidebar is GONE. Top bar carries branding + system status + clock +
+    E-STOP + Close across the window header. Notebook fills the main area.
+    Alerts are demoted to a footer strip at the bottom so the central
+    canvas feels like a blueprint sheet with annotations along its edges.
+
+    Widget IDs deliberately match main-window.ui so MainWindow.cpp stays
+    agnostic about which layout is loaded — only structural arrangement
+    differs, not the set of widgets.
+  -->
+  <object class="GtkBox" id="root_container">
+    <property name="orientation">vertical</property>
+    <property name="spacing">0</property>
+
+    <!-- ============ TOP BAR ============ -->
+    <child>
+      <object class="GtkBox" id="top_bar">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">16</property>
+        <property name="margin-top">8</property>
+        <property name="margin-bottom">8</property>
+        <property name="margin-start">16</property>
+        <property name="margin-end">16</property>
+        <property name="css-classes">sidebar</property>
+
+        <!-- Branding -->
+        <child>
+          <object class="GtkBox" id="sidebar_header">
+            <property name="orientation">vertical</property>
+            <property name="spacing">2</property>
+            <property name="valign">center</property>
+
+            <child>
+              <object class="GtkLabel" id="app_title">
+                <property name="label" translatable="yes">[BB] Industrial HMI</property>
+                <property name="css-classes">sidebar-title</property>
+                <property name="xalign">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="app_subtitle">
+                <property name="label" translatable="yes">MVP Architecture</property>
+                <property name="css-classes">sidebar-subtitle</property>
+                <property name="xalign">0</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Flexible spacer pushes everything else to the right -->
+        <child>
+          <object class="GtkBox">
+            <property name="hexpand">true</property>
+          </object>
+        </child>
+
+        <!-- System status badge -->
+        <child>
+          <object class="GtkBox" id="system_status_container">
+            <property name="orientation">horizontal</property>
+            <property name="valign">center</property>
+          </object>
+        </child>
+
+        <!-- Clock -->
+        <child>
+          <object class="GtkBox" id="clock_container">
+            <property name="orientation">vertical</property>
+            <property name="valign">center</property>
+          </object>
+        </child>
+
+        <!-- E-STOP -->
+        <child>
+          <object class="GtkButton" id="estop_button">
+            <property name="label" translatable="yes">E-STOP</property>
+            <property name="valign">center</property>
+            <property name="css-classes">sidebar-estop</property>
+          </object>
+        </child>
+
+        <!-- Close application -->
+        <child>
+          <object class="GtkButton" id="close_app_button">
+            <property name="label" translatable="yes">Close</property>
+            <property name="valign">center</property>
+            <property name="css-classes">sidebar-close-app</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- Thin separator between top bar and canvas -->
+    <child>
+      <object class="GtkSeparator">
+        <property name="orientation">horizontal</property>
+      </object>
+    </child>
+
+    <!-- ============ MAIN CANVAS ============ -->
+    <child>
+      <object class="GtkBox" id="content_area">
+        <property name="orientation">vertical</property>
+        <property name="hexpand">true</property>
+        <property name="vexpand">true</property>
+
+        <child>
+          <object class="GtkNotebook" id="main_notebook">
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            <property name="tab-pos">top</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- Log panel (toggled from Settings). Placed as a root-level
+         sibling of alerts_container so its height-request doesn't
+         fight with the vexpand notebook inside content_area. When
+         hidden it takes 0 height; when shown it carves 90px off
+         the bottom of the canvas — tight but it has its own
+         scrollbar so long runs fit. -->
+    <child>
+      <object class="GtkBox" id="log_panel">
+        <property name="orientation">vertical</property>
+        <property name="visible">false</property>
+        <property name="vexpand">false</property>
+        <property name="height-request">90</property>
+        <property name="css-classes">log-panel</property>
+
+        <child>
+          <object class="GtkScrolledWindow" id="log_scroll">
+            <property name="vexpand">true</property>
+            <property name="hexpand">true</property>
+            <child>
+              <object class="GtkTextView" id="log_text_view">
+                <property name="editable">false</property>
+                <property name="cursor-visible">false</property>
+                <property name="monospace">true</property>
+                <property name="wrap-mode">word</property>
+                <property name="css-classes">log-text</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- Thin separator above alerts footer -->
+    <child>
+      <object class="GtkSeparator">
+        <property name="orientation">horizontal</property>
+      </object>
+    </child>
+
+    <!-- ============ ALERTS FOOTER ============ -->
+    <!--
+      Fixed-height footer. Explicit vexpand=false blocks GTK from
+      auto-propagating any vexpand request coming up from children
+      (AlertsPanel's inner ScrolledWindow). Without that, the
+      content_area above and this footer compete for stretch and
+      the footer ends up collapsed to its header row only.
+    -->
+    <child>
+      <object class="GtkBox" id="alerts_container">
+        <property name="orientation">vertical</property>
+        <property name="vexpand">false</property>
+        <property name="height-request">130</property>
+        <property name="margin-top">4</property>
+      </object>
+    </child>
+
+    <!-- Version footer (thin, at the very bottom) -->
+    <child>
+      <object class="GtkBox" id="sidebar_footer">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">16</property>
+        <property name="margin-start">16</property>
+        <property name="margin-end">16</property>
+        <property name="margin-top">4</property>
+        <property name="margin-bottom">6</property>
+
+        <child>
+          <object class="GtkLabel" id="version_label">
+            <property name="label" translatable="yes">Version 1.0.0</property>
+            <property name="css-classes">sidebar-version</property>
+            <property name="xalign">0</property>
+            <property name="hexpand">true</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="author_label">
+            <property name="label" translatable="yes">Portfolio Demo</property>
+            <property name="css-classes">sidebar-author</property>
+            <property name="xalign">1</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

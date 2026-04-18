@@ -49,6 +49,11 @@ MainWindow::MainWindow()
     // Apply custom styling (legacy sidebar CSS)
     loadSidebarCSS();
 
+    // Apply user's saved palette (empty = baseline industrial look).
+    // Done after sidebar.css so the palette provider layers on top.
+    app::view::ThemeManager::instance().setPalette(
+        app::config::ConfigManager::instance().getPalette());
+
     // Setup keyboard shortcuts
     setupKeyboardShortcuts();
 
@@ -66,36 +71,12 @@ MainWindow::MainWindow()
     // Hook SettingsPage signals to MainWindow handlers
     wireSettingsSignals();
 
-    // AlertsPanel lives in the sidebar (above Close Application). Created
-    // AFTER createAllPages so DashboardPresenter already has the
-    // AlertCenter hooked up and any initial alerts it raises during
-    // initializeDemoData() show up on first paint.
-    if (alertsContainer_ && alertCenter_) {
-        alertsPanel_ = Gtk::make_managed<app::view::AlertsPanel>(*alertCenter_);
-        alertsContainer_->append(*alertsPanel_);
-    }
-
-    // System status LED badge — driven by DashboardPresenter's
-    // state-change signal.
-    if (systemStatusContainer_) {
-        statusBadge_ = Gtk::make_managed<app::view::SystemStatusBadge>();
-        systemStatusContainer_->append(*statusBadge_);
-        if (dashboardPresenter_) {
-            dashboardPresenter_->signalSystemStateChanged().connect(
-                [this](int state) {
-                    if (statusBadge_) statusBadge_->setState(state);
-                });
-        }
-    }
-
-    // Live clock in the sidebar footer (above Version / Portfolio Demo).
-    if (clockContainer_) {
-        clock_ = Gtk::make_managed<app::view::LiveClock>();
-        clockContainer_->append(*clock_);
-    }
-
-    // E-STOP button reuses the existing Stop-production command so the
-    // Model state machine stays the single source of truth.
+    // Sidebar / top-bar inhabitants (AlertsPanel, SystemStatusBadge,
+    // LiveClock) + E-STOP wiring. Extracted so reloadLayout() can
+    // rebuild them into a freshly-parsed .ui without duplicating the
+    // ordering constraints (must come AFTER presenters exist so the
+    // status-badge signal hookup resolves).
+    buildSidebarWidgets();
     if (estopButton_ && dashboardPresenter_) {
         estopButton_->signal_clicked().connect([this]() {
             if (dashboardPresenter_) dashboardPresenter_->onStopClicked();
@@ -125,31 +106,81 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow() = default;
 
-void MainWindow::loadUI() {
-    auto builder = Gtk::Builder::create_from_file(app::config::defaults::kMainWindowUI);
-
-    auto* rootContainer = builder->get_widget<Gtk::Box>("root_container");
-    if (rootContainer) {
-        set_child(*rootContainer);
+const char* MainWindow::chooseMainWindowUI(const std::string& palette) {
+    // Palettes with a structurally different layout get their own .ui.
+    // Extend here when adding e.g. a "cockpit.ui" variant.
+    if (palette == "blueprint") {
+        return app::config::defaults::kMainWindowBlueprintUI;
     }
+    return app::config::defaults::kMainWindowUI;
+}
 
-    mainNotebook_          = builder->get_widget<Gtk::Notebook>("main_notebook");
-    logPanel_              = builder->get_widget<Gtk::Box>("log_panel");
-    logTextView_           = builder->get_widget<Gtk::TextView>("log_text_view");
-    alertsContainer_       = builder->get_widget<Gtk::Box>("alerts_container");
-    systemStatusContainer_ = builder->get_widget<Gtk::Box>("system_status_container");
-    clockContainer_        = builder->get_widget<Gtk::Box>("clock_container");
-    estopButton_           = builder->get_widget<Gtk::Button>("estop_button");
+Gtk::Box* MainWindow::parseLayoutUI() {
+    const auto palette = app::config::ConfigManager::instance().getPalette();
+    currentLayoutUI_ = chooseMainWindowUI(palette);
+    // Keep the Builder alive as a member. Widget pointers returned by
+    // get_widget<T>() are only valid while the Builder holds a ref,
+    // until a parent adopts them via set_child/append. We release the
+    // previous builder after adoption to free memory.
+    pendingBuilder_ = Gtk::Builder::create_from_file(currentLayoutUI_);
+
+    auto* rootContainer = pendingBuilder_->get_widget<Gtk::Box>("root_container");
+
+    mainNotebook_          = pendingBuilder_->get_widget<Gtk::Notebook>("main_notebook");
+    logPanel_              = pendingBuilder_->get_widget<Gtk::Box>("log_panel");
+    logTextView_           = pendingBuilder_->get_widget<Gtk::TextView>("log_text_view");
+    alertsContainer_       = pendingBuilder_->get_widget<Gtk::Box>("alerts_container");
+    systemStatusContainer_ = pendingBuilder_->get_widget<Gtk::Box>("system_status_container");
+    clockContainer_        = pendingBuilder_->get_widget<Gtk::Box>("clock_container");
+    estopButton_           = pendingBuilder_->get_widget<Gtk::Button>("estop_button");
 
     // Sidebar widgets we'll re-translate on language switch.
-    appTitleLabel_    = builder->get_widget<Gtk::Label>("app_title");
-    appSubtitleLabel_ = builder->get_widget<Gtk::Label>("app_subtitle");
-    closeAppButton_   = builder->get_widget<Gtk::Button>("close_app_button");
-    versionLabel_     = builder->get_widget<Gtk::Label>("version_label");
-    authorLabel_      = builder->get_widget<Gtk::Label>("author_label");
+    appTitleLabel_    = pendingBuilder_->get_widget<Gtk::Label>("app_title");
+    appSubtitleLabel_ = pendingBuilder_->get_widget<Gtk::Label>("app_subtitle");
+    closeAppButton_   = pendingBuilder_->get_widget<Gtk::Button>("close_app_button");
+    versionLabel_     = pendingBuilder_->get_widget<Gtk::Label>("version_label");
+    authorLabel_      = pendingBuilder_->get_widget<Gtk::Label>("author_label");
 
     if (closeAppButton_) {
         closeAppButton_->signal_clicked().connect([this]() { close(); });
+    }
+
+    return rootContainer;
+}
+
+void MainWindow::loadUI() {
+    if (auto* root = parseLayoutUI()) {
+        set_child(*root);
+        // set_child has adopted root — safe to drop the builder ref now.
+        pendingBuilder_.reset();
+    }
+}
+
+void MainWindow::buildSidebarWidgets() {
+    // AlertsPanel mount — container is either in the sidebar (default
+    // layout) or the footer strip (Blueprint layout). Widget ID is
+    // the same either way, so this is layout-agnostic.
+    if (alertsContainer_ && alertCenter_) {
+        alertsPanel_ = Gtk::make_managed<app::view::AlertsPanel>(*alertCenter_);
+        alertsContainer_->append(*alertsPanel_);
+    }
+
+    // System status LED badge — driven by DashboardPresenter's signal.
+    if (systemStatusContainer_) {
+        statusBadge_ = Gtk::make_managed<app::view::SystemStatusBadge>();
+        systemStatusContainer_->append(*statusBadge_);
+        if (dashboardPresenter_) {
+            dashboardPresenter_->signalSystemStateChanged().connect(
+                [this](int state) {
+                    if (statusBadge_) statusBadge_->setState(state);
+                });
+        }
+    }
+
+    // Live clock.
+    if (clockContainer_) {
+        clock_ = Gtk::make_managed<app::view::LiveClock>();
+        clockContainer_->append(*clock_);
     }
 }
 
@@ -266,6 +297,32 @@ void MainWindow::wireSettingsSignals() {
                 rebuildPages(lang);
             });
         });
+    // Palette change: if the new palette wants a different
+    // main-window .ui we hot-reload the whole layout; otherwise the
+    // CSS swap (already applied by SettingsPage) is all the user
+    // needs. Deferred via signal_idle because the emitter (Settings
+    // palette card) dies during reload.
+    settingsPage_->signalPaletteChanged().connect(
+        [this](Glib::ustring newPalette) {
+            const std::string id = std::string(newPalette);
+            const std::string toStore = (id == "industrial") ? "" : id;
+            const std::string nextUI = chooseMainWindowUI(toStore);
+            const bool needsRelayout = (nextUI != currentLayoutUI_);
+
+            // Run CSS swap + (optional) relayout + Cairo repaint
+            // together in one idle callback so all three commit in a
+            // single compositor frame. Without this, the CSS change
+            // would render immediately on the OLD layout, producing
+            // a visible "hybrid" flash before the layout catches up.
+            Glib::signal_idle().connect_once(
+                [this, toStore, needsRelayout]() {
+                    app::view::ThemeManager::instance().setPalette(toStore);
+                    if (needsRelayout) {
+                        reloadLayout();
+                    }
+                    onThemeApplied();  // tell Cairo widgets to repaint
+                });
+        });
 }
 
 void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
@@ -362,6 +419,88 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
                 if (statusBadge_) statusBadge_->setState(state);
             });
     }
+}
+
+void MainWindow::reloadLayout() {
+    auto& logger = app::core::Application::instance().logger();
+    logger.info("Reloading main-window layout");
+
+    const int activeTab = mainNotebook_ ? mainNotebook_->get_current_page() : 0;
+
+    // 1) Stop background activity that would fire into soon-to-be-dead widgets.
+    autoRefreshTimer_.disconnect();
+    logRefreshConnection_.disconnect();
+
+    // 2) Drop model callbacks so presenters about to die stop receiving.
+    app::model::SimulatedModel::instance().clearCallbacks();
+
+    // 3) Move focus out of whatever is inside the tree we're about to wipe.
+    if (mainNotebook_ && mainNotebook_->get_n_pages() > 0) {
+        mainNotebook_->set_current_page(0);
+    }
+    // NOLINTNEXTLINE(bugprone-casting-through-void, cppcoreguidelines-pro-type-cstyle-cast)
+    gtk_window_set_focus(GTK_WINDOW(gobj()), nullptr);
+
+    // 4) Release the presenters so old pages stop receiving notifications.
+    //    The old page widgets still exist inside the old root and stay
+    //    on screen until we swap. That keeps the UI visually stable
+    //    during the rebuild.
+    dashboardPresenter_.reset();
+    productsPresenter_.reset();
+
+    // 5) Parse the new .ui into a DETACHED subtree (no set_child yet).
+    //    Member widget pointers — mainNotebook_, alertsContainer_, etc.
+    //    — now point into the freshly-built, not-yet-installed tree.
+    //    The raw Page/alerts/clock pointers still reference widgets in
+    //    the currently-displayed old tree, so we zero them out: the
+    //    corresponding widgets will be destroyed when set_child swaps
+    //    the roots below.
+    pages_.clear();
+    dashboardPage_  = nullptr;
+    productsPage_   = nullptr;
+    settingsPage_   = nullptr;
+    alertsPanel_    = nullptr;
+    statusBadge_    = nullptr;
+    clock_          = nullptr;
+    Gtk::Box* newRoot = parseLayoutUI();
+
+    // 6) Populate the new notebook + sidebar while still detached,
+    //    so the user never sees a half-built layout.
+    createAllPages();
+    wireSettingsSignals();
+    buildSidebarWidgets();
+    if (estopButton_ && dashboardPresenter_) {
+        estopButton_->signal_clicked().connect([this]() {
+            if (dashboardPresenter_) dashboardPresenter_->onStopClicked();
+        });
+    }
+
+    // 7) Atomic swap — GTK destroys the old root (and everything under
+    //    it) in the same frame it installs the new, fully-populated
+    //    root. No intermediate empty-notebook flash.
+    if (newRoot) {
+        set_child(*newRoot);
+        pendingBuilder_.reset();
+    }
+
+    // 8) Restore runtime state + tab selection.
+    if (settingsPage_) {
+        settingsPage_->syncWithRuntimeState(
+            /*fullscreen*/     isFullscreen_,
+            /*darkMode*/       app::view::ThemeManager::instance().isDarkMode(),
+            /*autoRefresh*/    autoRefreshOn_,
+            /*verboseLogging*/ verboseLogging_);
+    }
+    if (autoRefreshOn_)  applyAutoRefresh(true);
+    if (verboseLogging_) applyVerboseLogging(true);
+
+    if (mainNotebook_ && activeTab >= 0 &&
+        activeTab < mainNotebook_->get_n_pages()) {
+        mainNotebook_->set_current_page(activeTab);
+    }
+
+    refreshSidebarTranslations();
+    if (alertCenter_) alertCenter_->retranslate();
 }
 
 // ----------------------------------------------------------------------------

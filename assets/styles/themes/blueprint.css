@@ -1,0 +1,305 @@
+/* ============================================================================
+   Blueprint palette — drafting paper / engineering schematic
+   ============================================================================
+   Cool navy background with cream text and cyan accents; monospace
+   typography; zero border-radius everywhere; thin precise borders
+   instead of filled cards. Evokes technical drawings and CAD.
+
+   Surfaces:  #0D2847 (deep navy), #102E52, #18375F, #1F4170
+   Text:      #F5EFE0 (cream), #C9C0A4 (dim cream)
+   Accents:   #00BCD4 (cyan), #4DD0E1 (soft cyan), #26C6DA
+   Semantic:  #FF5252 (red), #FFB74D (amber), #81C784 (green)
+   ============================================================================ */
+
+/* ---------- Global typography --------------------------------------------- */
+window, window * {
+    font-family: "JetBrains Mono", "Cascadia Mono", "Consolas",
+                 "DejaVu Sans Mono", monospace;
+}
+
+/* Sharp corners across the app — CAD has no fillets. */
+.alert-card, .sidebar button, button.sidebar-estop, button.alert-dismiss,
+.system-status-badge, entry, spinbutton, combobox, combobox * {
+    border-radius: 0;
+}
+
+/* ---------- Sidebar ------------------------------------------------------- */
+.sidebar {
+    background-color: #0D2847;
+    border-right: 2px solid #00BCD4;
+}
+
+.sidebar-title {
+    color: #F5EFE0;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+.sidebar-subtitle {
+    color: #4DD0E1;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+.section-header {
+    color: #00BCD4;
+    letter-spacing: 2.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.sidebar-option         { color: #C9C0A4; }
+.sidebar-option:hover   { color: #F5EFE0; }
+.sidebar-option:checked { color: #00BCD4; font-weight: 700; }
+
+.sidebar button {
+    background: transparent;
+    color: #F5EFE0;
+    border: 1px solid #4DD0E1;
+    padding: 6px 12px;
+    letter-spacing: 1.5px;
+}
+.sidebar button:hover {
+    background: rgba(0, 188, 212, 0.12);
+    border-color: #00BCD4;
+}
+
+.sidebar-version, .sidebar-author { color: #4DD0E1; letter-spacing: 1.2px; }
+
+/* ---------- Clock --------------------------------------------------------- */
+.live-clock-time { color: #00BCD4; font-weight: 400; letter-spacing: 2px; }
+.live-clock-date { color: #C9C0A4; letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* ---------- System status ------------------------------------------------- */
+.system-status-badge {
+    background: transparent;
+    border: 1px solid #4DD0E1;
+    padding: 4px 8px;
+}
+.system-status-label { color: #F5EFE0; letter-spacing: 2px; text-transform: uppercase; }
+.system-status-dot.state-idle        { color: #C9C0A4; }
+.system-status-dot.state-running     { color: #81C784; }
+.system-status-dot.state-error       { color: #FF5252; }
+.system-status-dot.state-calibration { color: #FFB74D; }
+
+/* ---------- E-STOP -------------------------------------------------------- */
+button.sidebar-estop,
+window .sidebar button.sidebar-estop {
+    background: #FF5252;
+    color: #0D2847;
+    border: 2px solid #FF5252;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+button.sidebar-estop:hover,
+window .sidebar button.sidebar-estop:hover {
+    background: #FF8A80;
+    border-color: #FF8A80;
+}
+
+/* ---------- Alerts — no fill, just a left edge --------------------------- */
+.alerts-panel { color: #F5EFE0; }
+
+.alert-card {
+    background: transparent;
+    border: 1px solid #18375F;
+    border-left: 3px solid #00BCD4;
+    padding: 10px 12px;
+}
+.alert-card.alert-info     { border-left-color: #4DD0E1; }
+.alert-card.alert-warning  { border-left-color: #FFB74D; }
+.alert-card.alert-critical { border-left-color: #FF5252; }
+.alert-card.alert-resolved { opacity: 0.55; }
+
+.alert-title     { color: #F5EFE0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.alert-message   { color: #C9C0A4; }
+.alert-timestamp { color: #4DD0E1; letter-spacing: 1.2px; }
+
+button.alert-dismiss         { color: #4DD0E1; }
+button.alert-dismiss:hover   { color: #F5EFE0; background: rgba(0,188,212,0.08); }
+
+/* ---------- Notebook tabs ------------------------------------------------ */
+notebook header {
+    background: #0D2847;
+    border-bottom: 2px solid #00BCD4;
+}
+notebook tab {
+    background: transparent;
+    color: #C9C0A4;
+    border: 1px solid transparent;
+    padding: 8px 18px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+notebook tab:hover   { color: #F5EFE0; background: rgba(0,188,212,0.06); }
+notebook tab:checked { color: #00BCD4; border-color: #00BCD4; border-bottom-color: transparent; }
+
+/* ---------- Dashboard cards & labels ------------------------------------- */
+.work-unit-card,
+.equipment-card,
+.quality-card,
+.actuator-card {
+    background: transparent;
+    border: 1px solid #18375F;
+}
+
+.card-title        { color: #F5EFE0; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
+.field-label       { color: #4DD0E1; letter-spacing: 1.5px; text-transform: uppercase; }
+.field-value       { color: #F5EFE0; }
+.field-value-large { color: #00BCD4; font-weight: 700; letter-spacing: 1px; }
+.description-text  { color: #C9C0A4; }
+.separator-dot     { color: #00BCD4; }
+.status-message    { color: #C9C0A4; }
+.equipment-status  { color: #4DD0E1; letter-spacing: 2px; text-transform: uppercase; }
+.equipment-info    { color: #C9C0A4; }
+
+/* Status dots — big visible diagnostic dots */
+.status-dot                 { font-size: 18px; }
+.equipment-online           { color: #81C784; }
+.equipment-processing       { color: #00BCD4; }
+.equipment-error            { color: #FF5252; }
+.equipment-offline          { color: #4A5568; }
+.quality-passing            { color: #81C784; }
+.quality-warning            { color: #FFB74D; }
+.quality-critical           { color: #FF5252; }
+
+/* Control panel buttons — tactical feel */
+.start-button,
+.stop-button,
+.reset-button,
+.calibration-button {
+    background: transparent;
+    color: #F5EFE0;
+    border: 2px solid #4DD0E1;
+    padding: 10px 20px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+.start-button       { color: #81C784; border-color: #81C784; }
+.start-button:hover { background: rgba(129,199,132,0.12); }
+.stop-button        { color: #FF5252; border-color: #FF5252; }
+.stop-button:hover  { background: rgba(255,82,82,0.12); }
+.reset-button       { color: #FFB74D; border-color: #FFB74D; }
+.reset-button:hover { background: rgba(255,183,77,0.12); }
+.calibration-button       { color: #00BCD4; border-color: #00BCD4; }
+.calibration-button:hover { background: rgba(0,188,212,0.12); }
+
+/* Severity banners */
+.severity-info    { background: rgba(0,188,212,0.10);  border-left: 3px solid #00BCD4; }
+.severity-warning { background: rgba(255,183,77,0.12); border-left: 3px solid #FFB74D; }
+.severity-error   { background: rgba(255,82,82,0.12);  border-left: 3px solid #FF5252; }
+
+/* Main window background — the "drafting paper" */
+window {
+    background-color: #102E52;
+}
+
+/* ---------- Progress bars ------------------------------------------------- */
+progressbar trough {
+    background: #0D2847;
+    border: 1px solid #18375F;
+    border-radius: 0;
+    min-height: 8px;
+}
+progressbar progress {
+    background: #00BCD4;
+    border-radius: 0;
+}
+
+/* ---------- Settings page widgets --------------------------------------- */
+frame {
+    border: 1px solid #18375F;
+    background: transparent;
+    border-radius: 0;
+}
+frame > label {
+    color: #00BCD4;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0 8px;
+}
+label {
+    color: #F5EFE0;
+}
+.dim-label {
+    color: #C9C0A4;
+}
+
+/* GtkComboBoxText / GtkSpinButton / GtkEntry */
+combobox, spinbutton, entry {
+    background: transparent;
+    color: #F5EFE0;
+    border: 1px solid #4DD0E1;
+    border-radius: 0;
+    padding: 4px 8px;
+}
+combobox:focus-within, spinbutton:focus-within, entry:focus {
+    border-color: #00BCD4;
+}
+combobox button {
+    background: transparent;
+    color: #F5EFE0;
+    border: none;
+}
+combobox arrow { color: #00BCD4; }
+popover, popover.background, popover contents {
+    background: #0D2847;
+    color: #F5EFE0;
+    border: 1px solid #00BCD4;
+    border-radius: 0;
+}
+
+/* Check + radio */
+checkbutton check, checkbutton radio {
+    background: transparent;
+    border: 1px solid #4DD0E1;
+    color: #00BCD4;
+    border-radius: 0;
+    min-height: 16px;
+    min-width: 16px;
+}
+checkbutton check:checked, checkbutton radio:checked {
+    background: #00BCD4;
+    border-color: #00BCD4;
+    color: #0D2847;
+}
+checkbutton label { color: #F5EFE0; letter-spacing: 0.5px; }
+
+/* Spin buttons up/down arrows */
+spinbutton button { background: transparent; color: #00BCD4; border: none; }
+spinbutton button:hover { color: #F5EFE0; }
+
+/* ---------- Light mode: invert surfaces, keep engineer blue ------------- */
+window.light-mode .sidebar {
+    background-color: #F5EFE0;
+    border-right: 2px solid #0D2847;
+}
+window.light-mode .sidebar-title      { color: #0D2847; }
+window.light-mode .sidebar-subtitle   { color: #0097A7; }
+window.light-mode .section-header     { color: #006978; }
+window.light-mode .sidebar-option     { color: #18375F; }
+window.light-mode .sidebar-option:checked { color: #006978; }
+
+window.light-mode .sidebar button {
+    background: transparent;
+    color: #0D2847;
+    border-color: #0D2847;
+}
+window.light-mode .sidebar button:hover { background: rgba(13, 40, 71, 0.08); }
+
+window.light-mode .sidebar-version,
+window.light-mode .sidebar-author { color: #006978; }
+
+window.light-mode .live-clock-time { color: #006978; }
+window.light-mode .live-clock-date { color: #18375F; }
+
+window.light-mode .alert-card {
+    background: transparent;
+    border-color: #C9C0A4;
+}
+window.light-mode .alert-title    { color: #0D2847; }
+window.light-mode .alert-message  { color: #18375F; }
+window.light-mode .alert-timestamp { color: #006978; }

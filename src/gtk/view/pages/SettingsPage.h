@@ -4,6 +4,8 @@
 #include "src/gtk/view/pages/Page.h"
 #include <gtkmm.h>
 #include <sigc++/signal.h>
+#include <string>
+#include <unordered_map>
 
 namespace app::view {
 
@@ -61,6 +63,12 @@ public:
     sigc::signal<void(Glib::ustring)>& signalLanguageChangeRequested() {
         return signalLanguageChangeRequested_;
     }
+    // Emitted when the user picks a different palette. MainWindow
+    // checks whether the new palette ships a different main-window
+    // .ui layout and, if so, hot-reloads the window.
+    sigc::signal<void(Glib::ustring)>& signalPaletteChanged() {
+        return signalPaletteChanged_;
+    }
 
 private:
     void buildUI();
@@ -71,6 +79,7 @@ private:
     // hooks of similar names — note the `Selected` / `Toggled` suffixes).
     void onLanguageSelected();
     void onThemeSelected();
+    void onPaletteSelected();
     void onDisplayModeSelected();
     void onAutoRefreshToggled();
     void onRefreshIntervalChanged();
@@ -83,10 +92,20 @@ private:
     // double-apply — e.g. "Verbose logging enabled" twice on rebuild).
     bool syncingState_ = false;
 
+    // Populate the Palette section's card row (one clickable thumbnail
+    // per theme). Builds widgets programmatically from the kPalettes
+    // table in SettingsPage.cpp so adding a theme = one table entry.
+    void buildPaletteThumbnails();
+    // Update the `.selected` CSS class on thumbnail cards so the
+    // indicator follows the current palette.
+    void highlightSelectedPaletteCard(const std::string& paletteId);
+
     // Widgets
     Gtk::ComboBoxText* languageCombo_ = nullptr;
     Gtk::CheckButton*  radioDark_ = nullptr;
     Gtk::CheckButton*  radioLight_ = nullptr;
+    Gtk::Box*          paletteThumbs_ = nullptr;
+    std::unordered_map<std::string, Gtk::Button*> paletteCards_;
     Gtk::CheckButton*  radioFullscreen_ = nullptr;
     Gtk::CheckButton*  radioWindowed_ = nullptr;
     Gtk::CheckButton*  checkAutoRefresh_ = nullptr;
@@ -101,6 +120,7 @@ private:
     sigc::signal<void(int)>  signalRefreshIntervalChanged_;
     sigc::signal<void(bool)>           signalVerboseLoggingToggled_;
     sigc::signal<void(Glib::ustring)>  signalLanguageChangeRequested_;
+    sigc::signal<void(Glib::ustring)>  signalPaletteChanged_;
 };
 
 }  // namespace app::view

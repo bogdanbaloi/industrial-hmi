@@ -203,6 +203,76 @@ window.light-mode .sidebar-close-app:hover {
     font-size: 10px;
 }
 
+/* ============================================================
+   Palette thumbnail picker (Settings page)
+   ============================================================
+   Replaces a plain combo with a row of clickable cards. Each card
+   shows the 4 signature colors of a theme plus its name. Selected
+   card gets a highlight border. Active theme CSS can override
+   .palette-card.selected to style the indicator in its own hue. */
+
+button.palette-card {
+    background: transparent;
+    padding: 8px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    min-width: 130px;
+}
+button.palette-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.10);
+}
+button.palette-card.selected {
+    border-color: #64B5F6;
+    background: rgba(100, 181, 246, 0.10);
+}
+
+window.light-mode button.palette-card:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.10);
+}
+window.light-mode button.palette-card.selected {
+    border-color: #1976D2;
+    background: rgba(25, 118, 210, 0.08);
+}
+
+.palette-card-name {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.palette-swatch-row {
+    border-radius: 3px;
+    /* each swatch is a plain Box; row masks them together */
+}
+.palette-swatch {
+    min-width: 24px;
+    min-height: 30px;
+}
+
+/* Color swatches — one unique CSS class per (palette, slot).
+   Kept in sync with kPalettes[] in SettingsPage.cpp. */
+.swatch-industrial-0 { background: #263238; }
+.swatch-industrial-1 { background: #455A64; }
+.swatch-industrial-2 { background: #64B5F6; }
+.swatch-industrial-3 { background: #EF5350; }
+
+.swatch-nord-0 { background: #2E3440; }
+.swatch-nord-1 { background: #4C566A; }
+.swatch-nord-2 { background: #88C0D0; }
+.swatch-nord-3 { background: #BF616A; }
+
+.swatch-blueprint-0 { background: #0D2847; }
+.swatch-blueprint-1 { background: #F5EFE0; }
+.swatch-blueprint-2 { background: #00BCD4; }
+.swatch-blueprint-3 { background: #FF5252; }
+
+.swatch-cockpit-0 { background: #000000; }
+.swatch-cockpit-1 { background: #33FF66; }
+.swatch-cockpit-2 { background: #FFAA00; }
+.swatch-cockpit-3 { background: #FF3333; }
+
 /* Per-alert dismiss button: small, flat, fades in on card hover so the
    row stays visually clean until the operator actually interacts. */
 button.alert-dismiss {
