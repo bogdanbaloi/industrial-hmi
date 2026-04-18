@@ -394,3 +394,94 @@ msgstr "Nível de registo:"
 
 msgid "Show log panel at the bottom of the window"
 msgstr "Mostrar painel de registo na parte inferior da janela"
+
+
+msgid "Alerts"
+msgstr "Alertas"
+
+msgid "Clear all"
+msgstr "Limpar todos"
+
+msgid "No alerts"
+msgstr "Sem alertas"
+
+
+msgid "E-STOP"
+msgstr "PARAGEM"
+
+
+msgid "Sun"
+msgstr "Dom"
+
+msgid "Mon"
+msgstr "Seg"
+
+msgid "Tue"
+msgstr "Ter"
+
+msgid "Wed"
+msgstr "Qua"
+
+msgid "Thu"
+msgstr "Qui"
+
+msgid "Fri"
+msgstr "Sex"
+
+msgid "Sat"
+msgstr "Sáb"
+
+msgid "Jan"
+msgstr "Jan"
+
+msgid "Feb"
+msgstr "Fev"
+
+msgid "Mar"
+msgstr "Mar"
+
+msgid "Apr"
+msgstr "Abr"
+
+msgid "May"
+msgstr "Mai"
+
+msgid "Jun"
+msgstr "Jun"
+
+msgid "Jul"
+msgstr "Jul"
+
+msgid "Aug"
+msgstr "Ago"
+
+msgid "Sep"
+msgstr "Set"
+
+msgid "Oct"
+msgstr "Out"
+
+msgid "Nov"
+msgstr "Nov"
+
+msgid "Dec"
+msgstr "Dez"
+
+
+msgid "Equipment {} offline"
+msgstr "Equipamento {} offline"
+
+msgid "Equipment {} error"
+msgstr "Equipamento {} em erro"
+
+msgid "Line unavailable for production."
+msgstr "Linha indisponível para produção."
+
+msgid "{} critical"
+msgstr "{} crítico"
+
+msgid "{} below target"
+msgstr "{} abaixo da meta"
+
+msgid "Pass rate {:.1f}% (target {:.0f}%)"
+msgstr "Taxa de aprovação {:.1f}% (meta {:.0f}%)"

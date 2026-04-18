@@ -314,6 +314,11 @@ target_sources(objectsView
             src/gtk/view/pages/ProductObject.h
             src/gtk/view/widgets/QualityGauge.h
             src/gtk/view/widgets/TrendChart.h
+            src/gtk/view/widgets/AlertsPanel.h
+            src/gtk/view/widgets/SystemStatusBadge.h
+            src/gtk/view/widgets/LiveClock.h
+            src/presenter/AlertCenter.h
+            src/presenter/modelview/AlertViewModel.h
             src/gtk/view/css_classes.h
             src/gtk/view/ui_sizes.h
             src/gtk/view/colors.h

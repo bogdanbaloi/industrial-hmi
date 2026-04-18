@@ -394,3 +394,94 @@ msgstr "Protokollstufe:"
 
 msgid "Show log panel at the bottom of the window"
 msgstr "Protokoll-Panel am unteren Fensterrand anzeigen"
+
+
+msgid "Alerts"
+msgstr "Benachrichtigungen"
+
+msgid "Clear all"
+msgstr "Alle löschen"
+
+msgid "No alerts"
+msgstr "Keine Benachrichtigungen"
+
+
+msgid "E-STOP"
+msgstr "NOT-STOP"
+
+
+msgid "Sun"
+msgstr "So"
+
+msgid "Mon"
+msgstr "Mo"
+
+msgid "Tue"
+msgstr "Di"
+
+msgid "Wed"
+msgstr "Mi"
+
+msgid "Thu"
+msgstr "Do"
+
+msgid "Fri"
+msgstr "Fr"
+
+msgid "Sat"
+msgstr "Sa"
+
+msgid "Jan"
+msgstr "Jan"
+
+msgid "Feb"
+msgstr "Feb"
+
+msgid "Mar"
+msgstr "Mär"
+
+msgid "Apr"
+msgstr "Apr"
+
+msgid "May"
+msgstr "Mai"
+
+msgid "Jun"
+msgstr "Jun"
+
+msgid "Jul"
+msgstr "Jul"
+
+msgid "Aug"
+msgstr "Aug"
+
+msgid "Sep"
+msgstr "Sep"
+
+msgid "Oct"
+msgstr "Okt"
+
+msgid "Nov"
+msgstr "Nov"
+
+msgid "Dec"
+msgstr "Dez"
+
+
+msgid "Equipment {} offline"
+msgstr "Anlage {} offline"
+
+msgid "Equipment {} error"
+msgstr "Anlage {} Fehler"
+
+msgid "Line unavailable for production."
+msgstr "Linie nicht verfügbar."
+
+msgid "{} critical"
+msgstr "{} kritisch"
+
+msgid "{} below target"
+msgstr "{} unter Soll"
+
+msgid "Pass rate {:.1f}% (target {:.0f}%)"
+msgstr "Erfolgsquote {:.1f}% (Soll {:.0f}%)"

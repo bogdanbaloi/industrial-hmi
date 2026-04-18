@@ -58,10 +58,41 @@
           </object>
         </child>
 
-        <!-- Spacer to push footer + Close to bottom -->
+        <!-- SystemStatusBadge mount point (LED + state text). -->
         <child>
-          <object class="GtkBox">
+          <object class="GtkBox" id="system_status_container">
+            <property name="orientation">vertical</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkSeparator">
+            <property name="orientation">horizontal</property>
+            <property name="margin-start">12</property>
+            <property name="margin-end">12</property>
+          </object>
+        </child>
+
+        <!-- AlertsPanel injection point. MainWindow appends the
+             widget here at startup; the GtkBox is vexpand so it fills
+             the remaining sidebar height and pushes Close+footer down. -->
+        <child>
+          <object class="GtkBox" id="alerts_container">
+            <property name="orientation">vertical</property>
             <property name="vexpand">true</property>
+          </object>
+        </child>
+
+        <!-- Emergency Stop button. Hooked up in MainWindow to the
+             DashboardPresenter's stop command so the operator can
+             cut production from any tab. -->
+        <child>
+          <object class="GtkButton" id="estop_button">
+            <property name="label" translatable="yes">E-STOP</property>
+            <property name="margin-start">20</property>
+            <property name="margin-end">20</property>
+            <property name="margin-bottom">8</property>
+            <property name="css-classes">sidebar-estop</property>
           </object>
         </child>
 
@@ -73,6 +104,14 @@
             <property name="margin-end">20</property>
             <property name="margin-bottom">12</property>
             <property name="css-classes">sidebar-close-app</property>
+          </object>
+        </child>
+
+        <!-- Live clock mount point (two labels, updated every second). -->
+        <child>
+          <object class="GtkBox" id="clock_container">
+            <property name="orientation">vertical</property>
+            <property name="margin-bottom">12</property>
           </object>
         </child>
 

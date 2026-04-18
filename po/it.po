@@ -394,3 +394,94 @@ msgstr "Livello di log:"
 
 msgid "Show log panel at the bottom of the window"
 msgstr "Mostra il pannello di log in fondo alla finestra"
+
+
+msgid "Alerts"
+msgstr "Allarmi"
+
+msgid "Clear all"
+msgstr "Cancella tutti"
+
+msgid "No alerts"
+msgstr "Nessun allarme"
+
+
+msgid "E-STOP"
+msgstr "ARRESTO"
+
+
+msgid "Sun"
+msgstr "Dom"
+
+msgid "Mon"
+msgstr "Lun"
+
+msgid "Tue"
+msgstr "Mar"
+
+msgid "Wed"
+msgstr "Mer"
+
+msgid "Thu"
+msgstr "Gio"
+
+msgid "Fri"
+msgstr "Ven"
+
+msgid "Sat"
+msgstr "Sab"
+
+msgid "Jan"
+msgstr "Gen"
+
+msgid "Feb"
+msgstr "Feb"
+
+msgid "Mar"
+msgstr "Mar"
+
+msgid "Apr"
+msgstr "Apr"
+
+msgid "May"
+msgstr "Mag"
+
+msgid "Jun"
+msgstr "Giu"
+
+msgid "Jul"
+msgstr "Lug"
+
+msgid "Aug"
+msgstr "Ago"
+
+msgid "Sep"
+msgstr "Set"
+
+msgid "Oct"
+msgstr "Ott"
+
+msgid "Nov"
+msgstr "Nov"
+
+msgid "Dec"
+msgstr "Dic"
+
+
+msgid "Equipment {} offline"
+msgstr "Macchina {} offline"
+
+msgid "Equipment {} error"
+msgstr "Macchina {} in errore"
+
+msgid "Line unavailable for production."
+msgstr "Linea non disponibile per la produzione."
+
+msgid "{} critical"
+msgstr "{} critico"
+
+msgid "{} below target"
+msgstr "{} sotto soglia"
+
+msgid "Pass rate {:.1f}% (target {:.0f}%)"
+msgstr "Tasso di successo {:.1f}% (obiettivo {:.0f}%)"
