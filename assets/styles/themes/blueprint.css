@@ -81,6 +81,33 @@ window, window * {
 .system-status-dot.state-error       { color: #FF5252; }
 .system-status-dot.state-calibration { color: #FFB74D; }
 
+/* ---------- Top-bar alerts button --------------------------------------- */
+/* Blueprint routes alerts through a top-bar popover instead of a
+   bottom footer, so the launcher button gets a bit of emphasis to
+   signal it's the entry point. The `.has-alerts` helper class is
+   meant to be toggled from C++ when the alert count goes above 0,
+   flashing the cyan accent into a warn amber. */
+button.alerts-topbar-button {
+    background: transparent;
+    color: #4DD0E1;
+    border: 1px solid #4DD0E1;
+    padding: 8px 10px;
+    min-width: 36px;
+}
+button.alerts-topbar-button:hover {
+    background: rgba(0, 188, 212, 0.12);
+    color: #F5EFE0;
+}
+button.alerts-topbar-button.has-alerts {
+    color: #FFB74D;
+    border-color: #FFB74D;
+}
+
+/* Popover shell carries the same navy background as the rest of the
+   app so the alerts cards inside don't sit on a mismatched default
+   light surface. */
+popover.background { background: #0D2847; }
+
 /* ---------- E-STOP -------------------------------------------------------- */
 button.sidebar-estop,
 window .sidebar button.sidebar-estop {
@@ -141,8 +168,12 @@ notebook tab:hover   { color: #F5EFE0; background: rgba(0,188,212,0.06); }
 notebook tab:checked { color: #00BCD4; border-color: #00BCD4; border-bottom-color: transparent; }
 
 /* Pad the page container so the first row of page content clears
-   the tab bar even when the notebook is squeezed. */
-notebook stack { padding-top: 8px; }
+   the tab bar. `notebook stack` is the wrapper GTK4 puts around the
+   pages; `#dashboard_root` is a belt-and-suspenders selector for
+   older builds where the stack selector doesn't match. */
+notebook stack       { padding-top: 14px; }
+#dashboard_root      { margin-top: 16px; }
+#settings_root > *   { margin-top: 8px; }
 
 /* ---------- Dashboard cards & labels ------------------------------------- */
 /* Compact padding: Blueprint's top-bar + footer leaves notebook area

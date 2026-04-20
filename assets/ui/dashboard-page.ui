@@ -80,7 +80,6 @@
                       <object class="GtkLabel" id="wu_id_label">
                         <property name="label">-</property>
                         <property name="css-classes">field-value-large</property>
-                        <property name="selectable">true</property>
                       </object>
                     </child>
                   </object>

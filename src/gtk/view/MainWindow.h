@@ -117,6 +117,10 @@ private:
     Gtk::Box*        systemStatusContainer_ = nullptr;
     Gtk::Box*        clockContainer_        = nullptr;
     Gtk::Button*     estopButton_           = nullptr;
+    // Only present in Blueprint layout — hosts log_panel in a popover
+    // instead of the bottom dock. When the widget exists we wire the
+    // log tail timer to auto-start so the popover is never empty.
+    Gtk::MenuButton* logButton_             = nullptr;
 
     // Sidebar labels/buttons that carry translatable text. Kept as
     // members so `rebuildPages()` can reassign the text via `_()` after
