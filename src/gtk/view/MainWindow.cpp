@@ -83,6 +83,15 @@ MainWindow::MainWindow()
         });
     }
 
+    // Blueprint routes logs through a top_bar popover; there's no
+    // Settings "Show log panel" checkbox visible for the user there,
+    // so auto-start the tail timer and keep verbose logging on so
+    // clicking the log button always shows fresh output.
+    if (logButton_) {
+        verboseLogging_ = true;
+        applyVerboseLogging(true);
+    }
+
     // Start in fullscreen (industrial kiosk mode)
     fullscreen();
     isFullscreen_ = true;
@@ -133,6 +142,15 @@ Gtk::Box* MainWindow::parseLayoutUI() {
     systemStatusContainer_ = pendingBuilder_->get_widget<Gtk::Box>("system_status_container");
     clockContainer_        = pendingBuilder_->get_widget<Gtk::Box>("clock_container");
     estopButton_           = pendingBuilder_->get_widget<Gtk::Button>("estop_button");
+    // Only present in Blueprint layout (nullptr elsewhere).
+    // get_widget<T>() emits a Gtk-CRITICAL when the id is missing,
+    // even if the caller treats the return as "may be null". Use
+    // get_object() + dynamic_cast so baseline layouts stay silent.
+    if (auto obj = pendingBuilder_->get_object("log_button")) {
+        logButton_ = dynamic_cast<Gtk::MenuButton*>(obj.get());
+    } else {
+        logButton_ = nullptr;
+    }
 
     // Sidebar widgets we'll re-translate on language switch.
     appTitleLabel_    = pendingBuilder_->get_widget<Gtk::Label>("app_title");
@@ -492,6 +510,12 @@ void MainWindow::reloadLayout() {
             /*verboseLogging*/ verboseLogging_);
     }
     if (autoRefreshOn_)  applyAutoRefresh(true);
+    // Blueprint's log popover needs the tail timer running to show
+    // any content. The "Show log panel" checkbox isn't visible to
+    // the user in that layout, so auto-enable verbose logging when
+    // we detect the log button (layout probe) — regardless of what
+    // the checkbox said in the previous (sidebar) layout.
+    if (logButton_) verboseLogging_ = true;
     if (verboseLogging_) applyVerboseLogging(true);
 
     if (mainNotebook_ && activeTab >= 0 &&

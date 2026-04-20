@@ -96,6 +96,14 @@ void SettingsPage::loadInitialValues() {
     // Empty config value maps to the "industrial" baseline card.
     const auto saved = config.getPalette();
     highlightSelectedPaletteCard(saved.empty() ? "industrial" : saved);
+
+    // Blueprint routes logs through a top-bar popover, so the
+    // "Show log panel at the bottom of the window" checkbox is
+    // irrelevant there. Hide it for layouts that don't own a
+    // bottom log dock.
+    if (checkShowLogs_ && saved == "blueprint") {
+        checkShowLogs_->set_visible(false);
+    }
 }
 
 void SettingsPage::buildPaletteThumbnails() {
