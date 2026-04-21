@@ -3,6 +3,7 @@
 #include <clocale>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <libintl.h>
 
@@ -117,6 +118,55 @@ bool isAuto(const char* language) {
     return !language || !*language || std::strcmp(language, "auto") == 0;
 }
 
+// bindtextdomain(..., "locale") resolves against the current working
+// directory. That's fragile: launching `./build/debug/industrial-hmi.exe`
+// from the repo root leaves CWD at the repo root, so gettext would look
+// for `<repo-root>/locale/de/LC_MESSAGES/industrial-hmi.mo` which does
+// not exist — the catalogs live in `<exe-dir>/locale/`. Resolve the
+// directory ourselves so the binary works regardless of CWD.
+std::string resolveLocaleDir(const char* localeDir) {
+    namespace fs = std::filesystem;
+    if (!localeDir || !*localeDir) return "locale";
+    fs::path requested{localeDir};
+
+    // Absolute path: trust the caller.
+    if (requested.is_absolute()) return requested.string();
+
+    // 1) CWD-relative (preserves existing behaviour for callers that
+    //    already run from the correct working directory, e.g. CI).
+    std::error_code ec;
+    if (fs::exists(requested, ec)) {
+        return fs::absolute(requested, ec).string();
+    }
+
+    // 2) Executable-relative fallback — the catalogs ship next to
+    //    the binary when built via CMake (ADD_GETTEXT_CATALOGS copies
+    //    them into build/<cfg>/locale/).
+#ifdef _WIN32
+    wchar_t wbuf[MAX_PATH] = {};
+    DWORD len = GetModuleFileNameW(nullptr, wbuf, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+        char mbuf[MAX_PATH * 2] = {};
+        std::size_t converted = 0;
+        if (wcstombs_s(&converted, mbuf, sizeof mbuf, wbuf, _TRUNCATE) == 0) {
+            fs::path candidate = fs::path{mbuf}.parent_path() / requested;
+            if (fs::exists(candidate, ec)) return candidate.string();
+        }
+    }
+#else
+    fs::path exe = fs::read_symlink("/proc/self/exe", ec);
+    if (!ec) {
+        fs::path candidate = exe.parent_path() / requested;
+        if (fs::exists(candidate, ec)) return candidate.string();
+    }
+#endif
+
+    // 3) Give up and pass through — gettext will fail silently and
+    //    _() will return source strings, which at least keeps the UI
+    //    usable in English.
+    return requested.string();
+}
+
 }  // namespace
 
 void initI18n(const char* localeDir, const char* language) {
@@ -150,8 +200,11 @@ void initI18n(const char* localeDir, const char* language) {
     }
 #endif
 
+    // Resolve the locale directory so gettext works regardless of CWD.
+    const std::string resolvedDir = resolveLocaleDir(localeDir);
+
     // Point gettext at our compiled catalogs
-    bindtextdomain(GETTEXT_PACKAGE, localeDir);
+    bindtextdomain(GETTEXT_PACKAGE, resolvedDir.c_str());
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
     textdomain(GETTEXT_PACKAGE);
 

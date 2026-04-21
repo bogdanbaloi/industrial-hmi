@@ -48,11 +48,15 @@ inline constexpr int kConfirmDialogHeight = 150;
 
 // ----------------------------------------------------------------------------
 // ProductsPage ColumnView fixed column widths.
+// Sized for the longest header translation we ship (Spanish
+// "Codigo de producto", "Existencias bajas", Italian "Codice prodotto"
+// and Portuguese "Codigo do produto"). Columns stay resizable at
+// runtime; these are just the initial widths.
 // ----------------------------------------------------------------------------
-inline constexpr int kProductsColumnCodeWidth    = 120;
-inline constexpr int kProductsColumnStatusWidth  = 100;
-inline constexpr int kProductsColumnStockWidth   = 80;
-inline constexpr int kProductsColumnQualityWidth = 100;
+inline constexpr int kProductsColumnCodeWidth    = 170;
+inline constexpr int kProductsColumnStatusWidth  = 160;
+inline constexpr int kProductsColumnStockWidth   = 120;
+inline constexpr int kProductsColumnQualityWidth = 110;
 
 // ----------------------------------------------------------------------------
 // Spin-button ranges for product form.
