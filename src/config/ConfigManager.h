@@ -9,6 +9,8 @@
 #include <sstream>
 #include <cstdio>
 #include "config_defaults.h"
+#include "src/core/LoggerBase.h"
+#include "src/core/i18n.h"
 
 namespace app::config {
 
@@ -41,7 +43,49 @@ public:
      */
     [[nodiscard]] bool initialize(const std::string& configPath = defaults::kConfigPath) {
         configPath_ = configPath;
-        return loadConfig();
+        initialized_ = loadConfig();
+        return initialized_;
+    }
+
+    /**
+     * Inject a logger so subsequent policy methods (applyI18n, future
+     * applyTheme, etc.) can report degraded-config warnings through the
+     * normal log pipeline. When no logger is injected, those methods
+     * fall back to stderr, so the bootstrap sequence is safe even before
+     * the logger has been configured.
+     */
+    void setLogger(app::core::Logger& logger) {
+        logger_ = &logger;
+    }
+
+    /**
+     * Apply the configured language to the i18n subsystem.
+     *
+     * Policy owner: decides which language to request given the current
+     * config state. Delegates the actual gettext binding to the
+     * mechanism in app::core::initI18n().
+     *
+     *   - Config loaded OK  -> use getLanguage() (explicit code or "auto")
+     *   - Config unavailable -> "auto", log a warning
+     *
+     * Always succeeds: worst case, gettext falls back to source strings
+     * (English) and the UI is still usable.
+     */
+    void applyI18n() {
+        std::string language;
+        if (initialized_) {
+            language = getLanguage();
+        } else {
+            language = "auto";
+            if (logger_) {
+                logger_->warn(
+                    "Config unavailable - falling back to OS locale for i18n");
+            } else {
+                std::fprintf(stderr,
+                    "[warn] Config unavailable - falling back to OS locale\n");
+            }
+        }
+        app::core::initI18n(defaults::kLocaleDir, language.c_str());
     }
 
     /**
@@ -414,6 +458,8 @@ private:
 
     std::string configPath_;
     std::map<std::string, std::string> config_;
+    app::core::Logger* logger_ = nullptr;
+    bool initialized_ = false;
 };
 
 } // namespace app::config

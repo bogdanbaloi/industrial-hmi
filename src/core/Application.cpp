@@ -3,14 +3,11 @@
 #include "src/gtk/view/MainWindow.h"
 
 #include "src/core/Application.h"
+#include "src/core/Bootstrap.h"
 #include "src/core/LoggerImpl.h"
 #include "src/config/ConfigManager.h"
 #include "src/model/DatabaseManager.h"
 #include "src/model/ModelContext.h"
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 namespace app::core {
 
@@ -25,31 +22,21 @@ Application::~Application() {
     }
 }
 
-bool Application::initialize(int argc, char* argv[]) {
+bool Application::initialize(Bootstrap& bootstrap, int /*argc*/, char* /*argv*/[]) {
     if (initialized_) return true;
 
-    // Phase 1: Config (may fail gracefully - defaults used)
-    initConfig();
+    // Bootstrap has already prepared logger + config + i18n.
+    // Adopt the shared warnings list and borrow the logger.
+    logger_ = &bootstrap.logger();
+    startupWarnings_ = bootstrap.warnings();
 
-    // Phase 2: Console attachment (Windows GUI apps)
-#ifdef _WIN32
-    if (config::ConfigManager::instance().getLogConsoleEnabled()) {
-        if (AttachConsole(ATTACH_PARENT_PROCESS)) {
-            freopen("CONOUT$", "w", stdout);
-            freopen("CONOUT$", "w", stderr);
-        }
-    }
-#endif
+    logger_->info("Application starting (GTK frontend)");
 
-    // Phase 3: Logging (uses config values or defaults)
-    initLogging();
-
-    logger_->info("Application starting");
-
-    // Phase 4: Database (may fail gracefully)
+    // GTK-specific subsystems on top of Bootstrap:
     initDatabase();
 
-    // Log any warnings that occurred during startup
+    // Flush any accumulated warnings so they hit the log before the UI
+    // opens; the same list is re-shown via showStartupWarnings() later.
     for (const auto& warning : startupWarnings_) {
         logger_->warn("{}", warning);
     }
@@ -87,11 +74,10 @@ void Application::shutdown() {
 
     model::ModelContext::instance().stop();
 
-    if (logger_) {
-        logger_->flush();
-        logger_->shutdown();
-    }
-
+    // NOTE: Logger flush/shutdown is owned by Bootstrap — when the
+    // Bootstrap object in main() goes out of scope it will flush the
+    // final records. Application only borrows the pointer.
+    logger_ = nullptr;
     initialized_ = false;
 }
 
@@ -106,37 +92,6 @@ Logger& Application::logger() {
         return nullLogger;
     }
     return *logger_;
-}
-
-void Application::initConfig() {
-    auto& config = config::ConfigManager::instance();
-    if (!config.initialize()) {
-        startupWarnings_.emplace_back(
-            "Configuration file not found. Using default settings.");
-    }
-}
-
-void Application::initLogging() {
-    auto& config = config::ConfigManager::instance();
-
-    try {
-        logger_ = std::make_unique<Logger>(
-            createConfiguredLogger(
-                config.getLogFilePath(),
-                config.getLogLevel(),
-                config.getLogMaxFileSize(),
-                config.getLogMaxFiles(),
-                config.getLogConsoleEnabled()
-            )
-        );
-    } catch (const std::exception& e) {
-        // File logger failed (permissions?), fall back to console only
-        logger_ = std::make_unique<Logger>(
-            createConsoleLogger(LogLevel::INFO));
-        startupWarnings_.emplace_back(
-            std::string("Log file could not be opened: ") + e.what()
-            + ". Logging to console only.");
-    }
 }
 
 void Application::initDatabase() {

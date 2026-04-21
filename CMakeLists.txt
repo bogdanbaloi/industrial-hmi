@@ -220,17 +220,18 @@ target_sources(objectsConfig
             src/config/config_defaults.h
 )
 
-# Core Layer - Logging, Error Handling, Result, Application (C++20)
+# Core Layer - GTK-free utilities: Logger, i18n mechanism, Result, CsvSerializer
+# Bootstrap orchestrates staged startup (logger -> config -> i18n) and is
+# reused by every entry point (GTK today, headless console next).
 add_library(objectsCore OBJECT)
 target_sources(objectsCore
     PRIVATE
-        src/core/Application.cpp
         src/core/i18n.cpp
         src/core/CsvSerializer.cpp
+        src/core/Bootstrap.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
-            src/core/Application.h
             src/core/LoggerBase.h
             src/core/LoggerImpl.h
             src/core/ExceptionHandler.h
@@ -238,20 +239,15 @@ target_sources(objectsCore
             src/core/ErrorHandling.h
             src/core/i18n.h
             src/core/CsvSerializer.h
+            src/core/Bootstrap.h
 )
 target_link_libraries(objectsCore
     PUBLIC
         objectsModel
         objectsConfig
-        ${GTKMM_LIBRARIES}
-)
-target_include_directories(objectsCore
-    PUBLIC
-        ${GTKMM_INCLUDE_DIRS}
-)
-target_compile_options(objectsCore
-    PUBLIC
-        ${GTKMM_CFLAGS_OTHER}
+        # NOTE: deliberately no gtkmm — this library is GTK-free by
+        # construction so the headless console binary can link it
+        # without dragging in a GUI toolkit.
 )
 target_compile_definitions(objectsCore
     PUBLIC
@@ -263,6 +259,33 @@ if(Intl_FOUND)
     target_include_directories(objectsCore PUBLIC ${Intl_INCLUDE_DIRS})
     target_link_libraries(objectsCore PUBLIC ${Intl_LIBRARIES})
 endif()
+
+# AppGtk Layer - GTK-specific application bootstrap. Kept separate from
+# objectsCore so console binaries can link objectsCore without inheriting
+# gtkmm as a transitive dependency.
+add_library(objectsAppGtk OBJECT)
+target_sources(objectsAppGtk
+    PRIVATE
+        src/core/Application.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/core/Application.h
+)
+target_link_libraries(objectsAppGtk
+    PUBLIC
+        objectsCore
+        objectsModel
+        ${GTKMM_LIBRARIES}
+)
+target_include_directories(objectsAppGtk
+    PUBLIC
+        ${GTKMM_INCLUDE_DIRS}
+)
+target_compile_options(objectsAppGtk
+    PUBLIC
+        ${GTKMM_CFLAGS_OTHER}
+)
 
 # Presenter Layer - MVP orchestration
 add_library(objectsPresenter OBJECT)
@@ -326,6 +349,7 @@ target_sources(objectsView
 target_link_libraries(objectsView
     PUBLIC
         objectsPresenter
+        objectsAppGtk
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
 )
@@ -361,6 +385,7 @@ target_link_libraries(industrial-hmi
         objectsModel
         objectsConfig
         objectsCore
+        objectsAppGtk
         objectsPresenter
         objectsView
         Threads::Threads
@@ -532,9 +557,17 @@ else()
 endif()
 message(STATUS "")
 message(STATUS "Object Libraries:")
+message(STATUS "  objectsConfig     - INTERFACE: JSON config defaults + ConfigManager (policy)")
 message(STATUS "  objectsModel      - Data layer (SimulatedModel, DatabaseManager)")
+message(STATUS "  objectsCore       - Logger, i18n mechanism, Bootstrap (GTK-free)")
+message(STATUS "  objectsAppGtk     - GTK application bootstrap (Application.cpp)")
 message(STATUS "  objectsPresenter  - Presenter layer (MVP orchestration)")
 message(STATUS "  objectsView       - View layer (GTK4 pages)")
+message(STATUS "")
+message(STATUS "Dependency graph (low -> high):")
+message(STATUS "  Config -> Model -> Core -> {AppGtk, Presenter}")
+message(STATUS "                                     |")
+message(STATUS "                                    View -> industrial-hmi (GTK exe)")
 message(STATUS "")
 if(WIN32)
     message(STATUS "Windows Build:")

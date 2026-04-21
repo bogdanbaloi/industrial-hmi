@@ -1,29 +1,35 @@
-#include "src/core/Application.h"
-#include "src/core/i18n.h"
-#include "src/config/ConfigManager.h"
-#include "src/config/config_defaults.h"
+#include "src/core/Bootstrap.h"
 #include "src/model/SimulatedModel.h"
 #include <cstdlib>
 
+#ifdef CONSOLE_MODE
+// Headless console front-end (added in Phase 1). For Phase 0 the
+// console header doesn't exist yet — we only build the GTK binary
+// via the default target until the console sources land.
+#  include "src/console/InitConsole.h"
+#else
+#  include "src/core/Application.h"
+#endif
+
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
-    // Use Cairo renderer on Windows to avoid GL flicker
+    // Use Cairo renderer on Windows to avoid GL flicker in GTK4.
     _putenv_s("GSK_RENDERER", "cairo");
 #endif
 
-    // Load config early so we know the language preference before
-    // constructing any translatable UI. Best-effort: if config is missing,
-    // getLanguage() returns "auto" and i18n falls back to OS locale.
-    auto& config = app::config::ConfigManager::instance();
-    (void)config.initialize();
-    const std::string language = config.getLanguage();
+    // Staged startup: logger -> config -> configured logger -> i18n.
+    // Always succeeds; degraded-config cases are recorded as warnings.
+    app::core::Bootstrap bootstrap;
+    bootstrap.run();
 
-    // Bind gettext catalogs and select locale (config-driven).
-    app::core::initI18n(app::config::defaults::kLocaleDir, language.c_str());
-
+#ifdef CONSOLE_MODE
+    (void)argc; (void)argv;
+    app::console::InitConsole console(bootstrap);
+    console.run();
+    return 0;
+#else
     auto& app = app::core::Application::instance();
-
-    if (!app.initialize(argc, argv)) {
+    if (!app.initialize(bootstrap, argc, argv)) {
         return 1;
     }
 
@@ -37,4 +43,5 @@ int main(int argc, char* argv[]) {
     int result = app.run(argc, argv);
     app.shutdown();
     return result;
+#endif
 }
