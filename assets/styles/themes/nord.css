@@ -87,6 +87,24 @@ button.sidebar-estop:hover,
 button.alert-dismiss         { color: #81A1C1; }
 button.alert-dismiss:hover   { color: #ECEFF4; background: rgba(216,222,233,0.08); }
 
+/* Outline control buttons in dark mode — match the muted Nord Aurora
+   accents rather than inheriting the base vivid dashboard fills. */
+.start-button,
+.stop-button,
+.reset-button,
+.calibration-button {
+    background: transparent;
+    border: 2px solid #4C566A;
+}
+.start-button       { color: #A3BE8C; border-color: #A3BE8C; }
+.stop-button        { color: #BF616A; border-color: #BF616A; }
+.reset-button       { color: #D08770; border-color: #D08770; }
+.calibration-button { color: #88C0D0; border-color: #88C0D0; }
+.start-button:hover       { background: rgba(163,190,140,0.12); }
+.stop-button:hover        { background: rgba(191,97,106,0.14); }
+.reset-button:hover       { background: rgba(208,135,112,0.14); }
+.calibration-button:hover { background: rgba(136,192,208,0.12); }
+
 /* ---------- Light mode variant (invert surfaces, keep Frost accents) ----- */
 .sidebar {
     background-color: #ECEFF4;
@@ -225,10 +243,24 @@ window.light-mode .quality-passing      { color: #A3BE8C; }
 window.light-mode .quality-warning      { color: #D08770; }
 window.light-mode .quality-critical     { color: #BF616A; }
 
-window.light-mode .start-button       { color: #A3BE8C; border-color: #A3BE8C; }
-window.light-mode .stop-button        { color: #BF616A; border-color: #BF616A; }
-window.light-mode .reset-button       { color: #D08770; border-color: #D08770; }
-window.light-mode .calibration-button { color: #5E81AC; border-color: #5E81AC; }
+/* Light-mode outline buttons — reset base dashboard.css fills so the
+   Aurora accents land on a neutral surface instead of on vivid
+   solid greens / reds which would swallow the text. */
+window.light-mode .start-button,
+window.light-mode .stop-button,
+window.light-mode .reset-button,
+window.light-mode .calibration-button {
+    background: #ECEFF4;
+    border: 1px solid #D8DEE9;
+}
+window.light-mode .start-button       { color: #4D7C3A; border-color: #A3BE8C; }
+window.light-mode .stop-button        { color: #A04850; border-color: #BF616A; }
+window.light-mode .reset-button       { color: #B66D55; border-color: #D08770; }
+window.light-mode .calibration-button { color: #4A6E8F; border-color: #5E81AC; }
+window.light-mode .start-button:hover       { background: #E1ECD8; }
+window.light-mode .stop-button:hover        { background: #F2DADC; }
+window.light-mode .reset-button:hover       { background: #F4DFD5; }
+window.light-mode .calibration-button:hover { background: #DCE4EE; }
 
 window.light-mode progressbar trough   { background: #D8DEE9; border: 1px solid #C5CBD3; }
 window.light-mode progressbar progress { background: #5E81AC; }

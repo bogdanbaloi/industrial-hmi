@@ -120,7 +120,7 @@ void ProductsPage::buildUI() {
         [](const Glib::RefPtr<ProductObject>& p) { return p->getProductCode(); }));
     columnView_->append_column(makeColumn(_("Name"), 0, true,
         [](const Glib::RefPtr<ProductObject>& p) { return p->getName(); }));
-    columnView_->append_column(makeColumn(_("Status"), kProductsColumnCodeWidth, false,
+    columnView_->append_column(makeColumn(_("Status"), kProductsColumnStatusWidth, false,
         [](const Glib::RefPtr<ProductObject>& p) -> Glib::ustring {
             const auto& s = p->getStatus();
             if (s == config::defaults::kStatusActive)   return _("Active");

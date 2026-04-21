@@ -195,6 +195,16 @@ button:disabled {
     opacity: 0.5;
 }
 
+/* Mode-locked palettes (e.g. Paper = light only, Dracula = dark only)
+   call set_sensitive(false) on the unavailable Dark/Light radio. Each
+   palette overrides `checkbutton label { color: ... }` with an opaque
+   color, which defeats GTK's default disabled styling — so dim the
+   whole widget via opacity here. Opacity composes on top of any
+   palette color, so this wins without per-palette rules. */
+checkbutton:disabled {
+    opacity: 0.45;
+}
+
 button.suggested-action {
     background-color: @accent_bg_color;
     color: @accent_fg_color;

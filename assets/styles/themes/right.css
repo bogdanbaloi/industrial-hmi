@@ -96,10 +96,26 @@ notebook tab:checked { color: #00D4B1; border-bottom: 2px solid #00D4B1; }
 .quality-warning      { color: #FFB74D; }
 .quality-critical     { color: #EF5350; }
 
+/* Outline control buttons — transparent ground + accent edge/text.
+   Base dashboard.css uses solid vivid fills; without resetting the
+   background here, the palette accent text lands on the base fill
+   (teal on green, etc.) and becomes unreadable. */
+.start-button,
+.stop-button,
+.reset-button,
+.calibration-button {
+    background: transparent;
+    border: 2px solid #3E5764;
+}
 .start-button { color: #00D4B1; border-color: #00D4B1; }
 .stop-button  { color: #EF5350; border-color: #EF5350; }
 .reset-button { color: #FFB74D; border-color: #FFB74D; }
 .calibration-button { color: #4DD0E1; border-color: #4DD0E1; }
+
+.start-button:hover       { background: rgba(0,212,177,0.12); }
+.stop-button:hover        { background: rgba(239,83,80,0.14); }
+.reset-button:hover       { background: rgba(255,183,77,0.14); }
+.calibration-button:hover { background: rgba(77,208,225,0.12); }
 
 progressbar trough { background: #1B2B34; border: 1px solid #3E5764; }
 progressbar progress { background: #00D4B1; }
@@ -191,10 +207,21 @@ window.light-mode .field-label      { color: #4A6470; }
 window.light-mode .field-value      { color: #0E2A33; }
 window.light-mode .field-value-large{ color: #007A66; }
 
+window.light-mode .start-button,
+window.light-mode .stop-button,
+window.light-mode .reset-button,
+window.light-mode .calibration-button {
+    background: #FFFFFF;
+    border: 1px solid #CBD3DD;
+}
 window.light-mode .start-button       { color: #2E7D32; border-color: #2E7D32; }
 window.light-mode .stop-button        { color: #B71C1C; border-color: #B71C1C; }
 window.light-mode .reset-button       { color: #E65100; border-color: #E65100; }
 window.light-mode .calibration-button { color: #007A66; border-color: #007A66; }
+window.light-mode .start-button:hover       { background: #E8F5E9; }
+window.light-mode .stop-button:hover        { background: #FDECEA; }
+window.light-mode .reset-button:hover       { background: #FFF3E0; }
+window.light-mode .calibration-button:hover { background: #E0F2F1; }
 
 window.light-mode progressbar trough { background: #E9EEF0; border: 1px solid #D6DEE2; }
 window.light-mode progressbar progress { background: #007A66; }
