@@ -1,0 +1,250 @@
+/* ============================================================================
+   Right-sidebar — mirror of the Industrial baseline with a teal accent
+   so it's distinguishable at a glance. Layout comes from
+   main-window-right.ui; this file just tweaks the color palette.
+
+   Background: #1B2B34 (deep teal-slate)
+   Surface:    #263A45
+   Accent:     #00D4B1 (teal), #4DD0E1 (cyan)
+   Text:       #E6EEF4 (primary), #A0B4C3 (secondary)
+   ============================================================================ */
+
+.sidebar {
+    background-color: #1B2B34;
+    border-left: 1px solid #2E4450;
+    border-right: none;
+}
+
+.sidebar-title    { color: #E6EEF4; }
+.sidebar-subtitle { color: #00D4B1; letter-spacing: 1px; }
+.section-header   { color: #A0B4C3; letter-spacing: 1.2px; }
+.sidebar-option                 { color: #E6EEF4; }
+.sidebar-option:hover           { color: #00D4B1; }
+.sidebar-option:checked         { color: #00D4B1; font-weight: 700; }
+
+.sidebar button {
+    background: #263A45;
+    color: #E6EEF4;
+    border: 1px solid #3E5764;
+    border-radius: 6px;
+}
+.sidebar button:hover { background: #324A56; border-color: #00D4B1; }
+
+.sidebar-version, .sidebar-author { color: #6A8294; }
+
+.live-clock-time { color: #00D4B1; font-weight: 600; }
+.live-clock-date { color: #A0B4C3; }
+
+.system-status-label             { color: #E6EEF4; }
+.system-status-dot.state-idle        { color: #A0B4C3; }
+.system-status-dot.state-running     { color: #00D4B1; }
+.system-status-dot.state-error       { color: #EF5350; }
+.system-status-dot.state-calibration { color: #FFB74D; }
+
+button.sidebar-estop,
+.sidebar button.sidebar-estop {
+    background: #B71C1C;
+    color: #FFFFFF;
+    border: 2px solid #B71C1C;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+button.sidebar-estop:hover,
+.sidebar button.sidebar-estop:hover {
+    background: #D32F2F;
+}
+
+.alerts-panel { color: #E6EEF4; }
+.alert-card {
+    background: #263A45;
+    border-left: 3px solid #00D4B1;
+    border-radius: 4px;
+}
+.alert-card.alert-info     { border-left-color: #4DD0E1; }
+.alert-card.alert-warning  { border-left-color: #FFB74D; background: rgba(255,183,77,0.08); }
+.alert-card.alert-critical { border-left-color: #EF5350; background: rgba(239,83,80,0.10); }
+
+.alert-title     { color: #E6EEF4; font-weight: 600; }
+.alert-message   { color: #A0B4C3; }
+.alert-timestamp { color: #6A8294; }
+
+notebook header { background: #1B2B34; border-bottom: 2px solid #00D4B1; }
+notebook tab    { color: #A0B4C3; padding: 10px 20px; font-weight: 600; }
+notebook tab:hover   { color: #00D4B1; }
+notebook tab:checked { color: #00D4B1; border-bottom: 2px solid #00D4B1; }
+
+.work-unit-card,
+.equipment-card,
+.quality-card,
+.actuator-card {
+    background: #263A45;
+    border: 1px solid #3E5764;
+    border-radius: 6px;
+}
+
+.card-title        { color: #00D4B1; font-weight: 700; }
+.field-label       { color: #A0B4C3; }
+.field-value       { color: #E6EEF4; }
+.field-value-large { color: #00D4B1; font-weight: 700; }
+.separator-dot     { color: #00D4B1; }
+
+.equipment-online     { color: #00D4B1; }
+.equipment-processing { color: #4DD0E1; }
+.equipment-error      { color: #EF5350; }
+.equipment-offline    { color: #6A8294; }
+.quality-passing      { color: #00D4B1; }
+.quality-warning      { color: #FFB74D; }
+.quality-critical     { color: #EF5350; }
+
+.start-button { color: #00D4B1; border-color: #00D4B1; }
+.stop-button  { color: #EF5350; border-color: #EF5350; }
+.reset-button { color: #FFB74D; border-color: #FFB74D; }
+.calibration-button { color: #4DD0E1; border-color: #4DD0E1; }
+
+progressbar trough { background: #1B2B34; border: 1px solid #3E5764; }
+progressbar progress { background: #00D4B1; }
+
+window { background-color: #142028; }
+
+/* Products page */
+.page-title { color: #00D4B1; font-weight: 700; letter-spacing: 0.5px; }
+.toolbar-button {
+    background: #263A45; color: #E6EEF4;
+    border: 1px solid #3E5764; border-radius: 6px;
+    font-weight: 600;
+}
+.toolbar-button:hover { background: #324A56; border-color: #00D4B1; }
+.search-label { color: #A0B4C3; }
+
+columnview,
+columnview listview,
+columnview row {
+    background: #1B2B34; color: #E6EEF4;
+}
+columnview header {
+    background: #142028; color: #00D4B1;
+    border-bottom: 1px solid #2E4450; font-weight: 700;
+}
+columnview row:nth-child(even) { background: #22323C; }
+columnview row:hover    { background: #2A3D47; }
+columnview row:selected { background: rgba(0,212,177,0.18); color: #00D4B1; }
+columnview cell         { padding: 6px 10px; border-right: 1px solid #2E4450; }
+
+/* ============ Light-mode variant (inverted with teal accent kept) ========= */
+window.light-mode { background-color: #F5F7F8; }
+window.light-mode .sidebar {
+    background-color: #FFFFFF;
+    border-left: 1px solid #D6DEE2;
+    border-right: none;
+}
+window.light-mode .sidebar-title    { color: #0E2A33; }
+window.light-mode .sidebar-subtitle { color: #007A66; }
+window.light-mode .section-header   { color: #4A6470; }
+window.light-mode .sidebar-option         { color: #0E2A33; }
+window.light-mode .sidebar-option:checked { color: #007A66; font-weight: 700; }
+
+window.light-mode .sidebar button {
+    background: #FFFFFF;
+    color: #0E2A33;
+    border: 1px solid #D6DEE2;
+}
+window.light-mode .sidebar button:hover {
+    background: #F0F4F5;
+    border-color: #007A66;
+}
+window.light-mode .sidebar-version,
+window.light-mode .sidebar-author { color: #7A8E98; }
+
+window.light-mode .live-clock-time { color: #007A66; }
+window.light-mode .live-clock-date { color: #4A6470; }
+
+window.light-mode .system-status-label { color: #0E2A33; }
+
+window.light-mode button.sidebar-estop,
+window.light-mode .sidebar button.sidebar-estop {
+    background: #B71C1C; color: #FFFFFF; border-color: #B71C1C;
+}
+
+window.light-mode .alert-card {
+    background: #FFFFFF;
+    border: 1px solid #D6DEE2;
+    border-left: 3px solid #007A66;
+}
+window.light-mode .alert-title   { color: #0E2A33; }
+window.light-mode .alert-message { color: #4A6470; }
+window.light-mode .alert-timestamp { color: #7A8E98; }
+
+window.light-mode notebook header { background: #FFFFFF; border-bottom: 1px solid #D6DEE2; }
+window.light-mode notebook tab         { color: #4A6470; }
+window.light-mode notebook tab:hover   { color: #007A66; }
+window.light-mode notebook tab:checked { color: #007A66; border-bottom: 2px solid #007A66; }
+
+window.light-mode .work-unit-card,
+window.light-mode .equipment-card,
+window.light-mode .quality-card,
+window.light-mode .actuator-card {
+    background: #FFFFFF;
+    border: 1px solid #D6DEE2;
+}
+window.light-mode .card-title       { color: #007A66; }
+window.light-mode .field-label      { color: #4A6470; }
+window.light-mode .field-value      { color: #0E2A33; }
+window.light-mode .field-value-large{ color: #007A66; }
+
+window.light-mode .start-button       { color: #2E7D32; border-color: #2E7D32; }
+window.light-mode .stop-button        { color: #B71C1C; border-color: #B71C1C; }
+window.light-mode .reset-button       { color: #E65100; border-color: #E65100; }
+window.light-mode .calibration-button { color: #007A66; border-color: #007A66; }
+
+window.light-mode progressbar trough { background: #E9EEF0; border: 1px solid #D6DEE2; }
+window.light-mode progressbar progress { background: #007A66; }
+
+window.light-mode .page-title { color: #007A66; }
+window.light-mode .toolbar-button {
+    background: #FFFFFF; color: #0E2A33;
+    border: 1px solid #D6DEE2;
+}
+window.light-mode .toolbar-button:hover { background: #F0F4F5; border-color: #007A66; }
+window.light-mode .search-label { color: #4A6470; }
+
+window.light-mode columnview,
+window.light-mode columnview listview,
+window.light-mode columnview row {
+    background: #FFFFFF; color: #0E2A33;
+}
+window.light-mode columnview header {
+    background: #E9EEF0; color: #007A66;
+    border-bottom: 1px solid #D6DEE2;
+}
+window.light-mode columnview row:nth-child(even) { background: #F5F7F8; }
+window.light-mode columnview row:hover    { background: #E9EEF0; }
+window.light-mode columnview row:selected { background: #D8EEEA; color: #007A66; }
+window.light-mode columnview cell         { border-right: 1px solid #E3E8EB; }
+
+/* Settings widgets */
+window.light-mode frame { border: 1px solid #D6DEE2; background: #FFFFFF; border-radius: 6px; }
+window.light-mode frame > label { color: #007A66; }
+window.light-mode label { color: #0E2A33; }
+window.light-mode .dim-label { color: #7A8E98; }
+
+window.light-mode combobox,
+window.light-mode spinbutton,
+window.light-mode entry {
+    background: #FFFFFF; color: #0E2A33;
+    border: 1px solid #D6DEE2;
+}
+window.light-mode popover,
+window.light-mode popover.background,
+window.light-mode popover contents {
+    background: #FFFFFF; color: #0E2A33;
+    border: 1px solid #D6DEE2;
+}
+window.light-mode checkbutton check,
+window.light-mode checkbutton radio {
+    background: #FFFFFF; border: 1px solid #D6DEE2; color: #007A66;
+}
+window.light-mode checkbutton check:checked,
+window.light-mode checkbutton radio:checked {
+    background: #007A66; border-color: #007A66;
+}
+window.light-mode checkbutton label { color: #0E2A33; }

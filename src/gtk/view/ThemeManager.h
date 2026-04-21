@@ -49,12 +49,14 @@ public:
         if (theme == currentTheme_) {
             return;  // Already applied
         }
-        
+
         currentTheme_ = theme;
         applyTheme(theme);
-        
-        // Could save preference here
-        // saveThemePreference(theme);
+
+        // Re-apply the palette — some palettes are mode-specific (Paper
+        // is light-only, the rest are dark-only) and should unload
+        // their provider when the active theme no longer matches.
+        applyPalette();
     }
     
     /// Toggle between dark and light
@@ -141,8 +143,9 @@ private:
     }
     
     // Remove the previous palette provider (if any) and, if the new
-    // palette id is non-empty and has a matching file, load it at a
-    // higher priority than the base sidebar.css so its rules win.
+    // palette id is non-empty, compatible with the active theme, and
+    // has a matching file, load it at a higher priority than the
+    // base sidebar.css so its rules win.
     void applyPalette() {
         auto* display = Gdk::Display::get_default().get();
         if (!display) return;
@@ -155,6 +158,20 @@ private:
 
         if (currentPalette_.empty() || currentPalette_ == "industrial") {
             return;  // Baseline look — nothing extra to load.
+        }
+
+        // Palettes have a natural light/dark mode. Skip loading when
+        // the active Theme doesn't match so we don't paint dark-mode
+        // colors on a Light canvas (or vice versa) and end up with
+        // near-invisible text on same-tone backgrounds.
+        const bool lightOnly  = (currentPalette_ == "paper");
+        const bool darkOnly   = (currentPalette_ == "dracula" ||
+                                 currentPalette_ == "crt"     ||
+                                 currentPalette_ == "blueprint"||
+                                 currentPalette_ == "cockpit");
+        const bool isLight = (currentTheme_ == Theme::LIGHT);
+        if ((lightOnly && !isLight) || (darkOnly && isLight)) {
+            return;
         }
 
         const std::string path =

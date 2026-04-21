@@ -65,6 +65,7 @@ constexpr const char* kMainWindowUI    = "assets/ui/main-window.ui";
 // must expose the same set of widget IDs as main-window.ui so
 // MainWindow.cpp stays agnostic about which file was loaded.
 constexpr const char* kMainWindowBlueprintUI = "assets/ui/main-window-blueprint.ui";
+constexpr const char* kMainWindowRightUI     = "assets/ui/main-window-right.ui";
 constexpr const char* kDashboardPageUI = "assets/ui/dashboard-page.ui";
 constexpr const char* kProductsPageUI  = "assets/ui/products-page.ui";
 constexpr const char* kSettingsPageUI  = "assets/ui/settings-page.ui";

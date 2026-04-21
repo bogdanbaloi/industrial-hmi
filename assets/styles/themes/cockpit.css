@@ -15,7 +15,8 @@
    ============================================================================ */
 
 /* ---------- Global typography ---------------------------------------------- */
-window, window * {
+window,
+* {
     font-family: "Barlow Condensed", "Roboto Condensed",
                  "Oswald", "Impact", sans-serif;
 }
@@ -74,7 +75,8 @@ window, window * {
     border-color: #33FF66;
 }
 
-.sidebar-version, .sidebar-author {
+.sidebar-version,
+.sidebar-author {
     color: #808080;
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -118,7 +120,7 @@ window, window * {
 
 /* ---------- E-STOP — the big red mushroom -------------------------------- */
 button.sidebar-estop,
-window .sidebar button.sidebar-estop {
+.sidebar button.sidebar-estop {
     background: #FF3333;
     color: #000000;
     border: 3px solid #991F1F;
@@ -130,7 +132,7 @@ window .sidebar button.sidebar-estop {
     border-radius: 3px;
 }
 button.sidebar-estop:hover,
-window .sidebar button.sidebar-estop:hover {
+.sidebar button.sidebar-estop:hover {
     background: #FF6666;
     border-color: #FF3333;
 }
@@ -283,7 +285,9 @@ label {
     color: #808080;
 }
 
-combobox, spinbutton, entry {
+combobox,
+spinbutton,
+entry {
     background: #000000;
     color: #33FF66;
     border: 2px solid #3D3D3D;
@@ -291,7 +295,9 @@ combobox, spinbutton, entry {
     padding: 6px 10px;
     letter-spacing: 1px;
 }
-combobox:focus-within, spinbutton:focus-within, entry:focus {
+combobox:focus-within,
+spinbutton:focus-within,
+entry:focus {
     border-color: #33FF66;
 }
 combobox button {
@@ -300,7 +306,9 @@ combobox button {
     border: none;
 }
 combobox arrow { color: #33FF66; }
-popover, popover.background, popover contents {
+popover,
+popover.background,
+popover contents {
     background: #0A0A0A;
     color: #CCCCCC;
     border: 2px solid #33FF66;
@@ -308,7 +316,8 @@ popover, popover.background, popover contents {
 }
 popover label { color: #CCCCCC; }
 
-checkbutton check, checkbutton radio {
+checkbutton check,
+checkbutton radio {
     background: #000000;
     border: 2px solid #3D3D3D;
     color: #33FF66;
@@ -316,7 +325,8 @@ checkbutton check, checkbutton radio {
     min-height: 16px;
     min-width: 16px;
 }
-checkbutton check:checked, checkbutton radio:checked {
+checkbutton check:checked,
+checkbutton radio:checked {
     background: #33FF66;
     border-color: #33FF66;
     color: #000000;
@@ -326,41 +336,30 @@ checkbutton label { color: #CCCCCC; letter-spacing: 1.5px; }
 spinbutton button { background: transparent; color: #33FF66; border: none; }
 spinbutton button:hover { color: #66FF99; }
 
-/* ---------- Light mode — "inverted console" (amber-on-cream) ------------ */
-window.light-mode .sidebar {
-    background-color: #F5F0E6;
-    background-image: none;
-    border-right-color: #0A0A0A;
-}
-window.light-mode .sidebar-title    { color: #000000; }
-window.light-mode .sidebar-subtitle { color: #008833; }
-window.light-mode .section-header   { color: #555555; }
-window.light-mode .sidebar-option   { color: #333333; }
-window.light-mode .sidebar-option:checked { color: #008833; }
+/* Cockpit is a dark-only palette by design — no light-mode
+   overrides needed. ThemeManager skips loading this CSS when the
+   user picks Light mode, falling back to baseline Industrial-light. */
 
-window.light-mode .sidebar button {
-    background: #FFFFFF;
-    color: #008833;
-    border-color: #0A0A0A;
+/* Products page */
+.page-title { color: #33FF66; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+.toolbar-button {
+    background: #0A0A0A; color: #33FF66;
+    border: 2px solid #3D3D3D; border-radius: 2px;
+    font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
 }
-window.light-mode .sidebar button:hover {
-    background: #F0F0F0;
-    color: #00AA44;
-}
+.toolbar-button:hover { background: #1A1A1A; border-color: #33FF66; }
+.search-label { color: #808080; letter-spacing: 2px; text-transform: uppercase; }
 
-window.light-mode .sidebar-version,
-window.light-mode .sidebar-author { color: #555555; }
-
-window.light-mode .live-clock-time {
-    color: #008833;
-    text-shadow: none;
+columnview,
+columnview listview,
+columnview row {
+    background: #000000; color: #CCCCCC;
 }
-window.light-mode .live-clock-date { color: #555555; }
-
-window.light-mode .alert-card {
-    background: #FFFFFF;
-    border-color: #D4CDBB;
+columnview header {
+    background: #0A0A0A; color: #33FF66;
+    border-bottom: 2px solid #33FF66;
+    font-weight: 900; letter-spacing: 2px; text-transform: uppercase;
 }
-window.light-mode .alert-title    { color: #000000; }
-window.light-mode .alert-message  { color: #444444; }
-window.light-mode .alert-timestamp { color: #008833; }
+columnview row:hover    { background: #0A0A0A; }
+columnview row:selected { background: rgba(51,255,102,0.15); color: #33FF66; }
+columnview cell         { padding: 6px 10px; border-right: 1px solid #2A2A2A; }

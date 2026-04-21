@@ -99,6 +99,10 @@ private:
     // Update the `.selected` CSS class on thumbnail cards so the
     // indicator follows the current palette.
     void highlightSelectedPaletteCard(const std::string& paletteId);
+    // Mode-lock the Dark/Light radios for palettes that ship only
+    // one mode by design (Dracula/CRT/Blueprint/Cockpit are dark-
+    // only; Paper is light-only). Attach an explanatory tooltip.
+    void applyModeLockForPalette(const std::string& paletteId);
 
     // Widgets
     Gtk::ComboBoxText* languageCombo_ = nullptr;

@@ -1,0 +1,261 @@
+/* ============================================================================
+   Paper — executive white, navy accents, clean business dashboard
+   ============================================================================
+   Inverted baseline: white surfaces, near-black text, navy + slate accents.
+   No heavy bezels, no neon — reads like an SAP / Bloomberg Terminal Lite.
+
+   Surfaces: #FFFFFF (main), #F5F6F8 (panel), #E4E7EB (rails)
+   Text:     #1C1F26 (primary), #4A5568 (secondary), #8A95A5 (tertiary)
+   Accents:  #0B3D91 (navy primary), #1976D2 (secondary),
+             #B71C1C (red), #2E7D32 (green), #E65100 (amber)
+   ============================================================================ */
+
+window { background-color: #F5F6F8; }
+
+/* Notebook canvas — GTK's default page area is a dark surface. Force
+   the Paper light grey so the gap around cards matches the window. */
+notebook,
+notebook stack,
+notebook stack > * {
+    background-color: #F5F6F8;
+}
+
+/* IDLE / state indicator in Control Panel — align with Paper palette
+   (navy accent on tinted background) rather than the default light-
+   mode neutral grey. */
+.active-indicator {
+    color: #0B3D91;
+    background: #E3EDFB;
+    border: 1px solid #CBD3DD;
+}
+
+.sidebar {
+    background-color: #FFFFFF;
+    border-right: 1px solid #E4E7EB;
+}
+
+.sidebar-title    { color: #1C1F26; font-weight: 700; letter-spacing: 0.5px; }
+.sidebar-subtitle { color: #0B3D91; letter-spacing: 1px; }
+.section-header   { color: #4A5568; letter-spacing: 1.2px; }
+.sidebar-option                 { color: #1C1F26; }
+.sidebar-option:hover           { color: #0B3D91; }
+.sidebar-option:checked         { color: #0B3D91; font-weight: 700; }
+
+.sidebar button {
+    background: #FFFFFF;
+    color: #1C1F26;
+    border: 1px solid #CBD3DD;
+    border-radius: 4px;
+}
+.sidebar button:hover { background: #F5F6F8; border-color: #0B3D91; }
+
+.sidebar-version, .sidebar-author { color: #8A95A5; }
+
+.live-clock-time { color: #0B3D91; font-weight: 600; }
+.live-clock-date { color: #4A5568; letter-spacing: 1px; }
+
+.system-status-badge {
+    background: #F5F6F8;
+    border: 1px solid #CBD3DD;
+    border-radius: 4px;
+    padding: 4px 10px;
+}
+.system-status-label             { color: #1C1F26; letter-spacing: 1.5px; }
+.system-status-dot.state-idle        { color: #8A95A5; }
+.system-status-dot.state-running     { color: #2E7D32; }
+.system-status-dot.state-error       { color: #B71C1C; }
+.system-status-dot.state-calibration { color: #E65100; }
+
+button.sidebar-estop,
+window .sidebar button.sidebar-estop {
+    background: #B71C1C;
+    color: #FFFFFF;
+    border: 2px solid #B71C1C;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+button.sidebar-estop:hover,
+window .sidebar button.sidebar-estop:hover {
+    background: #D32F2F;
+}
+
+.alerts-panel { color: #1C1F26; }
+.alert-card {
+    background: #FFFFFF;
+    border: 1px solid #E4E7EB;
+    border-left: 3px solid #0B3D91;
+    border-radius: 4px;
+}
+.alert-card.alert-info     { border-left-color: #1976D2; background: #F4F7FB; }
+.alert-card.alert-warning  { border-left-color: #E65100; background: #FFF6E8; }
+.alert-card.alert-critical { border-left-color: #B71C1C; background: #FCEBEA; }
+.alert-card.alert-resolved { opacity: 0.6; }
+
+.alert-title     { color: #1C1F26; font-weight: 700; }
+.alert-message   { color: #4A5568; }
+.alert-timestamp { color: #8A95A5; }
+
+/* Notebook tabs */
+notebook header { background: #FFFFFF; border-bottom: 1px solid #E4E7EB; }
+notebook tab {
+    color: #4A5568;
+    padding: 10px 22px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 600;
+}
+notebook tab:hover   { color: #0B3D91; }
+notebook tab:checked { color: #0B3D91; border-bottom-color: #0B3D91; font-weight: 700; }
+
+/* Cards */
+.work-unit-card,
+.equipment-card,
+.quality-card,
+.actuator-card {
+    background: #FFFFFF;
+    border: 1px solid #E4E7EB;
+    border-radius: 6px;
+}
+
+.card-title        { color: #0B3D91; font-weight: 700; letter-spacing: 0.5px; }
+.field-label       { color: #4A5568; letter-spacing: 0.5px; }
+.field-value       { color: #1C1F26; }
+.field-value-large { color: #0B3D91; font-weight: 700; }
+.description-text  { color: #4A5568; }
+.separator-dot     { color: #0B3D91; }
+.equipment-status  { color: #1C1F26; letter-spacing: 1px; }
+
+.status-dot           { font-size: 16px; }
+.equipment-online     { color: #2E7D32; }
+.equipment-processing { color: #1976D2; }
+.equipment-error      { color: #B71C1C; }
+.equipment-offline    { color: #8A95A5; }
+.quality-passing      { color: #2E7D32; }
+.quality-warning      { color: #E65100; }
+.quality-critical     { color: #B71C1C; }
+
+.start-button,
+.stop-button,
+.reset-button,
+.calibration-button {
+    background: #FFFFFF;
+    color: #1C1F26;
+    border: 1px solid #CBD3DD;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-weight: 600;
+}
+.start-button       { color: #2E7D32; border-color: #2E7D32; }
+.start-button:hover { background: #E8F5E9; }
+.stop-button        { color: #B71C1C; border-color: #B71C1C; }
+.stop-button:hover  { background: #FDECEA; }
+.reset-button       { color: #E65100; border-color: #E65100; }
+.reset-button:hover { background: #FFF3E0; }
+.calibration-button       { color: #0B3D91; border-color: #0B3D91; }
+.calibration-button:hover { background: #E3EDFB; }
+
+progressbar trough {
+    background: #E4E7EB;
+    border: 1px solid #CBD3DD;
+    border-radius: 4px;
+}
+progressbar progress { background: #0B3D91; border-radius: 4px; }
+
+/* Settings */
+frame {
+    border: 1px solid #E4E7EB;
+    background: #FFFFFF;
+    border-radius: 6px;
+}
+frame > label {
+    color: #0B3D91;
+    letter-spacing: 1px;
+    font-weight: 700;
+    padding: 0 8px;
+}
+label { color: #1C1F26; }
+.dim-label { color: #8A95A5; }
+
+combobox,
+spinbutton,
+entry {
+    background: #FFFFFF;
+    color: #1C1F26;
+    border: 1px solid #CBD3DD;
+    border-radius: 4px;
+}
+popover,
+popover.background,
+popover contents {
+    background: #FFFFFF;
+    color: #1C1F26;
+    border: 1px solid #CBD3DD;
+    border-radius: 6px;
+}
+checkbutton check,
+checkbutton radio {
+    background: #FFFFFF;
+    border: 1px solid #CBD3DD;
+    color: #0B3D91;
+    border-radius: 3px;
+}
+checkbutton check:checked,
+checkbutton radio:checked {
+    background: #0B3D91;
+    border-color: #0B3D91;
+}
+checkbutton label { color: #1C1F26; }
+
+/* ---------- Products page ------------------------------------------------- */
+.page-title { color: #0B3D91; font-weight: 700; }
+
+.toolbar-button {
+    background: #FFFFFF;
+    color: #1C1F26;
+    border: 1px solid #CBD3DD;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.toolbar-button:hover { background: #F0F4F9; border-color: #0B3D91; }
+
+.search-label { color: #4A5568; }
+
+entry.search,
+entry#search_entry,
+.search entry {
+    background: #FFFFFF;
+    color: #1C1F26;
+    border: 1px solid #CBD3DD;
+    border-radius: 6px;
+}
+
+/* ColumnView table */
+columnview,
+columnview listview,
+columnview row {
+    background: #FFFFFF;
+    color: #1C1F26;
+}
+/* Header row: keep the navy-on-white contrast high so column names
+   stay readable. GTK's default column-view header uses a subtle
+   fg/bg that collapses on a cream sidebar. */
+columnview header,
+columnview > header button,
+columnview listview > header button {
+    background: #E3EDFB;
+    color: #0B3D91;
+    border-bottom: 1px solid #0B3D91;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+columnview header label,
+columnview > header button label {
+    color: #0B3D91;
+    font-weight: 700;
+}
+columnview row:nth-child(even) { background: #FAFBFC; }
+columnview row:hover    { background: #EAF1FB; }
+columnview row:selected { background: #E3EDFB; color: #0B3D91; }
+columnview cell         { padding: 6px 10px; border-right: 1px solid #EBEEF2; }
