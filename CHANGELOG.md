@@ -8,11 +8,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- CMakePresets.json for modern CMake workflow
-- Doxyfile for API documentation generation
-- Sanitizers support (AddressSanitizer, UBSanitizer)
-- Code coverage support (gcov/lcov)
-- .editorconfig for consistent coding style
+- **Color palettes** (8 total) — Industrial (baseline), Nord, Paper,
+  Right Sidebar, Dracula, CRT, Blueprint, Cockpit. Loaded as a second CSS
+  provider stacked on top of the base stylesheet.
+- **Thumbnail palette picker** in Settings with four colour swatches per
+  card, palette name, and a mode badge ("Dark + Light", "Dark only",
+  "Light only").
+- **Mode-locked palettes** — Tier 2 palettes are single-mode by design
+  (Paper is light-only; Dracula / CRT / Blueprint / Cockpit are dark-only).
+  The incompatible Dark/Light radio is disabled with a tooltip, and picking
+  a locked palette auto-snaps the Theme.
+- **Alternate UI layouts** — Right Sidebar mirrors the sidebar to the right;
+  Blueprint moves Alerts and Logs into top-bar popovers. Swapped at runtime
+  via `MainWindow::reloadLayout` with an atomic detach/parse/re-attach.
+- **Alerts Center** with info / warning / critical severities, per-alert
+  dismiss, and resolved-alert history. 26 dedicated tests.
+- **Products CSV export** with round-trip unit tests.
+- **CMakePresets.json** for modern CMake workflow.
+- **Doxyfile** for API documentation generation.
+- **Sanitizers** support (AddressSanitizer, UBSanitizer).
+- **Code coverage** support (gcov/lcov) and HTML reports in CI.
+- **.editorconfig** for consistent coding style.
+
+### Changed
+- i18n grown to 11 languages (added es_MX, ga, pt_BR, sv).
+- Test suite grown to 12 binaries / 160+ tests.
+- Baseline layouts: `log_panel` `height-request` reduced from 150 to 70
+  to stay within the 1200 px window budget across all palettes (the old
+  value produced `Trying to measure gtkmm__GtkBox for height of 1200, but
+  it needs at least N` warnings on dense palettes like Cockpit).
+
+### Fixed
+- Dracula combobox double-border (flattened the inner GTK button).
+- Nord: restored Light variant stripped by an earlier unwrap script.
+- Blueprint / Cockpit: removed stray light-mode CSS sections (both are
+  dark-only palettes).
+- Paper: ColumnView header text no longer invisible on light-on-light;
+  notebook stack background forced to paper cream.
+- Settings "Show logs" checkbox preserves the user's choice across palette
+  transitions (Blueprint forces a log tail, but the user's preference is
+  restored when leaving Blueprint).
 
 ## [1.0.0] - 2026-04-09
 

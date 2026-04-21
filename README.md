@@ -9,12 +9,15 @@ in manufacturing environments.
 ## Features
 
 - **Dashboard** with real-time equipment status, quality checkpoints (dynamic Cairo gauges), and control panel
-- **Products Database** with full CRUD operations via async SQLite
-- **Internationalization (i18n)** supporting 10 languages with in-app language selector and config persistence
+- **Products Database** with full CRUD operations via async SQLite and CSV export
+- **Alerts Center** with info/warning/critical severities, per-alert dismiss, and resolved-alert history
+- **Internationalization (i18n)** supporting 11 languages with in-app language selector and config persistence
 - **Dark / Light themes** with Adwaita design tokens, theme-aware gauge rendering
+- **8 color palettes** (Industrial, Nord, Paper, Right Sidebar, Dracula, CRT, Blueprint, Cockpit) with thumbnail picker, mode locks, and tooltips
+- **Alternate UI layouts** — baseline sidebar, right-sidebar mirror, Blueprint top-bar with alerts/logs in popovers — swapped at runtime via GtkBuilder
 - **Live simulation** with configurable auto-refresh from background Boost.Asio I/O thread
 - **Cross-platform** builds on Linux (GCC) and Windows (Clang / MSYS2)
-- **77+ unit tests** with GoogleTest / gmock across 8 test binaries
+- **160+ unit tests** with GoogleTest / gmock across 12 test binaries
 - **CI/CD pipeline** with GitHub Actions: build, test, coverage report, static analysis
 
 ## Architecture
@@ -47,9 +50,12 @@ src/
     ViewObserver        Callback interface for View updates
 
   gtk/view/            GTK4 UI layer
-    MainWindow          Window management, theme, sidebar, language selector
+    MainWindow          Window management, layout swap, language selector
+    ThemeManager        Base theme + palette provider stacking, mode locks
+    AlertsPanel         Observer-backed alerts list with severity routing
     DashboardPage       Equipment cards, quality gauges, control panel
-    ProductsPage        ColumnView, dialogs, search
+    ProductsPage        ColumnView, dialogs, search, CSV export
+    SettingsPage        Theme / palette / layout / i18n / logging controls
     DialogManager       Themed dialog factory (virtual methods for mocking)
     AboutDialog         App metadata dialog (F1)
     widgets/
@@ -57,21 +63,28 @@ src/
       TrendChart        Cairo-drawn line chart with circular buffer
 
 assets/
-  ui/                  GtkBuilder XML layouts
-    main-window.ui     Sidebar, notebook, log panel
-    dashboard-page.ui  Work unit, equipment, quality, control panel
-    products-page.ui   Toolbar, search, table container, action buttons
+  ui/                  GtkBuilder XML layouts (multi-layout)
+    main-window.ui             Baseline: left sidebar + notebook + log panel
+    main-window-right.ui       Mirror: right-hand sidebar
+    main-window-blueprint.ui   Top-bar with alerts/logs in popovers
+    dashboard-page.ui          Work unit, equipment, quality, control panel
+    products-page.ui           Toolbar, search, table, action buttons
+    settings-page.ui           Theme, palette, layout, language, logging
   styles/              CSS stylesheets
     adwaita-theme.css  Core theme tokens, dark/light variants
-    sidebar.css        Sidebar layout + controls
+    sidebar.css        Sidebar layout + controls, palette-card thumbnails
     dashboard.css      Dashboard card styling
     products.css       ColumnView + table styling
+    themes/            Optional palette overlays (loaded on top of base)
+      nord.css, paper.css, right.css      Dual-mode (dark + light)
+      dracula.css, crt.css,
+      blueprint.css, cockpit.css          Dark-only by design
   icons/               Application icons
   images/              Logos and illustrations
 
 po/                    gettext translation catalogs (11 languages)
 config/                app-config.json + runtime overrides
-tests/                 GoogleTest/gmock suites (9 binaries, ~95 tests)
+tests/                 GoogleTest/gmock suites (12 binaries, 160+ tests)
 ```
 
 ### UI Layout: GtkBuilder + Inline Widgets
@@ -111,7 +124,7 @@ EXPECT_CALL(repo, getAllProducts()).WillOnce(Return(...));
 | Database | SQLite3 (in-memory, prepared statements) |
 | Async I/O | Boost.Asio io_context with work guard |
 | i18n | GNU gettext, glibmm i18n macros |
-| Testing | GoogleTest + gmock (8 binaries, 77+ tests) |
+| Testing | GoogleTest + gmock (12 binaries, 160+ tests) |
 | Build | CMake 3.20+ with presets, Ninja |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 Clang64) |
 | Coverage | gcovr with HTML report artifact |
@@ -124,6 +137,39 @@ Italiano, Portugues, Portugues (Brasil), Svenska.
 
 Language is selectable from the sidebar dropdown and persists across restarts
 via `config/app-config.json`. The `"auto"` setting respects the OS locale.
+
+## Palettes and Layouts
+
+Three classes of visual customization are exposed from the Settings page:
+
+**Theme** — Dark or Light mode, toggles the `.light-mode` class on the main
+window. All Cairo widgets (`QualityGauge`, `TrendChart`) query
+`ThemeManager::isDarkMode()` at paint time so custom-drawn surfaces match.
+
+**Palette** — optional CSS overlay loaded on top of the base stylesheet at
+`GTK_STYLE_PROVIDER_PRIORITY_USER + 1`, redefining colors without touching
+layout:
+
+| Palette | Modes | Feel |
+|---------|-------|------|
+| Industrial | Dark + Light | Baseline (no overlay loaded) |
+| Nord | Dark + Light | Polar / Snow Storm |
+| Paper | Light only | Navy + white executive |
+| Right Sidebar | Dark + Light | Mirror layout, teal accent |
+| Dracula | Dark only | Purple / pink on slate |
+| CRT | Dark only | Phosphor green on black, monospace |
+| Blueprint | Dark only | Navy + cyan + cream, top-bar layout |
+| Cockpit | Dark only | Mission control, heavy instrument bezels |
+
+Mode-locked palettes are enforced in both directions — the incompatible Dark
+or Light radio is disabled with a tooltip explaining why, and picking a
+locked palette auto-snaps the Theme to its supported mode.
+
+**Layout** — some palettes ship structurally different GtkBuilder trees:
+Right Sidebar mirrors the sidebar to the right edge, Blueprint moves Alerts
+and Logs into top-bar popovers so the Dashboard reclaims vertical space.
+The layout is swapped at runtime via `MainWindow::reloadLayout` (detach old
+root, parse new `.ui`, re-attach) so the swap is atomic and state-preserving.
 
 ## Building
 
@@ -164,12 +210,16 @@ Test suites:
 
 | Binary | Scope | Tests |
 |--------|-------|-------|
-| test_result | Result\<T,E\> monadic operations | 21 |
+| test_result | Result\<T,E\> monadic operations | 22 |
 | test_config_manager | Config load, language get/set/persist | 9 |
-| test_database_manager | SQLite CRUD, search, soft delete | 11 |
+| test_database_manager | SQLite CRUD, search, soft delete | 12 |
+| test_csv_serializer | Product CSV export round-trip | 8 |
+| test_simulated_model | Equipment/quality simulation signals | 15 |
+| test_logger | LoggerBase formatting, level filtering | 13 |
 | test_base_presenter | Observer add/remove/notify dispatch | 7 |
+| test_alert_center | Severity routing, dismiss, resolved history | 26 |
 | test_products_presenter | Mock repository, ViewModel mapping | 8 |
-| test_dashboard_presenter | Mock model, signal routing, state machine | 21 |
+| test_dashboard_presenter | Mock model, signal routing, state machine | 29 |
 | test_dashboard_page | Confirm dialogs, presenter forwarding | 7 |
 | test_products_page | Delete confirmation, soft-delete flow | 4 |
 
