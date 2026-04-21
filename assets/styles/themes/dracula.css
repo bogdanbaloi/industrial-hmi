@@ -1,0 +1,213 @@
+/* ============================================================================
+   Dracula — purple/pink on slate, developer-trendy dark
+   ============================================================================
+   Reference: https://draculatheme.com/contribute
+   Background #282a36, Current line #44475a, Foreground #f8f8f2
+   Comment   #6272a4,
+   Cyan #8be9fd, Green #50fa7b, Orange #ffb86c, Pink #ff79c6, Purple #bd93f9, Red #ff5555, Yellow #f1fa8c
+   ============================================================================ */
+
+.sidebar {
+    background-color: #282a36;
+    border-right: 1px solid #44475a;
+}
+
+.sidebar-title    { color: #f8f8f2; }
+.sidebar-subtitle { color: #bd93f9; letter-spacing: 1px; }
+.section-header   { color: #6272a4; letter-spacing: 1.2px; }
+.sidebar-option                 { color: #f8f8f2; }
+.sidebar-option:hover           { color: #ff79c6; }
+.sidebar-option:checked         { color: #bd93f9; font-weight: 700; }
+
+.sidebar button {
+    background: #44475a;
+    color: #f8f8f2;
+    border: 1px solid #6272a4;
+    border-radius: 6px;
+}
+.sidebar button:hover { background: #6272a4; color: #ffffff; }
+
+.sidebar-version, .sidebar-author { color: #6272a4; }
+
+.live-clock-time { color: #bd93f9; }
+.live-clock-date { color: #f8f8f2; }
+
+.system-status-label             { color: #f8f8f2; }
+.system-status-dot.state-idle        { color: #6272a4; }
+.system-status-dot.state-running     { color: #50fa7b; }
+.system-status-dot.state-error       { color: #ff5555; }
+.system-status-dot.state-calibration { color: #ffb86c; }
+
+button.sidebar-estop,
+.sidebar button.sidebar-estop {
+    background: #ff5555;
+    color: #282a36;
+    border: 2px solid #ff5555;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+button.sidebar-estop:hover,
+.sidebar button.sidebar-estop:hover {
+    background: #ff79c6;
+    border-color: #ff79c6;
+}
+
+.alerts-panel { color: #f8f8f2; }
+.alert-card {
+    background: #44475a;
+    border-left: 3px solid #bd93f9;
+    border-radius: 6px;
+}
+.alert-card.alert-info     { border-left-color: #8be9fd; }
+.alert-card.alert-warning  { border-left-color: #ffb86c; background: rgba(255,184,108,0.10); }
+.alert-card.alert-critical { border-left-color: #ff5555; background: rgba(255,85,85,0.12); }
+.alert-card.alert-resolved { opacity: 0.55; }
+
+.alert-title     { color: #f8f8f2; }
+.alert-message   { color: #bd93f9; }
+.alert-timestamp { color: #6272a4; }
+
+button.alert-dismiss       { color: #6272a4; }
+button.alert-dismiss:hover { color: #ff79c6; background: rgba(255,121,198,0.10); }
+
+/* Notebook tabs */
+notebook header { background: #282a36; border-bottom: 2px solid #bd93f9; }
+notebook tab    { color: #6272a4; padding: 10px 20px; }
+notebook tab:hover   { color: #ff79c6; }
+notebook tab:checked { color: #bd93f9; border-bottom: 2px solid #bd93f9; font-weight: 700; }
+
+/* Dashboard cards */
+.work-unit-card,
+.equipment-card,
+.quality-card,
+.actuator-card {
+    background: #44475a;
+    border: 1px solid #6272a4;
+    border-radius: 8px;
+}
+
+.card-title        { color: #bd93f9; font-weight: 700; letter-spacing: 1px; }
+.field-label       { color: #6272a4; }
+.field-value       { color: #f8f8f2; }
+.field-value-large { color: #ff79c6; font-weight: 700; }
+.description-text  { color: #8be9fd; }
+.separator-dot     { color: #bd93f9; }
+
+.status-dot                 { font-size: 18px; }
+.equipment-online           { color: #50fa7b; }
+.equipment-processing       { color: #8be9fd; }
+.equipment-error            { color: #ff5555; }
+.equipment-offline          { color: #6272a4; }
+.quality-passing            { color: #50fa7b; }
+.quality-warning            { color: #ffb86c; }
+.quality-critical           { color: #ff5555; }
+
+.start-button,
+.stop-button,
+.reset-button,
+.calibration-button {
+    background: #44475a;
+    color: #f8f8f2;
+    border: 2px solid #6272a4;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-weight: 700;
+}
+.start-button       { color: #50fa7b; border-color: #50fa7b; }
+.start-button:hover { background: rgba(80,250,123,0.12); }
+.stop-button        { color: #ff5555; border-color: #ff5555; }
+.stop-button:hover  { background: rgba(255,85,85,0.12); }
+.reset-button       { color: #ffb86c; border-color: #ffb86c; }
+.reset-button:hover { background: rgba(255,184,108,0.12); }
+.calibration-button       { color: #8be9fd; border-color: #8be9fd; }
+.calibration-button:hover { background: rgba(139,233,253,0.12); }
+
+progressbar trough {
+    background: #282a36;
+    border: 1px solid #44475a;
+    border-radius: 4px;
+}
+progressbar progress {
+    background: #bd93f9;
+    border-radius: 4px;
+}
+
+window { background-color: #1e1f29; }
+
+/* Settings widgets */
+frame {
+    border: 1px solid #44475a;
+    background: transparent;
+    border-radius: 8px;
+}
+frame > label {
+    color: #bd93f9;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    padding: 0 8px;
+}
+label { color: #f8f8f2; }
+.dim-label { color: #6272a4; }
+
+combobox,
+spinbutton,
+entry {
+    background: #44475a;
+    color: #f8f8f2;
+    border: 1px solid #6272a4;
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+/* Flatten the inner button so the outer border isn't doubled up. */
+combobox > button, combobox button, spinbutton > button, spinbutton button {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+popover,
+popover.background,
+popover contents {
+    background: #282a36;
+    color: #f8f8f2;
+    border: 1px solid #bd93f9;
+    border-radius: 8px;
+}
+
+checkbutton check,
+checkbutton radio {
+    background: #44475a;
+    border: 1px solid #6272a4;
+    color: #bd93f9;
+    border-radius: 4px;
+}
+checkbutton check:checked,
+checkbutton radio:checked {
+    background: #bd93f9;
+    border-color: #bd93f9;
+    color: #282a36;
+}
+checkbutton label { color: #f8f8f2; }
+
+/* Products page */
+.page-title { color: #bd93f9; font-weight: 700; }
+.toolbar-button {
+    background: #44475a; color: #f8f8f2;
+    border: 1px solid #6272a4; border-radius: 6px;
+    font-weight: 600;
+}
+.toolbar-button:hover { background: #6272a4; }
+.search-label { color: #6272a4; }
+
+columnview,
+columnview listview,
+columnview row {
+    background: #282a36; color: #f8f8f2;
+}
+columnview header {
+    background: #1e1f29; color: #bd93f9;
+    border-bottom: 1px solid #44475a; font-weight: 700;
+}
+columnview row:nth-child(even) { background: #2e2f3e; }
+columnview row:hover    { background: #3b3d4c; }
+columnview row:selected { background: #44475a; color: #ff79c6; }
+columnview cell         { padding: 6px 10px; border-right: 1px solid #44475a; }

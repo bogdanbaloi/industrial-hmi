@@ -240,6 +240,25 @@ window.light-mode button.palette-card.selected {
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.5px;
+    color: #ECEFF1;            /* dark-mode default */
+}
+window.light-mode .palette-card-name {
+    color: #263238;            /* readable on the light canvas */
+}
+
+/* Small "Dark only / Light only / Dark + Light" badge under the
+   palette name — tells the operator at a glance whether the palette
+   ships both modes or is mode-locked by design. */
+.palette-card-mode {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    color: #B0BEC5;            /* dark-mode default */
+}
+window.light-mode .palette-card-mode {
+    color: #546E7A;
 }
 
 .palette-swatch-row {
@@ -272,6 +291,27 @@ window.light-mode button.palette-card.selected {
 .swatch-cockpit-1 { background: #33FF66; }
 .swatch-cockpit-2 { background: #FFAA00; }
 .swatch-cockpit-3 { background: #FF3333; }
+
+.swatch-dracula-0 { background: #282a36; }
+.swatch-dracula-1 { background: #bd93f9; }
+.swatch-dracula-2 { background: #ff79c6; }
+.swatch-dracula-3 { background: #50fa7b; }
+
+.swatch-crt-0 { background: #000000; }
+.swatch-crt-1 { background: #00FF41; }
+.swatch-crt-2 { background: #FFB000; }
+.swatch-crt-3 { background: #008F11; }
+
+.swatch-paper-0 { background: #FFFFFF; }
+.swatch-paper-1 { background: #0B3D91; }
+.swatch-paper-2 { background: #1976D2; }
+.swatch-paper-3 { background: #B71C1C; }
+
+.swatch-right-0 { background: #1B2B34; }
+.swatch-right-1 { background: #00D4B1; }
+.swatch-right-2 { background: #4DD0E1; }
+.swatch-right-3 { background: #EF5350; }
+
 
 /* Per-alert dismiss button: small, flat, fades in on card hover so the
    row stays visually clean until the operator actually interacts. */

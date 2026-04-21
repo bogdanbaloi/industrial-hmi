@@ -12,14 +12,19 @@
    ============================================================================ */
 
 /* ---------- Global typography --------------------------------------------- */
-window, window * {
+window,
+* {
     font-family: "JetBrains Mono", "Cascadia Mono", "Consolas",
                  "DejaVu Sans Mono", monospace;
 }
 
 /* Sharp corners across the app — CAD has no fillets. */
 .alert-card, .sidebar button, button.sidebar-estop, button.alert-dismiss,
-.system-status-badge, entry, spinbutton, combobox, combobox * {
+.system-status-badge,
+entry,
+spinbutton,
+combobox,
+combobox * {
     border-radius: 0;
 }
 
@@ -110,7 +115,7 @@ popover.background { background: #0D2847; }
 
 /* ---------- E-STOP -------------------------------------------------------- */
 button.sidebar-estop,
-window .sidebar button.sidebar-estop {
+.sidebar button.sidebar-estop {
     background: #FF5252;
     color: #0D2847;
     border: 2px solid #FF5252;
@@ -119,7 +124,7 @@ window .sidebar button.sidebar-estop {
     text-transform: uppercase;
 }
 button.sidebar-estop:hover,
-window .sidebar button.sidebar-estop:hover {
+.sidebar button.sidebar-estop:hover {
     background: #FF8A80;
     border-color: #FF8A80;
 }
@@ -278,14 +283,18 @@ label {
 }
 
 /* GtkComboBoxText / GtkSpinButton / GtkEntry */
-combobox, spinbutton, entry {
+combobox,
+spinbutton,
+entry {
     background: transparent;
     color: #F5EFE0;
     border: 1px solid #4DD0E1;
     border-radius: 0;
     padding: 4px 8px;
 }
-combobox:focus-within, spinbutton:focus-within, entry:focus {
+combobox:focus-within,
+spinbutton:focus-within,
+entry:focus {
     border-color: #00BCD4;
 }
 combobox button {
@@ -294,7 +303,9 @@ combobox button {
     border: none;
 }
 combobox arrow { color: #00BCD4; }
-popover, popover.background, popover contents {
+popover,
+popover.background,
+popover contents {
     background: #0D2847;
     color: #F5EFE0;
     border: 1px solid #00BCD4;
@@ -302,7 +313,8 @@ popover, popover.background, popover contents {
 }
 
 /* Check + radio */
-checkbutton check, checkbutton radio {
+checkbutton check,
+checkbutton radio {
     background: transparent;
     border: 1px solid #4DD0E1;
     color: #00BCD4;
@@ -310,7 +322,8 @@ checkbutton check, checkbutton radio {
     min-height: 16px;
     min-width: 16px;
 }
-checkbutton check:checked, checkbutton radio:checked {
+checkbutton check:checked,
+checkbutton radio:checked {
     background: #00BCD4;
     border-color: #00BCD4;
     color: #0D2847;
@@ -321,34 +334,31 @@ checkbutton label { color: #F5EFE0; letter-spacing: 0.5px; }
 spinbutton button { background: transparent; color: #00BCD4; border: none; }
 spinbutton button:hover { color: #F5EFE0; }
 
-/* ---------- Light mode: invert surfaces, keep engineer blue ------------- */
-window.light-mode .sidebar {
-    background-color: #F5EFE0;
-    border-right: 2px solid #0D2847;
+/* Blueprint is a dark-only palette by design — no light-mode
+   overrides needed. ThemeManager skips loading this CSS when the
+   user picks Light mode, falling back to baseline Industrial-light. */
+
+/* Products page */
+.page-title { color: #00BCD4; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+.toolbar-button {
+    background: transparent; color: #F5EFE0;
+    border: 1px solid #4DD0E1; border-radius: 0;
+    font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
 }
-window.light-mode .sidebar-title      { color: #0D2847; }
-window.light-mode .sidebar-subtitle   { color: #0097A7; }
-window.light-mode .section-header     { color: #006978; }
-window.light-mode .sidebar-option     { color: #18375F; }
-window.light-mode .sidebar-option:checked { color: #006978; }
+.toolbar-button:hover { background: rgba(0,188,212,0.12); border-color: #00BCD4; }
+.search-label { color: #4DD0E1; letter-spacing: 1.5px; }
 
-window.light-mode .sidebar button {
-    background: transparent;
-    color: #0D2847;
-    border-color: #0D2847;
+columnview,
+columnview listview,
+columnview row {
+    background: #0D2847; color: #F5EFE0;
 }
-window.light-mode .sidebar button:hover { background: rgba(13, 40, 71, 0.08); }
-
-window.light-mode .sidebar-version,
-window.light-mode .sidebar-author { color: #006978; }
-
-window.light-mode .live-clock-time { color: #006978; }
-window.light-mode .live-clock-date { color: #18375F; }
-
-window.light-mode .alert-card {
-    background: transparent;
-    border-color: #C9C0A4;
+columnview header {
+    background: #102E52; color: #00BCD4;
+    border-bottom: 1px solid #18375F;
+    font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
 }
-window.light-mode .alert-title    { color: #0D2847; }
-window.light-mode .alert-message  { color: #18375F; }
-window.light-mode .alert-timestamp { color: #006978; }
+columnview row:nth-child(even) { background: #102E52; }
+columnview row:hover    { background: #18375F; }
+columnview row:selected { background: rgba(0,188,212,0.18); color: #00BCD4; }
+columnview cell         { padding: 6px 10px; border-right: 1px solid #18375F; }

@@ -6,7 +6,8 @@
     font-weight: 700;
     color: #90A4AE;
     letter-spacing: 1px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+    margin-top: 0;
 }
 
 /* Work Unit Card */
@@ -58,7 +59,7 @@
 /* Equipment Cards */
 .equipment-card {
     border-radius: 12px;
-    padding: 16px;
+    padding: 10px 16px;
 }
 
 .card-title {

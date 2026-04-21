@@ -11,6 +11,7 @@
 #include "src/core/Application.h"
 #include "src/core/i18n.h"
 
+#include <algorithm>
 #include <array>
 
 namespace app::view {
@@ -32,12 +33,22 @@ struct PaletteInfo {
     const char* id;
     const char* label;
 };
-constexpr std::array<PaletteInfo, 4> kPalettes = {{
+constexpr std::array<PaletteInfo, 8> kPalettes = {{
     {"industrial", "Industrial"},
     {"nord",       "Nord"},
+    {"dracula",    "Dracula"},
+    {"crt",        "Retro CRT"},
+    {"paper",      "Paper"},
     {"blueprint",  "Blueprint"},
     {"cockpit",    "Cockpit"},
+    {"right",      "Right Sidebar"},
 }};
+// Palettes that ship a distinct main-window .ui (structural change).
+// Must mirror chooseMainWindowUI() in MainWindow.cpp — used below to
+// hide the "Show log panel" checkbox when logs move to a popover.
+constexpr std::array<const char*, 1> kLayoutPalettesWithoutBottomLog = {
+    "blueprint",
+};
 }  // namespace
 
 SettingsPage::SettingsPage(DialogManager& dialogManager)
@@ -97,12 +108,41 @@ void SettingsPage::loadInitialValues() {
     const auto saved = config.getPalette();
     highlightSelectedPaletteCard(saved.empty() ? "industrial" : saved);
 
-    // Blueprint routes logs through a top-bar popover, so the
-    // "Show log panel at the bottom of the window" checkbox is
-    // irrelevant there. Hide it for layouts that don't own a
-    // bottom log dock.
-    if (checkShowLogs_ && saved == "blueprint") {
-        checkShowLogs_->set_visible(false);
+    // Layouts that route logs through a popover don't own a bottom
+    // dock, so the "Show log panel at the bottom of the window"
+    // checkbox is irrelevant there. Hide it for those.
+    if (checkShowLogs_) {
+        const bool hasBottomDock =
+            std::find(kLayoutPalettesWithoutBottomLog.begin(),
+                      kLayoutPalettesWithoutBottomLog.end(),
+                      saved) == kLayoutPalettesWithoutBottomLog.end();
+        checkShowLogs_->set_visible(hasBottomDock);
+    }
+
+    // Tier 2 palettes ship only one mode by design (Dracula, Retro
+    // CRT, Blueprint, Cockpit are dark-only; Paper is light-only).
+    // Disable the incompatible theme radio so the user can't end up
+    // on a broken hybrid, and attach a tooltip that explains why.
+    applyModeLockForPalette(saved);
+}
+
+void SettingsPage::applyModeLockForPalette(const std::string& paletteId) {
+    const bool darkOnly =
+        paletteId == "dracula"  || paletteId == "crt" ||
+        paletteId == "blueprint"|| paletteId == "cockpit";
+    const bool lightOnly = paletteId == "paper";
+
+    if (radioDark_) {
+        radioDark_->set_sensitive(!lightOnly);
+        radioDark_->set_tooltip_text(
+            lightOnly ? Glib::ustring(_("This palette is light-only by design."))
+                      : Glib::ustring{});
+    }
+    if (radioLight_) {
+        radioLight_->set_sensitive(!darkOnly);
+        radioLight_->set_tooltip_text(
+            darkOnly ? Glib::ustring(_("This palette is dark-only by design."))
+                     : Glib::ustring{});
     }
 }
 
@@ -139,6 +179,24 @@ void SettingsPage::buildPaletteThumbnails() {
         name->set_xalign(0.5);
         content->append(*name);
 
+        // Mode-support badge — makes it obvious at a glance that
+        // some palettes ship only one mode by design. Lives as a
+        // second (smaller, dimmed) label under the palette name so
+        // the user doesn't have to discover the constraint by
+        // clicking and watching a radio go disabled.
+        const std::string pid{p.id};
+        const char* badgeText = nullptr;
+        if (pid == "paper")                                badgeText = "Light only";
+        else if (pid == "dracula" || pid == "crt" ||
+                 pid == "blueprint" || pid == "cockpit")   badgeText = "Dark only";
+        else                                               badgeText = "Dark + Light";
+
+        auto* badge = Gtk::make_managed<Gtk::Label>(_(badgeText));
+        badge->add_css_class("palette-card-mode");
+        badge->add_css_class("dim-label");
+        badge->set_xalign(0.5);
+        content->append(*badge);
+
         card->set_child(*content);
         const std::string id = p.id;
         card->signal_clicked().connect([this, id]() {
@@ -162,6 +220,7 @@ void SettingsPage::buildPaletteThumbnails() {
             }
             logger.info("Palette: {}", id.c_str());
             highlightSelectedPaletteCard(id);
+            applyModeLockForPalette(id);
 
             // DO NOT apply the CSS (ThemeManager::setPalette) here.
             // MainWindow handles that in a single signal_idle pass

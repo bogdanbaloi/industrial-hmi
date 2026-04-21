@@ -117,10 +117,8 @@ MainWindow::~MainWindow() = default;
 
 const char* MainWindow::chooseMainWindowUI(const std::string& palette) {
     // Palettes with a structurally different layout get their own .ui.
-    // Extend here when adding e.g. a "cockpit.ui" variant.
-    if (palette == "blueprint") {
-        return app::config::defaults::kMainWindowBlueprintUI;
-    }
+    if (palette == "blueprint") return app::config::defaults::kMainWindowBlueprintUI;
+    if (palette == "right")     return app::config::defaults::kMainWindowRightUI;
     return app::config::defaults::kMainWindowUI;
 }
 
@@ -333,10 +331,31 @@ void MainWindow::wireSettingsSignals() {
             // would render immediately on the OLD layout, producing
             // a visible "hybrid" flash before the layout catches up.
             Glib::signal_idle().connect_once(
-                [this, toStore, needsRelayout]() {
-                    app::view::ThemeManager::instance().setPalette(toStore);
+                [this, id, toStore, needsRelayout]() {
+                    auto& tm = app::view::ThemeManager::instance();
+                    // Palettes that ship only one mode by design —
+                    // snap the Theme to their supported mode before
+                    // loading the CSS, otherwise a freshly-selected
+                    // Dracula on a Light canvas would unload itself
+                    // again in ThemeManager::applyPalette().
+                    if (id == "paper") {
+                        tm.setTheme(app::view::ThemeManager::Theme::LIGHT);
+                    } else if (id == "dracula" || id == "crt" ||
+                               id == "blueprint" || id == "cockpit") {
+                        tm.setTheme(app::view::ThemeManager::Theme::DARK);
+                    }
+                    tm.setPalette(toStore);
                     if (needsRelayout) {
                         reloadLayout();
+                    }
+                    // Keep the Dark/Light radios in sync with any
+                    // forced-mode decision above.
+                    if (settingsPage_) {
+                        settingsPage_->syncWithRuntimeState(
+                            /*fullscreen*/     isFullscreen_,
+                            /*darkMode*/       tm.isDarkMode(),
+                            /*autoRefresh*/    autoRefreshOn_,
+                            /*verboseLogging*/ verboseLogging_);
                     }
                     onThemeApplied();  // tell Cairo widgets to repaint
                 });
@@ -510,13 +529,17 @@ void MainWindow::reloadLayout() {
             /*verboseLogging*/ verboseLogging_);
     }
     if (autoRefreshOn_)  applyAutoRefresh(true);
-    // Blueprint's log popover needs the tail timer running to show
-    // any content. The "Show log panel" checkbox isn't visible to
-    // the user in that layout, so auto-enable verbose logging when
-    // we detect the log button (layout probe) — regardless of what
-    // the checkbox said in the previous (sidebar) layout.
-    if (logButton_) verboseLogging_ = true;
-    if (verboseLogging_) applyVerboseLogging(true);
+    // Log tail timer: run if EITHER the user opted in via the
+    // "Show log panel" checkbox OR the layout has a log popover
+    // (Blueprint) that would otherwise be empty. Save + restore the
+    // user's preference across applyVerboseLogging() because it
+    // clobbers verboseLogging_ with whatever we pass in, and we
+    // don't want the Blueprint-forced tail to leak into the
+    // Settings checkbox after the next palette transition.
+    const bool userWantsLogs = verboseLogging_;
+    const bool runLogTail    = userWantsLogs || (logButton_ != nullptr);
+    applyVerboseLogging(runLogTail);
+    verboseLogging_ = userWantsLogs;
 
     if (mainNotebook_ && activeTab >= 0 &&
         activeTab < mainNotebook_->get_n_pages()) {

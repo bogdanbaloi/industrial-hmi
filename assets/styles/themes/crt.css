@@ -1,0 +1,244 @@
+/* ============================================================================
+   Retro CRT — vintage phosphor terminal
+   ============================================================================
+   Pure black background, phosphor green primary, amber accents. Every
+   label/field is uppercase monospace to evoke an IBM 3270 / VT100
+   session. Text-shadow simulates the bloom of an old tube display.
+
+   Background: #000000, Card: #050805
+   Phosphor green: #00FF41 (primary), #33FF66 (bright), #008F11 (dim)
+   Amber:          #FFB000 (warn)
+   Red:            #FF3333 (error)
+   ============================================================================ */
+
+window,
+* {
+    font-family: "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
+}
+
+window { background-color: #000000; }
+
+/* Phosphor glow helper: common text-shadow on every on-screen label.
+   Subtle but gives the whole UI a CRT bloom. */
+.sidebar-title,
+.sidebar-subtitle,
+.section-header,
+.sidebar-option,
+.card-title,
+.field-label,
+.field-value,
+.field-value-large,
+.alert-title,
+.alert-message,
+.live-clock-time,
+.live-clock-date {
+    text-shadow: 0 0 4px rgba(0, 255, 65, 0.55);
+}
+
+.sidebar {
+    background-color: #000000;
+    border-right: 1px solid #008F11;
+}
+
+.sidebar-title    { color: #00FF41; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+.sidebar-subtitle { color: #008F11; letter-spacing: 3px; text-transform: uppercase; }
+.section-header   { color: #008F11; letter-spacing: 3px; font-weight: 700; text-transform: uppercase; }
+.sidebar-option                 { color: #00FF41; letter-spacing: 2px; text-transform: uppercase; }
+.sidebar-option:hover           { color: #33FF66; }
+.sidebar-option:checked         { color: #FFB000; font-weight: 900; }
+
+.sidebar button {
+    background: #000000;
+    color: #00FF41;
+    border: 1px solid #00FF41;
+    border-radius: 0;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+.sidebar button:hover { background: rgba(0,255,65,0.10); color: #33FF66; }
+
+.sidebar-version, .sidebar-author { color: #008F11; letter-spacing: 2px; text-transform: uppercase; }
+
+.live-clock-time { color: #00FF41; font-weight: 900; letter-spacing: 4px; }
+.live-clock-date { color: #008F11; letter-spacing: 3px; text-transform: uppercase; }
+
+.system-status-badge {
+    background: #000000;
+    border: 1px solid #00FF41;
+    border-radius: 0;
+    padding: 4px 10px;
+}
+.system-status-label             { color: #00FF41; letter-spacing: 3px; text-transform: uppercase; }
+.system-status-dot.state-idle        { color: #008F11; }
+.system-status-dot.state-running     { color: #00FF41; }
+.system-status-dot.state-error       { color: #FF3333; }
+.system-status-dot.state-calibration { color: #FFB000; }
+
+button.sidebar-estop,
+.sidebar button.sidebar-estop {
+    background: #FF3333;
+    color: #000000;
+    border: 2px solid #FF3333;
+    border-radius: 0;
+    font-weight: 900;
+    letter-spacing: 4px;
+}
+button.sidebar-estop:hover,
+.sidebar button.sidebar-estop:hover {
+    background: #FFB000;
+    border-color: #FFB000;
+}
+
+.alerts-panel { color: #00FF41; }
+.alert-card {
+    background: #050805;
+    border: 1px solid #008F11;
+    border-left: 3px solid #00FF41;
+    border-radius: 0;
+}
+.alert-card.alert-info     { border-left-color: #33FF66; }
+.alert-card.alert-warning  { border-left-color: #FFB000; background: rgba(255,176,0,0.06); }
+.alert-card.alert-critical { border-left-color: #FF3333; background: rgba(255,51,51,0.08); }
+
+.alert-title     { color: #00FF41; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+.alert-message   { color: #008F11; }
+.alert-timestamp { color: #33FF66; letter-spacing: 1.5px; }
+
+/* Notebook tabs */
+notebook header { background: #000000; border-bottom: 2px solid #00FF41; }
+notebook tab {
+    color: #008F11;
+    padding: 10px 20px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    border-radius: 0;
+    border: 1px solid transparent;
+}
+notebook tab:hover   { color: #33FF66; }
+notebook tab:checked { color: #00FF41; border-color: #00FF41; border-bottom-color: transparent; }
+
+.work-unit-card,
+.equipment-card,
+.quality-card,
+.actuator-card {
+    background: #050805;
+    border: 1px solid #008F11;
+    border-radius: 0;
+}
+
+.card-title        { color: #00FF41; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+.field-label       { color: #008F11; letter-spacing: 2px; text-transform: uppercase; }
+.field-value       { color: #00FF41; letter-spacing: 1px; }
+.field-value-large { color: #33FF66; font-weight: 900; letter-spacing: 2px; }
+.description-text  { color: #008F11; }
+.separator-dot     { color: #00FF41; }
+
+.status-dot           { font-size: 18px; }
+.equipment-online     { color: #00FF41; }
+.equipment-processing { color: #FFB000; }
+.equipment-error      { color: #FF3333; }
+.equipment-offline    { color: #008F11; }
+.quality-passing      { color: #00FF41; }
+.quality-warning      { color: #FFB000; }
+.quality-critical     { color: #FF3333; }
+
+.start-button,
+.stop-button,
+.reset-button,
+.calibration-button {
+    background: #000000;
+    color: #00FF41;
+    border: 2px solid #00FF41;
+    border-radius: 0;
+    padding: 10px 20px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+.start-button       { color: #00FF41; border-color: #00FF41; }
+.stop-button        { color: #FF3333; border-color: #FF3333; }
+.reset-button       { color: #FFB000; border-color: #FFB000; }
+.calibration-button { color: #33FF66; border-color: #33FF66; }
+.start-button:hover       { background: rgba(0,255,65,0.10); }
+.stop-button:hover        { background: rgba(255,51,51,0.12); }
+.reset-button:hover       { background: rgba(255,176,0,0.12); }
+.calibration-button:hover { background: rgba(51,255,102,0.10); }
+
+progressbar trough {
+    background: #000000;
+    border: 1px solid #008F11;
+    border-radius: 0;
+}
+progressbar progress { background: #00FF41; border-radius: 0; }
+
+/* Settings */
+frame {
+    border: 1px solid #008F11;
+    background: transparent;
+    border-radius: 0;
+}
+frame > label {
+    color: #00FF41;
+    letter-spacing: 3px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+label { color: #00FF41; }
+.dim-label { color: #008F11; }
+
+combobox,
+spinbutton,
+entry {
+    background: #000000;
+    color: #00FF41;
+    border: 1px solid #00FF41;
+    border-radius: 0;
+    letter-spacing: 1px;
+}
+combobox arrow { color: #00FF41; }
+popover,
+popover.background,
+popover contents {
+    background: #000000;
+    color: #00FF41;
+    border: 1px solid #00FF41;
+    border-radius: 0;
+}
+checkbutton check,
+checkbutton radio {
+    background: #000000;
+    border: 1px solid #00FF41;
+    color: #00FF41;
+    border-radius: 0;
+}
+checkbutton check:checked,
+checkbutton radio:checked {
+    background: #00FF41;
+    color: #000000;
+}
+checkbutton label { color: #00FF41; letter-spacing: 2px; text-transform: uppercase; }
+
+/* Products page */
+.page-title { color: #00FF41; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+.toolbar-button {
+    background: #000000; color: #00FF41;
+    border: 1px solid #00FF41; border-radius: 0;
+    font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+}
+.toolbar-button:hover { background: rgba(0,255,65,0.10); }
+.search-label { color: #008F11; letter-spacing: 2px; text-transform: uppercase; }
+
+columnview,
+columnview listview,
+columnview row {
+    background: #000000; color: #00FF41;
+}
+columnview header {
+    background: #050805; color: #00FF41;
+    border-bottom: 1px solid #00FF41;
+    font-weight: 900; letter-spacing: 2px; text-transform: uppercase;
+}
+columnview row:hover    { background: rgba(0,255,65,0.06); }
+columnview row:selected { background: rgba(0,255,65,0.15); color: #33FF66; }
+columnview cell         { padding: 6px 10px; border-right: 1px solid #008F11; }
