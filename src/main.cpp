@@ -5,10 +5,17 @@
 #include <cstdlib>
 #include <exception>
 
+#ifdef _WIN32
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
+#  include <windows.h>   // SetConsoleOutputCP
+#  include <fcntl.h>
+#  include <io.h>
+#  include <clocale>
+#endif
+
 #ifdef CONSOLE_MODE
-// Headless console front-end (added in Phase 1). For Phase 0 the
-// console header doesn't exist yet — the binary target is only
-// introduced when the console sources land.
 #  include "src/console/InitConsole.h"
 #else
 #  include "src/core/Application.h"
@@ -40,6 +47,26 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     // Use Cairo renderer on Windows to avoid GL flicker in GTK4.
     _putenv_s("GSK_RENDERER", "cairo");
+
+    // Windows UTF-8 setup (three layers all need cooperating):
+    //
+    //   1. Win32 console codepage — applies when stdout is attached to
+    //      a real cmd.exe console.
+    //   2. CRT locale — controls how the C runtime interprets bytes
+    //      in fprintf / wide-conversion paths. ".UTF-8" is supported
+    //      from Windows 10 v1803; older systems silently fall back.
+    //   3. Binary mode on stdout — stops the CRT from doing LF->CRLF
+    //      and codepage conversion when stdout is a pipe (Git Bash /
+    //      mintty). Without this, UTF-8 sequences get mangled into
+    //      Latin-1 mojibake even though bytes were written verbatim.
+    //
+    // All three together cover console + pipe + mintty use cases.
+    // Harmless for the GTK build; critical for the console frontend.
+    ::SetConsoleOutputCP(CP_UTF8);
+    ::SetConsoleCP(CP_UTF8);
+    std::setlocale(LC_ALL, ".UTF-8");
+    _setmode(_fileno(stdout), _O_BINARY);
+    _setmode(_fileno(stderr), _O_BINARY);
 #endif
 
     // Top-level exception guard. Every fatal condition at or below

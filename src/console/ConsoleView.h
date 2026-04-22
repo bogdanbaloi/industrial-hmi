@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/presenter/ViewObserver.h"
+#include "src/presenter/modelview/AlertViewModel.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -40,8 +41,11 @@ namespace app::console {
 ///   safety.
 class ConsoleView : public ::app::ViewObserver {
 public:
-    using Action = std::function<void()>;
+    using Action                = std::function<void()>;
     using ToggleEquipmentAction = std::function<void(std::uint32_t, bool)>;
+    using ViewProductAction     = std::function<void(int)>;
+    using DismissAlertAction    = std::function<void(std::string_view)>;
+    using AlertsSnapshotAction  = std::function<std::vector<presenter::AlertViewModel>()>;
 
     /// @param out Where events and command output go. Default std::cout.
     ///            Tests inject a std::stringstream for assertion.
@@ -63,6 +67,12 @@ public:
     void onCalibrate(Action cb)        { cbCalibrate_        = std::move(cb); }
     void onToggleEquipment(ToggleEquipmentAction cb) {
         cbToggleEquipment_ = std::move(cb);
+    }
+    void onListProducts(Action cb)              { cbListProducts_  = std::move(cb); }
+    void onViewProduct(ViewProductAction cb)    { cbViewProduct_   = std::move(cb); }
+    void onDismissAlert(DismissAlertAction cb)  { cbDismissAlert_  = std::move(cb); }
+    void onAlertsSnapshot(AlertsSnapshotAction cb) {
+        cbAlertsSnapshot_ = std::move(cb);
     }
     /// Optional hook for InitConsole to stop the simulation tick thread
     /// before the process returns control to main(). Fires on quit.
@@ -87,14 +97,21 @@ public:
     void onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) override;
     void onControlPanelChanged(const presenter::ControlPanelViewModel& vm) override;
     void onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) override;
+    void onProductsLoaded(const presenter::ProductsViewModel& vm) override;
+    void onViewProductReady(const presenter::ViewProductDialogViewModel& vm) override;
     void onError(const std::string& errorMessage) override;
 
 private:
     // Command loop
     void readerLoop(std::stop_token stop);
     void dispatchCommand(std::string_view raw);
+    void handleEqCommand(std::string_view args);
+    void handleDismissCommand(std::string_view args);
+    void handleViewCommand(std::string_view args);
     void printHelp();
     void printStatus();
+    void printAlerts();
+    void printProducts();
     void printBanner();
     void signalExit();
 
@@ -114,6 +131,10 @@ private:
     Action                 cbReset_;
     Action                 cbCalibrate_;
     ToggleEquipmentAction  cbToggleEquipment_;
+    Action                 cbListProducts_;
+    ViewProductAction      cbViewProduct_;
+    DismissAlertAction     cbDismissAlert_;
+    AlertsSnapshotAction   cbAlertsSnapshot_;
     Action                 cbShutdown_;
 
     // Latest ViewModel snapshot (for `status` command). Guarded by
@@ -125,6 +146,7 @@ private:
     std::vector<presenter::QualityCheckpointViewModel>        lastQuality_;
     std::optional<presenter::ControlPanelViewModel>           lastControl_;
     std::optional<presenter::StatusZoneViewModel>             lastStatusZone_;
+    std::optional<presenter::ProductsViewModel>               lastProducts_;
 
     // Exit coordination — reader thread sets exit_ and notifies, main
     // thread waits on exitCv_ in waitForExit().

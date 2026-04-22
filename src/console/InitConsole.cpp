@@ -1,9 +1,17 @@
+// SimulatedModel.h (and therefore ProductionTypes.h with its
+// `enum class ProductionError { ... ERROR ... }`) must come before
+// ModelContext.h — the latter pulls Boost.Asio which on Windows
+// transitively includes wingdi.h, which `#define ERROR 0` and
+// poisons the enum identifier. Same reason main.cpp keeps
+// SimulatedModel include near the top.
+#include "src/model/SimulatedModel.h"
+
 #include "src/console/InitConsole.h"
 
 #include "src/console/ConsoleView.h"
 #include "src/core/Bootstrap.h"
 #include "src/core/LoggerBase.h"
-#include "src/model/SimulatedModel.h"
+#include "src/model/ModelContext.h"
 #include "src/presenter/AlertCenter.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/presenter/ProductsPresenter.h"
@@ -70,6 +78,12 @@ int InitConsole::run() {
 
     model.clearCallbacks();
 
+    // Stop the Asio io_context worker used by DatabaseManager async paths.
+    // Without this, its std::jthread joins after the singleton teardown
+    // order gets ambiguous at static destruction time and can crash
+    // (observed on Windows: segfault after the final log line).
+    model::ModelContext::instance().stop();
+
     logger.info("Application shutting down (console frontend)");
     return 0;
 }
@@ -77,11 +91,14 @@ int InitConsole::run() {
 // Wiring
 
 void InitConsole::wireActions() {
-    // Phase-1 command set: only shutdown is actionable; the rest become
-    // real actions in phase 2 (start/stop/reset/calibrate/equipment
-    // toggle). Presenter methods are captured by reference on the
-    // stable unique_ptr so lambdas outlive nothing suspicious.
+    // Presenter methods are captured by raw pointer on the stable
+    // unique_ptr owned by this composition root, so the lambdas stay
+    // valid for as long as the ConsoleView lives. AlertCenter is
+    // likewise captured by pointer — all three objects tear down
+    // together in InitConsole::run()'s cleanup block.
     auto* dp = dashboardPresenter_.get();
+    auto* pp = productsPresenter_.get();
+    auto* ac = alertCenter_.get();
 
     view_->onStart     ([dp] { if (dp) dp->onStartClicked(); });
     view_->onStop      ([dp] { if (dp) dp->onStopClicked(); });
@@ -91,6 +108,24 @@ void InitConsole::wireActions() {
         [dp](std::uint32_t id, bool enabled) {
             if (dp) dp->onEquipmentToggled(id, enabled);
         });
+
+    // Products: loadProducts() re-emits onProductsLoaded synchronously
+    // (the sync repository path, not the async DatabaseManager CRUD
+    // path), so console scenarios can exercise the full Model ->
+    // Presenter -> View chain without a GLib main loop.
+    view_->onListProducts([pp] { if (pp) pp->loadProducts(); });
+    view_->onViewProduct(
+        [pp](int id) { if (pp) pp->viewProduct(id); });
+
+    // Alerts: ConsoleView asks for a snapshot on demand rather than
+    // receiving a push-stream, because the terminal rendering cadence
+    // is the user's keystroke, not a real-time refresh timer.
+    view_->onAlertsSnapshot(
+        [ac]() -> std::vector<presenter::AlertViewModel> {
+            return ac ? ac->snapshot() : std::vector<presenter::AlertViewModel>{};
+        });
+    view_->onDismissAlert(
+        [ac](std::string_view key) { if (ac) ac->clear(key); });
 
     // Shutdown hook fires on `quit` so the tick thread can stop cleanly
     // before run() unblocks from waitForExit().
