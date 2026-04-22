@@ -118,6 +118,39 @@ target_link_libraries(test_logger PRIVATE
 )
 add_test(NAME LoggerTest COMMAND test_logger)
 
+# --- Core: StartupErrors (header-only typed exception hierarchy) ----------
+add_executable(test_startup_errors StartupErrorsTest.cpp)
+target_link_libraries(test_startup_errors PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME StartupErrorsTest COMMAND test_startup_errors)
+
+# --- Core: ExceptionHandler (StandardExceptionHandler + safeExecute +
+#     ExceptionGuard). Links NullLogger from LoggerImpl.h only — no GTK.
+add_executable(test_exception_handler ExceptionHandlerTest.cpp)
+target_link_libraries(test_exception_handler PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME ExceptionHandlerTest COMMAND test_exception_handler)
+
+# --- Core: StartupDialog (console-mode path only; MessageBoxW on Windows
+#     is exercised manually + via scenario suite). Compiles the source
+#     directly so the test stays on a minimal GTK-free link line.
+add_executable(test_startup_dialog
+    StartupDialogTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/StartupDialog.cpp)
+target_link_libraries(test_startup_dialog PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+if(WIN32)
+    target_link_libraries(test_startup_dialog PRIVATE user32)
+endif()
+add_test(NAME StartupDialogTest COMMAND test_startup_dialog
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
 # --- Presenter: BasePresenter (header-only observer mechanics) ------------
 add_executable(test_base_presenter BasePresenterTest.cpp)
 target_link_libraries(test_base_presenter PRIVATE
