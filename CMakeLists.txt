@@ -319,6 +319,29 @@ target_link_libraries(objectsPresenter
         Threads::Threads
 )
 
+# Console Layer - Headless front-end. Shares the Model + Presenter
+# layer with the GTK View, proving MVP's View-swap promise. Links zero
+# gtkmm (see architecture receipt in README).
+add_library(objectsConsole OBJECT)
+target_sources(objectsConsole
+    PRIVATE
+        src/console/ConsoleView.cpp
+        src/console/InitConsole.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/console/ConsoleView.h
+            src/console/InitConsole.h
+)
+target_link_libraries(objectsConsole
+    PUBLIC
+        objectsPresenter
+        objectsModel
+        objectsCore
+        ${BOOST_TARGET}
+        Threads::Threads
+)
+
 # View Layer - GTK4 UI
 add_library(objectsView OBJECT)
 target_sources(objectsView
@@ -402,6 +425,39 @@ target_link_libraries(industrial-hmi
 if(WIN32)
     target_link_libraries(industrial-hmi PRIVATE ws2_32 user32)
 endif()
+
+# ============================================================================
+# Console Executable (Cross-Platform) — shares src/main.cpp with the GTK
+# binary via #ifdef CONSOLE_MODE. Zero gtkmm on the link line.
+# ============================================================================
+add_executable(industrial-hmi-console)
+target_sources(industrial-hmi-console PRIVATE src/main.cpp)
+target_compile_definitions(industrial-hmi-console PRIVATE CONSOLE_MODE)
+target_link_libraries(industrial-hmi-console
+    PRIVATE
+        objectsModel
+        objectsConfig
+        objectsCore
+        objectsPresenter
+        objectsConsole
+        Threads::Threads
+)
+if(WIN32)
+    # Boost.Asio still pulls Winsock. user32 is not needed (no MessageBoxW
+    # path from the console reporter) but stays harmless if added.
+    target_link_libraries(industrial-hmi-console PRIVATE ws2_32 user32)
+endif()
+if(Intl_FOUND)
+    target_include_directories(industrial-hmi-console PRIVATE ${Intl_INCLUDE_DIRS})
+    target_link_libraries(industrial-hmi-console PRIVATE ${Intl_LIBRARIES})
+endif()
+add_dependencies(industrial-hmi-console CopyAssets CopyConfig)
+if(TARGET translations)
+    add_dependencies(industrial-hmi-console translations)
+endif()
+target_compile_definitions(industrial-hmi-console PRIVATE
+    LOCALE_DIR="${LOCALE_BUILD_DIR}"
+)
 
 # libintl - needed on platforms where gettext is not in libc (Windows, macOS)
 if(Intl_FOUND)
@@ -570,11 +626,13 @@ message(STATUS "  objectsCore       - Logger, i18n mechanism, Bootstrap (GTK-fre
 message(STATUS "  objectsAppGtk     - GTK application bootstrap (Application.cpp)")
 message(STATUS "  objectsPresenter  - Presenter layer (MVP orchestration)")
 message(STATUS "  objectsView       - View layer (GTK4 pages)")
+message(STATUS "  objectsConsole    - Headless console front-end (GTK-free)")
 message(STATUS "")
 message(STATUS "Dependency graph (low -> high):")
 message(STATUS "  Config -> Model -> Core -> {AppGtk, Presenter}")
 message(STATUS "                                     |")
-message(STATUS "                                    View -> industrial-hmi (GTK exe)")
+message(STATUS "                                     +-- View    -> industrial-hmi (GTK exe)")
+message(STATUS "                                     +-- Console -> industrial-hmi-console")
 message(STATUS "")
 if(WIN32)
     message(STATUS "Windows Build:")
