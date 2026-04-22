@@ -1,0 +1,30 @@
+# Treat most source text as auto-normalised.
+* text=auto
+
+# Console scenario fixtures must stay on LF so the exact-match diff in
+# tests/scenarios/run-scenario.cmake behaves identically on Linux and
+# Windows runners. A CRLF-converted checkout would silently break the
+# comparison.
+tests/scenarios/*.txt      text eol=lf
+tests/scenarios/*.expected text eol=lf
+
+# gettext translation catalogs are canonical LF.
+*.po                       text eol=lf
+*.pot                      text eol=lf
+
+# GtkBuilder XML and CSS — LF keeps diffs stable across platforms.
+*.ui                       text eol=lf
+*.css                      text eol=lf
+
+# Shell scripts, CMake files — LF.
+*.sh                       text eol=lf
+*.cmake                    text eol=lf
+CMakeLists.txt             text eol=lf
+
+# Binary files — leave alone.
+*.png                      binary
+*.jpg                      binary
+*.jpeg                     binary
+*.mo                       binary
+*.db                       binary
+*.sqlite                   binary

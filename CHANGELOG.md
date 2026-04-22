@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Headless console front-end** (`industrial-hmi-console`) sharing
+  Model + Presenter + Bootstrap with the GTK desktop binary. Full
+  command set: `help`, `status`, `start`, `stop`, `reset`, `calibrate`,
+  `eq <id> on|off`, `alerts`, `dismiss <key>`, `products`, `view <id>`,
+  `quit`. Implements `ViewObserver` so presenters don't branch per
+  front-end. Binary links zero gtkmm (validated by `nm`).
+- **Scenario test harness** — 5 `tests/scenarios/*.txt` inputs piped
+  through the console binary, stdout diffed against `*.expected`
+  golden files via a portable CMake runner
+  (`tests/scenarios/run-scenario.cmake`). Wired into ctest and runs
+  in CI without a display server.
+- **Staged Bootstrap** (`src/core/Bootstrap.{h,cpp}`) orchestrating
+  startup across both front-ends: stderr logger → config → configured
+  logger → i18n → SQLite. Resolves the classic config/logger
+  chicken-and-egg via a two-phase logger.
+- **Fail-fast startup errors** — typed `CriticalStartupError`
+  hierarchy (`ConfigMissing`, `ConfigCorrupt`, `DatabaseInit`,
+  `LoggerBootstrap`) thrown from Bootstrap/Application, caught in
+  `main()`, surfaced through a native reporter (MessageBoxW on
+  Windows GUI, stderr on console / Linux) with documented exit
+  codes (0/1/2/3). Localised dialog body.
 - **Color palettes** (8 total) — Industrial (baseline), Nord, Paper,
   Right Sidebar, Dracula, CRT, Blueprint, Cockpit. Loaded as a second CSS
   provider stacked on top of the base stylesheet.
@@ -32,7 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - i18n grown to 11 languages (added es_MX, ga, pt_BR, sv).
-- Test suite grown to 12 binaries / 160+ tests.
+- Test suite grown to 12 binaries + 5 scenario tests (160+ unit cases).
+- `objectsCore` is now GTK-free; GTK bootstrap moved to `objectsAppGtk`.
+- `Application::initialize` split into `Bootstrap::run()` (shared) +
+  GTK-specific glue.
+- `ConfigManager::applyI18n()` owns the language policy; `core/i18n`
+  stays a pure gettext adapter.
+- DB init moved from `Application::initDatabase` to `Bootstrap` Stage 5
+  so both front-ends start from the same initialised SQLite.
 - Baseline layouts: `log_panel` `height-request` reduced from 150 to 70
   to stay within the 1200 px window budget across all palettes (the old
   value produced `Trying to measure gtkmm__GtkBox for height of 1200, but
