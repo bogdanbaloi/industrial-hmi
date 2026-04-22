@@ -220,17 +220,22 @@ target_sources(objectsConfig
             src/config/config_defaults.h
 )
 
-# Core Layer - Logging, Error Handling, Result, Application (C++20)
+# Core Layer - GTK-free utilities: Logger, i18n mechanism, Result, CsvSerializer
+# Bootstrap orchestrates staged startup (logger -> config -> i18n) and is
+# reused by every entry point (GTK today, headless console next).
+# StartupErrors + StartupDialog form the fatal-reporting pipeline: typed
+# exceptions thrown from Bootstrap / Application land in main()'s guard
+# and surface through a native per-platform reporter.
 add_library(objectsCore OBJECT)
 target_sources(objectsCore
     PRIVATE
-        src/core/Application.cpp
         src/core/i18n.cpp
         src/core/CsvSerializer.cpp
+        src/core/Bootstrap.cpp
+        src/core/StartupDialog.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
-            src/core/Application.h
             src/core/LoggerBase.h
             src/core/LoggerImpl.h
             src/core/ExceptionHandler.h
@@ -238,20 +243,17 @@ target_sources(objectsCore
             src/core/ErrorHandling.h
             src/core/i18n.h
             src/core/CsvSerializer.h
+            src/core/Bootstrap.h
+            src/core/StartupErrors.h
+            src/core/StartupDialog.h
 )
 target_link_libraries(objectsCore
     PUBLIC
         objectsModel
         objectsConfig
-        ${GTKMM_LIBRARIES}
-)
-target_include_directories(objectsCore
-    PUBLIC
-        ${GTKMM_INCLUDE_DIRS}
-)
-target_compile_options(objectsCore
-    PUBLIC
-        ${GTKMM_CFLAGS_OTHER}
+        # NOTE: deliberately no gtkmm — this library is GTK-free by
+        # construction so the headless console binary can link it
+        # without dragging in a GUI toolkit.
 )
 target_compile_definitions(objectsCore
     PUBLIC
@@ -263,6 +265,33 @@ if(Intl_FOUND)
     target_include_directories(objectsCore PUBLIC ${Intl_INCLUDE_DIRS})
     target_link_libraries(objectsCore PUBLIC ${Intl_LIBRARIES})
 endif()
+
+# AppGtk Layer - GTK-specific application bootstrap. Kept separate from
+# objectsCore so console binaries can link objectsCore without inheriting
+# gtkmm as a transitive dependency.
+add_library(objectsAppGtk OBJECT)
+target_sources(objectsAppGtk
+    PRIVATE
+        src/core/Application.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/core/Application.h
+)
+target_link_libraries(objectsAppGtk
+    PUBLIC
+        objectsCore
+        objectsModel
+        ${GTKMM_LIBRARIES}
+)
+target_include_directories(objectsAppGtk
+    PUBLIC
+        ${GTKMM_INCLUDE_DIRS}
+)
+target_compile_options(objectsAppGtk
+    PUBLIC
+        ${GTKMM_CFLAGS_OTHER}
+)
 
 # Presenter Layer - MVP orchestration
 add_library(objectsPresenter OBJECT)
@@ -286,6 +315,29 @@ target_sources(objectsPresenter
 target_link_libraries(objectsPresenter
     PUBLIC
         objectsModel
+        ${BOOST_TARGET}
+        Threads::Threads
+)
+
+# Console Layer - Headless front-end. Shares the Model + Presenter
+# layer with the GTK View, proving MVP's View-swap promise. Links zero
+# gtkmm (see architecture receipt in README).
+add_library(objectsConsole OBJECT)
+target_sources(objectsConsole
+    PRIVATE
+        src/console/ConsoleView.cpp
+        src/console/InitConsole.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/console/ConsoleView.h
+            src/console/InitConsole.h
+)
+target_link_libraries(objectsConsole
+    PUBLIC
+        objectsPresenter
+        objectsModel
+        objectsCore
         ${BOOST_TARGET}
         Threads::Threads
 )
@@ -326,6 +378,7 @@ target_sources(objectsView
 target_link_libraries(objectsView
     PUBLIC
         objectsPresenter
+        objectsAppGtk
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
 )
@@ -361,15 +414,50 @@ target_link_libraries(industrial-hmi
         objectsModel
         objectsConfig
         objectsCore
+        objectsAppGtk
         objectsPresenter
         objectsView
         Threads::Threads
 )
 
-# Windows: Boost.Asio requires Winsock
+# Windows: Boost.Asio requires Winsock; StartupDialog needs user32 for
+# MessageBoxW (usually auto-linked, listed here for clarity + safety).
 if(WIN32)
-    target_link_libraries(industrial-hmi PRIVATE ws2_32)
+    target_link_libraries(industrial-hmi PRIVATE ws2_32 user32)
 endif()
+
+# ============================================================================
+# Console Executable (Cross-Platform) — shares src/main.cpp with the GTK
+# binary via #ifdef CONSOLE_MODE. Zero gtkmm on the link line.
+# ============================================================================
+add_executable(industrial-hmi-console)
+target_sources(industrial-hmi-console PRIVATE src/main.cpp)
+target_compile_definitions(industrial-hmi-console PRIVATE CONSOLE_MODE)
+target_link_libraries(industrial-hmi-console
+    PRIVATE
+        objectsModel
+        objectsConfig
+        objectsCore
+        objectsPresenter
+        objectsConsole
+        Threads::Threads
+)
+if(WIN32)
+    # Boost.Asio still pulls Winsock. user32 is not needed (no MessageBoxW
+    # path from the console reporter) but stays harmless if added.
+    target_link_libraries(industrial-hmi-console PRIVATE ws2_32 user32)
+endif()
+if(Intl_FOUND)
+    target_include_directories(industrial-hmi-console PRIVATE ${Intl_INCLUDE_DIRS})
+    target_link_libraries(industrial-hmi-console PRIVATE ${Intl_LIBRARIES})
+endif()
+add_dependencies(industrial-hmi-console CopyAssets CopyConfig)
+if(TARGET translations)
+    add_dependencies(industrial-hmi-console translations)
+endif()
+target_compile_definitions(industrial-hmi-console PRIVATE
+    LOCALE_DIR="${LOCALE_BUILD_DIR}"
+)
 
 # libintl - needed on platforms where gettext is not in libc (Windows, macOS)
 if(Intl_FOUND)
@@ -532,9 +620,19 @@ else()
 endif()
 message(STATUS "")
 message(STATUS "Object Libraries:")
+message(STATUS "  objectsConfig     - INTERFACE: JSON config defaults + ConfigManager (policy)")
 message(STATUS "  objectsModel      - Data layer (SimulatedModel, DatabaseManager)")
+message(STATUS "  objectsCore       - Logger, i18n mechanism, Bootstrap (GTK-free)")
+message(STATUS "  objectsAppGtk     - GTK application bootstrap (Application.cpp)")
 message(STATUS "  objectsPresenter  - Presenter layer (MVP orchestration)")
 message(STATUS "  objectsView       - View layer (GTK4 pages)")
+message(STATUS "  objectsConsole    - Headless console front-end (GTK-free)")
+message(STATUS "")
+message(STATUS "Dependency graph (low -> high):")
+message(STATUS "  Config -> Model -> Core -> {AppGtk, Presenter}")
+message(STATUS "                                     |")
+message(STATUS "                                     +-- View    -> industrial-hmi (GTK exe)")
+message(STATUS "                                     +-- Console -> industrial-hmi-console")
 message(STATUS "")
 if(WIN32)
     message(STATUS "Windows Build:")
