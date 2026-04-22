@@ -4,11 +4,13 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <format>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 namespace app::console {
 
@@ -79,6 +81,16 @@ constexpr std::string_view severityTag(presenter::StatusZoneViewModel::Severity 
     return "UNKNOWN";
 }
 
+constexpr std::string_view alertSeverityTag(presenter::AlertSeverity s) {
+    using S = presenter::AlertSeverity;
+    switch (s) {
+    case S::Info:     return "INFO";
+    case S::Warning:  return "WARNING";
+    case S::Critical: return "CRITICAL";
+    }
+    return "UNKNOWN";
+}
+
 }  // namespace
 
 // Lifecycle
@@ -130,16 +142,44 @@ void ConsoleView::dispatchCommand(std::string_view raw) {
     const std::string_view line = trim(raw);
     if (line.empty()) return;
 
-    // Case-insensitive first token.
+    // Case-insensitive first token. Rest of the line kept raw (may be
+    // case-sensitive args like alert keys).
     const auto spaceAt = line.find(' ');
     std::string verb{line.substr(0, spaceAt)};
     std::transform(verb.begin(), verb.end(), verb.begin(),
                    [](unsigned char c) { return std::tolower(c); });
+    const std::string_view args =
+        spaceAt == std::string_view::npos
+            ? std::string_view{}
+            : trim(line.substr(spaceAt + 1));
 
     if (verb == "help" || verb == "h" || verb == "?") {
         printHelp();
     } else if (verb == "status") {
         printStatus();
+    } else if (verb == "start" || verb == "s") {
+        if (cbStart_) cbStart_();
+        else          writeLine("[WARN     ] start action not wired");
+    } else if (verb == "stop" || verb == "p") {
+        if (cbStop_) cbStop_();
+        else         writeLine("[WARN     ] stop action not wired");
+    } else if (verb == "reset" || verb == "r") {
+        if (cbReset_) cbReset_();
+        else          writeLine("[WARN     ] reset action not wired");
+    } else if (verb == "calibrate" || verb == "c" || verb == "cal") {
+        if (cbCalibrate_) cbCalibrate_();
+        else              writeLine("[WARN     ] calibrate action not wired");
+    } else if (verb == "eq") {
+        handleEqCommand(args);
+    } else if (verb == "alerts") {
+        printAlerts();
+    } else if (verb == "dismiss") {
+        handleDismissCommand(args);
+    } else if (verb == "products") {
+        if (cbListProducts_) cbListProducts_();   // triggers onProductsLoaded
+        printProducts();
+    } else if (verb == "view") {
+        handleViewCommand(args);
     } else if (verb == "quit" || verb == "exit" || verb == "q") {
         writeLine("[BYE      ] Shutting down.");
         if (cbShutdown_) cbShutdown_();
@@ -148,6 +188,68 @@ void ConsoleView::dispatchCommand(std::string_view raw) {
         writeLine(std::format("[ERROR    ] Unknown command: '{}'. Type 'help'.",
                               verb));
     }
+}
+
+void ConsoleView::handleEqCommand(std::string_view args) {
+    // Syntax: eq <id> on|off
+    // Parse id (first token) + state (second token).
+    if (args.empty()) {
+        writeLine("[ERROR    ] Usage: eq <id> on|off");
+        return;
+    }
+    const auto spaceAt = args.find(' ');
+    std::string_view idToken =
+        (spaceAt == std::string_view::npos) ? args : args.substr(0, spaceAt);
+    std::string_view stateToken =
+        (spaceAt == std::string_view::npos) ? std::string_view{}
+                                            : trim(args.substr(spaceAt + 1));
+
+    std::uint32_t id = 0;
+    auto [ptr, ec] = std::from_chars(
+        idToken.data(), idToken.data() + idToken.size(), id);
+    if (ec != std::errc{} || ptr != idToken.data() + idToken.size()) {
+        writeLine(std::format("[ERROR    ] Invalid equipment id: '{}'", idToken));
+        return;
+    }
+
+    std::string stateLower{stateToken};
+    std::transform(stateLower.begin(), stateLower.end(), stateLower.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    bool enabled = false;
+    if      (stateLower == "on"  || stateLower == "true"  || stateLower == "1") enabled = true;
+    else if (stateLower == "off" || stateLower == "false" || stateLower == "0") enabled = false;
+    else {
+        writeLine(std::format("[ERROR    ] Expected on|off after id, got: '{}'",
+                              stateToken));
+        return;
+    }
+
+    if (cbToggleEquipment_) cbToggleEquipment_(id, enabled);
+    else                    writeLine("[WARN     ] toggle-equipment action not wired");
+}
+
+void ConsoleView::handleDismissCommand(std::string_view args) {
+    if (args.empty()) {
+        writeLine("[ERROR    ] Usage: dismiss <key>. Use 'alerts' to list keys.");
+        return;
+    }
+    if (cbDismissAlert_) cbDismissAlert_(args);
+    else                 writeLine("[WARN     ] dismiss-alert action not wired");
+}
+
+void ConsoleView::handleViewCommand(std::string_view args) {
+    if (args.empty()) {
+        writeLine("[ERROR    ] Usage: view <id>");
+        return;
+    }
+    int id = 0;
+    auto [ptr, ec] = std::from_chars(args.data(), args.data() + args.size(), id);
+    if (ec != std::errc{} || ptr != args.data() + args.size()) {
+        writeLine(std::format("[ERROR    ] Invalid product id: '{}'", args));
+        return;
+    }
+    if (cbViewProduct_) cbViewProduct_(id);
+    else                writeLine("[WARN     ] view-product action not wired");
 }
 
 // Output helpers
@@ -170,9 +272,60 @@ void ConsoleView::printBanner() {
 void ConsoleView::printHelp() {
     const std::scoped_lock lock{outMutex_};
     out_ << "Commands:\n"
-         << "  help, h, ?   Show this list\n"
-         << "  status       Dump current system snapshot\n"
-         << "  quit, q      Exit the application\n";
+         << "  help, h, ?            Show this list\n"
+         << "  status                Dump current system snapshot\n"
+         << "  start, s              Start production\n"
+         << "  stop, p               Stop / pause production\n"
+         << "  reset, r              Reset / restart sequence\n"
+         << "  calibrate, cal, c     Run calibration routine\n"
+         << "  eq <id> on|off        Toggle equipment enable (id: 0..2)\n"
+         << "  alerts                List active alerts\n"
+         << "  dismiss <key>         Dismiss an alert by key\n"
+         << "  products              List products from database\n"
+         << "  view <id>             Show product detail\n"
+         << "  quit, q, exit         Exit the application\n";
+    out_.flush();
+}
+
+void ConsoleView::printAlerts() {
+    std::vector<presenter::AlertViewModel> active;
+    if (cbAlertsSnapshot_) active = cbAlertsSnapshot_();
+
+    const std::scoped_lock lock{outMutex_};
+    out_ << "--- ALERTS ---\n";
+    if (active.empty()) {
+        out_ << "  (none)\n";
+    } else {
+        for (const auto& a : active) {
+            out_ << std::format("  [{}] key={} {} at {}\n",
+                                alertSeverityTag(a.severity),
+                                a.key,
+                                a.title,
+                                a.timestamp);
+            if (!a.message.empty()) {
+                out_ << std::format("        {}\n", a.message);
+            }
+        }
+    }
+    out_ << "--- END ---\n";
+    out_.flush();
+}
+
+void ConsoleView::printProducts() {
+    const std::scoped_lock sl{stateMutex_};
+    const std::scoped_lock ol{outMutex_};
+
+    out_ << "--- PRODUCTS ---\n";
+    if (!lastProducts_ || lastProducts_->products.empty()) {
+        out_ << "  (no products loaded)\n";
+    } else {
+        for (const auto& p : lastProducts_->products) {
+            out_ << std::format(
+                "  id={} code={} name=\"{}\" status={} stock={} quality={:.1f}%\n",
+                p.id, p.productCode, p.name, p.status, p.stock, p.qualityRate);
+        }
+    }
+    out_ << "--- END ---\n";
     out_.flush();
 }
 
@@ -289,6 +442,37 @@ void ConsoleView::onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) 
     writeLine(std::format(
         "[SYSTEM   ] severity={} message={}",
         severityTag(vm.severity), vm.message));
+}
+
+void ConsoleView::onProductsLoaded(const presenter::ProductsViewModel& vm) {
+    {
+        const std::scoped_lock lock{stateMutex_};
+        lastProducts_ = vm;
+    }
+    writeLine(std::format("[PRODUCTS ] loaded count={}", vm.products.size()));
+}
+
+void ConsoleView::onViewProductReady(const presenter::ViewProductDialogViewModel& vm) {
+    const std::scoped_lock lock{outMutex_};
+    out_ << "--- PRODUCT DETAIL ---\n";
+    out_ << std::format("  id/code: {}\n",       vm.productId);
+    out_ << std::format("  verified: {}\n",      vm.isVerified);
+    out_ << std::format("  created:  {}\n",      vm.createdDate.empty() ? "-" : vm.createdDate);
+    if (!vm.description.empty()) {
+        out_ << "  description:\n";
+        // Indent multi-line description for readability.
+        std::string_view desc = vm.description;
+        std::size_t pos = 0;
+        while (pos < desc.size()) {
+            const auto nl = desc.find('\n', pos);
+            const auto end = (nl == std::string_view::npos) ? desc.size() : nl;
+            out_ << "    " << desc.substr(pos, end - pos) << '\n';
+            if (nl == std::string_view::npos) break;
+            pos = nl + 1;
+        }
+    }
+    out_ << "--- END ---\n";
+    out_.flush();
 }
 
 void ConsoleView::onError(const std::string& errorMessage) {

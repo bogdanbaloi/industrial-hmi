@@ -5,10 +5,7 @@
 #include "src/core/Application.h"
 #include "src/core/Bootstrap.h"
 #include "src/core/LoggerImpl.h"
-#include "src/core/StartupErrors.h"
-#include "src/core/i18n.h"
-#include "src/config/ConfigManager.h"
-#include "src/model/DatabaseManager.h"
+#include "src/config/config_defaults.h"
 #include "src/model/ModelContext.h"
 
 namespace app::core {
@@ -27,18 +24,12 @@ Application::~Application() {
 void Application::initialize(Bootstrap& bootstrap, int /*argc*/, char* /*argv*/[]) {
     if (initialized_) return;
 
-    // Bootstrap has already prepared logger + config + i18n.
+    // Bootstrap has already prepared logger + config + i18n + database.
     // Adopt the shared warnings list and borrow the logger.
     logger_ = &bootstrap.logger();
     startupWarnings_ = bootstrap.warnings();
 
     logger_->info("Application starting (GTK frontend)");
-
-    // GTK-specific subsystems on top of Bootstrap.
-    // initDatabase() throws DatabaseInitError on fatal failures; the
-    // exception propagates out of main's try/catch and surfaces
-    // through the native startup dialog.
-    initDatabase();
 
     // Flush any accumulated warnings so they hit the log before the UI
     // opens; the same list is re-shown via showStartupWarnings() later.
@@ -96,24 +87,6 @@ Logger& Application::logger() {
         return nullLogger;
     }
     return *logger_;
-}
-
-void Application::initDatabase() {
-    model::ModelContext::instance().setLogger(*logger_);
-
-    auto& db = model::DatabaseManager::instance();
-    db.setLogger(*logger_);
-
-    if (!db.initialize()) {
-        // Products page + every CRUD path depends on the database. A
-        // partial start "without products" would surface as cryptic
-        // blank screens later. Refuse up-front and let the operator
-        // diagnose (disk full / permissions / schema mismatch).
-        throw DatabaseInitError(_(
-            "SQLite initialisation failed. Check logs for details and "
-            "verify disk space / permissions for the database path."));
-    }
-    logger_->info("Database initialized");
 }
 
 void Application::showStartupWarnings() {

@@ -62,7 +62,6 @@ private:
     Application() = default;
     ~Application();
 
-    void initDatabase();
     void showStartupWarnings();
 
     Logger*                 logger_ = nullptr;   // non-owning — Bootstrap owns

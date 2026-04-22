@@ -5,6 +5,8 @@
 #include "src/core/i18n.h"
 #include "src/config/ConfigManager.h"
 #include "src/config/config_defaults.h"
+#include "src/model/DatabaseManager.h"
+#include "src/model/ModelContext.h"
 
 #include <cstdlib>   // std::getenv
 #include <format>
@@ -117,6 +119,19 @@ void Bootstrap::run() {
     // triggers it. ConfigManager decides language and logs through
     // the current logger. Never throws.
     config.applyI18n();
+
+    // Stage 5 — database. Both frontends (GTK and console) read from
+    // the same SQLite; failure to open it is fatal because every
+    // products workflow depends on it, and a partial start would
+    // surface as cryptic blank screens later.
+    model::ModelContext::instance().setLogger(*logger_);
+    auto& db = model::DatabaseManager::instance();
+    db.setLogger(*logger_);
+    if (!db.initialize()) {
+        throw DatabaseInitError(_(
+            "SQLite initialisation failed. Check logs for details and "
+            "verify disk space / permissions for the database path."));
+    }
 
     logger_->info("Bootstrap complete ({} warning{})",
                   warnings_.size(),
