@@ -8,6 +8,11 @@
 #include "src/config/config_defaults.h"
 #include "src/model/ModelContext.h"
 
+#include <charconv>
+#include <cstdlib>
+#include <cstring>
+#include <system_error>
+
 namespace app::core {
 
 Application& Application::instance() {
@@ -54,6 +59,30 @@ int Application::run(int argc, char* argv[]) {
 
         if (hasStartupWarnings()) {
             showStartupWarnings();
+        }
+
+        // Coverage / smoke-test hook: if HMI_EXIT_AFTER_MS is set, arm
+        // a one-shot timer that asks Gtk::Application to quit normally.
+        // The resulting clean shutdown runs C++ atexit handlers (which
+        // includes gcov's __gcov_dump), so the CI coverage job captures
+        // the whole boot path through MainWindow / Pages / Widgets. A
+        // SIGTERM via `timeout` would skip atexit and leave those files
+        // at 0% coverage. No-op for every real user run.
+        //
+        // std::from_chars keeps the parse exception-free (std::stoi
+        // would throw on a malformed value, forcing an empty catch
+        // that clang-tidy's bugprone-empty-catch rightly dislikes).
+        if (const char* env = std::getenv("HMI_EXIT_AFTER_MS");
+            env && *env) {
+            int ms = 0;
+            const char* first = env;
+            const char* last  = env + std::strlen(env);
+            const auto result = std::from_chars(first, last, ms);
+            if (result.ec == std::errc{} && result.ptr == last && ms > 0) {
+                Glib::signal_timeout().connect_once(
+                    [gtkApp]() { gtkApp->quit(); },
+                    static_cast<unsigned int>(ms));
+            }
         }
     });
 
