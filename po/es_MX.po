@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: industrial-hmi 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-15 00:00+0000\n"
+"POT-Creation-Date: 2026-04-22 11:14+0300\n"
 "PO-Revision-Date: 2026-04-15 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Mexican Spanish\n"
@@ -16,59 +16,42 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+msgid ""
+"Could not load configuration from {}. Re-install the application or restore "
+"the config file."
+msgstr "No se pudo cargar la configuración desde {}. Reinstale la aplicación o restaure el archivo de configuración."
+
+msgid ""
+"SQLite initialisation failed. Check logs for details and verify disk space / "
+"permissions for the database path."
+msgstr "La inicialización de SQLite falló. Consulte los logs y verifique espacio en disco / permisos de la ruta de la base de datos."
+
+msgid "Equipment {} error"
+msgstr "Equipo {} con error"
+
+msgid "Equipment {} offline"
+msgstr "Equipo {} desconectado"
+
+msgid "Line unavailable for production."
+msgstr "Línea no disponible para producción."
+
+msgid "{} critical"
+msgstr "{} crítico"
+
+msgid "{} below target"
+msgstr "{} bajo objetivo"
+
+msgid "Pass rate {:.1f}% (target {:.0f}%)"
+msgstr "Tasa de aprobación {:.1f}% (objetivo {:.0f}%)"
+
 msgid "[BB] Industrial HMI"
 msgstr "[BB] HMI Industrial"
 
 msgid "MVP Architecture"
 msgstr "Arquitectura MVP"
 
-msgid "DISPLAY MODE"
-msgstr "MODO DE VISUALIZACIÓN"
-
-msgid "Fullscreen"
-msgstr "Pantalla completa"
-
-msgid "Windowed"
-msgstr "Ventana"
-
-msgid "THEME"
-msgstr "TEMA"
-
-msgid "Dark Mode"
-msgstr "Modo oscuro"
-
-msgid "Light Mode"
-msgstr "Modo claro"
-
-msgid "SYSTEM"
-msgstr "SISTEMA"
-
-msgid "LANGUAGE"
-msgstr "IDIOMA"
-
-msgid "Auto (System)"
-msgstr "Automático (Sistema)"
-
-msgid "Language Changed"
-msgstr "Idioma cambiado"
-
-msgid ""
-"The language has been updated.\n"
-"\n"
-"Please restart the application for the change to take effect."
-msgstr ""
-"El idioma se ha actualizado.\n"
-"\n"
-"Reinicia la aplicación para que el cambio surta efecto."
-
-msgid "Could not save the language preference."
-msgstr "No se pudo guardar la preferencia de idioma."
-
-msgid "Auto Refresh"
-msgstr "Actualización automática"
-
-msgid "Verbose Logging"
-msgstr "Registro detallado"
+msgid "Close Application"
+msgstr "Cerrar aplicación"
 
 msgid "Version 1.0.0"
 msgstr "Versión 1.0.0"
@@ -76,14 +59,14 @@ msgstr "Versión 1.0.0"
 msgid "Portfolio Demo"
 msgstr "Demo portafolio"
 
-msgid "Close Application"
-msgstr "Cerrar aplicación"
+msgid "E-STOP"
+msgstr "PARADA"
+
+msgid "Settings"
+msgstr "Configuración"
 
 msgid "Dashboard"
 msgstr "Tablero"
-
-msgid "Products Database"
-msgstr "Base de datos de productos"
 
 msgid "Cancel"
 msgstr "Cancelar"
@@ -91,89 +74,41 @@ msgstr "Cancelar"
 msgid "OK"
 msgstr "Aceptar"
 
-msgid "Save"
-msgstr "Guardar"
+# About dialog
+msgid "About"
+msgstr "Acerca de"
 
-msgid "Update"
-msgstr "Actualizar"
+msgid "Version %1"
+msgstr "Versión %1"
+
+msgid "Architecture"
+msgstr "Arquitectura"
+
+msgid "Build Info"
+msgstr "Información de compilación"
+
+msgid "Supported Languages"
+msgstr "Idiomas compatibles"
+
+msgid "Quality Assurance"
+msgstr "Control de calidad"
+
+msgid ""
+"86+ unit tests (GoogleTest + gmock)\n"
+"9 test binaries, CI/CD with coverage reporting"
+msgstr ""
+"86+ pruebas unitarias (GoogleTest + gmock)\n"
+"9 binarios de prueba, CI/CD con reporte de cobertura"
+
+msgid ""
+"Proprietary - All Rights Reserved.\n"
+"For interview evaluation purposes only."
+msgstr ""
+"Propietario - Todos los derechos reservados.\n"
+"Sólo para evaluación en entrevistas."
 
 msgid "Error"
 msgstr "Error"
-
-msgid "WORK UNIT"
-msgstr "UNIDAD DE TRABAJO"
-
-msgid "Work Unit:"
-msgstr "Unidad de trabajo:"
-
-msgid "Product:"
-msgstr "Producto:"
-
-msgid "Ready"
-msgstr "Listo"
-
-msgid "EQUIPMENT STATIONS"
-msgstr "ESTACIONES DE EQUIPO"
-
-msgid "QUALITY CHECKPOINTS"
-msgstr "PUNTOS DE INSPECCIÓN DE CALIDAD"
-
-msgid "Checkpoint %1"
-msgstr "Punto de inspección %1"
-
-msgid "0 inspected • 0 defects"
-msgstr "0 inspeccionados • 0 defectos"
-
-msgid "%1 inspected • %2 defects"
-msgstr "%1 inspeccionados • %2 defectos"
-
-msgid "Last: %1"
-msgstr "Último: %1"
-
-msgid "No defects detected"
-msgstr "No se detectaron defectos"
-
-msgid "Control Panel"
-msgstr "Panel de control"
-
-msgid "System Idle"
-msgstr "Sistema inactivo"
-
-msgid "START"
-msgstr "INICIAR"
-
-msgid "STOP"
-msgstr "DETENER"
-
-msgid "RESET"
-msgstr "REINICIAR"
-
-msgid "CALIBRATION"
-msgstr "CALIBRACIÓN"
-
-msgid "ONLINE"
-msgstr "EN LÍNEA"
-
-msgid "OFFLINE"
-msgstr "FUERA DE LÍNEA"
-
-msgid "PROCESSING"
-msgstr "PROCESANDO"
-
-msgid "ERROR"
-msgstr "ERROR"
-
-msgid "UNKNOWN"
-msgstr "DESCONOCIDO"
-
-msgid "RUNNING"
-msgstr "EN OPERACIÓN"
-
-msgid "STOPPED"
-msgstr "DETENIDO"
-
-msgid "IDLE"
-msgstr "INACTIVO"
 
 msgid "Confirm Reset"
 msgstr "Confirmar reinicio"
@@ -201,17 +136,44 @@ msgstr ""
 "Todo el equipo se moverá a la posición inicial.\n"
 "Esta operación puede tomar varios minutos."
 
-msgid "+ Add New Product"
-msgstr "+ Agregar nuevo producto"
+msgid "ONLINE"
+msgstr "EN LÍNEA"
 
-msgid "Refresh"
-msgstr "Actualizar"
+msgid "PROCESSING"
+msgstr "PROCESANDO"
 
-msgid "Search:"
-msgstr "Buscar:"
+msgid "ERROR"
+msgstr "ERROR"
 
-msgid "Search by Product ID or Name..."
-msgstr "Buscar por ID de producto o nombre..."
+msgid "OFFLINE"
+msgstr "FUERA DE LÍNEA"
+
+msgid "UNKNOWN"
+msgstr "DESCONOCIDO"
+
+msgid "%1 inspected • %2 defects"
+msgstr "%1 inspeccionados • %2 defectos"
+
+msgid "Last: %1"
+msgstr "Último: %1"
+
+msgid "No defects detected"
+msgstr "No se detectaron defectos"
+
+msgid "RUNNING"
+msgstr "EN OPERACIÓN"
+
+msgid "STOPPED"
+msgstr "DETENIDO"
+
+msgid "CALIBRATION"
+msgstr "CALIBRACIÓN"
+
+msgid "IDLE"
+msgstr "INACTIVO"
+
+msgid "Products Database"
+msgstr "Base de datos de productos"
 
 msgid "Product Code"
 msgstr "Código de producto"
@@ -222,20 +184,20 @@ msgstr "Nombre"
 msgid "Status"
 msgstr "Estado"
 
+msgid "Active"
+msgstr "Activo"
+
+msgid "Inactive"
+msgstr "Inactivo"
+
+msgid "Low Stock"
+msgstr "Inventario bajo"
+
 msgid "Stock"
 msgstr "Inventario"
 
 msgid "Quality %"
 msgstr "Calidad %"
-
-msgid "View Details"
-msgstr "Ver detalles"
-
-msgid "Edit"
-msgstr "Editar"
-
-msgid "Delete"
-msgstr "Eliminar"
 
 msgid "Product Details"
 msgstr "Detalles del producto"
@@ -248,15 +210,6 @@ msgstr "Creado: %1"
 
 msgid "Status: %1"
 msgstr "Estado: %1"
-
-msgid "Active"
-msgstr "Activo"
-
-msgid "Inactive"
-msgstr "Inactivo"
-
-msgid "Low Stock"
-msgstr "Inventario bajo"
 
 msgid "Add New Product"
 msgstr "Agregar nuevo producto"
@@ -279,8 +232,12 @@ msgstr "Inventario (unidades):"
 msgid "Quality (%):"
 msgstr "Calidad (%):"
 
+msgid "Save"
+msgstr "Guardar"
+
 msgid "Failed to add product. Product code may already exist."
-msgstr "No se pudo agregar el producto. El código de producto puede ya existir."
+msgstr ""
+"No se pudo agregar el producto. El código de producto puede ya existir."
 
 msgid "Confirm Delete"
 msgstr "Confirmar eliminación"
@@ -302,65 +259,138 @@ msgstr "No se pudo eliminar el producto."
 msgid "Edit Product"
 msgstr "Editar producto"
 
+msgid "Update"
+msgstr "Actualizar"
+
 msgid "Failed to update product."
 msgstr "No se pudo actualizar el producto."
-
-msgid "Export CSV"
-msgstr "Exportar CSV"
-
-msgid "Export Products"
-msgstr "Exportar productos"
-
-msgid "CSV files"
-msgstr "Archivos CSV"
-
-msgid "Export Complete"
-msgstr "Exportación completa"
-
-msgid "Products exported to:\n%1"
-msgstr "Productos exportados a:\n%1"
 
 msgid "Could not write the CSV file."
 msgstr "No se pudo escribir el archivo CSV."
 
-# About dialog
+msgid "Export Complete"
+msgstr "Exportación completa"
 
-msgid "About"
-msgstr "Acerca de"
+msgid ""
+"Products exported to:\n"
+"%1"
+msgstr ""
+"Productos exportados a:\n"
+"%1"
 
-msgid "Version %1"
-msgstr "Versión %1"
+msgid "This palette is light-only by design."
+msgstr ""
 
-msgid "Architecture"
-msgstr "Arquitectura"
+msgid "This palette is dark-only by design."
+msgstr ""
 
-msgid "Build Info"
-msgstr "Información de compilación"
+msgid "Light only"
+msgstr "Solo claro"
 
-msgid "Supported Languages"
-msgstr "Idiomas compatibles"
+msgid "Dark only"
+msgstr "Solo oscuro"
 
-msgid "Quality Assurance"
-msgstr "Control de calidad"
+msgid "Dark + Light"
+msgstr "Oscuro + Claro"
 
-msgid "86+ unit tests (GoogleTest + gmock)\n9 test binaries, CI/CD with coverage reporting"
-msgstr "86+ pruebas unitarias (GoogleTest + gmock)\n9 binarios de prueba, CI/CD con reporte de cobertura"
+msgid "Could not save the language preference."
+msgstr "No se pudo guardar la preferencia de idioma."
 
-msgid "Proprietary - All Rights Reserved.\nFor interview evaluation purposes only."
-msgstr "Propietario - Todos los derechos reservados.\nSólo para evaluación en entrevistas."
+msgid "History"
+msgstr "Historial"
 
-msgid "QUALITY TRENDS"
-msgstr "TENDENCIAS DE CALIDAD"
+msgid "Alerts"
+msgstr "Alertas"
 
+msgid "Clear history"
+msgstr "Borrar historial"
 
-msgid "Settings"
-msgstr "Configuración"
+msgid "Clear all"
+msgstr "Borrar todo"
+
+msgid "Show active alerts"
+msgstr "Mostrar alertas activas"
+
+msgid "Show history"
+msgstr "Mostrar historial"
+
+msgid "No alerts"
+msgstr "Sin alertas"
+
+msgid "No history"
+msgstr "Sin historial"
+
+msgid "Dismiss"
+msgstr "Descartar"
+
+msgid "WORK UNIT"
+msgstr "UNIDAD DE TRABAJO"
+
+msgid "Work Unit:"
+msgstr "Unidad de trabajo:"
+
+msgid "Product:"
+msgstr "Producto:"
+
+msgid "Ready"
+msgstr "Listo"
+
+msgid "EQUIPMENT STATIONS"
+msgstr "ESTACIONES DE EQUIPO"
+
+msgid "QUALITY CHECKPOINTS"
+msgstr "PUNTOS DE INSPECCIÓN DE CALIDAD"
+
+msgid "0 inspected • 0 defects"
+msgstr "0 inspeccionados • 0 defectos"
+
+msgid "Control Panel"
+msgstr "Panel de control"
+
+msgid "System Idle"
+msgstr "Sistema inactivo"
+
+msgid "START"
+msgstr "INICIAR"
+
+msgid "STOP"
+msgstr "DETENER"
+
+msgid "RESET"
+msgstr "REINICIAR"
+
+msgid "+ Add New Product"
+msgstr "+ Agregar nuevo producto"
+
+msgid "Refresh"
+msgstr "Actualizar"
+
+msgid "Export CSV"
+msgstr "Exportar CSV"
+
+msgid "Search:"
+msgstr "Buscar:"
+
+msgid "Search by Product ID or Name..."
+msgstr "Buscar por ID de producto o nombre..."
+
+msgid "View Details"
+msgstr "Ver detalles"
+
+msgid "Edit"
+msgstr "Editar"
+
+msgid "Delete"
+msgstr "Eliminar"
 
 msgid "General"
 msgstr "General"
 
 msgid "Language:"
 msgstr "Idioma:"
+
+msgid "Auto (System)"
+msgstr "Automático (Sistema)"
 
 msgid "Theme:"
 msgstr "Tema:"
@@ -371,11 +401,20 @@ msgstr "Oscuro"
 msgid "Light"
 msgstr "Claro"
 
+msgid "Palette:"
+msgstr ""
+
 msgid "Display"
 msgstr "Pantalla"
 
 msgid "Display mode:"
 msgstr "Modo de pantalla:"
+
+msgid "Fullscreen"
+msgstr "Pantalla completa"
+
+msgid "Windowed"
+msgstr "Ventana"
 
 msgid "Data"
 msgstr "Datos"
@@ -395,111 +434,107 @@ msgstr "Nivel de registro:"
 msgid "Show log panel at the bottom of the window"
 msgstr "Mostrar el panel de registro en la parte inferior de la ventana"
 
+#~ msgid "DISPLAY MODE"
+#~ msgstr "MODO DE VISUALIZACIÓN"
 
-msgid "Alerts"
-msgstr "Alertas"
+#~ msgid "THEME"
+#~ msgstr "TEMA"
 
-msgid "Clear all"
-msgstr "Borrar todo"
+#~ msgid "Dark Mode"
+#~ msgstr "Modo oscuro"
 
-msgid "No alerts"
-msgstr "Sin alertas"
+#~ msgid "Light Mode"
+#~ msgstr "Modo claro"
 
-msgid "Dismiss"
-msgstr "Descartar"
+#~ msgid "SYSTEM"
+#~ msgstr "SISTEMA"
 
+#~ msgid "LANGUAGE"
+#~ msgstr "IDIOMA"
 
-msgid "E-STOP"
-msgstr "PARADA"
+#~ msgid "Language Changed"
+#~ msgstr "Idioma cambiado"
 
+#~ msgid ""
+#~ "The language has been updated.\n"
+#~ "\n"
+#~ "Please restart the application for the change to take effect."
+#~ msgstr ""
+#~ "El idioma se ha actualizado.\n"
+#~ "\n"
+#~ "Reinicia la aplicación para que el cambio surta efecto."
 
-msgid "Sun"
-msgstr "Dom"
+#~ msgid "Auto Refresh"
+#~ msgstr "Actualización automática"
 
-msgid "Mon"
-msgstr "Lun"
+#~ msgid "Verbose Logging"
+#~ msgstr "Registro detallado"
 
-msgid "Tue"
-msgstr "Mar"
+#~ msgid "Checkpoint %1"
+#~ msgstr "Punto de inspección %1"
 
-msgid "Wed"
-msgstr "Mié"
+#~ msgid "Export Products"
+#~ msgstr "Exportar productos"
 
-msgid "Thu"
-msgstr "Jue"
+#~ msgid "CSV files"
+#~ msgstr "Archivos CSV"
 
-msgid "Fri"
-msgstr "Vie"
+#~ msgid "QUALITY TRENDS"
+#~ msgstr "TENDENCIAS DE CALIDAD"
 
-msgid "Sat"
-msgstr "Sáb"
+#~ msgid "Sun"
+#~ msgstr "Dom"
 
-msgid "Jan"
-msgstr "Ene"
+#~ msgid "Mon"
+#~ msgstr "Lun"
 
-msgid "Feb"
-msgstr "Feb"
+#~ msgid "Tue"
+#~ msgstr "Mar"
 
-msgid "Mar"
-msgstr "Mar"
+#~ msgid "Wed"
+#~ msgstr "Mié"
 
-msgid "Apr"
-msgstr "Abr"
+#~ msgid "Thu"
+#~ msgstr "Jue"
 
-msgid "May"
-msgstr "May"
+#~ msgid "Fri"
+#~ msgstr "Vie"
 
-msgid "Jun"
-msgstr "Jun"
+#~ msgid "Sat"
+#~ msgstr "Sáb"
 
-msgid "Jul"
-msgstr "Jul"
+#~ msgid "Jan"
+#~ msgstr "Ene"
 
-msgid "Aug"
-msgstr "Ago"
+#~ msgid "Feb"
+#~ msgstr "Feb"
 
-msgid "Sep"
-msgstr "Sep"
+#~ msgid "Mar"
+#~ msgstr "Mar"
 
-msgid "Oct"
-msgstr "Oct"
+#~ msgid "Apr"
+#~ msgstr "Abr"
 
-msgid "Nov"
-msgstr "Nov"
+#~ msgid "May"
+#~ msgstr "May"
 
-msgid "Dec"
-msgstr "Dic"
+#~ msgid "Jun"
+#~ msgstr "Jun"
 
+#~ msgid "Jul"
+#~ msgstr "Jul"
 
-msgid "Equipment {} offline"
-msgstr "Equipo {} desconectado"
+#~ msgid "Aug"
+#~ msgstr "Ago"
 
-msgid "Equipment {} error"
-msgstr "Equipo {} con error"
+#~ msgid "Sep"
+#~ msgstr "Sep"
 
-msgid "Line unavailable for production."
-msgstr "Línea no disponible para producción."
+#~ msgid "Oct"
+#~ msgstr "Oct"
 
-msgid "{} critical"
-msgstr "{} crítico"
+#~ msgid "Nov"
+#~ msgstr "Nov"
 
-msgid "{} below target"
-msgstr "{} bajo objetivo"
-
-msgid "Pass rate {:.1f}% (target {:.0f}%)"
-msgstr "Tasa de aprobación {:.1f}% (objetivo {:.0f}%)"
-
-msgid "History"
-msgstr "Historial"
-
-msgid "Clear history"
-msgstr "Borrar historial"
-
-msgid "Show history"
-msgstr "Mostrar historial"
-
-msgid "Show active alerts"
-msgstr "Mostrar alertas activas"
-
-msgid "No history"
-msgstr "Sin historial"
+#~ msgid "Dec"
+#~ msgstr "Dic"

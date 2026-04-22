@@ -223,12 +223,16 @@ target_sources(objectsConfig
 # Core Layer - GTK-free utilities: Logger, i18n mechanism, Result, CsvSerializer
 # Bootstrap orchestrates staged startup (logger -> config -> i18n) and is
 # reused by every entry point (GTK today, headless console next).
+# StartupErrors + StartupDialog form the fatal-reporting pipeline: typed
+# exceptions thrown from Bootstrap / Application land in main()'s guard
+# and surface through a native per-platform reporter.
 add_library(objectsCore OBJECT)
 target_sources(objectsCore
     PRIVATE
         src/core/i18n.cpp
         src/core/CsvSerializer.cpp
         src/core/Bootstrap.cpp
+        src/core/StartupDialog.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -240,6 +244,8 @@ target_sources(objectsCore
             src/core/i18n.h
             src/core/CsvSerializer.h
             src/core/Bootstrap.h
+            src/core/StartupErrors.h
+            src/core/StartupDialog.h
 )
 target_link_libraries(objectsCore
     PUBLIC
@@ -391,9 +397,10 @@ target_link_libraries(industrial-hmi
         Threads::Threads
 )
 
-# Windows: Boost.Asio requires Winsock
+# Windows: Boost.Asio requires Winsock; StartupDialog needs user32 for
+# MessageBoxW (usually auto-linked, listed here for clarity + safety).
 if(WIN32)
-    target_link_libraries(industrial-hmi PRIVATE ws2_32)
+    target_link_libraries(industrial-hmi PRIVATE ws2_32 user32)
 endif()
 
 # libintl - needed on platforms where gettext is not in libc (Windows, macOS)

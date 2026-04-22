@@ -30,6 +30,20 @@ namespace app::core {
 
 namespace {
 
+/// Has this process ever set LANGUAGE/LANG itself? Used to distinguish
+/// shell-provided env (first call, should be respected) from our own
+/// prior writes (subsequent calls, should be cleared so "auto" can
+/// genuinely re-detect the OS locale).
+///
+/// Rationale: without this flag, the sequence
+///   bootstrap "auto" -> [LANGUAGE=en_US via OS detect]
+///   user picks "de"   -> [LANGUAGE=de via forceLanguage]
+///   user picks "auto" -> propagateLangToLanguage sees LANGUAGE=de
+///                        and "respects" it -> stays German forever.
+/// The flag fixes step 3 by clearing our own previous writes before
+/// re-running detection.
+bool g_envOwned = false;
+
 #ifndef _WIN32
 // "auto" on Linux: derive LANGUAGE from the system's LANG/LC_ALL so
 // gettext honors the user's desktop language. We *overwrite* LANGUAGE
@@ -56,13 +70,55 @@ void propagateLangToLanguage() {
 #endif
 
 #ifdef _WIN32
-// "auto" on Windows: always query the OS and overwrite LANGUAGE/LANG.
-// We can't short-circuit on existing env vars because a previous run of
-// this process may have set them to an *explicit* language — in which
-// case "auto" would silently keep that language instead of picking up
-// the system locale.
+// "auto" on Windows: resolve the user's desired language in three layers.
+//
+// First call (`g_envOwned == false`) — we haven't touched the env yet,
+// so anything in LANGUAGE/LANG was set by the launching shell and
+// represents a deliberate pre-launch choice. Respect it. Falls through
+// to GetUserDefaultLocaleName only when the shell provided nothing.
+//
+// Subsequent calls — typically when the user toggles Settings -> Auto
+// after previously picking an explicit language. At this point LANGUAGE
+// almost certainly reflects our own earlier `forceLanguage()` write.
+// Clear it so the OS detection below can actually run; otherwise "Auto"
+// silently keeps the previously selected language forever.
+//
+// The makes test invocations like
+//     LANGUAGE=de ./industrial-hmi.exe
+// work (shell wins on first call), while still making within-process
+// "switch to Auto" truly re-detect OS locale.
 void propagateLangToLanguage() {
-    // 1) Ask Windows for the user's Region setting. Returns tags like
+    if (!g_envOwned) {
+        // 1) Respect shell-provided LANGUAGE verbatim.
+        if (const char* envLang = std::getenv("LANGUAGE");
+            envLang && *envLang && std::strcmp(envLang, "auto") != 0) {
+            _putenv_s("LANG", envLang);   // keep libintl happy on both axes
+            g_envOwned = true;
+            return;
+        }
+
+        // 2) Respect shell-provided LANG (POSIX convention). Strip any
+        //    ".UTF-8" encoding suffix because libintl expects bare codes.
+        if (const char* envBase = std::getenv("LANG");
+            envBase && *envBase && std::strcmp(envBase, "auto") != 0) {
+            std::string v = envBase;
+            if (auto dot = v.find('.'); dot != std::string::npos) v.resize(dot);
+            if (!v.empty()) {
+                _putenv_s("LANGUAGE", v.c_str());
+                _putenv_s("LANG", v.c_str());
+                g_envOwned = true;
+                return;
+            }
+        }
+    } else {
+        // Our own previous _putenv_s would otherwise be "respected"
+        // by the shell-env short-circuit above. Wipe it so OS detect
+        // runs unconditionally.
+        _putenv_s("LANGUAGE", "");
+        _putenv_s("LANG", "");
+    }
+
+    // 3) Ask Windows for the user's Region setting. Returns tags like
     //    "en-US", "pt-PT"; libintl expects POSIX "pt_PT", so translate.
     wchar_t wbuf[LOCALE_NAME_MAX_LENGTH] = {};
     if (GetUserDefaultLocaleName(wbuf, LOCALE_NAME_MAX_LENGTH) > 0) {
@@ -74,18 +130,8 @@ void propagateLangToLanguage() {
         if (!name.empty()) {
             _putenv_s("LANGUAGE", name.c_str());
             _putenv_s("LANG", name.c_str());
-            return;
+            g_envOwned = true;
         }
-    }
-
-    // 2) Fallback: if the OS call failed (extremely unlikely), fall
-    //    through to whatever LANG was set by the shell before launch.
-    const char* lang = std::getenv("LANG");
-    if (lang && *lang) {
-        std::string v = lang;
-        auto dot = v.find('.');
-        if (dot != std::string::npos) v.resize(dot);
-        _putenv_s("LANGUAGE", v.c_str());
     }
 }
 #endif
@@ -100,6 +146,7 @@ void forceLanguage(const char* language) {
     // target; the C runtime tolerates arbitrary LANG values.
     _putenv_s("LANGUAGE", language);
     _putenv_s("LANG", language);
+    g_envOwned = true;
 #else
     // On glibc, gettext ignores LANGUAGE whenever LC_MESSAGES resolves
     // to "C", "POSIX", *or* "C.UTF-8" — "C.UTF-8" specifically is
@@ -111,6 +158,7 @@ void forceLanguage(const char* language) {
     // en_US.UTF-8 on stock Ubuntu) and only set LANGUAGE, which
     // glibc's gettext honors as long as LC_MESSAGES isn't C-family.
     setenv("LANGUAGE", language, 1);
+    g_envOwned = true;
 #endif
 }
 

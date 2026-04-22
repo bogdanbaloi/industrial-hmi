@@ -35,10 +35,12 @@ public:
     /// out-live the Application (in practice: both are stack-owned by
     /// `main()` with Bootstrap declared first).
     ///
-    /// @return true if the app can start (possibly with warnings)
-    [[nodiscard]] bool initialize(Bootstrap& bootstrap,
-                                  int argc,
-                                  char* argv[]);
+    /// @throw DatabaseInitError if SQLite cannot be initialised. The
+    ///        caller (main) catches via the CriticalStartupError
+    ///        hierarchy and reports through the native dialog.
+    void initialize(Bootstrap& bootstrap,
+                    int argc,
+                    char* argv[]);
 
     /// Run the GTK main loop. Blocks until the window is closed.
     /// @return exit code (0 = success)

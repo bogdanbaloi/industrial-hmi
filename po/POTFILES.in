@@ -3,6 +3,10 @@
 [encoding: UTF-8]
 
 # C++ sources
+src/core/Bootstrap.cpp
+src/core/Application.cpp
+src/presenter/DashboardPresenter.cpp
+src/presenter/ProductsPresenter.cpp
 src/gtk/view/MainWindow.cpp
 src/gtk/view/DialogManager.cpp
 src/gtk/view/AboutDialog.cpp

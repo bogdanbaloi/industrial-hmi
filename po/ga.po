@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: industrial-hmi 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-15 00:00+0000\n"
+"POT-Creation-Date: 2026-04-22 11:14+0300\n"
 "PO-Revision-Date: 2026-04-15 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Irish\n"
@@ -14,7 +14,36 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=5; plural=(n==1 ? 0 : n==2 ? 1 : n<7 ? 2 : n<11 ? 3 : 4);\n"
+"Plural-Forms: nplurals=5; plural=(n==1 ? 0 : n==2 ? 1 : n<7 ? 2 : n<11 ? 3 : "
+"4);\n"
+
+msgid ""
+"Could not load configuration from {}. Re-install the application or restore "
+"the config file."
+msgstr "Níorbh fhéidir an chumraíocht a lódáil ó {}. Athshuiteáil an feidhmchlár nó cuir an comhad cumraíochta ar ais."
+
+msgid ""
+"SQLite initialisation failed. Check logs for details and verify disk space / "
+"permissions for the database path."
+msgstr "Theip ar thúsú SQLite. Seiceáil na lomaí agus fíoraigh an spás diosca / na ceadanna don chosán bunachair shonraí."
+
+msgid "Equipment {} error"
+msgstr "Trealamh {} in earráid"
+
+msgid "Equipment {} offline"
+msgstr "Trealamh {} as líne"
+
+msgid "Line unavailable for production."
+msgstr "Líne neamhinfhaighte le haghaidh táirgthe."
+
+msgid "{} critical"
+msgstr "{} criticiúil"
+
+msgid "{} below target"
+msgstr "{} faoi bhun sprice"
+
+msgid "Pass rate {:.1f}% (target {:.0f}%)"
+msgstr "Ráta rathúlachta {:.1f}% (sprioc {:.0f}%)"
 
 msgid "[BB] Industrial HMI"
 msgstr "[BB] HMI Tionsclaíoch"
@@ -22,53 +51,8 @@ msgstr "[BB] HMI Tionsclaíoch"
 msgid "MVP Architecture"
 msgstr "Ailtireacht MVP"
 
-msgid "DISPLAY MODE"
-msgstr "MÓD TAISPEÁNA"
-
-msgid "Fullscreen"
-msgstr "Lánscáileán"
-
-msgid "Windowed"
-msgstr "Fuinneog"
-
-msgid "THEME"
-msgstr "TÉAMA"
-
-msgid "Dark Mode"
-msgstr "Mód Dorcha"
-
-msgid "Light Mode"
-msgstr "Mód Geal"
-
-msgid "SYSTEM"
-msgstr "CÓRAS"
-
-msgid "LANGUAGE"
-msgstr "TEANGA"
-
-msgid "Auto (System)"
-msgstr "Uathoibríoch (Córas)"
-
-msgid "Language Changed"
-msgstr "Teanga athraithe"
-
-msgid ""
-"The language has been updated.\n"
-"\n"
-"Please restart the application for the change to take effect."
-msgstr ""
-"Nuashonraíodh an teanga.\n"
-"\n"
-"Atosaigh an feidhmchlár chun an t-athrú a chur i bhfeidhm."
-
-msgid "Could not save the language preference."
-msgstr "Níorbh fhéidir an sainrogha teanga a shábháil."
-
-msgid "Auto Refresh"
-msgstr "Athnuachan Uathoibríoch"
-
-msgid "Verbose Logging"
-msgstr "Logáil Mhionsonraithe"
+msgid "Close Application"
+msgstr "Dún an Feidhmchlár"
 
 msgid "Version 1.0.0"
 msgstr "Leagan 1.0.0"
@@ -76,14 +60,14 @@ msgstr "Leagan 1.0.0"
 msgid "Portfolio Demo"
 msgstr "Taispeántas Punainne"
 
-msgid "Close Application"
-msgstr "Dún an Feidhmchlár"
+msgid "E-STOP"
+msgstr "STOP"
+
+msgid "Settings"
+msgstr "Socruithe"
 
 msgid "Dashboard"
 msgstr "Deais"
-
-msgid "Products Database"
-msgstr "Bunachar Sonraí Táirgí"
 
 msgid "Cancel"
 msgstr "Cealaigh"
@@ -91,89 +75,41 @@ msgstr "Cealaigh"
 msgid "OK"
 msgstr "Ceart go leor"
 
-msgid "Save"
-msgstr "Sábháil"
+# About dialog
+msgid "About"
+msgstr "Maidir Le"
 
-msgid "Update"
-msgstr "Nuashonraigh"
+msgid "Version %1"
+msgstr "Leagan %1"
+
+msgid "Architecture"
+msgstr "Ailtireacht"
+
+msgid "Build Info"
+msgstr "Eolas Tógála"
+
+msgid "Supported Languages"
+msgstr "Teangacha a dTacaítear Leo"
+
+msgid "Quality Assurance"
+msgstr "Dearbhú Cáilíochta"
+
+msgid ""
+"86+ unit tests (GoogleTest + gmock)\n"
+"9 test binaries, CI/CD with coverage reporting"
+msgstr ""
+"86+ tástálacha aonad (GoogleTest + gmock)\n"
+"9 dénártha tástála, CI/CD le tuairisciú clúdaigh"
+
+msgid ""
+"Proprietary - All Rights Reserved.\n"
+"For interview evaluation purposes only."
+msgstr ""
+"Dílsithe - Gach Ceart Forchoimeádta.\n"
+"Ar mhaithe le measúnú agallaimh amháin."
 
 msgid "Error"
 msgstr "Earráid"
-
-msgid "WORK UNIT"
-msgstr "AONAD OIBRE"
-
-msgid "Work Unit:"
-msgstr "Aonad Oibre:"
-
-msgid "Product:"
-msgstr "Táirge:"
-
-msgid "Ready"
-msgstr "Réidh"
-
-msgid "EQUIPMENT STATIONS"
-msgstr "STÁISIÚIN TROSCÁIN"
-
-msgid "QUALITY CHECKPOINTS"
-msgstr "SEICPHOINTÍ CÁILÍOCHTA"
-
-msgid "Checkpoint %1"
-msgstr "Seicphointe %1"
-
-msgid "0 inspected • 0 defects"
-msgstr "0 iniúchta • 0 locht"
-
-msgid "%1 inspected • %2 defects"
-msgstr "%1 iniúchta • %2 locht"
-
-msgid "Last: %1"
-msgstr "Is déanaí: %1"
-
-msgid "No defects detected"
-msgstr "Níor braitheadh aon locht"
-
-msgid "Control Panel"
-msgstr "Painéal Rialaithe"
-
-msgid "System Idle"
-msgstr "Córas Díomhaoin"
-
-msgid "START"
-msgstr "TOSAIGH"
-
-msgid "STOP"
-msgstr "STAD"
-
-msgid "RESET"
-msgstr "ATHSHOCRAIGH"
-
-msgid "CALIBRATION"
-msgstr "CALLÚ"
-
-msgid "ONLINE"
-msgstr "AR LÍNE"
-
-msgid "OFFLINE"
-msgstr "AS LÍNE"
-
-msgid "PROCESSING"
-msgstr "Á PHRÓISEÁIL"
-
-msgid "ERROR"
-msgstr "EARRÁID"
-
-msgid "UNKNOWN"
-msgstr "ANAITHNID"
-
-msgid "RUNNING"
-msgstr "AG RITH"
-
-msgid "STOPPED"
-msgstr "STADTA"
-
-msgid "IDLE"
-msgstr "DÍOMHAOIN"
 
 msgid "Confirm Reset"
 msgstr "Deimhnigh an tAthshocrú"
@@ -201,17 +137,44 @@ msgstr ""
 "Cuirfear an trealamh uile chuig an suíomh baile.\n"
 "D'fhéadfadh sé seo roinnt nóiméad a thógáil."
 
-msgid "+ Add New Product"
-msgstr "+ Cuir Táirge Nua Leis"
+msgid "ONLINE"
+msgstr "AR LÍNE"
 
-msgid "Refresh"
-msgstr "Athnuaigh"
+msgid "PROCESSING"
+msgstr "Á PHRÓISEÁIL"
 
-msgid "Search:"
-msgstr "Cuardaigh:"
+msgid "ERROR"
+msgstr "EARRÁID"
 
-msgid "Search by Product ID or Name..."
-msgstr "Cuardaigh de réir aitheantais nó ainm..."
+msgid "OFFLINE"
+msgstr "AS LÍNE"
+
+msgid "UNKNOWN"
+msgstr "ANAITHNID"
+
+msgid "%1 inspected • %2 defects"
+msgstr "%1 iniúchta • %2 locht"
+
+msgid "Last: %1"
+msgstr "Is déanaí: %1"
+
+msgid "No defects detected"
+msgstr "Níor braitheadh aon locht"
+
+msgid "RUNNING"
+msgstr "AG RITH"
+
+msgid "STOPPED"
+msgstr "STADTA"
+
+msgid "CALIBRATION"
+msgstr "CALLÚ"
+
+msgid "IDLE"
+msgstr "DÍOMHAOIN"
+
+msgid "Products Database"
+msgstr "Bunachar Sonraí Táirgí"
 
 msgid "Product Code"
 msgstr "Cód Táirge"
@@ -222,20 +185,20 @@ msgstr "Ainm"
 msgid "Status"
 msgstr "Stádas"
 
+msgid "Active"
+msgstr "Gníomhach"
+
+msgid "Inactive"
+msgstr "Neamhghníomhach"
+
+msgid "Low Stock"
+msgstr "Stoc Íseal"
+
 msgid "Stock"
 msgstr "Stoc"
 
 msgid "Quality %"
 msgstr "Cáilíocht %"
-
-msgid "View Details"
-msgstr "Féach ar Shonraí"
-
-msgid "Edit"
-msgstr "Cuir in Eagar"
-
-msgid "Delete"
-msgstr "Scrios"
 
 msgid "Product Details"
 msgstr "Sonraí an Táirge"
@@ -248,15 +211,6 @@ msgstr "Cruthaithe: %1"
 
 msgid "Status: %1"
 msgstr "Stádas: %1"
-
-msgid "Active"
-msgstr "Gníomhach"
-
-msgid "Inactive"
-msgstr "Neamhghníomhach"
-
-msgid "Low Stock"
-msgstr "Stoc Íseal"
 
 msgid "Add New Product"
 msgstr "Cuir Táirge Nua Leis"
@@ -279,8 +233,12 @@ msgstr "Stoc (aonaid):"
 msgid "Quality (%):"
 msgstr "Cáilíocht (%):"
 
+msgid "Save"
+msgstr "Sábháil"
+
 msgid "Failed to add product. Product code may already exist."
-msgstr "Theip ar chur an táirge leis. D'fhéadfadh go bhfuil an cód táirge ann cheana."
+msgstr ""
+"Theip ar chur an táirge leis. D'fhéadfadh go bhfuil an cód táirge ann cheana."
 
 msgid "Confirm Delete"
 msgstr "Deimhnigh an Scriosadh"
@@ -302,65 +260,138 @@ msgstr "Theip ar scriosadh an táirge."
 msgid "Edit Product"
 msgstr "Cuir an Táirge in Eagar"
 
+msgid "Update"
+msgstr "Nuashonraigh"
+
 msgid "Failed to update product."
 msgstr "Theip ar nuashonrú an táirge."
-
-msgid "Export CSV"
-msgstr "Easportáil CSV"
-
-msgid "Export Products"
-msgstr "Easportáil Táirgí"
-
-msgid "CSV files"
-msgstr "Comhaid CSV"
-
-msgid "Export Complete"
-msgstr "Easportáil críochnaithe"
-
-msgid "Products exported to:\n%1"
-msgstr "Táirgí easportáilte go:\n%1"
 
 msgid "Could not write the CSV file."
 msgstr "Níorbh fhéidir an comhad CSV a scríobh."
 
-# About dialog
+msgid "Export Complete"
+msgstr "Easportáil críochnaithe"
 
-msgid "About"
-msgstr "Maidir Le"
+msgid ""
+"Products exported to:\n"
+"%1"
+msgstr ""
+"Táirgí easportáilte go:\n"
+"%1"
 
-msgid "Version %1"
-msgstr "Leagan %1"
+msgid "This palette is light-only by design."
+msgstr ""
 
-msgid "Architecture"
-msgstr "Ailtireacht"
+msgid "This palette is dark-only by design."
+msgstr ""
 
-msgid "Build Info"
-msgstr "Eolas Tógála"
+msgid "Light only"
+msgstr "Solas amháin"
 
-msgid "Supported Languages"
-msgstr "Teangacha a dTacaítear Leo"
+msgid "Dark only"
+msgstr "Dorcha amháin"
 
-msgid "Quality Assurance"
-msgstr "Dearbhú Cáilíochta"
+msgid "Dark + Light"
+msgstr "Dorcha + Solas"
 
-msgid "86+ unit tests (GoogleTest + gmock)\n9 test binaries, CI/CD with coverage reporting"
-msgstr "86+ tástálacha aonad (GoogleTest + gmock)\n9 dénártha tástála, CI/CD le tuairisciú clúdaigh"
+msgid "Could not save the language preference."
+msgstr "Níorbh fhéidir an sainrogha teanga a shábháil."
 
-msgid "Proprietary - All Rights Reserved.\nFor interview evaluation purposes only."
-msgstr "Dílsithe - Gach Ceart Forchoimeádta.\nAr mhaithe le measúnú agallaimh amháin."
+msgid "History"
+msgstr "Stair"
 
-msgid "QUALITY TRENDS"
-msgstr "TREOCHTAÍ CÁILÍOCHTA"
+msgid "Alerts"
+msgstr "Foláirimh"
 
+msgid "Clear history"
+msgstr "Glan an stair"
 
-msgid "Settings"
-msgstr "Socruithe"
+msgid "Clear all"
+msgstr "Glan gach"
+
+msgid "Show active alerts"
+msgstr "Taispeáin foláirimh ghníomhacha"
+
+msgid "Show history"
+msgstr "Taispeáin stair"
+
+msgid "No alerts"
+msgstr "Gan foláirimh"
+
+msgid "No history"
+msgstr "Gan stair"
+
+msgid "Dismiss"
+msgstr "Ruaig"
+
+msgid "WORK UNIT"
+msgstr "AONAD OIBRE"
+
+msgid "Work Unit:"
+msgstr "Aonad Oibre:"
+
+msgid "Product:"
+msgstr "Táirge:"
+
+msgid "Ready"
+msgstr "Réidh"
+
+msgid "EQUIPMENT STATIONS"
+msgstr "STÁISIÚIN TROSCÁIN"
+
+msgid "QUALITY CHECKPOINTS"
+msgstr "SEICPHOINTÍ CÁILÍOCHTA"
+
+msgid "0 inspected • 0 defects"
+msgstr "0 iniúchta • 0 locht"
+
+msgid "Control Panel"
+msgstr "Painéal Rialaithe"
+
+msgid "System Idle"
+msgstr "Córas Díomhaoin"
+
+msgid "START"
+msgstr "TOSAIGH"
+
+msgid "STOP"
+msgstr "STAD"
+
+msgid "RESET"
+msgstr "ATHSHOCRAIGH"
+
+msgid "+ Add New Product"
+msgstr "+ Cuir Táirge Nua Leis"
+
+msgid "Refresh"
+msgstr "Athnuaigh"
+
+msgid "Export CSV"
+msgstr "Easportáil CSV"
+
+msgid "Search:"
+msgstr "Cuardaigh:"
+
+msgid "Search by Product ID or Name..."
+msgstr "Cuardaigh de réir aitheantais nó ainm..."
+
+msgid "View Details"
+msgstr "Féach ar Shonraí"
+
+msgid "Edit"
+msgstr "Cuir in Eagar"
+
+msgid "Delete"
+msgstr "Scrios"
 
 msgid "General"
 msgstr "Ginearálta"
 
 msgid "Language:"
 msgstr "Teanga:"
+
+msgid "Auto (System)"
+msgstr "Uathoibríoch (Córas)"
 
 msgid "Theme:"
 msgstr "Téama:"
@@ -371,11 +402,20 @@ msgstr "Dorcha"
 msgid "Light"
 msgstr "Éadrom"
 
+msgid "Palette:"
+msgstr ""
+
 msgid "Display"
 msgstr "Taispeáint"
 
 msgid "Display mode:"
 msgstr "Mód taispeána:"
+
+msgid "Fullscreen"
+msgstr "Lánscáileán"
+
+msgid "Windowed"
+msgstr "Fuinneog"
 
 msgid "Data"
 msgstr "Sonraí"
@@ -395,111 +435,107 @@ msgstr "Leibhéal logála:"
 msgid "Show log panel at the bottom of the window"
 msgstr "Taispeáin painéal logála ag bun na fuinneoige"
 
+#~ msgid "DISPLAY MODE"
+#~ msgstr "MÓD TAISPEÁNA"
 
-msgid "Alerts"
-msgstr "Foláirimh"
+#~ msgid "THEME"
+#~ msgstr "TÉAMA"
 
-msgid "Clear all"
-msgstr "Glan gach"
+#~ msgid "Dark Mode"
+#~ msgstr "Mód Dorcha"
 
-msgid "No alerts"
-msgstr "Gan foláirimh"
+#~ msgid "Light Mode"
+#~ msgstr "Mód Geal"
 
-msgid "Dismiss"
-msgstr "Ruaig"
+#~ msgid "SYSTEM"
+#~ msgstr "CÓRAS"
 
+#~ msgid "LANGUAGE"
+#~ msgstr "TEANGA"
 
-msgid "E-STOP"
-msgstr "STOP"
+#~ msgid "Language Changed"
+#~ msgstr "Teanga athraithe"
 
+#~ msgid ""
+#~ "The language has been updated.\n"
+#~ "\n"
+#~ "Please restart the application for the change to take effect."
+#~ msgstr ""
+#~ "Nuashonraíodh an teanga.\n"
+#~ "\n"
+#~ "Atosaigh an feidhmchlár chun an t-athrú a chur i bhfeidhm."
 
-msgid "Sun"
-msgstr "Domh"
+#~ msgid "Auto Refresh"
+#~ msgstr "Athnuachan Uathoibríoch"
 
-msgid "Mon"
-msgstr "Luan"
+#~ msgid "Verbose Logging"
+#~ msgstr "Logáil Mhionsonraithe"
 
-msgid "Tue"
-msgstr "Máir"
+#~ msgid "Checkpoint %1"
+#~ msgstr "Seicphointe %1"
 
-msgid "Wed"
-msgstr "Céad"
+#~ msgid "Export Products"
+#~ msgstr "Easportáil Táirgí"
 
-msgid "Thu"
-msgstr "Déar"
+#~ msgid "CSV files"
+#~ msgstr "Comhaid CSV"
 
-msgid "Fri"
-msgstr "Aoin"
+#~ msgid "QUALITY TRENDS"
+#~ msgstr "TREOCHTAÍ CÁILÍOCHTA"
 
-msgid "Sat"
-msgstr "Sath"
+#~ msgid "Sun"
+#~ msgstr "Domh"
 
-msgid "Jan"
-msgstr "Ean"
+#~ msgid "Mon"
+#~ msgstr "Luan"
 
-msgid "Feb"
-msgstr "Feabh"
+#~ msgid "Tue"
+#~ msgstr "Máir"
 
-msgid "Mar"
-msgstr "Márta"
+#~ msgid "Wed"
+#~ msgstr "Céad"
 
-msgid "Apr"
-msgstr "Aib"
+#~ msgid "Thu"
+#~ msgstr "Déar"
 
-msgid "May"
-msgstr "Beal"
+#~ msgid "Fri"
+#~ msgstr "Aoin"
 
-msgid "Jun"
-msgstr "Meith"
+#~ msgid "Sat"
+#~ msgstr "Sath"
 
-msgid "Jul"
-msgstr "Iúil"
+#~ msgid "Jan"
+#~ msgstr "Ean"
 
-msgid "Aug"
-msgstr "Lún"
+#~ msgid "Feb"
+#~ msgstr "Feabh"
 
-msgid "Sep"
-msgstr "MFómh"
+#~ msgid "Mar"
+#~ msgstr "Márta"
 
-msgid "Oct"
-msgstr "DFómh"
+#~ msgid "Apr"
+#~ msgstr "Aib"
 
-msgid "Nov"
-msgstr "Samh"
+#~ msgid "May"
+#~ msgstr "Beal"
 
-msgid "Dec"
-msgstr "Nollaig"
+#~ msgid "Jun"
+#~ msgstr "Meith"
 
+#~ msgid "Jul"
+#~ msgstr "Iúil"
 
-msgid "Equipment {} offline"
-msgstr "Trealamh {} as líne"
+#~ msgid "Aug"
+#~ msgstr "Lún"
 
-msgid "Equipment {} error"
-msgstr "Trealamh {} in earráid"
+#~ msgid "Sep"
+#~ msgstr "MFómh"
 
-msgid "Line unavailable for production."
-msgstr "Líne neamhinfhaighte le haghaidh táirgthe."
+#~ msgid "Oct"
+#~ msgstr "DFómh"
 
-msgid "{} critical"
-msgstr "{} criticiúil"
+#~ msgid "Nov"
+#~ msgstr "Samh"
 
-msgid "{} below target"
-msgstr "{} faoi bhun sprice"
-
-msgid "Pass rate {:.1f}% (target {:.0f}%)"
-msgstr "Ráta rathúlachta {:.1f}% (sprioc {:.0f}%)"
-
-msgid "History"
-msgstr "Stair"
-
-msgid "Clear history"
-msgstr "Glan an stair"
-
-msgid "Show history"
-msgstr "Taispeáin stair"
-
-msgid "Show active alerts"
-msgstr "Taispeáin foláirimh ghníomhacha"
-
-msgid "No history"
-msgstr "Gan stair"
+#~ msgid "Dec"
+#~ msgstr "Nollaig"

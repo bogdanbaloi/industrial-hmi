@@ -184,12 +184,19 @@ void SettingsPage::buildPaletteThumbnails() {
         // second (smaller, dimmed) label under the palette name so
         // the user doesn't have to discover the constraint by
         // clicking and watching a radio go disabled.
+        //
+        // N_() marks the literals for xgettext extraction without
+        // translating at assignment time; the actual gettext call
+        // happens in `_(badgeText)` below, which picks the right
+        // catalog entry at render time. Using plain _() on the
+        // assignments would work runtime-wise but leave xgettext
+        // unable to see the strings because `badgeText` is a variable.
         const std::string pid{p.id};
         const char* badgeText = nullptr;
-        if (pid == "paper")                                badgeText = "Light only";
+        if (pid == "paper")                                badgeText = N_("Light only");
         else if (pid == "dracula" || pid == "crt" ||
-                 pid == "blueprint" || pid == "cockpit")   badgeText = "Dark only";
-        else                                               badgeText = "Dark + Light";
+                 pid == "blueprint" || pid == "cockpit")   badgeText = N_("Dark only");
+        else                                               badgeText = N_("Dark + Light");
 
         auto* badge = Gtk::make_managed<Gtk::Label>(_(badgeText));
         badge->add_css_class("palette-card-mode");

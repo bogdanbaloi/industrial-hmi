@@ -5,6 +5,8 @@
 #include "src/core/Application.h"
 #include "src/core/Bootstrap.h"
 #include "src/core/LoggerImpl.h"
+#include "src/core/StartupErrors.h"
+#include "src/core/i18n.h"
 #include "src/config/ConfigManager.h"
 #include "src/model/DatabaseManager.h"
 #include "src/model/ModelContext.h"
@@ -22,8 +24,8 @@ Application::~Application() {
     }
 }
 
-bool Application::initialize(Bootstrap& bootstrap, int /*argc*/, char* /*argv*/[]) {
-    if (initialized_) return true;
+void Application::initialize(Bootstrap& bootstrap, int /*argc*/, char* /*argv*/[]) {
+    if (initialized_) return;
 
     // Bootstrap has already prepared logger + config + i18n.
     // Adopt the shared warnings list and borrow the logger.
@@ -32,7 +34,10 @@ bool Application::initialize(Bootstrap& bootstrap, int /*argc*/, char* /*argv*/[
 
     logger_->info("Application starting (GTK frontend)");
 
-    // GTK-specific subsystems on top of Bootstrap:
+    // GTK-specific subsystems on top of Bootstrap.
+    // initDatabase() throws DatabaseInitError on fatal failures; the
+    // exception propagates out of main's try/catch and surfaces
+    // through the native startup dialog.
     initDatabase();
 
     // Flush any accumulated warnings so they hit the log before the UI
@@ -42,7 +47,6 @@ bool Application::initialize(Bootstrap& bootstrap, int /*argc*/, char* /*argv*/[
     }
 
     initialized_ = true;
-    return true;
 }
 
 int Application::run(int argc, char* argv[]) {
@@ -101,11 +105,15 @@ void Application::initDatabase() {
     db.setLogger(*logger_);
 
     if (!db.initialize()) {
-        startupWarnings_.emplace_back(
-            "Database initialization failed. Product features may not work.");
-    } else {
-        logger_->info("Database initialized");
+        // Products page + every CRUD path depends on the database. A
+        // partial start "without products" would surface as cryptic
+        // blank screens later. Refuse up-front and let the operator
+        // diagnose (disk full / permissions / schema mismatch).
+        throw DatabaseInitError(_(
+            "SQLite initialisation failed. Check logs for details and "
+            "verify disk space / permissions for the database path."));
     }
+    logger_->info("Database initialized");
 }
 
 void Application::showStartupWarnings() {
