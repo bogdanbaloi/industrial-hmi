@@ -81,9 +81,7 @@ constexpr std::string_view severityTag(presenter::StatusZoneViewModel::Severity 
 
 }  // namespace
 
-// --------------------------------------------------------------------------
 // Lifecycle
-// --------------------------------------------------------------------------
 
 ConsoleView::ConsoleView(std::ostream& out, std::istream& in)
     : out_{out}, in_{in} {}
@@ -115,9 +113,7 @@ void ConsoleView::signalExit() {
     exitCv_.notify_all();
 }
 
-// --------------------------------------------------------------------------
 // Reader loop and command dispatch
-// --------------------------------------------------------------------------
 
 void ConsoleView::readerLoop(std::stop_token stop) {
     std::string line;
@@ -154,9 +150,7 @@ void ConsoleView::dispatchCommand(std::string_view raw) {
     }
 }
 
-// --------------------------------------------------------------------------
 // Output helpers
-// --------------------------------------------------------------------------
 
 void ConsoleView::writeLine(std::string_view s) {
     const std::scoped_lock lock{outMutex_};
@@ -225,11 +219,9 @@ void ConsoleView::printStatus() {
     out_.flush();
 }
 
-// --------------------------------------------------------------------------
 // ViewObserver — cache the latest VM (for `status`) and emit one
 // structured line per event. Format is stable so scenario CI tests
 // can diff against expected files.
-// --------------------------------------------------------------------------
 
 void ConsoleView::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) {
     {

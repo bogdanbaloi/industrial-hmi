@@ -27,13 +27,10 @@ Bootstrap::~Bootstrap() {
 }
 
 void Bootstrap::run() {
-    // -----------------------------------------------------------------
     // Stage 1 — bootstrap logger (stderr only, INFO level).
     // Available before any config is read so stages 2+ can log warnings.
-    // -----------------------------------------------------------------
     logger_ = std::make_unique<Logger>(createConsoleLogger(LogLevel::INFO));
 
-    // -----------------------------------------------------------------
     // Stage 1.5 — bind gettext to the OS locale BEFORE we touch config.
     // If config turns out to be missing / corrupt, the fatal error
     // message surfaced through StartupDialog needs to be translated —
@@ -42,7 +39,6 @@ void Bootstrap::run() {
     // environment locale, which is the best signal we have at this
     // point. Once config loads, Stage 4 re-binds to the explicit
     // language from config (may or may not match OS locale).
-    // -----------------------------------------------------------------
     // Capture shell-provided env vars BEFORE initI18n potentially
     // overwrites them, then log both pre- and post-bind values. Keeps
     // the i18n policy observable in the log without needing a debugger.
@@ -61,13 +57,11 @@ void Bootstrap::run() {
                   postLANGUAGE && *postLANGUAGE ? postLANGUAGE : "(unset)",
                   postLANG     && *postLANG     ? postLANG     : "(unset)");
 
-    // -----------------------------------------------------------------
     // Stage 2 — ConfigManager::initialize(). Missing / corrupt config
     // is treated as FATAL: the app refuses to start rather than
     // silently running with built-in defaults. Operational degradation
     // (log file, i18n fallback) remains non-fatal and just records
     // warnings that the frontend surfaces later.
-    // -----------------------------------------------------------------
     auto& config = config::ConfigManager::instance();
     config.setLogger(*logger_);
     if (!config.initialize()) {
@@ -97,12 +91,10 @@ void Bootstrap::run() {
     }
 #endif
 
-    // -----------------------------------------------------------------
     // Stage 3 — replace the bootstrap logger with a configured one
     // (level / path / rotation / console-enable from config). Failure
     // here is NOT fatal — we keep the bootstrap stderr logger and
     // record a warning. The app is still usable without a log file.
-    // -----------------------------------------------------------------
     try {
         auto configured = std::make_unique<Logger>(
             createConfiguredLogger(
@@ -121,11 +113,9 @@ void Bootstrap::run() {
         // Keep bootstrap logger — still functional, just not persisted.
     }
 
-    // -----------------------------------------------------------------
     // Stage 4 — i18n. Policy lives in ConfigManager; Bootstrap just
     // triggers it. ConfigManager decides language and logs through
     // the current logger. Never throws.
-    // -----------------------------------------------------------------
     config.applyI18n();
 
     logger_->info("Bootstrap complete ({} warning{})",
