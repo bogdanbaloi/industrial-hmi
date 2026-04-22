@@ -1,0 +1,8 @@
+eq
+eq abc on
+eq 0 maybe
+eq 0
+dismiss
+view
+view abc
+quit

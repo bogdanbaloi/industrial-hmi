@@ -247,6 +247,11 @@ set(CONSOLE_SCENARIOS
     start-stop-cycle
     equipment-toggle
     products-list
+    help-and-unknown
+    alerts-and-dismiss
+    view-product
+    error-paths
+    full-cycle
 )
 
 foreach(scenario ${CONSOLE_SCENARIOS})

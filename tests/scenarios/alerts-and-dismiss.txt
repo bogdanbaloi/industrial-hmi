@@ -1,0 +1,5 @@
+alerts
+dismiss equipment-2
+alerts
+dismiss nonexistent-key
+quit
