@@ -1,0 +1,25 @@
+[PRODUCTS ] loaded count=6
+[EQUIPMENT] id=0 status=PROCESSING enabled=true
+[EQUIPMENT] id=1 status=ONLINE enabled=true
+[EQUIPMENT] id=2 status=OFFLINE enabled=false
+[ACTUATOR ] id=0 status=WORKING auto=true home=false
+[ACTUATOR ] id=1 status=IDLE auto=true home=true
+[QUALITY  ] id=0 status=PASSING pass=98.1% inspected=645 defects=12
+[QUALITY  ] id=1 status=PASSING pass=95.7% inspected=645 defects=28
+[QUALITY  ] id=2 status=WARNING pass=93.0% inspected=645 defects=45
+[WORK_UNIT] id=WU-2024-001234 product=TAB-200 progress=3/5
+[CONTROL  ] start=true stop=false reset=true calib=true
+========================================
+ Industrial HMI - Console front-end
+ Type 'help' for commands, 'quit' to exit.
+========================================
+[PRODUCTS ] loaded count=6
+--- PRODUCTS ---
+  id=1 code=PROD-001 name="Product A" status=Active stock=850 quality=98.1%
+  id=2 code=PROD-002 name="Product B" status=Active stock=320 quality=95.7%
+  id=3 code=PROD-003 name="Product C" status=Low Stock stock=45 quality=93.0%
+  id=4 code=PROD-004 name="Product D" status=Inactive stock=0 quality=0.0%
+  id=5 code=PROD-005 name="Product E" status=Active stock=1200 quality=99.2%
+  id=6 code=PROD-006 name="Product F" status=Active stock=540 quality=96.8%
+--- END ---
+[BYE      ] Shutting down.

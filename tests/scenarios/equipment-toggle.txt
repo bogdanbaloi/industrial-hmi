@@ -1,0 +1,3 @@
+eq 0 off
+eq 0 on
+quit

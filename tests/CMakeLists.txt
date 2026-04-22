@@ -228,3 +228,38 @@ if(WIN32)
     target_link_libraries(test_dashboard_page      PRIVATE ws2_32)
     target_link_libraries(test_products_page       PRIVATE ws2_32)
 endif()
+
+# ============================================================================
+# Console scenario tests — end-to-end MVP regression suite
+# ============================================================================
+# Each *.txt scenario is piped into industrial-hmi-console and the filtered
+# stdout is diffed against the matching *.expected file. The runner
+# (tests/scenarios/run-scenario.cmake) normalises line endings + strips
+# logger timestamp lines so only structural events and command output
+# participate in the match.
+#
+# No display server, no Xvfb, no GLib main loop — these run on any CI
+# runner and give us cheap cross-platform regression coverage of the
+# full Model -> Presenter -> View pipeline.
+set(CONSOLE_SCENARIOS
+    boot-and-quit
+    status-snapshot
+    start-stop-cycle
+    equipment-toggle
+    products-list
+)
+
+foreach(scenario ${CONSOLE_SCENARIOS})
+    add_test(
+        NAME Scenario_${scenario}
+        COMMAND ${CMAKE_COMMAND}
+            "-DCONSOLE_BIN=$<TARGET_FILE:industrial-hmi-console>"
+            "-DSCENARIO_INPUT=${CMAKE_SOURCE_DIR}/tests/scenarios/${scenario}.txt"
+            "-DSCENARIO_EXPECTED=${CMAKE_SOURCE_DIR}/tests/scenarios/${scenario}.expected"
+            "-DSCENARIO_NAME=${scenario}"
+            -P ${CMAKE_SOURCE_DIR}/tests/scenarios/run-scenario.cmake
+        # CWD = build dir so the console binary picks up the build-dir
+        # config + locale layout, same as running it directly from there.
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+endforeach()

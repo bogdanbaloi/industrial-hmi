@@ -16,8 +16,10 @@ in manufacturing environments.
 - **8 color palettes** (Industrial, Nord, Paper, Right Sidebar, Dracula, CRT, Blueprint, Cockpit) with thumbnail picker, mode locks, and tooltips
 - **Alternate UI layouts** — baseline sidebar, right-sidebar mirror, Blueprint top-bar with alerts/logs in popovers — swapped at runtime via GtkBuilder
 - **Live simulation** with configurable auto-refresh from background Boost.Asio I/O thread
+- **Two front-ends** sharing one presenter + model layer: GTK4 desktop (`industrial-hmi`) and headless console (`industrial-hmi-console`) — console is GTK-free, validates View-swap works
 - **Cross-platform** builds on Linux (GCC) and Windows (Clang / MSYS2)
 - **160+ unit tests** with GoogleTest / gmock across 12 test binaries
+- **5 scenario tests** pipe scripted input through the console binary and diff stdout against golden files — exercises the full Model → Presenter → View pipeline without a display server
 - **CI/CD pipeline** with GitHub Actions: build, test, coverage report, static analysis
 
 ## Architecture
@@ -223,8 +225,46 @@ Test suites:
 | test_dashboard_page | Confirm dialogs, presenter forwarding | 7 |
 | test_products_page | Delete confirmation, soft-delete flow | 4 |
 
+Plus **5 scenario tests** that drive the headless console binary
+end-to-end (stdin pipe → stdout diff):
+
+| Scenario | Covers |
+|----------|--------|
+| `boot-and-quit` | Baseline startup event sequence |
+| `status-snapshot` | `status` command rendering |
+| `start-stop-cycle` | Control-panel state machine transitions |
+| `equipment-toggle` | `eq <id> on/off` argument parsing + toggle |
+| `products-list` | Sync DB read path via ProductsPresenter |
+
+Scenario inputs live in `tests/scenarios/*.txt`; expected outputs in
+`*.expected`. The runner (`tests/scenarios/run-scenario.cmake`) strips
+logger timestamp lines so only structural events and command output
+participate in the byte-exact comparison. No display server, no Xvfb,
+no GLib main loop — runs anywhere `ctest` runs.
+
 Coverage reports are generated automatically in CI and available as
 downloadable artifacts on each GitHub Actions run.
+
+## Two front-ends, one core
+
+Running the GTK desktop UI:
+```bash
+./build/debug/industrial-hmi
+```
+
+Running the headless console UI:
+```bash
+./build/debug/industrial-hmi-console
+# Type `help` for the command list, `quit` to exit.
+# Or pipe a script:
+printf 'start\nstatus\nquit\n' | ./build/debug/industrial-hmi-console
+```
+
+Both binaries share `main.cpp` via an `#ifdef CONSOLE_MODE` switch,
+and link the same Model + Presenter + Bootstrap libraries. The console
+binary links **zero gtkmm** (verified by `nm`), which is the concrete
+proof that the `ViewObserver` abstraction is a real View-swap seam and
+not just marketing.
 
 ## Configuration
 
