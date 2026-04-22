@@ -54,11 +54,9 @@ public:
     ConsoleView(ConsoleView&&)                 = delete;
     ConsoleView& operator=(ConsoleView&&)      = delete;
 
-    // ------------------------------------------------------------------
     // Wiring — injected by InitConsole at startup. Safe to leave any of
     // them unbound; the reader just prints "command not wired" in that
     // case so commands added later don't silently no-op.
-    // ------------------------------------------------------------------
     void onStart(Action cb)            { cbStart_            = std::move(cb); }
     void onStop(Action cb)             { cbStop_             = std::move(cb); }
     void onReset(Action cb)            { cbReset_            = std::move(cb); }
@@ -70,9 +68,7 @@ public:
     /// before the process returns control to main(). Fires on quit.
     void onShutdown(Action cb)         { cbShutdown_         = std::move(cb); }
 
-    // ------------------------------------------------------------------
     // Lifecycle
-    // ------------------------------------------------------------------
 
     /// Spawn the stdin reader thread. Returns immediately.
     void start();
@@ -81,12 +77,10 @@ public:
     /// command, EOF on stdin, or destructor-driven stop request).
     void waitForExit();
 
-    // ------------------------------------------------------------------
     // ViewObserver — only the subset the console renders is overridden.
     // The defaults in the base interface handle the dialog-specific
     // callbacks (ViewProduct, ResetProcess…) as no-ops, which is the
     // right behaviour for a line-oriented terminal UI.
-    // ------------------------------------------------------------------
     void onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) override;
     void onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) override;
     void onActuatorCardChanged(const presenter::ActuatorCardViewModel& vm) override;
@@ -96,9 +90,7 @@ public:
     void onError(const std::string& errorMessage) override;
 
 private:
-    // ------------------------------------------------------------------
     // Command loop
-    // ------------------------------------------------------------------
     void readerLoop(std::stop_token stop);
     void dispatchCommand(std::string_view raw);
     void printHelp();
@@ -106,23 +98,17 @@ private:
     void printBanner();
     void signalExit();
 
-    // ------------------------------------------------------------------
     // Output helpers (serialise access to out_ across threads)
-    // ------------------------------------------------------------------
     void writeLine(std::string_view s);
 
-    // ------------------------------------------------------------------
     // I/O
-    // ------------------------------------------------------------------
     std::ostream& out_;
     std::istream& in_;
     std::mutex    outMutex_;
 
-    // ------------------------------------------------------------------
     // Injected actions. std::function so presenter type stays out of
     // this header (Dependency Inversion — ConsoleView depends on the
     // ViewObserver abstraction, not on DashboardPresenter).
-    // ------------------------------------------------------------------
     Action                 cbStart_;
     Action                 cbStop_;
     Action                 cbReset_;
@@ -130,11 +116,9 @@ private:
     ToggleEquipmentAction  cbToggleEquipment_;
     Action                 cbShutdown_;
 
-    // ------------------------------------------------------------------
     // Latest ViewModel snapshot (for `status` command). Guarded by
     // stateMutex_ because presenter callbacks fire on the tick thread
     // while the reader thread may be building a status dump.
-    // ------------------------------------------------------------------
     std::mutex                                                stateMutex_;
     std::optional<presenter::WorkUnitViewModel>               lastWorkUnit_;
     std::vector<presenter::EquipmentCardViewModel>            lastEquipment_;
@@ -142,10 +126,8 @@ private:
     std::optional<presenter::ControlPanelViewModel>           lastControl_;
     std::optional<presenter::StatusZoneViewModel>             lastStatusZone_;
 
-    // ------------------------------------------------------------------
     // Exit coordination — reader thread sets exit_ and notifies, main
     // thread waits on exitCv_ in waitForExit().
-    // ------------------------------------------------------------------
     std::mutex              exitMutex_;
     std::condition_variable exitCv_;
     std::atomic<bool>       exit_{false};

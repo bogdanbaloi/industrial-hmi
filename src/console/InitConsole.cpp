@@ -23,27 +23,21 @@ int InitConsole::run() {
     auto& logger = bootstrap_.logger();
     logger.info("Application starting (console frontend)");
 
-    // ------------------------------------------------------------------
     // Model — reuse the Simulated singleton that GTK also binds to.
     // Logger injection is the same pattern MainWindow uses.
-    // ------------------------------------------------------------------
     auto& model = model::SimulatedModel::instance();
     model.setLogger(logger);
 
-    // ------------------------------------------------------------------
     // Presenters — DI construction so we don't rely on any singleton
     // shortcut from inside the presenter. Makes the dependency graph
     // explicit at the composition root, identical to test wiring.
-    // ------------------------------------------------------------------
     alertCenter_        = std::make_unique<presenter::AlertCenter>();
     dashboardPresenter_ = std::make_unique<DashboardPresenter>(model);
     dashboardPresenter_->setAlertCenter(*alertCenter_);
     productsPresenter_  = std::make_unique<ProductsPresenter>();  // DB singleton path
 
-    // ------------------------------------------------------------------
     // View — injected with std::cout / std::cin so tests can plug in
     // string streams and run scenarios without touching terminal state.
-    // ------------------------------------------------------------------
     view_ = std::make_unique<ConsoleView>(std::cout, std::cin);
 
     wireActions();
@@ -53,22 +47,16 @@ int InitConsole::run() {
     productsPresenter_->initialize();
     model.initializeDemoData();
 
-    // ------------------------------------------------------------------
     // Simulation tick — drives the SimulatedModel the same way the
     // GTK path does via Glib::signal_timeout, except without GLib.
-    // ------------------------------------------------------------------
     tickThread_ = std::jthread([this](std::stop_token st) { tickLoop(st); });
 
-    // ------------------------------------------------------------------
     // Event loop — ConsoleView owns the stdin reader thread; we block
     // here until the user signals exit.
-    // ------------------------------------------------------------------
     view_->start();
     view_->waitForExit();
 
-    // ------------------------------------------------------------------
     // Teardown (reverse order of construction).
-    // ------------------------------------------------------------------
     tickEnabled_.store(false, std::memory_order_release);
     tickThread_.request_stop();
     if (tickThread_.joinable()) tickThread_.join();
@@ -86,9 +74,7 @@ int InitConsole::run() {
     return 0;
 }
 
-// --------------------------------------------------------------------------
 // Wiring
-// --------------------------------------------------------------------------
 
 void InitConsole::wireActions() {
     // Phase-1 command set: only shutdown is actionable; the rest become
@@ -123,9 +109,7 @@ void InitConsole::detachObservers() {
     if (productsPresenter_)  productsPresenter_->removeObserver(view_.get());
 }
 
-// --------------------------------------------------------------------------
 // Simulation tick
-// --------------------------------------------------------------------------
 
 void InitConsole::tickLoop(std::stop_token stop) {
     // Sleep in small slices so stop is responsive even mid-tick-period.
