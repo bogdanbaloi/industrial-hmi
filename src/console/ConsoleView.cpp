@@ -16,10 +16,10 @@ namespace {
 
 /// Trim ASCII whitespace from both ends.
 constexpr std::string_view trim(std::string_view s) {
-    constexpr std::string_view ws = " \t\r\n";
-    const auto first = s.find_first_not_of(ws);
+    constexpr std::string_view kWs = " \t\r\n";
+    const auto first = s.find_first_not_of(kWs);
     if (first == std::string_view::npos) return {};
-    const auto last = s.find_last_not_of(ws);
+    const auto last = s.find_last_not_of(kWs);
     return s.substr(first, last - first + 1);
 }
 
@@ -88,14 +88,14 @@ constexpr std::string_view severityTag(presenter::StatusZoneViewModel::Severity 
 ConsoleView::ConsoleView(std::ostream& out, std::istream& in)
     : out_{out}, in_{in} {}
 
-ConsoleView::~ConsoleView() {
-    // jthread destructor will request_stop() + join(). If the reader is
-    // blocked in std::getline, join() would hang forever. By the time we
-    // destruct, the process is shutting down anyway — either the reader
-    // already returned (quit / EOF) or SIGINT killed us; both cases make
-    // join() return promptly. Interactive callers must drain via
-    // waitForExit() before destruction.
-}
+// Note on the (defaulted) destructor: jthread will request_stop() +
+// join() on member destruction. If the reader is still blocked in
+// std::getline, join() would hang forever. In practice the process is
+// shutting down by the time we destruct — either the reader already
+// returned (quit / EOF) or SIGINT killed us; both cases make join()
+// return promptly. Interactive callers must drain via waitForExit()
+// before letting the instance go out of scope.
+ConsoleView::~ConsoleView() = default;
 
 void ConsoleView::start() {
     printBanner();

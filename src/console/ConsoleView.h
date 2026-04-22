@@ -100,7 +100,7 @@ private:
     // Command loop
     // ------------------------------------------------------------------
     void readerLoop(std::stop_token stop);
-    void dispatchCommand(std::string_view line);
+    void dispatchCommand(std::string_view raw);
     void printHelp();
     void printStatus();
     void printBanner();

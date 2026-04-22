@@ -78,10 +78,10 @@ void reportFatalStartup(const CriticalStartupError& error,
 
 void reportUnexpectedFatal(std::string_view message,
                            bool consoleMode) noexcept {
-    constexpr std::string_view tag = "UNEXPECTED FATAL ERROR";
+    constexpr std::string_view kTag = "UNEXPECTED FATAL ERROR";
 
     if (consoleMode) {
-        writeStderr(tag, message);
+        writeStderr(kTag, message);
         return;
     }
 
@@ -89,7 +89,7 @@ void reportUnexpectedFatal(std::string_view message,
     const std::string title = "Industrial HMI - Unexpected Fatal Error";
     showNativeDialog(title, message);
 #else
-    writeStderr(tag, message);
+    writeStderr(kTag, message);
 #endif
 }
 

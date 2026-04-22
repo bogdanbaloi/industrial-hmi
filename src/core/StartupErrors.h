@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <utility>
 
 namespace app::core {
 
@@ -47,8 +46,12 @@ inline std::string_view toTag(StartupErrorCode code) {
 /// faults use StandardExceptionHandler (see ExceptionHandler.h).
 class CriticalStartupError : public std::runtime_error {
 public:
-    CriticalStartupError(StartupErrorCode code, std::string detail)
-        : std::runtime_error(std::move(detail)), code_{code} {}
+    // std::runtime_error takes `const std::string&`, not an rvalue, so
+    // std::move on `detail` would be a silent no-op. Pass by value and
+    // let the base-class constructor copy — keeps the intent readable
+    // and clang-tidy-clean (hicpp-move-const-arg).
+    CriticalStartupError(StartupErrorCode code, const std::string& detail)
+        : std::runtime_error(detail), code_{code} {}
 
     [[nodiscard]] StartupErrorCode code() const noexcept { return code_; }
 
@@ -62,26 +65,26 @@ private:
 
 class ConfigMissingError final : public CriticalStartupError {
 public:
-    explicit ConfigMissingError(std::string detail)
-        : CriticalStartupError(StartupErrorCode::ConfigMissing, std::move(detail)) {}
+    explicit ConfigMissingError(const std::string& detail)
+        : CriticalStartupError(StartupErrorCode::ConfigMissing, detail) {}
 };
 
 class ConfigCorruptError final : public CriticalStartupError {
 public:
-    explicit ConfigCorruptError(std::string detail)
-        : CriticalStartupError(StartupErrorCode::ConfigCorrupt, std::move(detail)) {}
+    explicit ConfigCorruptError(const std::string& detail)
+        : CriticalStartupError(StartupErrorCode::ConfigCorrupt, detail) {}
 };
 
 class DatabaseInitError final : public CriticalStartupError {
 public:
-    explicit DatabaseInitError(std::string detail)
-        : CriticalStartupError(StartupErrorCode::DatabaseInit, std::move(detail)) {}
+    explicit DatabaseInitError(const std::string& detail)
+        : CriticalStartupError(StartupErrorCode::DatabaseInit, detail) {}
 };
 
 class LoggerBootstrapError final : public CriticalStartupError {
 public:
-    explicit LoggerBootstrapError(std::string detail)
-        : CriticalStartupError(StartupErrorCode::LoggerBootstrap, std::move(detail)) {}
+    explicit LoggerBootstrapError(const std::string& detail)
+        : CriticalStartupError(StartupErrorCode::LoggerBootstrap, detail) {}
 };
 
 }  // namespace app::core

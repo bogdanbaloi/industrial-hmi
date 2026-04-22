@@ -42,7 +42,14 @@ namespace {
 ///                        and "respects" it -> stays German forever.
 /// The flag fixes step 3 by clearing our own previous writes before
 /// re-running detection.
-bool g_envOwned = false;
+///
+/// Lives in an anonymous namespace so it is TU-local (not truly
+/// "global"), but clang-tidy's cppcoreguidelines check fires on any
+/// non-const mutable — the state is intentional here, so silence the
+/// lint with a targeted NOLINT rather than pretzel-twisting through a
+/// function-local static.
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+bool gEnvOwned = false;
 
 #ifndef _WIN32
 // "auto" on Linux: derive LANGUAGE from the system's LANG/LC_ALL so
@@ -72,7 +79,7 @@ void propagateLangToLanguage() {
 #ifdef _WIN32
 // "auto" on Windows: resolve the user's desired language in three layers.
 //
-// First call (`g_envOwned == false`) — we haven't touched the env yet,
+// First call (`gEnvOwned == false`) — we haven't touched the env yet,
 // so anything in LANGUAGE/LANG was set by the launching shell and
 // represents a deliberate pre-launch choice. Respect it. Falls through
 // to GetUserDefaultLocaleName only when the shell provided nothing.
@@ -88,12 +95,12 @@ void propagateLangToLanguage() {
 // work (shell wins on first call), while still making within-process
 // "switch to Auto" truly re-detect OS locale.
 void propagateLangToLanguage() {
-    if (!g_envOwned) {
+    if (!gEnvOwned) {
         // 1) Respect shell-provided LANGUAGE verbatim.
         if (const char* envLang = std::getenv("LANGUAGE");
             envLang && *envLang && std::strcmp(envLang, "auto") != 0) {
             _putenv_s("LANG", envLang);   // keep libintl happy on both axes
-            g_envOwned = true;
+            gEnvOwned = true;
             return;
         }
 
@@ -106,7 +113,7 @@ void propagateLangToLanguage() {
             if (!v.empty()) {
                 _putenv_s("LANGUAGE", v.c_str());
                 _putenv_s("LANG", v.c_str());
-                g_envOwned = true;
+                gEnvOwned = true;
                 return;
             }
         }
@@ -130,7 +137,7 @@ void propagateLangToLanguage() {
         if (!name.empty()) {
             _putenv_s("LANGUAGE", name.c_str());
             _putenv_s("LANG", name.c_str());
-            g_envOwned = true;
+            gEnvOwned = true;
         }
     }
 }
@@ -146,7 +153,7 @@ void forceLanguage(const char* language) {
     // target; the C runtime tolerates arbitrary LANG values.
     _putenv_s("LANGUAGE", language);
     _putenv_s("LANG", language);
-    g_envOwned = true;
+    gEnvOwned = true;
 #else
     // On glibc, gettext ignores LANGUAGE whenever LC_MESSAGES resolves
     // to "C", "POSIX", *or* "C.UTF-8" — "C.UTF-8" specifically is
@@ -158,7 +165,7 @@ void forceLanguage(const char* language) {
     // en_US.UTF-8 on stock Ubuntu) and only set LANGUAGE, which
     // glibc's gettext honors as long as LC_MESSAGES isn't C-family.
     setenv("LANGUAGE", language, 1);
-    g_envOwned = true;
+    gEnvOwned = true;
 #endif
 }
 

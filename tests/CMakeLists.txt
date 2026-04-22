@@ -184,6 +184,7 @@ set(VIEW_COMMON_LIBS
     ${TEST_COMMON_LIBS}
     tests_includes
     objectsView
+    objectsAppGtk      # Application.cpp moved here out of objectsCore
     objectsPresenter
     objectsModel
     objectsCore

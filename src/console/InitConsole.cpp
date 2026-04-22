@@ -129,7 +129,7 @@ void InitConsole::detachObservers() {
 
 void InitConsole::tickLoop(std::stop_token stop) {
     // Sleep in small slices so stop is responsive even mid-tick-period.
-    constexpr auto slice = std::chrono::milliseconds{50};
+    constexpr auto kSlice = std::chrono::milliseconds{50};
     auto next = std::chrono::steady_clock::now() + kDefaultTickPeriod;
     while (!stop.stop_requested()
            && tickEnabled_.load(std::memory_order_acquire)) {
@@ -138,7 +138,7 @@ void InitConsole::tickLoop(std::stop_token stop) {
             model::SimulatedModel::instance().tickSimulation();
             next = now + kDefaultTickPeriod;
         }
-        std::this_thread::sleep_for(slice);
+        std::this_thread::sleep_for(kSlice);
     }
 }
 
