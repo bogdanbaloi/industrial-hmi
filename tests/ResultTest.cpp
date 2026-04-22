@@ -188,3 +188,43 @@ TEST(ResultTest, AndThenCanReturnErrFromChain) {
     EXPECT_TRUE(chained.isErr());
     EXPECT_EQ(chained.error(), DatabaseError::QueryFailed);
 }
+
+// ============================================================================
+// errorToString — pin down every enum -> message mapping so a future
+// reorder of the enum values doesn't silently drop a case
+// ============================================================================
+
+using app::core::IOError;
+
+TEST(ErrorHandlingTest, DatabaseErrorStrings) {
+    using DE = DatabaseError;
+    using R = Result<int, DE>;
+    EXPECT_EQ(R::errorToString(DE::ConnectionFailed),    "Database connection failed");
+    EXPECT_EQ(R::errorToString(DE::QueryFailed),         "Database query failed");
+    EXPECT_EQ(R::errorToString(DE::ConstraintViolation), "Database constraint violation");
+    EXPECT_EQ(R::errorToString(DE::UniqueViolation),     "Duplicate key violation");
+    EXPECT_EQ(R::errorToString(DE::Timeout),             "Database operation timeout");
+    EXPECT_EQ(R::errorToString(DE::DiskFull),            "Disk full");
+    EXPECT_EQ(R::errorToString(DE::PermissionDenied),    "Permission denied");
+    EXPECT_EQ(R::errorToString(DE::NotFound),            "Record not found");
+    EXPECT_EQ(R::errorToString(DE::Unknown),             "Unknown database error");
+}
+
+TEST(ErrorHandlingTest, ValidationErrorStrings) {
+    using VE = ValidationError;
+    using R = Result<int, VE>;
+    EXPECT_EQ(R::errorToString(VE::EmptyField),        "Required field is empty");
+    EXPECT_EQ(R::errorToString(VE::InvalidFormat),     "Invalid format");
+    EXPECT_EQ(R::errorToString(VE::OutOfRange),        "Value out of range");
+    EXPECT_EQ(R::errorToString(VE::TooLong),           "Value too long");
+    EXPECT_EQ(R::errorToString(VE::TooShort),          "Value too short");
+    EXPECT_EQ(R::errorToString(VE::InvalidCharacters), "Invalid characters");
+}
+
+TEST(ErrorHandlingTest, IOErrorStrings) {
+    using R = Result<int, IOError>;
+    EXPECT_EQ(R::errorToString(IOError::ThreadFailed),       "I/O thread failed");
+    EXPECT_EQ(R::errorToString(IOError::OperationCancelled), "Operation cancelled");
+    EXPECT_EQ(R::errorToString(IOError::QueueFull),          "Operation queue full");
+    EXPECT_EQ(R::errorToString(IOError::Timeout),            "I/O operation timeout");
+}
