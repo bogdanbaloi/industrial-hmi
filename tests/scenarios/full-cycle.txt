@@ -1,0 +1,13 @@
+status
+start
+status
+stop
+reset
+calibrate
+eq 1 off
+eq 1 on
+alerts
+products
+view 5
+status
+quit
