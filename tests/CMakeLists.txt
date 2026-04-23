@@ -189,6 +189,27 @@ target_link_libraries(test_products_presenter PRIVATE
 
 add_test(NAME ProductsPresenterTest COMMAND test_products_presenter)
 
+# --- Presenter: ProductsPresenter ASYNC CRUD -----------------------------
+# Exercises addProduct / updateProduct / deleteProduct / exportProducts,
+# each of which posts to the Boost.Asio I/O thread in ModelContext and
+# marshals back via Glib::signal_idle. Test drives a Glib::MainLoop to
+# pump the idle queue so callbacks actually run under gtest.
+#
+# Links GTKMM for glibmm (same pattern as AlertCenterTest). Links
+# objectsModel for DatabaseManager + ModelContext + Boost.Asio.
+add_executable(test_products_presenter_async ProductsPresenterAsyncTest.cpp)
+target_include_directories(test_products_presenter_async PRIVATE
+    ${GTKMM_INCLUDE_DIRS}
+)
+target_link_libraries(test_products_presenter_async PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsModel
+    ${GTKMM_LIBRARIES}
+)
+add_test(NAME ProductsPresenterAsyncTest COMMAND test_products_presenter_async)
+
 # --- Presenter: DashboardPresenter (with mock production model) -----------
 # DashboardPresenter.cpp pulls in SimulatedModel via its default
 # constructor's initializer list, so we still need objectsModel for the
@@ -255,11 +276,12 @@ add_test(NAME ProductsPageTest COMMAND test_products_page
 # Boost.Asio on Windows references WSAStartup / WSACleanup from Winsock;
 # every objectsModel-linked target needs ws2_32.
 if(WIN32)
-    target_link_libraries(test_database_manager    PRIVATE ws2_32)
-    target_link_libraries(test_products_presenter  PRIVATE ws2_32)
-    target_link_libraries(test_dashboard_presenter PRIVATE ws2_32)
-    target_link_libraries(test_dashboard_page      PRIVATE ws2_32)
-    target_link_libraries(test_products_page       PRIVATE ws2_32)
+    target_link_libraries(test_database_manager          PRIVATE ws2_32)
+    target_link_libraries(test_products_presenter        PRIVATE ws2_32)
+    target_link_libraries(test_products_presenter_async  PRIVATE ws2_32)
+    target_link_libraries(test_dashboard_presenter       PRIVATE ws2_32)
+    target_link_libraries(test_dashboard_page            PRIVATE ws2_32)
+    target_link_libraries(test_products_page             PRIVATE ws2_32)
 endif()
 
 # ============================================================================
