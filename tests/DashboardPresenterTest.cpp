@@ -66,9 +66,7 @@ public:
 
 }  // namespace
 
-// ============================================================================
 // Fixture
-// ============================================================================
 
 class DashboardPresenterTest : public ::testing::Test {
 protected:
@@ -86,9 +84,7 @@ protected:
     std::unique_ptr<DashboardPresenter> presenter;
 };
 
-// ============================================================================
 // User-action handlers - thin command forwards
-// ============================================================================
 
 TEST_F(DashboardPresenterTest, OnStartClickedCallsStartProduction) {
     EXPECT_CALL(model, startProduction()).Times(1);
@@ -118,9 +114,7 @@ TEST_F(DashboardPresenterTest, OnEquipmentToggledForwardsIdAndState) {
     presenter->onEquipmentToggled(3, false);
 }
 
-// ============================================================================
 // initialize() - subscribes to every model signal
-// ============================================================================
 
 TEST_F(DashboardPresenterTest, InitializeSubscribesToAllFiveModelSignals) {
     EXPECT_CALL(model, onEquipmentStatusChanged(_)).Times(1);
@@ -132,7 +126,6 @@ TEST_F(DashboardPresenterTest, InitializeSubscribesToAllFiveModelSignals) {
     presenter->initialize();
 }
 
-// ============================================================================
 // Equipment signal -> EquipmentCardViewModel
 //
 // status mapping the Presenter implements:
@@ -140,7 +133,6 @@ TEST_F(DashboardPresenterTest, InitializeSubscribesToAllFiveModelSignals) {
 //   1 -> Online / "Supply level: 85%" / enabled
 //   2 -> Processing / "Supply level: 60%" / enabled
 //   3 -> Error / "Low supply (12%)" / disabled
-// ============================================================================
 
 class DashboardPresenterEquipmentTest : public DashboardPresenterTest {
 protected:
@@ -191,14 +183,12 @@ TEST_F(DashboardPresenterEquipmentTest, ErrorStatusProducesErrorViewModel) {
     EXPECT_THAT(observer.equipment->consumables, ::testing::HasSubstr("Low supply"));
 }
 
-// ============================================================================
 // Quality checkpoint signal -> QualityCheckpointViewModel
 //
 // Pass-rate threshold mapping (from config_defaults):
 //   >= kQualityPassThreshold (95.0)    -> Passing
 //   >= kQualityWarningThreshold (90.0) -> Warning
 //   <  kQualityWarningThreshold        -> Critical
-// ============================================================================
 
 class DashboardPresenterQualityTest : public DashboardPresenterTest {
 protected:
@@ -254,9 +244,7 @@ TEST_F(DashboardPresenterQualityTest, LowPassRateMapsToCritical) {
     EXPECT_EQ(observer.quality->status, app::presenter::QualityCheckpointStatus::Critical);
 }
 
-// ============================================================================
 // Work unit signal -> WorkUnitViewModel (progress + status message)
-// ============================================================================
 
 class DashboardPresenterWorkUnitTest : public DashboardPresenterTest {
 protected:
@@ -302,9 +290,7 @@ TEST_F(DashboardPresenterWorkUnitTest, FullProgressShowsCompleteMessage) {
     EXPECT_EQ(observer.workUnit->statusMessage, "Complete");
 }
 
-// ============================================================================
 // System state signal -> ControlPanelViewModel button availability
-// ============================================================================
 
 class DashboardPresenterStateTest : public DashboardPresenterTest {
 protected:
@@ -373,7 +359,6 @@ TEST_F(DashboardPresenterStateTest, CalibrationStateMarksCalibrationActive) {
     EXPECT_TRUE(observer.control->stopEnabled);
 }
 
-// ============================================================================
 // AlertCenter integration
 //
 // The presenter raises a keyed alert on equipment Offline(0)/Error(3) and
@@ -383,7 +368,6 @@ TEST_F(DashboardPresenterStateTest, CalibrationStateMarksCalibrationActive) {
 //
 // These tests inject a real AlertCenter (header-only, no deps) and
 // inspect its snapshot after firing the captured model callbacks.
-// ============================================================================
 
 class DashboardPresenterAlertsTest : public DashboardPresenterTest {
 protected:

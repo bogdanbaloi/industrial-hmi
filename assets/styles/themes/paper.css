@@ -1,6 +1,5 @@
-/* ============================================================================
+/*
    Paper — executive white, navy accents, clean business dashboard
-   ============================================================================
    Inverted baseline: white surfaces, near-black text, navy + slate accents.
    No heavy bezels, no neon — reads like an SAP / Bloomberg Terminal Lite.
 
@@ -8,7 +7,7 @@
    Text:     #1C1F26 (primary), #4A5568 (secondary), #8A95A5 (tertiary)
    Accents:  #0B3D91 (navy primary), #1976D2 (secondary),
              #B71C1C (red), #2E7D32 (green), #E65100 (amber)
-   ============================================================================ */
+   */
 
 window { background-color: #F5F6F8; }
 
@@ -208,7 +207,7 @@ checkbutton radio:checked {
 }
 checkbutton label { color: #1C1F26; }
 
-/* ---------- Products page ------------------------------------------------- */
+/* Products page */
 .page-title { color: #0B3D91; font-weight: 700; }
 
 .toolbar-button {

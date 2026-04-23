@@ -1,9 +1,7 @@
 # Doxyfile for Industrial HMI Portfolio Project
 # Generate documentation: doxygen Doxyfile
 
-#---------------------------------------------------------------------------
 # Project related configuration
-#---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "Industrial HMI - MVP Architecture"
 PROJECT_NUMBER         = 1.0.0
@@ -12,9 +10,7 @@ OUTPUT_DIRECTORY       = docs/doxygen
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English
 
-#---------------------------------------------------------------------------
 # Build related configuration
-#---------------------------------------------------------------------------
 EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = NO
 EXTRACT_STATIC         = YES
@@ -32,9 +28,7 @@ SEPARATE_MEMBER_PAGES  = NO
 DISTRIBUTE_GROUP_DOC   = NO
 SUBGROUPING            = YES
 
-#---------------------------------------------------------------------------
 # Input related configuration
-#---------------------------------------------------------------------------
 INPUT                  = src \
                          README.md \
                          PORTFOLIO_SUMMARY.md
@@ -52,9 +46,7 @@ EXCLUDE_PATTERNS       = */build/* \
                          */ui/*
 EXCLUDE_SYMBOLS        = 
 
-#---------------------------------------------------------------------------
 # Source browsing
-#---------------------------------------------------------------------------
 SOURCE_BROWSER         = YES
 INLINE_SOURCES         = NO
 STRIP_CODE_COMMENTS    = YES
@@ -64,15 +56,11 @@ REFERENCES_LINK_SOURCE = YES
 USE_HTAGS              = NO
 VERBATIM_HEADERS       = YES
 
-#---------------------------------------------------------------------------
 # Alphabetical index
-#---------------------------------------------------------------------------
 ALPHABETICAL_INDEX     = YES
 COLS_IN_ALPHA_INDEX    = 5
 
-#---------------------------------------------------------------------------
 # HTML output
-#---------------------------------------------------------------------------
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
@@ -84,14 +72,10 @@ HTML_DYNAMIC_SECTIONS  = YES
 GENERATE_TREEVIEW      = YES
 TREEVIEW_WIDTH         = 250
 
-#---------------------------------------------------------------------------
 # LaTeX output
-#---------------------------------------------------------------------------
 GENERATE_LATEX         = NO
 
-#---------------------------------------------------------------------------
 # Preprocessor
-#---------------------------------------------------------------------------
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = NO
@@ -99,9 +83,7 @@ SEARCH_INCLUDES        = YES
 INCLUDE_PATH           = src
 PREDEFINED             = __cplusplus=202002L
 
-#---------------------------------------------------------------------------
 # Dot tool (graphs)
-#---------------------------------------------------------------------------
 CLASS_DIAGRAMS         = YES
 HAVE_DOT               = YES
 DOT_NUM_THREADS        = 4
@@ -122,9 +104,7 @@ DOT_GRAPH_MAX_NODES    = 50
 MAX_DOT_GRAPH_DEPTH    = 0
 DOT_TRANSPARENT        = YES
 
-#---------------------------------------------------------------------------
 # Other options
-#---------------------------------------------------------------------------
 QUIET                  = NO
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = YES

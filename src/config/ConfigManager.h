@@ -100,9 +100,7 @@ public:
         configPath_.clear();
     }
     
-    // ========================================================================
     // Asset Paths
-    // ========================================================================
     
     std::string getAssetPath(const std::string& category, const std::string& name) const {
         auto key = "assets." + category + "." + name;
@@ -122,9 +120,7 @@ public:
         return getAssetPath("ui_files", name);
     }
     
-    // ========================================================================
     // Dialog Configuration
-    // ========================================================================
     
     std::string getDialogTitle(const std::string& category, const std::string& name) const {
         auto key = "dialogs." + category + "." + name + ".title";
@@ -163,9 +159,7 @@ public:
         return (it != config_.end()) ? it->second : defaults::kCancelButton;
     }
     
-    // ========================================================================
     // Application Settings
-    // ========================================================================
     
     std::string getAppName() const {
         return getValue("application.name", defaults::kAppName);
@@ -191,9 +185,7 @@ public:
         return getValue("theme.default", defaults::kDefaultTheme);
     }
 
-    // ========================================================================
     // i18n
-    // ========================================================================
 
     std::string getLanguage() const {
         return getValue("i18n.language", defaults::kDefaultLanguage);
@@ -214,9 +206,7 @@ public:
         return persistLanguage(language);
     }
 
-    // ========================================================================
     // UI palette (CSS theme on top of dark/light)
-    // ========================================================================
 
     /// Current palette id. Empty string = baseline "industrial" look
     /// (no extra CSS provider, same as a fresh install).
@@ -231,9 +221,7 @@ public:
         return persistPalette(palette);
     }
 
-    // ========================================================================
     // Logging Configuration
-    // ========================================================================
 
     std::string getLogLevel() const {
         return getValue("logging.level", defaults::kLogLevel);
@@ -257,9 +245,7 @@ public:
         return getValue("logging.console", "true") == "true";
     }
     
-    // ========================================================================
     // Template Support
-    // ========================================================================
     
     /**
      * Format dialog message with template variables

@@ -67,7 +67,7 @@ void ProductsPage::buildUI() {
     auto* root = builder->get_widget<Gtk::Box>("products_root");
     if (root) append(*root);
 
-    // ---- Toolbar buttons ----
+    // Toolbar buttons
     addButton_ = builder->get_widget<Gtk::Button>("btn_add");
     refreshButton_ = builder->get_widget<Gtk::Button>("btn_refresh");
     exportButton_ = builder->get_widget<Gtk::Button>("btn_export");
@@ -79,12 +79,12 @@ void ProductsPage::buildUI() {
     exportButton_->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onExportCsvClicked));
 
-    // ---- Search ----
+    // Search
     searchEntry_ = builder->get_widget<Gtk::SearchEntry>("search_entry");
     searchEntry_->signal_search_changed().connect(
         sigc::mem_fun(*this, &ProductsPage::onSearchChanged));
 
-    // ---- ColumnView (programmatic — factories + list model can't live in XML) ----
+    // ColumnView (programmatic — factories + list model can't live in XML)
     listStore_ = Gio::ListStore<ProductObject>::create();
     selectionModel_ = Gtk::SingleSelection::create(listStore_);
 
@@ -144,7 +144,7 @@ void ProductsPage::buildUI() {
     scrolledWindow_ = builder->get_widget<Gtk::ScrolledWindow>("table_container");
     scrolledWindow_->set_child(*columnView_);
 
-    // ---- Action buttons ----
+    // Action buttons
     auto* viewBtn = builder->get_widget<Gtk::Button>("btn_view");
     auto* editBtn = builder->get_widget<Gtk::Button>("btn_edit");
     auto* deleteBtn = builder->get_widget<Gtk::Button>("btn_delete");

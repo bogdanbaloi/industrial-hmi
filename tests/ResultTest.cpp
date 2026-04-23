@@ -14,9 +14,7 @@ using app::core::Err;
 using app::core::DatabaseError;
 using app::core::ValidationError;
 
-// ============================================================================
 // Construction + state inspection
-// ============================================================================
 
 TEST(ResultTest, OkIntIsOk) {
     Result<int, DatabaseError> r(Ok, 42);
@@ -44,9 +42,7 @@ TEST(ResultTest, VoidErrIsErr) {
     EXPECT_TRUE(r.isErr());
 }
 
-// ============================================================================
 // unwrap / unwrapOr
-// ============================================================================
 
 TEST(ResultTest, UnwrapOkReturnsValue) {
     Result<int, DatabaseError> r(Ok, 7);
@@ -78,9 +74,7 @@ TEST(ResultTest, VoidUnwrapErrThrows) {
     EXPECT_THROW(r.unwrap(), std::runtime_error);
 }
 
-// ============================================================================
 // error() - extracting the error enum
-// ============================================================================
 
 TEST(ResultTest, ErrorReturnsEnumValueOnErr) {
     Result<int, DatabaseError> r(Err, DatabaseError::UniqueViolation);
@@ -92,9 +86,7 @@ TEST(ResultTest, ErrorOnOkThrows) {
     EXPECT_THROW((void)r.error(), std::runtime_error);
 }
 
-// ============================================================================
 // errorMessage() - mapping enum to human-readable string
-// ============================================================================
 
 TEST(ResultTest, ErrorMessageIsEmptyOnOk) {
     Result<int, DatabaseError> r(Ok, 1);
@@ -127,9 +119,7 @@ TEST(ResultTest, VoidErrorMessageDelegatesToIntSpecialization) {
     EXPECT_EQ(r.errorMessage(), "Permission denied");
 }
 
-// ============================================================================
 // map - transform Ok values, pass through Err unchanged
-// ============================================================================
 
 TEST(ResultTest, MapAppliesFunctionOnOk) {
     Result<int, DatabaseError> r(Ok, 10);
@@ -154,9 +144,7 @@ TEST(ResultTest, MapPropagatesErrWithoutCallingFunction) {
     EXPECT_FALSE(called);
 }
 
-// ============================================================================
 // andThen - chain operations that may themselves return Result
-// ============================================================================
 
 TEST(ResultTest, AndThenChainsOnOk) {
     Result<int, DatabaseError> r(Ok, 5);
@@ -189,10 +177,8 @@ TEST(ResultTest, AndThenCanReturnErrFromChain) {
     EXPECT_EQ(chained.error(), DatabaseError::QueryFailed);
 }
 
-// ============================================================================
 // errorToString — pin down every enum -> message mapping so a future
 // reorder of the enum values doesn't silently drop a case
-// ============================================================================
 
 using app::core::IOError;
 

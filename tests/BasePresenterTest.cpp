@@ -45,9 +45,7 @@ public:
 
 }  // namespace
 
-// ============================================================================
 // Observer registration
-// ============================================================================
 
 TEST(BasePresenterTest, AddObserverThenNotifyDeliversCallback) {
     ConcretePresenter p;
@@ -83,9 +81,7 @@ TEST(BasePresenterTest, AddObserverIgnoresNullptr) {
     EXPECT_NO_THROW(p.fireAll([](app::ViewObserver*) {}));
 }
 
-// ============================================================================
 // Observer removal
-// ============================================================================
 
 TEST(BasePresenterTest, RemoveObserverStopsDelivery) {
     ConcretePresenter p;
@@ -107,9 +103,7 @@ TEST(BasePresenterTest, RemoveObserverThatWasNeverRegisteredIsSafe) {
     EXPECT_NO_THROW(p.removeObserver(nullptr));
 }
 
-// ============================================================================
 // Multi-observer dispatch
-// ============================================================================
 
 TEST(BasePresenterTest, NotifyAllReachesEveryRegisteredObserver) {
     ConcretePresenter p;

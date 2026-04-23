@@ -24,9 +24,7 @@ using ::testing::HasSubstr;
 using ::testing::SaveArg;
 using ::testing::Return;
 
-// ============================================================================
 // Fixture
-// ============================================================================
 
 class DashboardPageTest : public ::testing::Test {
 protected:
@@ -52,9 +50,7 @@ protected:
     app::view::DashboardPage* page_{nullptr};
 };
 
-// ============================================================================
 // Reset button -> confirm dialog -> presenter
-// ============================================================================
 
 TEST_F(DashboardPageTest, ResetButtonShowsConfirmDialog) {
     std::function<void(bool)> capturedCb;
@@ -94,9 +90,7 @@ TEST_F(DashboardPageTest, ResetCancelledDoesNotCallPresenter) {
     capturedCb(false);
 }
 
-// ============================================================================
 // Calibration button -> confirm dialog -> presenter
-// ============================================================================
 
 TEST_F(DashboardPageTest, CalibrationButtonShowsConfirmDialog) {
     EXPECT_CALL(mockDM_, showConfirmAsync(
@@ -118,9 +112,7 @@ TEST_F(DashboardPageTest, CalibrationConfirmedCallsPresenterCalibration) {
     capturedCb(true);
 }
 
-// ============================================================================
 // Direct button handlers forward to presenter without dialog
-// ============================================================================
 
 TEST_F(DashboardPageTest, StartButtonCallsPresenterStart) {
     EXPECT_CALL(mockModel_, startProduction()).Times(1);

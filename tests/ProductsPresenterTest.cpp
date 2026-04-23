@@ -59,9 +59,7 @@ Product makeProduct(int id, const std::string& code, const std::string& name,
 
 }  // namespace
 
-// ============================================================================
 // Fixture
-// ============================================================================
 
 class ProductsPresenterTest : public ::testing::Test {
 protected:
@@ -79,9 +77,7 @@ protected:
     std::unique_ptr<ProductsPresenter> presenter;
 };
 
-// ============================================================================
 // loadProducts - routes through getAllProducts and emits ProductsViewModel
-// ============================================================================
 
 TEST_F(ProductsPresenterTest, LoadProductsCallsGetAllAndNotifies) {
     EXPECT_CALL(repo, getAllProducts())
@@ -111,9 +107,7 @@ TEST_F(ProductsPresenterTest, LoadProductsEmitsEmptyVmWhenRepoReturnsNothing) {
     EXPECT_TRUE(observer.products->products.empty());
 }
 
-// ============================================================================
 // searchProducts - routes through searchProducts (not getAllProducts)
-// ============================================================================
 
 TEST_F(ProductsPresenterTest, SearchProductsForwardsQueryToRepository) {
     EXPECT_CALL(repo, searchProducts(std::string{"widget"}))
@@ -143,9 +137,7 @@ TEST_F(ProductsPresenterTest, SearchWithEmptyQueryFallsBackToGetAll) {
     EXPECT_EQ(observer.products->products.size(), 1u);
 }
 
-// ============================================================================
 // viewProduct - emits detail view-model or "NOT FOUND" placeholder
-// ============================================================================
 
 TEST_F(ProductsPresenterTest, ViewProductEmitsDetailVmForActiveProduct) {
     EXPECT_CALL(repo, getProduct(42))
@@ -182,9 +174,7 @@ TEST_F(ProductsPresenterTest, ViewProductEmitsNotFoundWhenRepoReturnsInvalidId) 
     EXPECT_FALSE(observer.productDetail->isVerified);
 }
 
-// ============================================================================
 // getProduct - simple passthrough to the repository
-// ============================================================================
 
 TEST_F(ProductsPresenterTest, GetProductPassesThroughToRepository) {
     EXPECT_CALL(repo, getProduct(11))

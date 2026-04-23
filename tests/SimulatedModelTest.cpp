@@ -29,9 +29,7 @@ protected:
     }
 };
 
-// ============================================================================
 // Initial state after demo data
-// ============================================================================
 
 TEST_F(SimulatedModelTest, InitialStateIsIdle) {
     EXPECT_EQ(model().getState(), SystemState::IDLE);
@@ -56,9 +54,7 @@ TEST_F(SimulatedModelTest, InitialQualityCheckpointsExist) {
     EXPECT_EQ(cp2.name, "Final Inspection");
 }
 
-// ============================================================================
 // State transitions via commands
-// ============================================================================
 
 TEST_F(SimulatedModelTest, StartProductionSetsRunning) {
     model().startProduction();
@@ -83,9 +79,7 @@ TEST_F(SimulatedModelTest, StartCalibrationSetsCalibration) {
     EXPECT_EQ(model().getState(), SystemState::CALIBRATION);
 }
 
-// ============================================================================
 // Equipment enable/disable
-// ============================================================================
 
 TEST_F(SimulatedModelTest, SetEquipmentEnabledChangesStatus) {
     auto captured = std::make_shared<EquipmentStatus>();
@@ -105,9 +99,7 @@ TEST_F(SimulatedModelTest, SetEquipmentDisabledSetsOffline) {
     EXPECT_EQ(captured->status, 0);  // offline
 }
 
-// ============================================================================
 // Signal delivery (callbacks fire on subscribe)
-// ============================================================================
 
 TEST_F(SimulatedModelTest, StateCallbackFiresOnTransition) {
     // shared_ptr so the vector outlives the test — callback persists in singleton
@@ -140,9 +132,7 @@ TEST_F(SimulatedModelTest, QualityCallbackFiresOnTick) {
     EXPECT_GE(*callCount, 3);
 }
 
-// ============================================================================
 // Tick simulation advances state
-// ============================================================================
 
 TEST_F(SimulatedModelTest, TickAdvancesWorkUnitProgress) {
     auto before = model().getWorkUnit().completedOperations;

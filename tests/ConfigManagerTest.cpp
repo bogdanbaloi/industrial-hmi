@@ -59,9 +59,7 @@ void writeFile(const fs::path& p, const std::string& content) {
 
 }  // namespace
 
-// ============================================================================
 // Fixture - manages a unique temp file per test + resets singleton state
-// ============================================================================
 
 class ConfigManagerTest : public ::testing::Test {
 protected:
@@ -86,9 +84,7 @@ protected:
     fs::path tmpPath_;
 };
 
-// ============================================================================
 // getLanguage()
-// ============================================================================
 
 TEST_F(ConfigManagerTest, LoadsLanguageFromConfigFile) {
     writeFile(tmpPath_, baseConfig("it"));
@@ -125,9 +121,7 @@ TEST_F(ConfigManagerTest, DefaultsToAutoWhenInitializeFails) {
     EXPECT_EQ(cfg.getLanguage(), "auto");
 }
 
-// ============================================================================
 // setLanguage() - in-memory update
-// ============================================================================
 
 TEST_F(ConfigManagerTest, SetLanguageUpdatesInMemoryValueImmediately) {
     writeFile(tmpPath_, baseConfig("it"));
@@ -140,9 +134,7 @@ TEST_F(ConfigManagerTest, SetLanguageUpdatesInMemoryValueImmediately) {
     EXPECT_EQ(cfg.getLanguage(), "fr");
 }
 
-// ============================================================================
 // setLanguage() - persistence
-// ============================================================================
 
 TEST_F(ConfigManagerTest, SetLanguagePersistsToDisk) {
     writeFile(tmpPath_, baseConfig("it"));
@@ -190,9 +182,7 @@ TEST_F(ConfigManagerTest, SetLanguageInsertsI18nSectionWhenMissing) {
     EXPECT_NE(onDisk.find("\"language\": \"es\""), std::string::npos);
 }
 
-// ============================================================================
 // Application / Window getters - sanity check that parse reaches other keys
-// ============================================================================
 
 TEST_F(ConfigManagerTest, ReadsApplicationNameFromConfig) {
     writeFile(tmpPath_, baseConfig("auto"));

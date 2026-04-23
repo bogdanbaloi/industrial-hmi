@@ -1,4 +1,4 @@
-/* ============================================================================
+/*
    Right-sidebar — mirror of the Industrial baseline with a teal accent
    so it's distinguishable at a glance. Layout comes from
    main-window-right.ui; this file just tweaks the color palette.
@@ -7,7 +7,7 @@
    Surface:    #263A45
    Accent:     #00D4B1 (teal), #4DD0E1 (cyan)
    Text:       #E6EEF4 (primary), #A0B4C3 (secondary)
-   ============================================================================ */
+   */
 
 .sidebar {
     background-color: #1B2B34;
@@ -146,7 +146,7 @@ columnview row:hover    { background: #2A3D47; }
 columnview row:selected { background: rgba(0,212,177,0.18); color: #00D4B1; }
 columnview cell         { padding: 6px 10px; border-right: 1px solid #2E4450; }
 
-/* ============ Light-mode variant (inverted with teal accent kept) ========= */
+/* Light-mode variant (inverted with teal accent kept) */
 window.light-mode { background-color: #F5F7F8; }
 window.light-mode .sidebar {
     background-color: #FFFFFF;

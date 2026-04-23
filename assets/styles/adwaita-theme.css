@@ -9,9 +9,9 @@
  * - Adwaita color palette
  */
 
-/* ============================================
+/*
    DESIGN TOKENS - DARK MODE (Default)
-   ============================================ */
+   */
 
 /* Color Palette - Adwaita Dark */
 @define-color window_bg_color #242424;
@@ -83,9 +83,9 @@
 
 
 
-/* ============================================
+/*
    LIGHT MODE DESIGN TOKENS
-   ============================================ */
+   */
 
 @define-color light_window_bg_color #fafafa;
 @define-color light_window_fg_color #000000;
@@ -114,9 +114,9 @@
 @define-color light_hover_bg_color rgba(0, 0, 0, 0.05);
 @define-color light_active_bg_color rgba(0, 0, 0, 0.08);
 
-/* ============================================
+/*
    GLOBAL STYLES
-   ============================================ */
+   */
 
 * {
     /* Use design tokens */
@@ -154,9 +154,9 @@ window.light-mode .log-text {
     color: #37474F;
 }
 
-/* ============================================
+/*
    SIDEBAR STYLES
-   ============================================ */
+   */
 
 /* Sidebar styles managed by sidebar.css */
 
@@ -164,9 +164,9 @@ window.light-mode .log-text {
     margin-bottom: 32px;
 }
 
-/* ============================================
+/*
    BUTTONS
-   ============================================ */
+   */
 
 button,
 button.text-button,
@@ -225,9 +225,9 @@ button.destructive-action:hover {
     background-color: shade(@destructive_bg_color, 1.1);
 }
 
-/* ============================================
+/*
    CARDS & CONTAINERS
-   ============================================ */
+   */
 
 .card {
     background-color: @card_bg_color;
@@ -248,9 +248,9 @@ button.destructive-action:hover {
     line-height: 1.5;
 }
 
-/* ============================================
+/*
    EQUIPMENT CARDS (Dashboard)
-   ============================================ */
+   */
 
 .equipment-card {
     background-color: @card_bg_color;
@@ -316,9 +316,9 @@ button.destructive-action:hover {
     letter-spacing: 0.5px;
 }
 
-/* ============================================
+/*
    STATUS INDICATORS
-   ============================================ */
+   */
 
 .status-active {
     color: @success_color;
@@ -358,9 +358,9 @@ button.destructive-action:hover {
     color: @error_color;
 }
 
-/* ============================================
+/*
    ENTRIES & INPUTS
-   ============================================ */
+   */
 
 entry {
     background-color: @view_bg_color;
@@ -378,9 +378,9 @@ entry > text > placeholder {
     color: @text_placeholder;
 }
 
-/* ============================================
+/*
    TREEVIEW (Tables)
-   ============================================ */
+   */
 
 treeview {
     background-color: @view_bg_color;
@@ -406,9 +406,9 @@ treeview row:hover {
     background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* ============================================
+/*
    DIALOGS
-   ============================================ */
+   */
 
 dialog,
 dialog.dark-mode {
@@ -449,9 +449,9 @@ messagedialog.light-mode button {
     color: @light_headerbar_fg_color;
 }
 
-/* ============================================
+/*
    POPOVERS
-   ============================================ */
+   */
 
 popover {
     background-color: @popover_bg_color;
@@ -461,9 +461,9 @@ popover {
     padding: 12px;
 }
 
-/* ============================================
+/*
    SCROLLBARS
-   ============================================ */
+   */
 
 scrollbar {
     background-color: transparent;
@@ -480,10 +480,10 @@ scrollbar slider:hover {
     background-color: alpha(@text_secondary, 0.5);
 }
 
-/* ============================================
+/*
    LIGHT MODE OVERRIDES
    Use .light-mode class on window
-   ============================================ */
+   */
 
 window.light-mode,
 window.light-mode notebook,
@@ -545,9 +545,9 @@ window.light-mode .card-content {
     color: @light_text_secondary;
 }
 
-/* ============================================
+/*
    UTILITY CLASSES
-   ============================================ */
+   */
 
 .text-xs { font-size: 11px; }
 .text-sm { font-size: 12px; }
@@ -589,13 +589,13 @@ window.light-mode .card-content {
 .shadow-lg { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5); }
 .shadow-xl { box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6); }
 
-/* ============================================
+/*
    COMBOBOX DROPDOWN POPUP
    GTK4 GtkComboBoxText uses an internal treeview inside a
    popover; items are cellviews / labels. The generic popover
    rule (color:#fff, padding:12px) breaks contrast and spacing,
    so we flatten the combobox popup and force item colors.
-   ============================================ */
+   */
 
 combobox > popover {
     padding: 0;

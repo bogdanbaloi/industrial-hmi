@@ -6,13 +6,13 @@
 
 set -e
 
-# -- Environment check ---------------------------------------------------
+# Environment check
 if [[ -z "$MSYSTEM_PREFIX" ]]; then
     echo "Please run in a MSYS2 shell"
     exit 1
 fi
 
-# -- Parse arguments ------------------------------------------------------
+# Parse arguments
 while getopts "hdb:t:" arg; do
     case $arg in
         d) BUILD_TYPE=debug ;;
@@ -57,7 +57,7 @@ is_system_dll() {
     [[ "$path" == "$WIN_WINSXS"* ]]
 }
 
-# -- Prepare temp folder --------------------------------------------------
+# Prepare temp folder
 rm -rf "$TMP_DIR"
 mkdir -p "$TMP_DIR"
 mkdir -p "$TARGET_DIR"
@@ -67,11 +67,11 @@ echo "  Packaging industrial-hmi ($BUILD_TYPE)"
 echo "================================================================"
 echo ""
 
-# -- Copy executable ------------------------------------------------------
+# Copy executable
 echo "Copying executable..."
 cp "$EXE" "$TMP_DIR/"
 
-# -- Copy application data ------------------------------------------------
+# Copy application data
 for dir in assets config ui; do
     if [[ -d "${BUILD_DIR}/${dir}" ]]; then
         echo "Copying ${dir}/..."
@@ -81,7 +81,7 @@ for dir in assets config ui; do
     fi
 done
 
-# -- Collect non-system DLLs ----------------------------------------------
+# Collect non-system DLLs
 echo "Collecting DLL dependencies..."
 
 ldd "$EXE" | grep "=> /" | while read -r line; do
@@ -91,7 +91,7 @@ ldd "$EXE" | grep "=> /" | while read -r line; do
     fi
 done
 
-# -- GDK Pixbuf loaders ---------------------------------------------------
+# GDK Pixbuf loaders
 PIXBUF_SRC="${MSYSTEM_PREFIX}/lib/gdk-pixbuf-2.0/2.10.0"
 PIXBUF_DST="$TMP_DIR/lib/gdk-pixbuf-2.0/2.10.0"
 
@@ -113,7 +113,7 @@ else
     echo "Warning: GDK Pixbuf loaders not found at $PIXBUF_SRC"
 fi
 
-# -- GSettings schemas ----------------------------------------------------
+# GSettings schemas
 SCHEMAS_SRC="${MSYSTEM_PREFIX}/share/glib-2.0/schemas"
 SCHEMAS_DST="$TMP_DIR/share/glib-2.0/schemas"
 
@@ -125,7 +125,7 @@ else
     echo "Warning: gschemas.compiled not found"
 fi
 
-# -- GTK icon theme (Adwaita) ---------------------------------------------
+# GTK icon theme (Adwaita)
 ICONS_SRC="${MSYSTEM_PREFIX}/share/icons/Adwaita"
 if [[ -d "$ICONS_SRC" ]]; then
     echo "Copying Adwaita icon theme..."
@@ -139,14 +139,14 @@ if [[ -d "$HICOLOR_SRC" ]]; then
     cp -r "$HICOLOR_SRC" "$TMP_DIR/share/icons/"
 fi
 
-# -- gdbus.exe (required for GTK on Windows) ------------------------------
+# gdbus.exe (required for GTK on Windows)
 GDBUS="${MSYSTEM_PREFIX}/bin/gdbus.exe"
 if [[ -f "$GDBUS" ]]; then
     echo "Copying gdbus.exe..."
     cp -u "$GDBUS" "$TMP_DIR/"
 fi
 
-# -- Create ZIP ------------------------------------------------------------
+# Create ZIP
 echo ""
 echo "Creating ZIP: $ZIPFILE"
 (cd "$TMP_DIR" && zip -r -q "../$ZIPFILE" .)

@@ -37,7 +37,7 @@ public:
                               bool autoRefresh,
                               bool verboseLogging);
 
-    // --- Signals consumed by MainWindow -------------------------------------
+    // Signals consumed by MainWindow
     // Emitted when the user flips the Fullscreen/Windowed radio.
     sigc::signal<void(bool)>& signalDisplayModeChanged() {
         return signalDisplayModeChanged_;

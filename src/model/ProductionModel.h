@@ -28,21 +28,21 @@ public:
 
     virtual ~ProductionModel() = default;
 
-    // ---- Subscriptions ----------------------------------------------------
+    // Subscriptions
     virtual void onEquipmentStatusChanged(EquipmentCallback callback) = 0;
     virtual void onActuatorStatusChanged(ActuatorCallback callback) = 0;
     virtual void onQualityCheckpointChanged(QualityCheckpointCallback callback) = 0;
     virtual void onWorkUnitChanged(WorkUnitCallback callback) = 0;
     virtual void onSystemStateChanged(StateCallback callback) = 0;
 
-    // ---- Commands ---------------------------------------------------------
+    // Commands
     virtual void startProduction() = 0;
     virtual void stopProduction() = 0;
     virtual void resetSystem() = 0;
     virtual void startCalibration() = 0;
     virtual void setEquipmentEnabled(uint32_t equipmentId, bool enabled) = 0;
 
-    // ---- Queries ----------------------------------------------------------
+    // Queries
     [[nodiscard]] virtual SystemState getState() const = 0;
     [[nodiscard]] virtual QualityCheckpoint getQualityCheckpoint(uint32_t id) const = 0;
     [[nodiscard]] virtual WorkUnit getWorkUnit() const = 0;

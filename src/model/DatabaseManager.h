@@ -209,9 +209,7 @@ public:
         return success;
     }
     
-    // ========================================================================
     // ASYNC I/O OPERATIONS - Non-blocking Database Access
-    // ========================================================================
     
     /**
      * Add product asynchronously (non-blocking)

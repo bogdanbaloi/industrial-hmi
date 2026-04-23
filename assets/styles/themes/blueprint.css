@@ -1,6 +1,5 @@
-/* ============================================================================
+/*
    Blueprint palette — drafting paper / engineering schematic
-   ============================================================================
    Cool navy background with cream text and cyan accents; monospace
    typography; zero border-radius everywhere; thin precise borders
    instead of filled cards. Evokes technical drawings and CAD.
@@ -9,9 +8,9 @@
    Text:      #F5EFE0 (cream), #C9C0A4 (dim cream)
    Accents:   #00BCD4 (cyan), #4DD0E1 (soft cyan), #26C6DA
    Semantic:  #FF5252 (red), #FFB74D (amber), #81C784 (green)
-   ============================================================================ */
+   */
 
-/* ---------- Global typography --------------------------------------------- */
+/* Global typography */
 window,
 * {
     font-family: "JetBrains Mono", "Cascadia Mono", "Consolas",
@@ -28,7 +27,7 @@ combobox * {
     border-radius: 0;
 }
 
-/* ---------- Sidebar ------------------------------------------------------- */
+/* Sidebar */
 .sidebar {
     background-color: #0D2847;
     border-right: 2px solid #00BCD4;
@@ -70,11 +69,11 @@ combobox * {
 
 .sidebar-version, .sidebar-author { color: #4DD0E1; letter-spacing: 1.2px; }
 
-/* ---------- Clock --------------------------------------------------------- */
+/* Clock */
 .live-clock-time { color: #00BCD4; font-weight: 400; letter-spacing: 2px; }
 .live-clock-date { color: #C9C0A4; letter-spacing: 1.5px; text-transform: uppercase; }
 
-/* ---------- System status ------------------------------------------------- */
+/* System status */
 .system-status-badge {
     background: transparent;
     border: 1px solid #4DD0E1;
@@ -86,7 +85,7 @@ combobox * {
 .system-status-dot.state-error       { color: #FF5252; }
 .system-status-dot.state-calibration { color: #FFB74D; }
 
-/* ---------- Top-bar alerts button --------------------------------------- */
+/* Top-bar alerts button */
 /* Blueprint routes alerts through a top-bar popover instead of a
    bottom footer, so the launcher button gets a bit of emphasis to
    signal it's the entry point. The `.has-alerts` helper class is
@@ -113,7 +112,7 @@ button.alerts-topbar-button.has-alerts {
    light surface. */
 popover.background { background: #0D2847; }
 
-/* ---------- E-STOP -------------------------------------------------------- */
+/* E-STOP */
 button.sidebar-estop,
 .sidebar button.sidebar-estop {
     background: #FF5252;
@@ -129,7 +128,7 @@ button.sidebar-estop:hover,
     border-color: #FF8A80;
 }
 
-/* ---------- Alerts — no fill, just a left edge --------------------------- */
+/* Alerts — no fill, just a left edge */
 .alerts-panel { color: #F5EFE0; }
 
 .alert-card {
@@ -150,7 +149,7 @@ button.sidebar-estop:hover,
 button.alert-dismiss         { color: #4DD0E1; }
 button.alert-dismiss:hover   { color: #F5EFE0; background: rgba(0,188,212,0.08); }
 
-/* ---------- Notebook tabs ------------------------------------------------ */
+/* Notebook tabs */
 /* Taller tab bar so the page content below doesn't visually collide
    with the selected-tab label (dashboard_root only margins 6px off
    the top, which is too snug on compact monitors). */
@@ -180,7 +179,7 @@ notebook stack       { padding-top: 14px; }
 #dashboard_root      { margin-top: 16px; }
 #settings_root > *   { margin-top: 8px; }
 
-/* ---------- Dashboard cards & labels ------------------------------------- */
+/* Dashboard cards & labels */
 /* Compact padding: Blueprint's top-bar + footer leaves notebook area
    tight, so shave ~10px off each card vs the default Industrial look. */
 .work-unit-card,
@@ -250,7 +249,7 @@ window {
     background-color: #102E52;
 }
 
-/* ---------- Progress bars ------------------------------------------------- */
+/* Progress bars */
 progressbar trough {
     background: #0D2847;
     border: 1px solid #18375F;
@@ -262,7 +261,7 @@ progressbar progress {
     border-radius: 0;
 }
 
-/* ---------- Settings page widgets --------------------------------------- */
+/* Settings page widgets */
 frame {
     border: 1px solid #18375F;
     background: transparent;

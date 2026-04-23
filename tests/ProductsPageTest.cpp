@@ -26,9 +26,7 @@ using ::testing::_;
 using ::testing::HasSubstr;
 using ::testing::SaveArg;
 
-// ============================================================================
 // Fixture — needs DB initialized for presenter.getProduct()
-// ============================================================================
 
 class ProductsPageTest : public ::testing::Test {
 protected:
@@ -55,9 +53,7 @@ protected:
     app::view::ProductsPage* page_{nullptr};
 };
 
-// ============================================================================
 // Delete confirmation
-// ============================================================================
 
 TEST_F(ProductsPageTest, ShowDeleteConfirmShowsDialogWithProductName) {
     // showDeleteConfirmDialog is the private method that the delete flow
@@ -98,9 +94,7 @@ TEST_F(ProductsPageTest, DeleteCancelledDoesNothing) {
     EXPECT_NO_THROW(capturedCb(false));
 }
 
-// ============================================================================
 // Error dialogs
-// ============================================================================
 
 TEST_F(ProductsPageTest, ShowDeleteConfirmDialogMessageMentionsSoftDelete) {
     std::string capturedMsg;

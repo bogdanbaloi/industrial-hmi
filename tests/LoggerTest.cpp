@@ -48,9 +48,7 @@ private:
 
 }  // namespace
 
-// ============================================================================
 // levelToString
-// ============================================================================
 
 TEST(LoggerHelpersTest, LevelToStringMapsAllLevels) {
     EXPECT_STREQ(app::core::levelToString(LogLevel::TRACE),    "TRACE");
@@ -61,9 +59,7 @@ TEST(LoggerHelpersTest, LevelToStringMapsAllLevels) {
     EXPECT_STREQ(app::core::levelToString(LogLevel::CRITICAL), "CRIT");
 }
 
-// ============================================================================
 // formatTimestamp
-// ============================================================================
 
 TEST(LoggerHelpersTest, FormatTimestampProducesNonEmptyString) {
     auto ts = app::core::formatTimestamp();
@@ -75,9 +71,7 @@ TEST(LoggerHelpersTest, FormatTimestampProducesNonEmptyString) {
     EXPECT_NE(ts.find('.'), std::string::npos);
 }
 
-// ============================================================================
 // parseLogLevel
-// ============================================================================
 
 TEST(LoggerHelpersTest, ParseLogLevelMapsStrings) {
     EXPECT_EQ(app::core::parseLogLevel("TRACE"), LogLevel::TRACE);
@@ -93,9 +87,7 @@ TEST(LoggerHelpersTest, ParseLogLevelDefaultsToInfoForUnknown) {
     EXPECT_EQ(app::core::parseLogLevel(""), LogLevel::INFO);
 }
 
-// ============================================================================
 // Logger facade with CapturingLogger
-// ============================================================================
 
 TEST(LoggerTest, InfoLogsWhenLevelIsDebug) {
     auto capturing = std::make_unique<CapturingLogger>(LogLevel::DEBUG);
@@ -167,9 +159,7 @@ TEST(LoggerTest, WarnLogsCorrectly) {
     EXPECT_EQ(raw->entries[0].level, LogLevel::WARN);
 }
 
-// ============================================================================
 // ConsoleLogger (just verifying it doesn't crash)
-// ============================================================================
 
 TEST(ConsoleLoggerTest, LogDoesNotCrash) {
     ConsoleLogger cl(LogLevel::DEBUG);
@@ -187,9 +177,7 @@ TEST(ConsoleLoggerTest, IsEnabledRespectsMinLevel) {
     EXPECT_TRUE(cl.isEnabled(LogLevel::ERROR));
 }
 
-// ============================================================================
 // CallbackLogger
-// ============================================================================
 
 TEST(CallbackLoggerTest, CallbackReceivesFormattedMessage) {
     std::string captured;

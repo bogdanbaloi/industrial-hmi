@@ -10,9 +10,9 @@
     <property name="margin-top">40</property>
     <property name="margin-bottom">40</property>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- TOOLBAR                                                      -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkBox" id="toolbar">
         <property name="orientation">horizontal</property>
@@ -51,9 +51,9 @@
       </object>
     </child>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- SEARCH BAR                                                   -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkBox">
         <property name="orientation">horizontal</property>
@@ -76,9 +76,9 @@
       </object>
     </child>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- TABLE CONTAINER (ColumnView injected from code)              -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkScrolledWindow" id="table_container">
         <property name="css-classes">products-table</property>
@@ -88,9 +88,9 @@
       </object>
     </child>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- ACTION BUTTONS                                               -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkBox" id="action_bar">
         <property name="orientation">horizontal</property>
