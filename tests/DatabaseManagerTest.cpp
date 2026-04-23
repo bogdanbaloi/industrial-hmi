@@ -37,9 +37,7 @@ protected:
     }
 };
 
-// ============================================================================
 // Initialize + demo seed
-// ============================================================================
 
 TEST_F(DatabaseManagerTest, InitializeSucceeds) {
     // SetUpTestSuite already ran initialize() once; calling it again should
@@ -67,9 +65,7 @@ TEST_F(DatabaseManagerTest, DemoProductAHasExpectedFields) {
     EXPECT_FLOAT_EQ(a->qualityRate, 98.1f);
 }
 
-// ============================================================================
 // getProduct(id)
-// ============================================================================
 
 TEST_F(DatabaseManagerTest, GetProductByIdReturnsMatchingRow) {
     auto all = DatabaseManager::instance().getAllProducts();
@@ -87,9 +83,7 @@ TEST_F(DatabaseManagerTest, GetProductByIdReturnsInvalidForMissing) {
     EXPECT_EQ(p.id, app::config::defaults::kInvalidProductId);
 }
 
-// ============================================================================
 // searchProducts
-// ============================================================================
 
 TEST_F(DatabaseManagerTest, SearchByCodeFindsMatchingRow) {
     auto matches = DatabaseManager::instance().searchProducts("PROD-001");
@@ -109,9 +103,7 @@ TEST_F(DatabaseManagerTest, SearchWithNoMatchesReturnsEmpty) {
     EXPECT_TRUE(matches.empty());
 }
 
-// ============================================================================
 // addProduct
-// ============================================================================
 
 TEST_F(DatabaseManagerTest, AddProductWithNewCodeSucceeds) {
     const std::string code = "TEST-ADD-001";
@@ -133,9 +125,7 @@ TEST_F(DatabaseManagerTest, AddProductWithDuplicateCodeFails) {
         "PROD-001", "Dup", "Active", 10, 90.0f));
 }
 
-// ============================================================================
 // updateProduct
-// ============================================================================
 
 TEST_F(DatabaseManagerTest, UpdateProductChangesValues) {
     const std::string code = "TEST-UPDATE-001";
@@ -158,9 +148,7 @@ TEST_F(DatabaseManagerTest, UpdateProductChangesValues) {
     EXPECT_FLOAT_EQ(updated.qualityRate, 80.0f);
 }
 
-// ============================================================================
 // deleteProduct (soft delete)
-// ============================================================================
 
 TEST_F(DatabaseManagerTest, DeleteProductHidesItFromQueries) {
     const std::string code = "TEST-DELETE-001";

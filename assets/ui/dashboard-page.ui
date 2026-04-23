@@ -11,9 +11,9 @@
     <property name="margin-top">6</property>
     <property name="margin-bottom">4</property>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- STATUS ZONE (hidden banner at top)                           -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkBox" id="status_banner">
         <property name="orientation">horizontal</property>
@@ -34,9 +34,9 @@
       </object>
     </child>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- WORK UNIT                                                    -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkLabel">
         <property name="label" translatable="yes">WORK UNIT</property>
@@ -149,9 +149,9 @@
       </object>
     </child>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- EQUIPMENT STATIONS                                           -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkLabel">
         <property name="label" translatable="yes">EQUIPMENT STATIONS</property>
@@ -235,9 +235,9 @@
       </object>
     </child>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- QUALITY CHECKPOINTS                                          -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkLabel">
         <property name="label" translatable="yes">QUALITY CHECKPOINTS</property>
@@ -325,9 +325,9 @@
       </object>
     </child>
 
-    <!-- ============================================================ -->
+    <!-- = -->
     <!-- CONTROL PANEL                                                -->
-    <!-- ============================================================ -->
+    <!-- = -->
     <child>
       <object class="GtkFrame">
         <property name="label" translatable="yes">Control Panel</property>

@@ -41,7 +41,7 @@ public:
     /// Initialize the page - sets up presenter connection
     void initialize(std::shared_ptr<DashboardPresenter> presenter);
 
-    // --- Page overrides ------------------------------------------------------
+    // Page overrides
     [[nodiscard]] Glib::ustring pageTitle() const override;
     void onThemeChanged() override;
 

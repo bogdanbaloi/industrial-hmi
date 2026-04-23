@@ -10,9 +10,7 @@ project(industrial-hmi
     DESCRIPTION "Industrial HMI MVP Architecture - Cross-Platform (Linux/Windows)"
     LANGUAGES CXX)
 
-# ============================================================================
 # Platform Detection
-# ============================================================================
 if(WIN32)
     # Detect MSYS2/MinGW environment (use pkg-config like Linux)
     if(CMAKE_CXX_COMPILER MATCHES "msys64|clang64|mingw64|ucrt64")
@@ -31,16 +29,12 @@ elseif(APPLE)
     set(PLATFORM_MACOS TRUE)
 endif()
 
-# ============================================================================
 # C++20 Standard (Cross-Platform)
-# ============================================================================
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# ============================================================================
 # Compiler Warnings (Platform-Specific)
-# ============================================================================
 if(MSVC)
     # MSVC (Visual Studio / Windows)
     add_compile_options(
@@ -67,9 +61,7 @@ else()
     )
 endif()
 
-# ============================================================================
 # Sanitizers (Debug builds - GCC/Clang only)
-# ============================================================================
 option(ENABLE_SANITIZERS "Enable sanitizers (AddressSanitizer, UBSanitizer)" OFF)
 
 if(ENABLE_SANITIZERS AND NOT MSVC)
@@ -89,9 +81,7 @@ if(ENABLE_SANITIZERS AND NOT MSVC)
     # -fsanitize=thread
 endif()
 
-# ============================================================================
 # Code Coverage (Debug builds - GCC/Clang only)
-# ============================================================================
 option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
 
 if(ENABLE_COVERAGE AND NOT MSVC)
@@ -107,14 +97,10 @@ if(ENABLE_COVERAGE AND NOT MSVC)
     add_link_options(${COVERAGE_FLAGS})
 endif()
 
-# ============================================================================
 # Unit Tests (opt-in)
-# ============================================================================
 option(BUILD_TESTS "Build unit tests (requires GoogleTest + gmock)" OFF)
 
-# ============================================================================
 # Platform-Specific Definitions
-# ============================================================================
 if(WIN32)
     add_compile_definitions(
         _CRT_SECURE_NO_WARNINGS     # Disable MSVC secure warnings
@@ -123,9 +109,7 @@ if(WIN32)
     )
 endif()
 
-# ============================================================================
 # Find Dependencies (Cross-Platform)
-# ============================================================================
 
 # On Windows with vcpkg, set toolchain file
 # MSYS2 users: dependencies via pacman (pkg-config)
@@ -167,17 +151,13 @@ endif()
 # Threads (cross-platform)
 find_package(Threads REQUIRED)
 
-# ============================================================================
 # Internationalization (gettext)
-# ============================================================================
 # Build catalog: po/<lang>.po -> <build>/locale/<lang>/LC_MESSAGES/<domain>.mo
 set(GETTEXT_DOMAIN "industrial-hmi")
 find_package(Gettext)  # msgfmt + msgmerge (translators only need the former)
 find_package(Intl)     # libintl (MSVC/MinGW expose it as a separate library)
 
-# ============================================================================
 # Object Libraries (Modular Build Pattern)
-# ============================================================================
 
 # Model Layer - Data and business logic simulation
 add_library(objectsModel OBJECT)
@@ -394,9 +374,7 @@ target_compile_options(objectsView
         ${GTKMM_CFLAGS_OTHER}
 )
 
-# ============================================================================
 # Main Executable (Cross-Platform)
-# ============================================================================
 
 # On Windows, create a GUI application (not console)
 if(WIN32)
@@ -428,10 +406,8 @@ if(WIN32)
     target_link_libraries(industrial-hmi PRIVATE ws2_32 user32)
 endif()
 
-# ============================================================================
 # Console Executable (Cross-Platform) — shares src/main.cpp with the GTK
 # binary via #ifdef CONSOLE_MODE. Zero gtkmm on the link line.
-# ============================================================================
 add_executable(industrial-hmi-console)
 target_sources(industrial-hmi-console PRIVATE src/main.cpp)
 target_compile_definitions(industrial-hmi-console PRIVATE CONSOLE_MODE)
@@ -472,9 +448,7 @@ if(WIN32 AND EXISTS "${CMAKE_SOURCE_DIR}/resources/app.rc")
     target_sources(industrial-hmi PRIVATE resources/app.rc)
 endif()
 
-# ============================================================================
 # Copy Assets to Build Directory (Cross-Platform)
-# ============================================================================
 
 # Use platform-agnostic path separators
 add_custom_target(CopyAssets ALL
@@ -500,9 +474,7 @@ add_custom_target(CopyConfig ALL
 
 add_dependencies(industrial-hmi CopyAssets CopyConfig)
 
-# ============================================================================
 # Translation Catalogs (.po -> .mo)
-# ============================================================================
 set(PO_DIR "${CMAKE_SOURCE_DIR}/po")
 set(LOCALE_BUILD_DIR "${CMAKE_BINARY_DIR}/locale")
 
@@ -548,9 +520,7 @@ else()
     message(STATUS "gettext msgfmt not found - translations will not be compiled")
 endif()
 
-# ============================================================================
 # Installation Rules (Cross-Platform)
-# ============================================================================
 
 if(WIN32)
     # Windows: Install to Program Files
@@ -566,17 +536,13 @@ else()
     install(DIRECTORY assets DESTINATION share/industrial-hmi)
 endif()
 
-# ============================================================================
 # Tests (only when BUILD_TESTS=ON)
-# ============================================================================
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-# ============================================================================
 # CPack - Package Generation (Windows Installer / Linux Package)
-# ============================================================================
 
 set(CPACK_PACKAGE_NAME "IndustrialHMI")
 set(CPACK_PACKAGE_VENDOR "Portfolio Project")
@@ -599,9 +565,7 @@ endif()
 
 include(CPack)
 
-# ============================================================================
 # Summary (Cross-Platform)
-# ============================================================================
 
 message(STATUS "")
 message(STATUS "═══════════════════════════════════════════════════════")

@@ -57,9 +57,7 @@ void DashboardPage::refreshThemedWidgets() {
     }
 }
 
-// ============================================================================
 // ViewObserver Interface Implementation
-// ============================================================================
 
 /// @note All these methods are called from Presenter thread!
 ///       Must use Glib::signal_idle() to update GTK widgets safely.
@@ -133,9 +131,7 @@ void DashboardPage::onError(const std::string& errorMessage) {
     });
 }
 
-// ============================================================================
 // UI Construction
-// ============================================================================
 
 void DashboardPage::buildUI() {
     // Load the entire static layout from XML — all widget creation,
@@ -148,18 +144,18 @@ void DashboardPage::buildUI() {
         append(*root);
     }
 
-    // ---- Status zone ----
+    // Status zone
     statusZoneWidgets_.bannerBox = builder->get_widget<Gtk::Box>("status_banner");
     statusZoneWidgets_.messageLabel = builder->get_widget<Gtk::Label>("status_message");
 
-    // ---- Work unit ----
+    // Work unit
     workUnitWidgets_.workUnitIdLabel = builder->get_widget<Gtk::Label>("wu_id_label");
     workUnitWidgets_.productIdLabel = builder->get_widget<Gtk::Label>("wu_product_label");
     workUnitWidgets_.productDescLabel = builder->get_widget<Gtk::Label>("wu_desc_label");
     workUnitWidgets_.progressBar = builder->get_widget<Gtk::ProgressBar>("wu_progress");
     workUnitWidgets_.statusLabel = builder->get_widget<Gtk::Label>("wu_status");
 
-    // ---- Equipment cards ----
+    // Equipment cards
     // Card IDs match the SimulatedModel demo data (equipmentId 0, 1, 2)
     // so the presenter's VMs route to the correct card.
     for (uint32_t i = 0; i < 3; ++i) {
@@ -181,7 +177,7 @@ void DashboardPage::buildUI() {
         equipmentCards_.push_back(card);
     }
 
-    // ---- Quality cards (gauge + trend chart injected dynamically) ----
+    // Quality cards (gauge + trend chart injected dynamically)
     for (uint32_t i = 0; i < 3; ++i) {
         QualityCard card;
         card.checkpointId = i;
@@ -214,7 +210,7 @@ void DashboardPage::buildUI() {
         qualityCards_.push_back(card);
     }
 
-    // ---- Control panel ----
+    // Control panel
     controlPanelWidgets_.activeIndicator = builder->get_widget<Gtk::Label>("cp_indicator");
     controlPanelWidgets_.startButton = builder->get_widget<Gtk::Button>("cp_start");
     controlPanelWidgets_.stopButton = builder->get_widget<Gtk::Button>("cp_stop");
@@ -238,9 +234,7 @@ void DashboardPage::buildUI() {
         sigc::mem_fun(*this, &DashboardPage::onCalibrationButtonClicked));
 }
 
-// ============================================================================
 // Event Handlers (User Actions → Presenter)
-// ============================================================================
 
 void DashboardPage::onStartButtonClicked() {
     log().debug("DashboardPage: Start button clicked");
@@ -303,9 +297,7 @@ void DashboardPage::onEquipmentSwitchToggled(uint32_t equipmentId, bool enabled)
     }
 }
 
-// ============================================================================
 // UI Update Helpers (Render ViewModels)
-// ============================================================================
 
 void DashboardPage::updateWorkUnitWidgets(const presenter::WorkUnitViewModel& vm) {
     workUnitWidgets_.workUnitIdLabel->set_text(vm.workUnitId);
@@ -471,9 +463,7 @@ void DashboardPage::updateStatusZone(const presenter::StatusZoneViewModel& vm) {
     }
 }
 
-// ============================================================================
 // CSS Styling
-// ============================================================================
 
 void DashboardPage::applyStyles() {
     cssProvider_ = Gtk::CssProvider::create();

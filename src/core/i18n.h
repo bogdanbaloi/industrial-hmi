@@ -1,8 +1,6 @@
 #pragma once
 
-// ============================================================================
 // Internationalization (i18n) — gettext wrapper (GTK-free)
-// ============================================================================
 //
 // Provides translation macros for user-facing strings:
 //   _("text")    - translate at runtime
@@ -14,7 +12,6 @@
 //
 // Depends only on libintl — no <glibmm/i18n.h>, no GTK. Usable from both
 // the GTK front-end and the headless console.
-// ============================================================================
 
 #ifndef GETTEXT_PACKAGE
 #define GETTEXT_PACKAGE "industrial-hmi"

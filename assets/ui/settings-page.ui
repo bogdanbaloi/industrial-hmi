@@ -35,7 +35,7 @@
           </object>
         </child>
 
-        <!-- ================= General ================= -->
+        <!-- General -->
         <child>
           <object class="GtkFrame">
             <property name="label" translatable="yes">General</property>
@@ -137,7 +137,7 @@
           </object>
         </child>
 
-        <!-- ================= Display ================= -->
+        <!-- Display -->
         <child>
           <object class="GtkFrame">
             <property name="label" translatable="yes">Display</property>
@@ -186,7 +186,7 @@
           </object>
         </child>
 
-        <!-- ================= Data ================= -->
+        <!-- Data -->
         <child>
           <object class="GtkFrame">
             <property name="label" translatable="yes">Data</property>
@@ -231,7 +231,7 @@
           </object>
         </child>
 
-        <!-- ================= Logging ================= -->
+        <!-- Logging -->
         <child>
           <object class="GtkFrame">
             <property name="label" translatable="yes">Logging</property>

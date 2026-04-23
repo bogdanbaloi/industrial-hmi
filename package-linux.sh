@@ -6,7 +6,7 @@
 
 set -e
 
-# -- Parse arguments ------------------------------------------------------
+# Parse arguments
 while getopts "hdb:t:" arg; do
     case $arg in
         d) BUILD_TYPE=debug ;;
@@ -39,7 +39,7 @@ if [[ ! -f "$EXE" ]]; then
     exit 1
 fi
 
-# -- Prepare ---------------------------------------------------------------
+# Prepare
 rm -rf "$TMP_DIR"
 mkdir -p "$TMP_DIR/bin"
 mkdir -p "$TARGET_DIR"
@@ -49,12 +49,12 @@ echo "  Packaging industrial-hmi ($BUILD_TYPE) for Linux"
 echo "================================================================"
 echo ""
 
-# -- Copy executable -------------------------------------------------------
+# Copy executable
 echo "Copying executable..."
 cp "$EXE" "$TMP_DIR/bin/"
 chmod +x "$TMP_DIR/bin/industrial-hmi"
 
-# -- Copy application data -------------------------------------------------
+# Copy application data
 for dir in assets config ui; do
     if [[ -d "${BUILD_DIR}/${dir}" ]]; then
         echo "Copying ${dir}/..."
@@ -64,7 +64,7 @@ for dir in assets config ui; do
     fi
 done
 
-# -- Create launch script --------------------------------------------------
+# Create launch script
 cat > "$TMP_DIR/run.sh" << 'LAUNCHER'
 #!/bin/bash
 # Launch industrial-hmi from the package directory
@@ -74,13 +74,12 @@ exec ./bin/industrial-hmi "$@"
 LAUNCHER
 chmod +x "$TMP_DIR/run.sh"
 
-# -- List runtime dependencies ---------------------------------------------
+# List runtime dependencies
 echo ""
 echo "Checking runtime dependencies..."
 DEPS_FILE="$TMP_DIR/DEPENDENCIES.txt"
 cat > "$DEPS_FILE" << EOF
 Industrial HMI - Runtime Dependencies
-======================================
 
 Install these packages before running:
 
@@ -109,7 +108,7 @@ else
     echo "All runtime dependencies satisfied."
 fi
 
-# -- Create tarball ---------------------------------------------------------
+# Create tarball
 echo ""
 echo "Creating archive: ${PKG_NAME}.tar.gz"
 (cd "$TARGET_DIR" && tar czf "${PKG_NAME}.tar.gz" "$PKG_NAME")

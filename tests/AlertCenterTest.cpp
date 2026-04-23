@@ -52,9 +52,7 @@ struct SignalCounter {
 
 }  // namespace
 
-// ============================================================================
 // raise()
-// ============================================================================
 
 TEST(AlertCenter, RaiseInsertsNewAlert) {
     AlertCenter c;
@@ -98,9 +96,7 @@ TEST(AlertCenter, RaisePreservesExplicitTimestamp) {
     EXPECT_EQ(c.snapshot().at(0).timestamp, "12:34:56");
 }
 
-// ============================================================================
 // clear() / clearAll()
-// ============================================================================
 
 TEST(AlertCenter, ClearRemovesByKey) {
     AlertCenter c;
@@ -133,9 +129,7 @@ TEST(AlertCenter, ClearAllOnEmptyIsNoOp) {
     EXPECT_TRUE(c.snapshot().empty());
 }
 
-// ============================================================================
 // snapshot()
-// ============================================================================
 
 TEST(AlertCenter, SnapshotReturnsIndependentCopy) {
     AlertCenter c;
@@ -150,9 +144,7 @@ TEST(AlertCenter, SnapshotReturnsIndependentCopy) {
     EXPECT_EQ(snap2.at(0).title, "updated");
 }
 
-// ============================================================================
 // signalAlertsChanged()
-// ============================================================================
 
 TEST(AlertCenter, RaiseEmitsSignal) {
     AlertCenter c;
@@ -196,9 +188,7 @@ TEST(AlertCenter, ClearAllEmitsSignalOnlyWhenListWasNonEmpty) {
     EXPECT_EQ(s.count, 2);  // one from raise, one from clearAll
 }
 
-// ============================================================================
 // history()
-// ============================================================================
 
 // Separate counter for the history signal — parallels SignalCounter but
 // subscribes to signalHistoryChanged.

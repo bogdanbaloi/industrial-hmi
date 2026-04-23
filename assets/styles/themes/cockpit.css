@@ -1,6 +1,5 @@
-/* ============================================================================
+/*
    Cockpit palette — mission control / phosphor CRT / airliner console
-   ============================================================================
    Pure black surfaces, phosphor green as primary, amber for warn,
    red for critical. Heavy "instrument bezel" feel on every container.
    Subtle glow (box-shadow) where the engine allows it. Compressed
@@ -12,16 +11,16 @@
    Red:        #FF3333 (critical), #FF6666 (hover)
    Grey rails: #2A2A2A, #3D3D3D (bezel edges)
    Text:       #CCCCCC (base), #808080 (secondary)
-   ============================================================================ */
+   */
 
-/* ---------- Global typography ---------------------------------------------- */
+/* Global typography */
 window,
 * {
     font-family: "Barlow Condensed", "Roboto Condensed",
                  "Oswald", "Impact", sans-serif;
 }
 
-/* ---------- Sidebar -- the "console rack" --------------------------------- */
+/* Sidebar -- the "console rack" */
 .sidebar {
     background-color: #000000;
     background-image: linear-gradient(180deg, #0A0A0A 0%, #000000 100%);
@@ -82,7 +81,7 @@ window,
     text-transform: uppercase;
 }
 
-/* ---------- Clock — cockpit timekeeper ----------------------------------- */
+/* Clock — cockpit timekeeper */
 .live-clock-time {
     color: #33FF66;
     font-weight: 900;
@@ -97,7 +96,7 @@ window,
     font-size: 11px;
 }
 
-/* ---------- System status — big LED readout ------------------------------ */
+/* System status — big LED readout */
 .system-status-badge {
     background: #0A0A0A;
     border: 2px solid #2A2A2A;
@@ -118,7 +117,7 @@ window,
 .system-status-dot.state-error       { color: #FF3333; }
 .system-status-dot.state-calibration { color: #FFAA00; }
 
-/* ---------- E-STOP — the big red mushroom -------------------------------- */
+/* E-STOP — the big red mushroom */
 button.sidebar-estop,
 .sidebar button.sidebar-estop {
     background: #FF3333;
@@ -137,7 +136,7 @@ button.sidebar-estop:hover,
     border-color: #FF3333;
 }
 
-/* ---------- Alerts — instrument rack rows -------------------------------- */
+/* Alerts — instrument rack rows */
 .alerts-panel { color: #CCCCCC; }
 
 .alert-card {
@@ -171,12 +170,12 @@ button.alert-dismiss:hover {
     background: rgba(255,51,51,0.1);
 }
 
-/* ---------- Main window background — console panel metal ---------------- */
+/* Main window background — console panel metal */
 window {
     background-color: #000000;
 }
 
-/* ---------- Notebook tabs — instrument selector switches ---------------- */
+/* Notebook tabs — instrument selector switches */
 notebook header {
     background: #000000;
     border-bottom: 2px solid #33FF66;
@@ -194,7 +193,7 @@ notebook tab {
 notebook tab:hover   { color: #66FF99; }
 notebook tab:checked { color: #33FF66; background: #1A1A1A; border-color: #33FF66; border-bottom-color: #1A1A1A; }
 
-/* ---------- Dashboard cards — "instrument bezels" ------------------------ */
+/* Dashboard cards — "instrument bezels" */
 .work-unit-card,
 .equipment-card,
 .quality-card,
@@ -253,7 +252,7 @@ notebook tab:checked { color: #33FF66; background: #1A1A1A; border-color: #33FF6
 .severity-warning { background: rgba(255,170,0,0.10);   border-left: 4px solid #FFAA00; }
 .severity-error   { background: rgba(255,51,51,0.12);   border-left: 4px solid #FF3333; }
 
-/* ---------- Progress bars — analog gauges ------------------------------- */
+/* Progress bars — analog gauges */
 progressbar trough {
     background: #0A0A0A;
     border: 2px solid #2A2A2A;
@@ -265,7 +264,7 @@ progressbar progress {
     border-radius: 1px;
 }
 
-/* ---------- Settings page widgets --------------------------------------- */
+/* Settings page widgets */
 frame {
     background: #0A0A0A;
     border: 2px solid #2A2A2A;

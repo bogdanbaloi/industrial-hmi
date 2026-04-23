@@ -151,9 +151,9 @@ window.light-mode .sidebar-close-app:hover {
     border-color: #ea4335;
 }
 
-/* ============================================================
+/*
    Alerts panel (sidebar)
-   ============================================================ */
+   */
 
 .alerts-panel {
     color: #CFD8DC;
@@ -203,9 +203,8 @@ window.light-mode .sidebar-close-app:hover {
     font-size: 10px;
 }
 
-/* ============================================================
+/*
    Palette thumbnail picker (Settings page)
-   ============================================================
    Replaces a plain combo with a row of clickable cards. Each card
    shows the 4 signature colors of a theme plus its name. Selected
    card gets a highlight border. Active theme CSS can override
@@ -352,9 +351,9 @@ window.light-mode .alert-message  { color: #455A64; }
 window.light-mode .alert-card.alert-warning  { background-color: rgba(255, 179, 0, 0.12); }
 window.light-mode .alert-card.alert-critical { background-color: rgba(239, 83, 80, 0.14); }
 
-/* ============================================================
+/*
    System status badge
-   ============================================================ */
+   */
 .system-status-badge {
     padding: 4px 0;
 }
@@ -374,10 +373,10 @@ window.light-mode .alert-card.alert-critical { background-color: rgba(239, 83, 8
 }
 window.light-mode .system-status-label { color: #263238; }
 
-/* ============================================================
+/*
    E-STOP  (button.sidebar-estop has specificity 0-1-1, tying with
    .sidebar button so the later rule wins and we get a red button.)
-   ============================================================ */
+   */
 button.sidebar-estop {
     background-color: #B71C1C;
     background-image: none;
@@ -391,9 +390,9 @@ button.sidebar-estop {
 button.sidebar-estop:hover  { background-color: #D32F2F; }
 button.sidebar-estop:active { background-color: #7F0000; }
 
-/* ============================================================
+/*
    Live clock
-   ============================================================ */
+   */
 .live-clock-time {
     font-size: 22px;
     font-weight: 700;

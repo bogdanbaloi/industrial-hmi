@@ -45,9 +45,7 @@ std::vector<std::string> lines(const std::string& csv) {
 
 }  // namespace
 
-// ============================================================================
 // Basic output format
-// ============================================================================
 
 TEST(CsvSerializerTest, EmptyListProducesHeaderOnly) {
     std::ostringstream out;
@@ -86,9 +84,7 @@ TEST(CsvSerializerTest, MultipleRowsInOrder) {
     EXPECT_EQ(l[3], "C,Gamma,Low Stock,5,92.3");
 }
 
-// ============================================================================
 // RFC 4180 field escaping
-// ============================================================================
 
 TEST(CsvSerializerTest, FieldWithCommaIsQuoted) {
     std::ostringstream out;
@@ -119,9 +115,7 @@ TEST(CsvSerializerTest, FieldWithNewlineIsQuoted) {
     EXPECT_NE(out.str().find("\"Line1\nLine2\""), std::string::npos);
 }
 
-// ============================================================================
 // Custom headers (i18n scenario)
-// ============================================================================
 
 TEST(CsvSerializerTest, CustomTranslatedHeaderAppearsInOutput) {
     std::ostringstream out;
@@ -135,9 +129,7 @@ TEST(CsvSerializerTest, CustomTranslatedHeaderAppearsInOutput) {
     EXPECT_NE(l[0].find("Qualita %"), std::string::npos);
 }
 
-// ============================================================================
 // UTF-8 BOM present
-// ============================================================================
 
 TEST(CsvSerializerTest, OutputStartsWithUtf8Bom) {
     std::ostringstream out;

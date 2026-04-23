@@ -18,7 +18,7 @@
     <property name="orientation">vertical</property>
     <property name="spacing">0</property>
 
-    <!-- ============ TOP BAR ============ -->
+    <!-- TOP BAR -->
     <child>
       <object class="GtkBox" id="top_bar">
         <property name="orientation">horizontal</property>
@@ -172,7 +172,7 @@
       </object>
     </child>
 
-    <!-- ============ MAIN CANVAS ============ -->
+    <!-- MAIN CANVAS -->
     <child>
       <object class="GtkBox" id="content_area">
         <property name="orientation">vertical</property>

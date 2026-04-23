@@ -1,6 +1,5 @@
-/* ============================================================================
+/*
    Retro CRT — vintage phosphor terminal
-   ============================================================================
    Pure black background, phosphor green primary, amber accents. Every
    label/field is uppercase monospace to evoke an IBM 3270 / VT100
    session. Text-shadow simulates the bloom of an old tube display.
@@ -9,7 +8,7 @@
    Phosphor green: #00FF41 (primary), #33FF66 (bright), #008F11 (dim)
    Amber:          #FFB000 (warn)
    Red:            #FF3333 (error)
-   ============================================================================ */
+   */
 
 window,
 * {

@@ -47,10 +47,10 @@ window.light-mode .toolbar-button:hover {
     background: #d2d5d9;
 }
 
-/* ============================================
+/*
    Products table (ColumnView) — scoped to .products-table
    so other scrolledwindows in the app aren't affected.
-   ============================================ */
+   */
 
 /* Dark mode — every layer gets explicit dark background */
 .products-table,
@@ -91,7 +91,7 @@ window.light-mode .toolbar-button:hover {
     font-weight: 600;
 }
 
-/* ---- Light mode ---- */
+/* Light mode */
 window.light-mode .products-table,
 window.light-mode .products-table viewport,
 window.light-mode .products-table columnview,

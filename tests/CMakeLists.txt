@@ -1,13 +1,10 @@
-# ============================================================================
 # Unit Tests - GoogleTest + gmock
-# ============================================================================
 # Enabled via -DBUILD_TESTS=ON from the top-level CMakeLists.txt.
 #
 # Dependency resolution:
 #   * Linux / MSYS2: find_package(GTest) via CMake config modules (both
 #     libgtest-dev and mingw-w64-clang-x86_64-gtest ship them).
 #   * Fallback for environments without GTest installed: pkg-config.
-# ============================================================================
 
 find_package(GTest CONFIG QUIET)
 
@@ -42,9 +39,7 @@ if(NOT GTest_FOUND)
     target_link_libraries(GTest::gmock INTERFACE ${GMOCK_PC_LIBRARIES})
 endif()
 
-# ----------------------------------------------------------------------------
 # Test executable - one binary per subsystem keeps link errors localized
-# ----------------------------------------------------------------------------
 
 # Common link set used by every test target
 set(TEST_COMMON_LIBS
@@ -59,7 +54,7 @@ set(TEST_COMMON_LIBS
 add_library(tests_includes INTERFACE)
 target_include_directories(tests_includes INTERFACE ${CMAKE_SOURCE_DIR})
 
-# --- Core: Result<T, E> ---------------------------------------------------
+# Core: Result<T, E>
 # Result.h + ErrorHandling.h are header-only, so we avoid linking objectsCore
 # (which would pull in Application.cpp -> MainWindow, Boost.Asio -> Winsock).
 add_executable(test_result ResultTest.cpp)
@@ -69,7 +64,7 @@ target_link_libraries(test_result PRIVATE
 )
 add_test(NAME ResultTest COMMAND test_result)
 
-# --- Config: ConfigManager ------------------------------------------------
+# Config: ConfigManager
 # ConfigManager.h is header-only (pure std:: code) and config_defaults.h is a
 # plain constexpr header; neither needs GTK or the model layer.
 add_executable(test_config_manager ConfigManagerTest.cpp)
@@ -82,7 +77,7 @@ target_link_libraries(test_config_manager PRIVATE
 add_test(NAME ConfigManagerTest COMMAND test_config_manager
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-# --- Model: DatabaseManager ------------------------------------------------
+# Model: DatabaseManager
 # DatabaseManager.cpp uses Boost.Asio (async helpers) and SQLite at runtime,
 # so we do need the real object lib + its transitive deps here.
 add_executable(test_database_manager DatabaseManagerTest.cpp)
@@ -93,7 +88,7 @@ target_link_libraries(test_database_manager PRIVATE
 )
 add_test(NAME DatabaseManagerTest COMMAND test_database_manager)
 
-# --- Core: CsvSerializer (pure C++, no GTK) --------------------------------
+# Core: CsvSerializer (pure C++, no GTK)
 add_executable(test_csv_serializer CsvSerializerTest.cpp
     ${CMAKE_SOURCE_DIR}/src/core/CsvSerializer.cpp)
 target_link_libraries(test_csv_serializer PRIVATE
@@ -102,7 +97,7 @@ target_link_libraries(test_csv_serializer PRIVATE
 )
 add_test(NAME CsvSerializerTest COMMAND test_csv_serializer)
 
-# --- Model: SimulatedModel (singleton, no GTK) ----------------------------
+# Model: SimulatedModel (singleton, no GTK)
 add_executable(test_simulated_model SimulatedModelTest.cpp)
 target_link_libraries(test_simulated_model PRIVATE
     ${TEST_COMMON_LIBS}
@@ -110,7 +105,7 @@ target_link_libraries(test_simulated_model PRIVATE
 )
 add_test(NAME SimulatedModelTest COMMAND test_simulated_model)
 
-# --- Core: Logger (CapturingLogger + helpers) ------------------------------
+# Core: Logger (CapturingLogger + helpers)
 add_executable(test_logger LoggerTest.cpp)
 target_link_libraries(test_logger PRIVATE
     ${TEST_COMMON_LIBS}
@@ -118,7 +113,7 @@ target_link_libraries(test_logger PRIVATE
 )
 add_test(NAME LoggerTest COMMAND test_logger)
 
-# --- View: MainWindow keyboard dispatcher (pure, no GTK instance) ---------
+# View: MainWindow keyboard dispatcher (pure, no GTK instance)
 # The dispatcher was extracted from MainWindow::onKeyPressed so it can be
 # tested without instantiating MainWindow (which drags in Presenters,
 # DatabaseManager, ThemeManager, timers, and a fullscreen Notebook).
@@ -135,7 +130,7 @@ target_link_libraries(test_main_window_key_dispatch PRIVATE
     ${GTKMM_LIBRARIES})
 add_test(NAME MainWindowKeyDispatchTest COMMAND test_main_window_key_dispatch)
 
-# --- Core: LoggerImpl concrete classes ------------------------------------
+# Core: LoggerImpl concrete classes
 # Exercises FileLogger rotation, Composite propagation, Null no-ops, and
 # CallbackLogger reentrancy guard — paths LoggerTest.cpp's CapturingLogger
 # does not touch. Pure filesystem + std, no GTK.
@@ -146,7 +141,7 @@ target_link_libraries(test_logger_impl PRIVATE
 )
 add_test(NAME LoggerImplTest COMMAND test_logger_impl)
 
-# --- Core: StartupErrors (header-only typed exception hierarchy) ----------
+# Core: StartupErrors (header-only typed exception hierarchy)
 add_executable(test_startup_errors StartupErrorsTest.cpp)
 target_link_libraries(test_startup_errors PRIVATE
     ${TEST_COMMON_LIBS}
@@ -179,7 +174,7 @@ endif()
 add_test(NAME StartupDialogTest COMMAND test_startup_dialog
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-# --- Presenter: BasePresenter (header-only observer mechanics) ------------
+# Presenter: BasePresenter (header-only observer mechanics)
 add_executable(test_base_presenter BasePresenterTest.cpp)
 target_link_libraries(test_base_presenter PRIVATE
     ${TEST_COMMON_LIBS}
@@ -187,7 +182,7 @@ target_link_libraries(test_base_presenter PRIVATE
 )
 add_test(NAME BasePresenterTest COMMAND test_base_presenter)
 
-# --- Presenter: AlertCenter (header-only, sigc++ provides the signal) ----
+# Presenter: AlertCenter (header-only, sigc++ provides the signal)
 # Pulls GTKMM's include dirs to find <sigc++/signal.h>; GTKMM transitively
 # re-exports sigc++-3.0 headers so we don't need a separate find_package.
 add_executable(test_alert_center AlertCenterTest.cpp)
@@ -199,7 +194,7 @@ target_link_libraries(test_alert_center PRIVATE
 target_include_directories(test_alert_center PRIVATE ${GTKMM_INCLUDE_DIRS})
 add_test(NAME AlertCenterTest COMMAND test_alert_center)
 
-# --- Presenter: ProductsPresenter (with mock repository) ------------------
+# Presenter: ProductsPresenter (with mock repository)
 # ProductsPresenter.cpp lives in objectsPresenter; MockProductsRepository
 # is a header in tests/mocks. The test target needs the source root on its
 # include path (tests_includes) plus objectsPresenter (and transitively
@@ -217,7 +212,7 @@ target_link_libraries(test_products_presenter PRIVATE
 
 add_test(NAME ProductsPresenterTest COMMAND test_products_presenter)
 
-# --- Presenter: ProductsPresenter ASYNC CRUD -----------------------------
+# Presenter: ProductsPresenter ASYNC CRUD
 # Exercises addProduct / updateProduct / deleteProduct / exportProducts,
 # each of which posts to the Boost.Asio I/O thread in ModelContext and
 # marshals back via Glib::signal_idle. Test drives a Glib::MainLoop to
@@ -238,7 +233,7 @@ target_link_libraries(test_products_presenter_async PRIVATE
 )
 add_test(NAME ProductsPresenterAsyncTest COMMAND test_products_presenter_async)
 
-# --- Presenter: DashboardPresenter (with mock production model) -----------
+# Presenter: DashboardPresenter (with mock production model)
 # DashboardPresenter.cpp pulls in SimulatedModel via its default
 # constructor's initializer list, so we still need objectsModel for the
 # default-ctor instantiation, even though the test injects a mock.
@@ -255,9 +250,7 @@ target_link_libraries(test_dashboard_presenter PRIVATE
 
 add_test(NAME DashboardPresenterTest COMMAND test_dashboard_presenter)
 
-# ============================================================================
 # View-layer tests (require GTK initialised via custom main)
-# ============================================================================
 # These binaries use ViewTestMain.cpp instead of gtest_main, because
 # gtk_init() must run before any widget is constructed. On Linux CI the
 # test command is prefixed with xvfb-run (see ci.yml).
@@ -274,7 +267,7 @@ set(VIEW_COMMON_LIBS
     Threads::Threads
 )
 
-# --- View: DashboardPage --------------------------------------------------
+# View: DashboardPage
 add_executable(test_dashboard_page
     DashboardPageTest.cpp
     ViewTestMain.cpp          # custom main with gtk_init()
@@ -288,7 +281,7 @@ target_link_libraries(test_dashboard_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME DashboardPageTest COMMAND test_dashboard_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
-# --- View: ProductsPage ---------------------------------------------------
+# View: ProductsPage
 add_executable(test_products_page
     ProductsPageTest.cpp
     ViewTestMain.cpp
@@ -301,7 +294,7 @@ target_link_libraries(test_products_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME ProductsPageTest COMMAND test_products_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
-# --- View: DialogManager --------------------------------------------------
+# View: DialogManager
 # Exercises every public method on DialogManager under a real GTK main
 # loop (gtk_init in ViewTestMain.cpp). Blocking variants (showConfirm,
 # showInput, showForm) spin their own inner Glib::MainLoop — the tests
@@ -331,9 +324,7 @@ if(WIN32)
     target_link_libraries(test_dialog_manager            PRIVATE ws2_32)
 endif()
 
-# ============================================================================
 # Console scenario tests — end-to-end MVP regression suite
-# ============================================================================
 # Each *.txt scenario is piped into industrial-hmi-console and the filtered
 # stdout is diffed against the matching *.expected file. The runner
 # (tests/scenarios/run-scenario.cmake) normalises line endings + strips
