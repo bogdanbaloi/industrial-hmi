@@ -273,6 +273,24 @@ target_link_libraries(test_products_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME ProductsPageTest COMMAND test_products_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
+# --- View: DialogManager --------------------------------------------------
+# Exercises every public method on DialogManager under a real GTK main
+# loop (gtk_init in ViewTestMain.cpp). Blocking variants (showConfirm,
+# showInput, showForm) spin their own inner Glib::MainLoop — the tests
+# pre-arm a signal_timeout that dispatches Dialog::response() once the
+# inner loop starts pumping.
+add_executable(test_dialog_manager
+    DialogManagerTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_dialog_manager PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_dialog_manager PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_dialog_manager PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME DialogManagerTest COMMAND test_dialog_manager
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
 # Boost.Asio on Windows references WSAStartup / WSACleanup from Winsock;
 # every objectsModel-linked target needs ws2_32.
 if(WIN32)
@@ -282,6 +300,7 @@ if(WIN32)
     target_link_libraries(test_dashboard_presenter       PRIVATE ws2_32)
     target_link_libraries(test_dashboard_page            PRIVATE ws2_32)
     target_link_libraries(test_products_page             PRIVATE ws2_32)
+    target_link_libraries(test_dialog_manager            PRIVATE ws2_32)
 endif()
 
 # ============================================================================
