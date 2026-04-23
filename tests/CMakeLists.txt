@@ -294,6 +294,23 @@ target_link_libraries(test_products_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME ProductsPageTest COMMAND test_products_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
+# View: SettingsPage (handlers, sync guard, palette mode-lock)
+# buildUI loads settings-page.ui from assets, so CWD must be source root.
+# No DB dependency — handlers talk to ConfigManager / ThemeManager /
+# Application::logger() singletons, all of which cope with being
+# uninitialized (defaults + NullLogger fallback).
+add_executable(test_settings_page
+    SettingsPageTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_settings_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_settings_page PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_settings_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME SettingsPageTest COMMAND test_settings_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
 # View: DialogManager
 # Exercises every public method on DialogManager under a real GTK main
 # loop (gtk_init in ViewTestMain.cpp). Blocking variants (showConfirm,
@@ -321,6 +338,7 @@ if(WIN32)
     target_link_libraries(test_dashboard_presenter       PRIVATE ws2_32)
     target_link_libraries(test_dashboard_page            PRIVATE ws2_32)
     target_link_libraries(test_products_page             PRIVATE ws2_32)
+    target_link_libraries(test_settings_page             PRIVATE ws2_32)
     target_link_libraries(test_dialog_manager            PRIVATE ws2_32)
 endif()
 
