@@ -186,7 +186,7 @@ jobs:
           build-essential cmake ninja-build \
           libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
           libgtest-dev libgmock-dev \
-          gcovr xvfb
+          gcovr xvfb xdotool
 
     # Debug + ENABLE_COVERAGE adds --coverage / -fprofile-arcs / -ftest-coverage
     # to the existing compile and link options. Sanitizers are deliberately
@@ -218,11 +218,43 @@ jobs:
     # one-shot Glib timer that calls gtkApp->quit() cleanly. Using
     # `timeout` + SIGTERM would skip the gcov atexit handler and leave
     # every .gcda file empty, which defeats the purpose.
-    - name: Boot GTK binary for coverage (Xvfb smoke)
+    # Boot the GTK binary in the background under Xvfb, send F1 to open
+    # AboutDialog, wait a beat, Escape to close, then let
+    # HMI_EXIT_AFTER_MS drive a clean quit. This lifts AboutDialog.cpp
+    # and DialogManager.cpp (dialog-presentation helpers) out of 0%
+    # coverage — the plain boot smoke didn't trigger either.
+    - name: Boot GTK binary for coverage (Xvfb smoke + xdotool)
       working-directory: build/coverage
       env:
-        HMI_EXIT_AFTER_MS: "3000"
-      run: xvfb-run -a ./industrial-hmi || true
+        HMI_EXIT_AFTER_MS: "10000"
+      run: |
+        xvfb-run -a -s "-screen 0 1920x1080x24" bash -c '
+          ./industrial-hmi &
+          HMI_PID=$!
+
+          # Let the main window + initial renders materialise before
+          # poking it. Xvfb + cold start needs a generous wait.
+          sleep 4
+
+          # Send keys to whatever GTK has focused — industrial-hmi is
+          # the only window under this Xvfb, so no risk of hitting
+          # another process. Try to find + activate first, fall
+          # through silently if the title lookup fails.
+          xdotool search --name "Industrial" windowactivate --sync 2>/dev/null || true
+          sleep 1
+
+          # F1 opens AboutDialog (MainWindow key handler at F1).
+          xdotool key F1 || true
+          sleep 2
+
+          # Escape closes the dialog.
+          xdotool key Escape || true
+          sleep 1
+
+          # HMI_EXIT_AFTER_MS fires Gtk::Application::quit at 10s;
+          # wait for clean shutdown so gcov flushes .gcda.
+          wait $HMI_PID || true
+        '
 
     # Generate report from the .gcda files dropped by the test runs.
     # --filter src/ keeps third-party headers (gtest, gtkmm, boost) and the
