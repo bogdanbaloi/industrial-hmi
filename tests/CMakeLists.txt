@@ -118,6 +118,23 @@ target_link_libraries(test_logger PRIVATE
 )
 add_test(NAME LoggerTest COMMAND test_logger)
 
+# --- View: MainWindow keyboard dispatcher (pure, no GTK instance) ---------
+# The dispatcher was extracted from MainWindow::onKeyPressed so it can be
+# tested without instantiating MainWindow (which drags in Presenters,
+# DatabaseManager, ThemeManager, timers, and a fullscreen Notebook).
+# Links the source file directly — no GTK runtime, just gdk/gdk.h for the
+# GDK_KEY_* keysym macros via GTKMM_INCLUDE_DIRS.
+add_executable(test_main_window_key_dispatch
+    MainWindowKeyDispatchTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/gtk/view/MainWindowKeyDispatch.cpp)
+target_include_directories(test_main_window_key_dispatch PRIVATE
+    ${GTKMM_INCLUDE_DIRS})
+target_link_libraries(test_main_window_key_dispatch PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    ${GTKMM_LIBRARIES})
+add_test(NAME MainWindowKeyDispatchTest COMMAND test_main_window_key_dispatch)
+
 # --- Core: LoggerImpl concrete classes ------------------------------------
 # Exercises FileLogger rotation, Composite propagation, Null no-ops, and
 # CallbackLogger reentrancy guard — paths LoggerTest.cpp's CapturingLogger
