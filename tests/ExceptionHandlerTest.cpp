@@ -118,9 +118,7 @@ TEST_F(StandardHandlerFixture, RecoveryHandlerThrowingDoesNotCrash) {
     EXPECT_EQ(handler_->getExceptionCount(), 1u);
 }
 
-// ---------------------------------------------------------------------------
 // safeExecute
-// ---------------------------------------------------------------------------
 
 TEST_F(StandardHandlerFixture, SafeExecuteReturnsTrueOnCleanRun) {
     bool ran = false;
@@ -149,9 +147,7 @@ TEST_F(StandardHandlerFixture, SafeExecuteCatchesNonStdException) {
     EXPECT_EQ(handler_->getUnknownExceptionCount(), 1u);
 }
 
-// ---------------------------------------------------------------------------
 // ExceptionGuard
-// ---------------------------------------------------------------------------
 
 TEST_F(StandardHandlerFixture, ExceptionGuardDoesNothingOnNormalExit) {
     {

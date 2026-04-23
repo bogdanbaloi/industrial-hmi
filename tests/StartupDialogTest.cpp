@@ -65,9 +65,7 @@ private:
 
 }  // namespace
 
-// ---------------------------------------------------------------------------
 // reportFatalStartup — console mode
-// ---------------------------------------------------------------------------
 
 TEST(StartupDialogTest, FatalConsoleIncludesTagAndBody) {
     StderrCapture cap{"stderr-fatal-body.txt"};
@@ -105,9 +103,7 @@ TEST(StartupDialogTest, FatalConsoleTagsDifferByErrorCode) {
 // contract is still enforced at declaration site in StartupDialog.h,
 // which is the actual invariant we care about.)
 
-// ---------------------------------------------------------------------------
 // reportUnexpectedFatal — console mode
-// ---------------------------------------------------------------------------
 
 TEST(StartupDialogTest, UnexpectedConsoleIncludesTagAndMessage) {
     StderrCapture cap{"stderr-unexpected.txt"};

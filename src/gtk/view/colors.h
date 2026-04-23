@@ -11,21 +11,17 @@ struct Rgb {
 
 namespace colors {
 
-// ----------------------------------------------------------------------------
 // Status palette - used by QualityGauge arc/dot and elsewhere.
 // Hex sources (Material Design 500 line):
 //   Passing green  #4CAF50
 //   Warning amber  #FF9800
 //   Critical red   #F44336
-// ----------------------------------------------------------------------------
 inline constexpr Rgb kStatusPassingGreen = {0x4C / 255.0, 0xAF / 255.0, 0x50 / 255.0};
 inline constexpr Rgb kStatusWarningAmber = {0xFF / 255.0, 0x98 / 255.0, 0x00 / 255.0};
 inline constexpr Rgb kStatusCriticalRed  = {0xF4 / 255.0, 0x43 / 255.0, 0x36 / 255.0};
 
-// ----------------------------------------------------------------------------
 // Theme-aware track / background shades for Cairo widgets.
 // Picked to sit a notch above/below the surrounding card colour.
-// ----------------------------------------------------------------------------
 inline constexpr Rgb kTrackDarkMode  = {0x3A / 255.0, 0x3A / 255.0, 0x3A / 255.0};
 inline constexpr Rgb kTrackLightMode = {0xE0 / 255.0, 0xE0 / 255.0, 0xE0 / 255.0};
 

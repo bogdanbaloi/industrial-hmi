@@ -88,9 +88,7 @@ protected:
 
 }  // namespace
 
-// ---------------------------------------------------------------------------
 // addProduct (async)
-// ---------------------------------------------------------------------------
 
 TEST_F(ProductsPresenterAsyncTest, AddProductSucceeds) {
     ProductsPresenter presenter;
@@ -143,9 +141,7 @@ TEST_F(ProductsPresenterAsyncTest, AddProductWithDuplicateCodeFails) {
     EXPECT_FALSE(success) << "Duplicate productCode should have been rejected";
 }
 
-// ---------------------------------------------------------------------------
 // updateProduct (async)
-// ---------------------------------------------------------------------------
 
 TEST_F(ProductsPresenterAsyncTest, UpdateProductMutatesFields) {
     ProductsPresenter presenter;
@@ -179,9 +175,7 @@ TEST_F(ProductsPresenterAsyncTest, UpdateProductMutatesFields) {
     EXPECT_FLOAT_EQ(p.qualityRate, 72.5f);
 }
 
-// ---------------------------------------------------------------------------
 // deleteProduct (async, soft delete)
-// ---------------------------------------------------------------------------
 
 TEST_F(ProductsPresenterAsyncTest, DeleteProductRemovesFromList) {
     ProductsPresenter presenter;
@@ -211,9 +205,7 @@ TEST_F(ProductsPresenterAsyncTest, DeleteProductRemovesFromList) {
         << "Soft-deleted row should not appear in getAllProducts";
 }
 
-// ---------------------------------------------------------------------------
 // exportProducts (async; fetches snapshot for CSV export)
-// ---------------------------------------------------------------------------
 
 TEST_F(ProductsPresenterAsyncTest, ExportProductsReturnsFullList) {
     ProductsPresenter presenter;

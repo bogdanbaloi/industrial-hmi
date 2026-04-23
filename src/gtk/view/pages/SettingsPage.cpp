@@ -306,9 +306,7 @@ void SettingsPage::syncWithRuntimeState(bool fullscreen,
     syncingState_ = false;
 }
 
-// ----------------------------------------------------------------------------
 // Handlers
-// ----------------------------------------------------------------------------
 
 void SettingsPage::onLanguageSelected() {
     if (syncingState_) return;
