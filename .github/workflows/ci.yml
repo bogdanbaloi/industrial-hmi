@@ -207,6 +207,23 @@ jobs:
       working-directory: build/coverage
       run: xvfb-run ctest --output-on-failure --no-tests=error
 
+    # Boot the real GTK binary once under Xvfb so the MainWindow /
+    # SettingsPage / DialogManager / AlertsPanel / LiveClock /
+    # SystemStatusBadge / ThemeManager / *Gauge / *Chart constructors
+    # get hit at least once. We have no unit test that composes the
+    # full window, so without this smoke run those files stay at 0%
+    # coverage even though Xvfb is already available for ctest.
+    #
+    # HMI_EXIT_AFTER_MS is honoured by Application::run: it arms a
+    # one-shot Glib timer that calls gtkApp->quit() cleanly. Using
+    # `timeout` + SIGTERM would skip the gcov atexit handler and leave
+    # every .gcda file empty, which defeats the purpose.
+    - name: Boot GTK binary for coverage (Xvfb smoke)
+      working-directory: build/coverage
+      env:
+        HMI_EXIT_AFTER_MS: "3000"
+      run: xvfb-run -a ./industrial-hmi || true
+
     # Generate report from the .gcda files dropped by the test runs.
     # --filter src/ keeps third-party headers (gtest, gtkmm, boost) and the
     # tests/ directory itself out of the percentages.
