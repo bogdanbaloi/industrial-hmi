@@ -347,6 +347,7 @@ add_library(objectsView OBJECT)
 target_sources(objectsView
     PRIVATE
         src/gtk/view/MainWindow.cpp
+        src/gtk/view/MainWindowKeyDispatch.cpp
         src/gtk/view/DialogManager.cpp
         src/gtk/view/AboutDialog.cpp
         src/gtk/view/pages/DashboardPage.cpp
@@ -357,6 +358,7 @@ target_sources(objectsView
         TYPE HEADERS
         FILES
             src/gtk/view/MainWindow.h
+            src/gtk/view/MainWindowKeyDispatch.h
             src/gtk/view/DialogManager.h
             src/gtk/view/AboutDialog.h
             src/gtk/view/pages/Page.h

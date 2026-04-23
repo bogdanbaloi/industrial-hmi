@@ -4,6 +4,7 @@
 
 #include "MainWindow.h"
 #include "src/gtk/view/DialogManager.h"
+#include "src/gtk/view/MainWindowKeyDispatch.h"
 #include "src/gtk/view/ThemeManager.h"
 #include "src/gtk/view/pages/Page.h"
 #include "src/gtk/view/pages/DashboardPage.h"
@@ -654,42 +655,29 @@ void MainWindow::applyVerboseLogging(bool enabled) {
 // Keyboard shortcuts
 
 bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
-    // F1: About dialog
-    if (keyval == GDK_KEY_F1) {
+    // The dispatch logic proper lives in MainWindowKeyDispatch.{h,cpp}
+    // so it can be unit-tested without instantiating MainWindow. We
+    // hand it a bundle of callbacks that close over the MainWindow
+    // members each handler needs to touch.
+    app::view::KeyDispatchContext ctx;
+    ctx.pageCount = mainNotebook_ ? mainNotebook_->get_n_pages() : 0;
+    ctx.onPageSwitch = [this](int index) {
+        if (mainNotebook_) mainNotebook_->set_current_page(index);
+    };
+    ctx.onRefresh = [] {
+        app::model::SimulatedModel::instance().tickSimulation();
+    };
+    ctx.onAbout = [this] {
         auto* about = new app::view::AboutDialog(*this);
         about->signal_close_request().connect([about]() {
             delete about;
             return false;
         }, false);
         about->present();
-        return true;
-    }
-
-    // F2 / F3 / F4: jump to the 1st/2nd/3rd registered page (generic)
-    auto switchToPage = [this](int index) -> bool {
-        if (!mainNotebook_) return false;
-        if (index < 0 || index >= mainNotebook_->get_n_pages()) return false;
-        mainNotebook_->set_current_page(index);
-        return true;
     };
-    if (keyval == GDK_KEY_F2) return switchToPage(0);
-    if (keyval == GDK_KEY_F3) return switchToPage(1);
-    if (keyval == GDK_KEY_F4) return switchToPage(2);
-
-    // F5: manual refresh (advance the simulation one tick)
-    if (keyval == GDK_KEY_F5) {
-        app::model::SimulatedModel::instance().tickSimulation();
-        return true;
-    }
-
-    // F11: Toggle fullscreen
-    if (keyval == GDK_KEY_F11) {
-        toggleFullscreen();
-        return true;
-    }
-
-    // Esc: Exit fullscreen
-    if (keyval == GDK_KEY_Escape && isFullscreen_) {
+    ctx.onFullscreenToggle = [this] { toggleFullscreen(); };
+    ctx.isFullscreen = isFullscreen_;
+    ctx.onExitFullscreen = [this] {
         unfullscreen();
         isFullscreen_ = false;
         if (settingsPage_) {
@@ -699,10 +687,8 @@ bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
                 /*autoRefresh*/    autoRefreshOn_,
                 /*verboseLogging*/ verboseLogging_);
         }
-        return true;
-    }
-
-    return false;
+    };
+    return app::view::dispatchKey(keyval, ctx);
 }
 
 void MainWindow::toggleFullscreen() {
