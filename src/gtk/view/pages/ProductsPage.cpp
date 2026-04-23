@@ -193,11 +193,19 @@ void ProductsPage::updateProductsList(const presenter::ProductsViewModel& vm) {
 }
 
 void ProductsPage::showProductDetail(const presenter::ViewProductDialogViewModel& vm) {
-    auto* dialog = new Gtk::MessageDialog(*dynamic_cast<Gtk::Window*>(get_root()),
-                                          _("Product Details"),
-                                          false,
-                                          Gtk::MessageType::INFO,
-                                          Gtk::ButtonsType::OK);
+    // Mirror DialogManager::createMessageDialog: if the page isn't rooted
+    // in a realized Gtk::Window (e.g. under a test harness without Xvfb
+    // on Windows), dynamic_cast returns nullptr. Dereferencing that was
+    // a latent null-deref — use the parentless MessageDialog overload
+    // instead, same defensive pattern DialogManager uses.
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    auto* dialog = parent
+        ? new Gtk::MessageDialog(*parent, _("Product Details"), false,
+                                 Gtk::MessageType::INFO,
+                                 Gtk::ButtonsType::OK)
+        : new Gtk::MessageDialog(_("Product Details"), false,
+                                 Gtk::MessageType::INFO,
+                                 Gtk::ButtonsType::OK);
 
     Glib::ustring message =
         Glib::ustring::compose(_("Product ID: %1"), vm.productId) + "\n\n" +
@@ -261,7 +269,11 @@ int ProductsPage::getSelectedProductId() {
 }
 
 void ProductsPage::showAddProductDialog() {
-    auto* dialog = new Gtk::Dialog(_("Add New Product"), *dynamic_cast<Gtk::Window*>(get_root()));
+    // Defensive parent resolution — see showProductDetail for rationale.
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    auto* dialog = parent
+        ? new Gtk::Dialog(_("Add New Product"), *parent)
+        : new Gtk::Dialog(_("Add New Product"));
     dialog->set_default_size(kFormDialogWidth, kFormDialogHeight);
     dialog->set_modal(true);
     app::view::ThemeManager::instance().applyToDialog(dialog);
@@ -388,7 +400,11 @@ void ProductsPage::showDeleteConfirmDialog(int productId, const std::string& pro
 }
 
 void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& product) {
-    auto* dialog = new Gtk::Dialog(_("Edit Product"), *dynamic_cast<Gtk::Window*>(get_root()));
+    // Defensive parent resolution — see showProductDetail for rationale.
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    auto* dialog = parent
+        ? new Gtk::Dialog(_("Edit Product"), *parent)
+        : new Gtk::Dialog(_("Edit Product"));
     dialog->set_default_size(kFormDialogWidth, kFormDialogHeight);
     dialog->set_modal(true);
     app::view::ThemeManager::instance().applyToDialog(dialog);
