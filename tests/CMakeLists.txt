@@ -118,6 +118,17 @@ target_link_libraries(test_logger PRIVATE
 )
 add_test(NAME LoggerTest COMMAND test_logger)
 
+# --- Core: LoggerImpl concrete classes ------------------------------------
+# Exercises FileLogger rotation, Composite propagation, Null no-ops, and
+# CallbackLogger reentrancy guard — paths LoggerTest.cpp's CapturingLogger
+# does not touch. Pure filesystem + std, no GTK.
+add_executable(test_logger_impl LoggerImplTest.cpp)
+target_link_libraries(test_logger_impl PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME LoggerImplTest COMMAND test_logger_impl)
+
 # --- Core: StartupErrors (header-only typed exception hierarchy) ----------
 add_executable(test_startup_errors StartupErrorsTest.cpp)
 target_link_libraries(test_startup_errors PRIVATE
