@@ -307,7 +307,12 @@ TEST_F(ProductsPageTest, ExportToCsvWritesRowsToFile) {
     EXPECT_NE(contents.find("Alpha"), std::string::npos);
     EXPECT_NE(contents.find("PROD-002"), std::string::npos);
 
-    fs::remove_all(tmpDir);
+    // Best-effort cleanup — on Windows CI the file can remain locked
+    // briefly by AV scanners / OS after the ofstream went out of scope,
+    // and the throwing overload would fail the test despite the real
+    // work being done. error_code overload swallows transient locks.
+    std::error_code ec;
+    fs::remove_all(tmpDir, ec);
 }
 
 TEST_F(ProductsPageTest, ExportToCsvShowsErrorOnUnwritablePath) {
