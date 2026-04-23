@@ -26,9 +26,7 @@ using app::core::LoggerBootstrapError;
 using app::core::StartupErrorCode;
 using app::core::toTag;
 
-// ---------------------------------------------------------------------------
 // toTag()
-// ---------------------------------------------------------------------------
 
 TEST(StartupErrorsTest, ToTagMapsEveryCode) {
     EXPECT_EQ(toTag(StartupErrorCode::ConfigMissing),   "CONFIG MISSING");
@@ -55,9 +53,7 @@ TEST(StartupErrorsTest, TagsAreDistinct) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Base CriticalStartupError
-// ---------------------------------------------------------------------------
 
 TEST(StartupErrorsTest, BaseCtorPreservesCodeAndMessage) {
     CriticalStartupError e{StartupErrorCode::DatabaseInit,
@@ -77,10 +73,8 @@ TEST(StartupErrorsTest, BaseIsCatchableAsStdException) {
     FAIL() << "Expected std::exception to catch";
 }
 
-// ---------------------------------------------------------------------------
 // Concrete subclasses — each one carries its specific code and can be
 // caught as the base type (which is what main.cpp relies on).
-// ---------------------------------------------------------------------------
 
 TEST(StartupErrorsTest, ConfigMissingErrorCarriesCode) {
     ConfigMissingError e{"missing"};

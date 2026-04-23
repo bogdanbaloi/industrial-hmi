@@ -550,9 +550,7 @@ void MainWindow::reloadLayout() {
     if (alertCenter_) alertCenter_->retranslate();
 }
 
-// ----------------------------------------------------------------------------
 // Handlers driven by SettingsPage signals
-// ----------------------------------------------------------------------------
 
 void MainWindow::applyDisplayMode(bool wantFullscreen) {
     auto& logger = app::core::Application::instance().logger();
@@ -653,9 +651,7 @@ void MainWindow::applyVerboseLogging(bool enabled) {
     }
 }
 
-// ----------------------------------------------------------------------------
 // Keyboard shortcuts
-// ----------------------------------------------------------------------------
 
 bool MainWindow::onKeyPressed(guint keyval, guint, Gdk::ModifierType) {
     // F1: About dialog
