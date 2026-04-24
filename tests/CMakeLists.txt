@@ -141,6 +141,25 @@ target_link_libraries(test_logger_impl PRIVATE
 )
 add_test(NAME LoggerImplTest COMMAND test_logger_impl)
 
+# Core: i18n (gettext adapter)
+# Exercises forceLanguage / propagateLangToLanguage / resolveLocaleDir
+# branches without pulling GTK or any singleton state. Compiles the
+# source directly so the test stays on a minimal link line.
+add_executable(test_i18n
+    I18nTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/i18n.cpp)
+target_compile_definitions(test_i18n PRIVATE
+    GETTEXT_PACKAGE="${GETTEXT_DOMAIN}")
+target_link_libraries(test_i18n PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+if(Intl_FOUND)
+    target_include_directories(test_i18n PRIVATE ${Intl_INCLUDE_DIRS})
+    target_link_libraries(test_i18n PRIVATE ${Intl_LIBRARIES})
+endif()
+add_test(NAME I18nTest COMMAND test_i18n)
+
 # Core: StartupErrors (header-only typed exception hierarchy)
 add_executable(test_startup_errors StartupErrorsTest.cpp)
 target_link_libraries(test_startup_errors PRIVATE
