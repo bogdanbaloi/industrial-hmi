@@ -38,8 +38,8 @@ The system follows a strict MVP architecture to ensure:
 ┌─────────────────────────────────────────────────────┐
 │ PRESENTER (Orchestration & Transformation)          │
 │  - Subscribe to Model signals                       │
-│  - Transform raw data → ViewModels                  │
-│  - Handle user actions → Model commands             │
+│  - Transform raw data -> ViewModels                  │
+│  - Handle user actions -> Model commands             │
 │  - Implement business rules                         │
 │  - NO UI dependencies                               │
 └─────────────────────────────────────────────────────┘
@@ -202,28 +202,28 @@ std::atomic<bool> waitingForActuatorHome_{false};
 
 ## Data Flow
 
-### Typical Flow: PLC Update → UI Update
+### Typical Flow: PLC Update -> UI Update
 
 ```
 1. PLC sends "actuator status" via OPC-UA
                     ↓
 2. OpcuaController receives on hardware thread
-   → Parses raw data
-   → Emits actuatortatusChanged(id, status) signal
+   -> Parses raw data
+   -> Emits actuatortatusChanged(id, status) signal
                     ↓
 3. Main state machine receives signal on app thread
-   → Updates internal state
-   → Emits stateChanged() signal
+   -> Updates internal state
+   -> Emits stateChanged() signal
                     ↓
 4. Presenter receives signal on presenter thread
-   → Queries additional data from database
-   → Transforms raw data → ViewModel
-   → Checks cache: if (vm != lastVm)
-   → Calls Glib::signal_idle()
+   -> Queries additional data from database
+   -> Transforms raw data -> ViewModel
+   -> Checks cache: if (vm != lastVm)
+   -> Calls Glib::signal_idle()
                     ↓
 5. GTK main thread callback executes
-   → Calls observer->onActuatorCardChanged(vm)
-   → View updates widget: operation->set_text(vm.status)
+   -> Calls observer->onActuatorCardChanged(vm)
+   -> View updates widget: operation->set_text(vm.status)
 ```
 
 **Why so many layers?**
@@ -274,11 +274,11 @@ ControlPanelViewModel computeState() {
 **State Transitions:**
 
 ```
-    IDLE ←→ RUNNING
+    IDLE ←-> RUNNING
      ↓         ↓
    ERROR ←──────┘
      ↓
-   RESET → IDLE
+   RESET -> IDLE
 ```
 
 ---

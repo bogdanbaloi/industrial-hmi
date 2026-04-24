@@ -28,7 +28,7 @@ enum class ActiveControl : uint8_t {
 /// @design This ViewModel is computed by a state machine in the Presenter layer.
 ///         The View simply renders these boolean states - NO business logic in UI.
 ///
-/// @pattern State Machine → Presenter → ViewModel → View
+/// @pattern State Machine -> Presenter -> ViewModel -> View
 ///          1. Main state machine determines current state (IDLE, RUNNING, ERROR, etc.)
 ///          2. Presenter calls computeControlPanelState() with state + flags
 ///          3. Presenter creates this ViewModel with button enable/disable states

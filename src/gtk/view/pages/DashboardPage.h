@@ -114,11 +114,11 @@ private:
     /// Presenter reference
     std::shared_ptr<DashboardPresenter> presenter_;
 
-    // UI construction — loads layout from assets/ui/dashboard-page.ui and
+    // UI construction -- loads layout from assets/ui/dashboard-page.ui and
     // injects dynamic widgets (gauges, trend charts) into named containers.
     void buildUI();
 
-    // Event handlers (user interactions → Presenter)
+    // Event handlers (user interactions -> Presenter)
     void onStartButtonClicked();
     void onStopButtonClicked();
     void onResetButtonClicked();

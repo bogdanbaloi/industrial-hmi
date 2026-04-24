@@ -48,7 +48,7 @@ class CriticalStartupError : public std::runtime_error {
 public:
     // std::runtime_error takes `const std::string&`, not an rvalue, so
     // std::move on `detail` would be a silent no-op. Pass by value and
-    // let the base-class constructor copy — keeps the intent readable
+    // let the base-class constructor copy -- keeps the intent readable
     // and clang-tidy-clean (hicpp-move-const-arg).
     CriticalStartupError(StartupErrorCode code, const std::string& detail)
         : std::runtime_error(detail), code_{code} {}
@@ -59,7 +59,7 @@ private:
     StartupErrorCode code_;
 };
 
-// Concrete subclasses — mostly for documentation / grep-ability.
+// Concrete subclasses -- mostly for documentation / grep-ability.
 // Callers can `throw ConfigMissingError{...}` for readability or fall
 // back to `throw CriticalStartupError{StartupErrorCode::ConfigMissing, ...}`.
 

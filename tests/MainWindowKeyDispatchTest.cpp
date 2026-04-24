@@ -1,8 +1,8 @@
 // Tests for the MainWindow keyboard-shortcut dispatcher.
 //
 // MainWindow::onKeyPressed was refactored to delegate to the free
-// function `dispatchKey(keyval, ctx)`. The dispatcher is pure — it
-// owns no Gtk widgets, no singletons, no MainWindow state — so these
+// function `dispatchKey(keyval, ctx)`. The dispatcher is pure -- it
+// owns no Gtk widgets, no singletons, no MainWindow state -- so these
 // tests capture callback invocations via std::function flags and
 // assert the mapping keyval -> callback directly.
 //
@@ -19,7 +19,7 @@
 
 namespace {
 
-// X11 keysyms — stable ABI, mirrored from /usr/include/X11/keysymdef.h
+// X11 keysyms -- stable ABI, mirrored from /usr/include/X11/keysymdef.h
 // (and in gdk/gdkkeysyms.h). Duplicated here to keep the test GTK-free.
 constexpr unsigned int kKeyF1     = 0xffbe;
 constexpr unsigned int kKeyF2     = 0xffbf;
@@ -59,7 +59,7 @@ KeyDispatchContext makeContext(CallbackFlags& flags,
 
 }  // namespace
 
-// F1 — About dialog
+// F1 -- About dialog
 
 TEST(MainWindowKeyDispatchTest, F1InvokesOnAbout) {
     CallbackFlags flags;
@@ -78,7 +78,7 @@ TEST(MainWindowKeyDispatchTest, F1ReturnsTrueEvenWithNullCallback) {
     EXPECT_TRUE(dispatchKey(kKeyF1, ctx));
 }
 
-// F2 / F3 / F4 — page switch
+// F2 / F3 / F4 -- page switch
 
 TEST(MainWindowKeyDispatchTest, F2SwitchesToPageZero) {
     CallbackFlags flags;
@@ -106,7 +106,7 @@ TEST(MainWindowKeyDispatchTest, F4SwitchesToPageTwo) {
 
 TEST(MainWindowKeyDispatchTest, F4ReturnsFalseWhenOutOfRange) {
     CallbackFlags flags;
-    // Only 2 pages registered — F4 (index 2) is out of range.
+    // Only 2 pages registered -- F4 (index 2) is out of range.
     auto ctx = makeContext(flags, /*pageCount=*/2);
 
     EXPECT_FALSE(dispatchKey(kKeyF4, ctx));
@@ -122,7 +122,7 @@ TEST(MainWindowKeyDispatchTest, F2ReturnsFalseWhenNoPages) {
     EXPECT_EQ(flags.switchedToPage, -1);
 }
 
-// F5 — refresh
+// F5 -- refresh
 
 TEST(MainWindowKeyDispatchTest, F5InvokesOnRefresh) {
     CallbackFlags flags;
@@ -132,7 +132,7 @@ TEST(MainWindowKeyDispatchTest, F5InvokesOnRefresh) {
     EXPECT_TRUE(flags.refresh);
 }
 
-// F11 — fullscreen toggle
+// F11 -- fullscreen toggle
 
 TEST(MainWindowKeyDispatchTest, F11InvokesOnFullscreenToggle) {
     CallbackFlags flags;
@@ -142,7 +142,7 @@ TEST(MainWindowKeyDispatchTest, F11InvokesOnFullscreenToggle) {
     EXPECT_TRUE(flags.fullscreenToggle);
 }
 
-// Esc — exits fullscreen only when in fullscreen
+// Esc -- exits fullscreen only when in fullscreen
 
 TEST(MainWindowKeyDispatchTest, EscapeExitsFullscreenWhenInFullscreen) {
     CallbackFlags flags;

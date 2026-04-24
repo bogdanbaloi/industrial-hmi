@@ -37,7 +37,7 @@ namespace {
 
 /// Finds the first Gtk::Dialog (MessageDialog included) among the live
 /// toplevels and dispatches a response to it. This is the programmatic
-/// equivalent of the user clicking the matching button — it triggers
+/// equivalent of the user clicking the matching button -- it triggers
 /// the exact signal_response handler wired up by DialogManager.
 void respondToFirstDialog(int response) {
     for (auto* w : Gtk::Window::list_toplevels()) {
@@ -51,7 +51,7 @@ void respondToFirstDialog(int response) {
 /// Pumps a Glib::MainLoop for up to `timeout`, calling `afterPresent`
 /// once before the loop starts so callers can post the async op that
 /// opens the dialog. `afterResponse` runs on a second timer `responseMs`
-/// into the loop — typically the programmatic response() dispatch.
+/// into the loop -- typically the programmatic response() dispatch.
 ///
 /// The loop exits either when `afterResponse`'s callback ran and we
 /// scheduled a quit, or when the safety timeout fires.
@@ -74,7 +74,7 @@ void pumpForDialog(std::function<void()> afterPresent,
         },
         static_cast<unsigned int>(responseDelay.count()));
 
-    // Safety timeout — if response() above didn't find a dialog, still
+    // Safety timeout -- if response() above didn't find a dialog, still
     // escape so the test fails cleanly instead of hanging CI.
     Glib::signal_timeout().connect_once(
         [loop]() { loop->quit(); },
@@ -90,7 +90,7 @@ TEST(DialogManagerTest, ShowInfoPresentsAndClosesOnResponse) {
     pumpForDialog(
         [&] { dm.showInfo("Info Title", "Info message"); },
         [] { respondToFirstDialog(Gtk::ResponseType::OK); });
-    // No crash, no leak reported by gtkmm — dialog was presented and
+    // No crash, no leak reported by gtkmm -- dialog was presented and
     // its signal_response(delete dialog) branch ran.
     SUCCEED();
 }
@@ -147,7 +147,7 @@ TEST(DialogManagerTest, ShowConfirmAsyncCancelInvokesCallbackWithFalse) {
 // DialogManager::showConfirm. We can't wrap it in our usual pump helper
 // because the outer run() would sit on top of the inner one. Instead we
 // schedule the response via signal_timeout *before* calling showConfirm
-// — by the time the inner loop is running, the timer is already queued
+// -- by the time the inner loop is running, the timer is already queued
 // on the default main context and will fire.
 TEST(DialogManagerTest, ShowConfirmBlockingReturnsTrueOnOk) {
     DialogManager dm;

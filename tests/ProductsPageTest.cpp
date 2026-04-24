@@ -1,4 +1,4 @@
-// Tests for app::view::ProductsPage — View layer.
+// Tests for app::view::ProductsPage -- View layer.
 //
 // Exercises the full user-interaction surface:
 //   * delete flow (confirm dialog, OK / Cancel branches, error path)
@@ -6,7 +6,7 @@
 //   * ViewObserver callbacks (onProductsLoaded, onViewProductReady)
 //   * CSV export (file-write success + unwritable-path error)
 //   * showAddProductDialog / showEditProductDialog / showProductDetail
-//     — these build real Gtk::Dialog instances (not via DialogManager),
+//     -- these build real Gtk::Dialog instances (not via DialogManager),
 //     so the tests locate them via Gtk::Window::list_toplevels() and
 //     dispatch response() programmatically, same pattern as
 //     DialogManagerTest.
@@ -41,7 +41,7 @@ using ::testing::SaveArg;
 
 namespace fs = std::filesystem;
 
-// Fixture — needs DB initialized for presenter.getProduct()
+// Fixture -- needs DB initialized for presenter.getProduct()
 
 class ProductsPageTest : public ::testing::Test {
 protected:
@@ -57,7 +57,7 @@ protected:
         page_->initialize(presenter_);
     }
 
-    // Friend bridges — see DashboardPageTest for rationale. ProductsPage
+    // Friend bridges -- see DashboardPageTest for rationale. ProductsPage
     // declares `friend class ::ProductsPageTest`, which gives THIS fixture
     // access to privates. TEST_F bodies don't inherit friendship, so we
     // route through static helpers here.
@@ -158,7 +158,7 @@ TEST_F(ProductsPageTest, RefreshClickedClearsSearchEntry) {
 
 TEST_F(ProductsPageTest, SearchChangedDoesNotCrash) {
     // searchProducts posts to the async ModelContext I/O thread, which
-    // isn't running in this test harness — so we can't observe the
+    // isn't running in this test harness -- so we can't observe the
     // listStore repopulating without the presenter's observer callback
     // firing. Exercising the dispatch path (presenter lookup, trace
     // log, presenter_->searchProducts invocation) still contributes to
@@ -170,7 +170,7 @@ TEST_F(ProductsPageTest, SearchChangedDoesNotCrash) {
     EXPECT_NO_THROW(callSearchChanged(page_));
 }
 
-// ViewObserver callbacks — populate via synchronous helper to avoid
+// ViewObserver callbacks -- populate via synchronous helper to avoid
 // the extra Glib::signal_idle hop that onProductsLoaded wraps around
 // updateProductsList.
 
@@ -212,12 +212,12 @@ TEST_F(ProductsPageTest, UpdateProductsListWithEmptyVmClearsStore) {
     EXPECT_EQ(listStoreSize(page_), 0u);
 }
 
-// NOTE — showProductDetail / showAddProductDialog / showEditProductDialog
+// NOTE -- showProductDetail / showAddProductDialog / showEditProductDialog
 // are NOT unit-tested here. All three construct a Gtk::(Message)Dialog
 // and pass it to ThemeManager::applyToDialog, which calls
 // Gtk::Dialog::set_titlebar(new HeaderBar). That titlebar plumbing
 // requires a fully-started Gtk::Application (the `startup` signal must
-// have fired), which only happens from inside `app->run()` — we can't
+// have fired), which only happens from inside `app->run()` -- we can't
 // spin a main loop in a unit-test fixture without deadlocking the test.
 // Linux Xvfb was masking the issue on showProductDetail; Windows MSYS2
 // Clang exposed the same crash consistently. Coverage for these methods
@@ -226,7 +226,7 @@ TEST_F(ProductsPageTest, UpdateProductsListWithEmptyVmClearsStore) {
 // The production code was still hardened as part of this PR: the
 // `dynamic_cast<Gtk::Window*>(get_root())` sites now fall back to the
 // parentless dialog constructor instead of dereferencing a null pointer
-// — same defensive pattern DialogManager uses.
+// -- same defensive pattern DialogManager uses.
 
 // CSV export
 
@@ -251,7 +251,7 @@ TEST_F(ProductsPageTest, ExportToCsvWritesRowsToFile) {
     EXPECT_NE(contents.find("Alpha"), std::string::npos);
     EXPECT_NE(contents.find("PROD-002"), std::string::npos);
 
-    // Best-effort cleanup — on Windows CI the file can remain locked
+    // Best-effort cleanup -- on Windows CI the file can remain locked
     // briefly by AV scanners / OS after the ofstream went out of scope,
     // and the throwing overload would fail the test despite the real
     // work being done. error_code overload swallows transient locks.
@@ -261,7 +261,7 @@ TEST_F(ProductsPageTest, ExportToCsvWritesRowsToFile) {
 
 TEST_F(ProductsPageTest, ExportToCsvShowsErrorOnUnwritablePath) {
     // Path into a non-existent directory that can't be auto-created by
-    // std::ofstream — triggers the `!out.is_open()` branch.
+    // std::ofstream -- triggers the `!out.is_open()` branch.
     const std::string bogusPath =
         "/nonexistent-root-dir-should-fail/products.csv";
 
@@ -270,7 +270,7 @@ TEST_F(ProductsPageTest, ExportToCsvShowsErrorOnUnwritablePath) {
     callExportToCsv(page_, bogusPath, {});
 }
 
-// onExportCsvClicked — triggers async exportProducts which then writes
+// onExportCsvClicked -- triggers async exportProducts which then writes
 // to "products.csv" in CWD. Without ModelContext running, the async
 // callback never fires, so this test only exercises the presenter-call
 // side. We cleanup the potentially-produced file at end.
@@ -281,7 +281,7 @@ TEST_F(ProductsPageTest, OnExportCsvClickedCallsPresenterExport) {
     // presenter_->exportProducts invocation) still gets covered.
     EXPECT_NO_THROW(callExportCsv(page_));
 
-    // Best-effort cleanup — the async callback may or may not have
+    // Best-effort cleanup -- the async callback may or may not have
     // fired depending on runtime ordering. remove() on missing file
     // is a silent no-op with error_code overload.
     std::error_code ec;

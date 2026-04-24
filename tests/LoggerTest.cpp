@@ -64,7 +64,7 @@ TEST(LoggerHelpersTest, LevelToStringMapsAllLevels) {
 TEST(LoggerHelpersTest, FormatTimestampProducesNonEmptyString) {
     auto ts = app::core::formatTimestamp();
     EXPECT_FALSE(ts.empty());
-    // Format is HH:MM:SS.mmm — colon splits H/M/S, dot before millis.
+    // Format is HH:MM:SS.mmm -- colon splits H/M/S, dot before millis.
     // The date was dropped deliberately to keep the log panel readable;
     // see formatTimestamp() comment.
     EXPECT_NE(ts.find(':'), std::string::npos);

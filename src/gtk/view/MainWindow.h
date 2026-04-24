@@ -56,7 +56,7 @@ private:
     // member widget pointers (mainNotebook_, alertsContainer_, etc.)
     // to the freshly-built subtree WITHOUT installing it via
     // set_child(). Caller is responsible for calling set_child()
-    // once the new subtree is fully populated — used by reloadLayout
+    // once the new subtree is fully populated -- used by reloadLayout
     // to avoid showing an empty frame between swap and repopulate.
     Gtk::Box* parseLayoutUI();
     void loadSidebarCSS();
@@ -75,11 +75,11 @@ private:
         const std::string& palette);
     // Build the sidebar/top-bar inhabitants (AlertsPanel, SystemStatusBadge,
     // LiveClock) and hook up E-STOP + Close handlers. Safe to call
-    // multiple times during a live relayout — callers are expected to
+    // multiple times during a live relayout -- callers are expected to
     // have reset the member pointers to null first.
     void buildSidebarWidgets();
     // Tear down + re-parse main-window.ui from disk when switching
-    // between structurally different layouts (e.g. default → Blueprint
+    // between structurally different layouts (e.g. default -> Blueprint
     // top-bar). Keeps the user's active tab and runtime toggles.
     void reloadLayout();
 
@@ -117,14 +117,14 @@ private:
     Gtk::Box*        systemStatusContainer_ = nullptr;
     Gtk::Box*        clockContainer_        = nullptr;
     Gtk::Button*     estopButton_           = nullptr;
-    // Only present in Blueprint layout — hosts log_panel in a popover
+    // Only present in Blueprint layout -- hosts log_panel in a popover
     // instead of the bottom dock. When the widget exists we wire the
     // log tail timer to auto-start so the popover is never empty.
     Gtk::MenuButton* logButton_             = nullptr;
 
     // Sidebar labels/buttons that carry translatable text. Kept as
     // members so `rebuildPages()` can reassign the text via `_()` after
-    // a live language switch — the .ui file is only loaded once at
+    // a live language switch -- the .ui file is only loaded once at
     // startup, so GtkBuilder won't re-translate these by itself.
     Gtk::Label*      appTitleLabel_    = nullptr;
     Gtk::Label*      appSubtitleLabel_ = nullptr;
@@ -151,7 +151,7 @@ private:
 
     app::view::SettingsPage*                 settingsPage_  = nullptr;
 
-    // Sidebar Alert center + view — owned by the window, shared with
+    // Sidebar Alert center + view -- owned by the window, shared with
     // DashboardPresenter which raises/clears alerts on state transitions.
     std::unique_ptr<app::presenter::AlertCenter> alertCenter_;
     app::view::AlertsPanel*                      alertsPanel_ = nullptr;

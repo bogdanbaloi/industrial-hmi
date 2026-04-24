@@ -36,7 +36,7 @@ template<typename E>
 concept ErrorType = std::is_enum_v<E>;
 
 // Helper tags for construction. These are Rust-inspired sentinels used at
-// call sites (`Result(Ok, value)`) — the short, prefix-free names are part of
+// call sites (`Result(Ok, value)`) -- the short, prefix-free names are part of
 // the public API, so we opt out of the project-wide k-prefix naming rule.
 struct OkTag {};
 struct ErrTag {};

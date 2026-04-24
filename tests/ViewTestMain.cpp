@@ -2,7 +2,7 @@
 //
 // Gtk::Application::create() registers all gtkmm type wrappers so
 // Gtk::Builder::create_from_file() can map GObject types to C++ classes.
-// We never call app->run() — just creating the Application is enough.
+// We never call app->run() -- just creating the Application is enough.
 //
 // On CI (Linux) this needs a virtual framebuffer (xvfb-run).
 

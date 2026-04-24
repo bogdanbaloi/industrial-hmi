@@ -6,7 +6,7 @@ messages introduced in the "fail-fast startup" refactor.
 Use case: a small set of msgids that msgmerge has left as empty msgstr
 (because they are brand new) and that don't warrant firing up a full
 translation workflow for ten languages. Run once, commit the .po diff,
-delete the script — it's a scaffold, not a permanent tool.
+delete the script -- it's a scaffold, not a permanent tool.
 
 Safe to re-run: idempotent, only touches msgstr entries that are empty.
 """

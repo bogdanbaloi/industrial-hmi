@@ -101,7 +101,7 @@ ConsoleView::ConsoleView(std::ostream& out, std::istream& in)
 // Note on the (defaulted) destructor: jthread will request_stop() +
 // join() on member destruction. If the reader is still blocked in
 // std::getline, join() would hang forever. In practice the process is
-// shutting down by the time we destruct — either the reader already
+// shutting down by the time we destruct -- either the reader already
 // returned (quit / EOF) or SIGINT killed us; both cases make join()
 // return promptly. Interactive callers must drain via waitForExit()
 // before letting the instance go out of scope.
@@ -134,7 +134,7 @@ void ConsoleView::readerLoop(std::stop_token stop) {
         dispatchCommand(line);
         if (exit_.load(std::memory_order_acquire)) break;
     }
-    // EOF, stop, or quit — signal exit so waitForExit() returns.
+    // EOF, stop, or quit -- signal exit so waitForExit() returns.
     signalExit();
 }
 
@@ -372,7 +372,7 @@ void ConsoleView::printStatus() {
     out_.flush();
 }
 
-// ViewObserver — cache the latest VM (for `status`) and emit one
+// ViewObserver -- cache the latest VM (for `status`) and emit one
 // structured line per event. Format is stable so scenario CI tests
 // can diff against expected files.
 

@@ -32,7 +32,7 @@ public:
         
         // Compact one-line format:
         //   HH:MM:SS.mmm [LEVEL] file.h:line  message
-        // — no absolute path, fixed-width level, double-space before the
+        // -- no absolute path, fixed-width level, double-space before the
         // message so the header column is easy to skim in the log panel.
         stream << std::format("{} [{}] {}:{}  {}\n",
                              formatTimestamp(),

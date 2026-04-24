@@ -1,4 +1,4 @@
-// Tests for app::core::StartupErrors — the typed exception hierarchy
+// Tests for app::core::StartupErrors -- the typed exception hierarchy
 // thrown from Bootstrap / Application on unrecoverable startup failures.
 //
 // These are tiny value types (a code + a what-string), so the tests
@@ -73,7 +73,7 @@ TEST(StartupErrorsTest, BaseIsCatchableAsStdException) {
     FAIL() << "Expected std::exception to catch";
 }
 
-// Concrete subclasses — each one carries its specific code and can be
+// Concrete subclasses -- each one carries its specific code and can be
 // caught as the base type (which is what main.cpp relies on).
 
 TEST(StartupErrorsTest, ConfigMissingErrorCarriesCode) {
@@ -101,7 +101,7 @@ TEST(StartupErrorsTest, LoggerBootstrapErrorCarriesCode) {
 }
 
 TEST(StartupErrorsTest, SubclassesCatchableAsBase) {
-    // main.cpp has `catch (const CriticalStartupError& e)` — every
+    // main.cpp has `catch (const CriticalStartupError& e)` -- every
     // concrete subclass must reach that handler.
     try { throw ConfigMissingError{"a"}; }
     catch (const CriticalStartupError&) { SUCCEED(); }

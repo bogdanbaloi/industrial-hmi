@@ -22,7 +22,7 @@ class ConsoleView;
 /// in MainWindow on the GTK side.
 ///
 /// @design Symmetric counterpart to the lifecycle that
-/// `core::Application` runs for the GTK binary — the existence of two
+/// `core::Application` runs for the GTK binary -- the existence of two
 /// composition roots sharing the same presenter + model layer is the
 /// concrete proof that the MVP interfaces hold. Anything the
 /// DashboardPresenter emits through `ViewObserver` is consumed here
@@ -32,7 +32,7 @@ class ConsoleView;
 ///   1. `run()` builds presenters and the ConsoleView.
 ///   2. Presenter signals are wired to view callbacks; view command
 ///      callbacks are wired back to presenter methods (DI at compose
-///      time, not at construction time — presenters stay unaware of
+///      time, not at construction time -- presenters stay unaware of
 ///      whether their audience is a GTK widget or a terminal).
 ///   3. The simulation tick runs on a background thread, producing
 ///      ViewModel callbacks that the view renders as lines.

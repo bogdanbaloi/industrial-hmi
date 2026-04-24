@@ -12,7 +12,7 @@ namespace app::presenter {
 ///         simplified enum that the View can easily render.
 ///
 /// @note The enum values map directly to CSS classes in the GTK theme.
-///       Example: EquipmentCardStatus::Online → CSS class "equipment-status-online"
+///       Example: EquipmentCardStatus::Online -> CSS class "equipment-status-online"
 enum class EquipmentCardStatus {
     Offline,      ///< Unreachable / not configured (safe zero-init default)
     StartingUp,   ///< Equipment is booting up
@@ -35,7 +35,7 @@ enum class EquipmentCardStatus {
 ///
 /// @pattern This follows the ViewModel pattern from MVP architecture:
 ///          - Model (hardware): Complex state with many fields, error flags, enums
-///          - Presenter: Translates Model → ViewModel (this struct)
+///          - Presenter: Translates Model -> ViewModel (this struct)
 ///          - View: Renders ViewModel fields directly into widgets
 ///
 /// @thread_safety This struct is passed by value or const-ref between threads.

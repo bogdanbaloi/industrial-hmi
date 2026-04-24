@@ -7,194 +7,188 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **Headless console front-end** (`industrial-hmi-console`) sharing
-  Model + Presenter + Bootstrap with the GTK desktop binary. Full
-  command set: `help`, `status`, `start`, `stop`, `reset`, `calibrate`,
-  `eq <id> on|off`, `alerts`, `dismiss <key>`, `products`, `view <id>`,
-  `quit`. Implements `ViewObserver` so presenters don't branch per
-  front-end. Binary links zero gtkmm (validated by `nm`).
-- **Scenario test harness** — 5 `tests/scenarios/*.txt` inputs piped
-  through the console binary, stdout diffed against `*.expected`
-  golden files via a portable CMake runner
-  (`tests/scenarios/run-scenario.cmake`). Wired into ctest and runs
-  in CI without a display server.
-- **Staged Bootstrap** (`src/core/Bootstrap.{h,cpp}`) orchestrating
-  startup across both front-ends: stderr logger → config → configured
-  logger → i18n → SQLite. Resolves the classic config/logger
-  chicken-and-egg via a two-phase logger.
-- **Fail-fast startup errors** — typed `CriticalStartupError`
-  hierarchy (`ConfigMissing`, `ConfigCorrupt`, `DatabaseInit`,
-  `LoggerBootstrap`) thrown from Bootstrap/Application, caught in
-  `main()`, surfaced through a native reporter (MessageBoxW on
-  Windows GUI, stderr on console / Linux) with documented exit
-  codes (0/1/2/3). Localised dialog body.
-- **Color palettes** (8 total) — Industrial (baseline), Nord, Paper,
-  Right Sidebar, Dracula, CRT, Blueprint, Cockpit. Loaded as a second CSS
-  provider stacked on top of the base stylesheet.
-- **Thumbnail palette picker** in Settings with four colour swatches per
-  card, palette name, and a mode badge ("Dark + Light", "Dark only",
+### Architecture
+
+- **Headless console front-end** (`industrial-hmi-console`) sharing Model +
+  Presenter + Bootstrap with the GTK desktop binary. Full command set:
+  `help`, `status`, `start`, `stop`, `reset`, `calibrate`, `eq <id> on|off`,
+  `alerts`, `dismiss <key>`, `products`, `view <id>`, `quit`. Implements
+  `ViewObserver` so presenters never branch per front-end. The binary
+  links zero gtkmm (validated by `nm`).
+- **Staged Bootstrap** (`src/core/Bootstrap.{h,cpp}`) orchestrates startup
+  across both front-ends: stderr logger -> config -> configured logger ->
+  i18n -> SQLite. Resolves the classic config/logger chicken-and-egg via
+  a two-phase logger; `objectsCore` is now GTK-free and `objectsAppGtk`
+  holds the GTK bootstrap glue.
+- **Fail-fast startup errors** -- typed `CriticalStartupError` hierarchy
+  (`ConfigMissing`, `ConfigCorrupt`, `DatabaseInit`, `LoggerBootstrap`)
+  thrown from Bootstrap/Application, caught in `main()`, surfaced through
+  a native reporter (MessageBoxW on Windows GUI, stderr elsewhere) with
+  documented exit codes (0/1/2/3). Dialog body is localised via gettext.
+- **Policy / mechanism split** -- `ConfigManager::applyI18n()` owns the
+  language policy; `src/core/i18n` stays a pure gettext adapter with no
+  dependency on glibmm. DB init moved from `Application::initDatabase`
+  to `Bootstrap` Stage 5 so both front-ends start from the same
+  initialised SQLite.
+- **MainWindow keyboard dispatcher extracted** into `MainWindowKeyDispatch`
+  -- a pure free function + `KeyDispatchContext` struct so every F-key
+  shortcut can be unit-tested without instantiating MainWindow.
+- **Defensive dialog parent lookups** in `ProductsPage`
+  (showAddProductDialog, showEditProductDialog, showProductDetail) --
+  `dynamic_cast<Gtk::Window*>` now falls back to a parentless dialog
+  constructor instead of dereferencing a null pointer, mirroring the
+  pattern already used by `DialogManager::createMessageDialog`.
+
+### Testing & CI
+
+- **Test coverage: 43% -> 79%** across 4095 lines, verified by gcovr on
+  every PR and surfaced at the top of the Actions run page.
+- **31 ctest targets** organised as:
+  - 10 scenario-based E2E tests piping stdin into the console binary
+    and diffing stdout against `*.expected` golden files
+  - 20+ unit test binaries (model, presenter, view, config, core)
+  - 1 coverage-dedicated Xvfb job booting the real GTK binary to lift
+    MainWindow / SettingsPage / DialogManager / AlertsPanel / LiveClock
+    / gauges / charts out of 0%
+- **View-layer tests under real GTK** via `ViewTestMain.cpp` (gtk_init)
+  + `xvfb-run` on Linux CI. Includes `DashboardPageTest`,
+  `ProductsPageTest` (12 cases), `SettingsPageTest` (25 cases), and
+  `DialogManagerTest` (11 cases that dispatch `Gtk::Dialog::response()`
+  programmatically).
+- **Async presenter tests** -- `ProductsPresenterAsyncTest` drives a
+  Glib::MainLoop to pump signal_idle queues, exercising the Boost.Asio
+  -> ModelContext -> signal_idle marshaling path that a synchronous
+  harness can't observe.
+- **Coverage-focused xdotool smoke** -- CI coverage job boots the GTK
+  binary under Xvfb, sends F1 to open AboutDialog, Escape to close,
+  then lets `HMI_EXIT_AFTER_MS` drive a clean atexit so gcov .gcda
+  files flush. Lifts `AboutDialog.cpp` to 98%.
+- **LoggerImplTest** (23 cases) covers FileLogger rotation workflow,
+  CompositeLogger propagation + `isEnabled` fan-out, NullLogger no-ops,
+  CallbackLogger reentrancy guard via atomic flag.
+- **I18nTest** (7 cases) covers the gettext adapter: forceLanguage /
+  propagateLangToLanguage / resolveLocaleDir (absolute, relative-exists,
+  missing), `gEnvOwned` reset on "auto -> explicit -> auto".
+- **CI: Node.js 24 opt-in** via `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`
+  eliminates 3 Node 20 deprecation warnings on upload-artifact@v5.
+- **Dual-platform CI** -- Ubuntu 24.04 (GCC 13 + pkg-config) and Windows
+  MSYS2 CLANG64 (vcpkg-free); both build + test on every PR. Coverage
+  job runs only on Ubuntu (one source of truth for the gcovr report).
+- **Clang-tidy + cppcheck** gates on every PR, with the clang-tidy
+  report uploaded as an artifact.
+
+### Features
+
+- **Color palettes** (8 total) -- Industrial (baseline), Nord, Paper,
+  Right Sidebar, Dracula, CRT, Blueprint, Cockpit. Loaded as a second
+  CSS provider layered over the base stylesheet.
+- **Thumbnail palette picker** in Settings with four colour swatches
+  per card, palette name, and a mode badge ("Dark + Light", "Dark only",
   "Light only").
-- **Mode-locked palettes** — Tier 2 palettes are single-mode by design
-  (Paper is light-only; Dracula / CRT / Blueprint / Cockpit are dark-only).
-  The incompatible Dark/Light radio is disabled with a tooltip, and picking
-  a locked palette auto-snaps the Theme.
-- **Alternate UI layouts** — Right Sidebar mirrors the sidebar to the right;
-  Blueprint moves Alerts and Logs into top-bar popovers. Swapped at runtime
-  via `MainWindow::reloadLayout` with an atomic detach/parse/re-attach.
+- **Mode-locked palettes** -- Tier 2 palettes are single-mode by design
+  (Paper = light-only; Dracula / CRT / Blueprint / Cockpit = dark-only).
+  The incompatible Dark/Light radio is disabled with a tooltip, and
+  picking a locked palette auto-snaps the Theme.
+- **Alternate UI layouts** -- Right Sidebar mirrors the sidebar to the
+  right; Blueprint moves Alerts and Logs into top-bar popovers. Swapped
+  at runtime via `MainWindow::reloadLayout` with an atomic
+  detach/parse/re-attach.
 - **Alerts Center** with info / warning / critical severities, per-alert
   dismiss, and resolved-alert history. 26 dedicated tests.
-- **Products CSV export** with round-trip unit tests.
+- **Products CSV export** with round-trip unit tests + error dialog on
+  unwritable paths.
+- **i18n grown to 11 languages** (added `es_MX`, `ga`, `pt_BR`, `sv`).
+
+### Tooling
+
 - **CMakePresets.json** for modern CMake workflow.
 - **Doxyfile** for API documentation generation.
-- **Sanitizers** support (AddressSanitizer, UBSanitizer).
-- **Code coverage** support (gcov/lcov) and HTML reports in CI.
-- **.editorconfig** for consistent coding style.
+- **Sanitizers** support (AddressSanitizer, UBSanitizer) via
+  `-DENABLE_SANITIZERS=ON`.
+- **Code coverage** (gcov/gcovr) with HTML reports published as a CI
+  artifact.
+- **.editorconfig** for consistent formatting.
 
-### Changed
-- i18n grown to 11 languages (added es_MX, ga, pt_BR, sv).
-- Test suite grown to 12 binaries + 5 scenario tests (160+ unit cases).
-- `objectsCore` is now GTK-free; GTK bootstrap moved to `objectsAppGtk`.
-- `Application::initialize` split into `Bootstrap::run()` (shared) +
-  GTK-specific glue.
-- `ConfigManager::applyI18n()` owns the language policy; `core/i18n`
-  stays a pure gettext adapter.
-- DB init moved from `Application::initDatabase` to `Bootstrap` Stage 5
-  so both front-ends start from the same initialised SQLite.
-- Baseline layouts: `log_panel` `height-request` reduced from 150 to 70
-  to stay within the 1200 px window budget across all palettes (the old
-  value produced `Trying to measure gtkmm__GtkBox for height of 1200, but
-  it needs at least N` warnings on dense palettes like Cockpit).
+### Style
+
+- **Banner separator cleanup** -- 372 `// ----`, `# ====`, `/* ==== */`,
+  `<!-- ==== -->` decorative comment lines stripped across 37 source,
+  test, CMake, shell, CSS, and UI files. Replaced with single-line
+  `// Title` comments where the label was meaningful; dropped otherwise.
 
 ### Fixed
-- Dracula combobox double-border (flattened the inner GTK button).
-- Nord: restored Light variant stripped by an earlier unwrap script.
-- Blueprint / Cockpit: removed stray light-mode CSS sections (both are
-  dark-only palettes).
-- Paper: ColumnView header text no longer invisible on light-on-light;
+
+- **Dracula** combobox double-border (flattened the inner GTK button).
+- **Nord**: restored Light variant stripped by an earlier unwrap script.
+- **Blueprint / Cockpit**: removed stray light-mode CSS sections (both
+  are dark-only palettes by design).
+- **Paper**: ColumnView header text no longer invisible on light-on-light;
   notebook stack background forced to paper cream.
-- Settings "Show logs" checkbox preserves the user's choice across palette
-  transitions (Blueprint forces a log tail, but the user's preference is
-  restored when leaving Blueprint).
+- **Settings "Show logs"** checkbox preserves the user's choice across
+  palette transitions (Blueprint forces a log tail, but the user's
+  preference is restored when leaving Blueprint).
+- **Log panel sizing**: `log_panel` `height-request` reduced from 150
+  to 70 across palettes to stay within the 1200 px window budget.
 
 ## [1.0.0] - 2026-04-09
 
 ### Added
-- **Async I/O Context** with Boost.Asio and std::jthread (C++20 RAII)
-  - Non-blocking database operations
-  - Single I/O thread for async work
-  - Thread-safe callback marshaling via Glib::signal_idle()
-  - Production-ready async pattern
 
-- **Theme Toggle UI** in sidebar
-  - Dark Mode / Light Mode radio buttons
-  - Real-time theme switching
-  - Integration with ThemeManager
-
-- **vcpkg.json Manifest** for Windows dependencies
-  - Modern vcpkg manifest mode
-  - Automatic dependency resolution
-  - Reproducible Windows builds
-
-- **Cross-Platform Support**
-  - Linux (Ubuntu 24.04+, Debian, Fedora)
-  - Windows (10/11, Server 2022)
-  - Platform-agnostic CMake build system
-  - vcpkg integration for Windows
-  - pkg-config for Linux
-
-- **CI/CD Pipeline** (GitHub Actions)
-  - Dual platform builds (Ubuntu + Windows)
-  - Code quality checks (clang-tidy, cppcheck)
-  - Documentation verification
-  - Automated releases with artifacts
-
-- **Adwaita Themes** with Design Tokens
-  - Dark Mode (industrial dark theme)
-  - Light Mode (clean light theme)
-  - 30+ CSS design tokens (colors, spacing, typography)
-  - Gradient sidebar backgrounds
-  - Professional UI/UX
-
-- **Complete CRUD Operations**
-  - Create, Read, Update, Delete products
-  - Soft delete pattern with deleted_at timestamp
-  - Input validation with error dialogs
-  - Async confirmation dialogs
-  - Search functionality
-
-- **Dependency Injection Pattern**
-  - Refactored from Singleton anti-pattern
-  - Explicit dependencies via constructor injection
-  - Testable architecture with mock support
-  - Production-ready pattern
-
-- **MVP Architecture**
-  - Model: DatabaseManager, SimulatedModel, ModelContext
-  - View: GTK4 pages (DashboardPage, ProductsPage)
-  - Presenter: DashboardPresenter, ProductsPresenter
-  - Clean separation of concerns
-
-- **SOLID Principles**
-  - Interface Segregation (focused view interfaces)
-  - Dependency Inversion (DI pattern)
-  - Single Responsibility (layer separation)
-
-- **Modern C++20 Features**
-  - Concepts (ViewInterfaceConcept)
-  - std::jthread (RAII thread management)
-  - Ranges
-  - constexpr
-  - [[nodiscard]] attributes
-
-- **Comprehensive Documentation**
-  - README.md (project overview)
-  - PORTFOLIO_SUMMARY.md (interview preparation)
-  - BUILD.md (cross-platform build guide)
-  - tests/README_TESTING.md (unit testing guide)
+- **Async I/O Context** with Boost.Asio and `std::jthread` (C++20 RAII)
+  -- non-blocking database operations, single I/O thread for async work,
+  thread-safe callback marshaling via `Glib::signal_idle()`.
+- **Theme Toggle UI** in sidebar (Dark Mode / Light Mode radios,
+  real-time switching, ThemeManager integration).
+- **vcpkg.json manifest** for Windows dependencies (manifest mode,
+  reproducible builds).
+- **Cross-platform support** -- Linux (Ubuntu 24.04+, Debian, Fedora) +
+  Windows (10/11, Server 2022). Platform-agnostic CMake; vcpkg on
+  Windows, pkg-config on Linux.
+- **CI/CD pipeline** (GitHub Actions) with dual-platform builds, code
+  quality checks (clang-tidy, cppcheck), documentation verification,
+  automated releases with artifacts.
+- **Adwaita themes with design tokens** -- 30+ CSS variables (colours,
+  spacing, typography), gradient sidebar backgrounds.
+- **Complete CRUD operations** -- soft delete with `deleted_at`
+  timestamp, input validation with error dialogs, async confirmation
+  dialogs, search.
+- **Dependency Injection** -- refactored from singleton anti-pattern;
+  explicit dependencies via constructor injection, testable
+  architecture with mock support.
+- **MVP architecture** -- Model (`DatabaseManager`, `SimulatedModel`,
+  `ModelContext`), View (GTK4 pages), Presenter (`DashboardPresenter`,
+  `ProductsPresenter`).
+- **Modern C++20 features** -- Concepts, `std::jthread`, ranges,
+  `constexpr`, `[[nodiscard]]`.
 
 ### Changed
-- DatabaseManager: Added async methods alongside sync methods
-- ProductsPresenter: Updated to async signatures with callbacks
-- ProductsPage: Updated UI to handle async operations
+
+- `DatabaseManager`: added async methods alongside sync methods.
+- `ProductsPresenter`: updated to async signatures with callbacks.
+- `ProductsPage`: updated UI to handle async operations.
 
 ### Fixed
-- UI freezing during database operations (now async)
-- Theme consistency across components
-- Windows build with vcpkg
+
+- UI freezing during database operations (now async).
+- Theme consistency across components.
+- Windows build with vcpkg.
 
 ## [0.5.0] - 2026-04-07
 
 ### Added
-- Initial MVP architecture implementation
-- GTK4 user interface
-- SQLite database integration
-- Pharmaceutical manufacturing domain model
-- Basic CRUD operations (synchronous)
-- Singleton pattern (later refactored to DI)
 
-### Known Issues
-- Blocking database operations (fixed in v1.0.0)
-- Singleton pattern (refactored in v1.0.0)
-- Linux-only build (cross-platform in v1.0.0)
+- Initial MVP architecture implementation.
+- GTK4 user interface.
+- SQLite database integration.
+- Pharmaceutical manufacturing domain model.
+- Basic CRUD operations (synchronous).
+- Singleton pattern (later refactored to DI in 1.0.0).
 
----
+### Known Issues (resolved in 1.0.0)
 
-## Release Notes
-
-### Version 1.0.0 Highlights
-
-**Production-Ready Async Architecture:**
-The major focus of this release is the transition from blocking to non-blocking I/O. Database operations now execute on a dedicated background thread using Boost.Asio, preventing UI freezes. Callbacks are marshaled back to the GTK main thread using Glib::signal_idle(), ensuring thread safety.
-
-**Cross-Platform Excellence:**
-Full support for both Linux and Windows with platform-specific tooling (pkg-config vs vcpkg). CMake automatically detects the platform and configures the build accordingly. CI/CD builds and tests on both Ubuntu 24.04 and Windows Server 2022.
-
-**Modern C++20 RAII:**
-Uses std::jthread instead of std::thread for automatic thread lifecycle management. No manual join/detach required - the thread joins automatically on destruction, making the code exception-safe and cleaner.
-
-**Professional Patterns:**
-Demonstrates production-grade software engineering: MVP architecture, Dependency Injection, SOLID principles, async I/O, RAII, design tokens, soft delete, and comprehensive error handling.
+- Blocking database operations.
+- Singleton pattern.
+- Linux-only build.
 
 ---
 
@@ -202,33 +196,22 @@ Demonstrates production-grade software engineering: MVP architecture, Dependency
 
 ### From 0.5.0 to 1.0.0
 
-**Breaking Changes:**
-- `ProductsPresenter::addProduct()` now requires a callback parameter
-- `ProductsPresenter::updateProduct()` now requires a callback parameter
-- `ProductsPresenter::deleteProduct()` now requires a callback parameter
+**Breaking changes** -- `ProductsPresenter::{addProduct, updateProduct,
+deleteProduct}` now require a callback parameter:
 
-**Migration Example:**
 ```cpp
-// Old (0.5.0):
-bool success = presenter_->addProduct(code, name, status, stock, quality);
-if (!success) {
-    showError();
-}
+// 0.5.0
+bool ok = presenter_->addProduct(code, name, status, stock, quality);
+if (!ok) showError();
 
-// New (1.0.0):
-presenter_->addProduct(code, name, status, stock, quality, [this](bool success) {
-    if (!success) {
-        showError();
-    }
-});
+// 1.0.0
+presenter_->addProduct(code, name, status, stock, quality,
+    [this](bool ok) { if (!ok) showError(); });
 ```
 
-**New Dependencies:**
-- Boost.Asio (already required for signals2)
-- C++20 compiler (GCC 10+, MSVC 2019+, Clang 10+)
+**New dependencies** -- Boost.Asio (already pulled in by signals2);
+C++20 compiler (GCC 10+, MSVC 2019+, Clang 10+).
 
----
-
-[Unreleased]: https://github.com/yourusername/industrial-hmi/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/yourusername/industrial-hmi/releases/tag/v1.0.0
-[0.5.0]: https://github.com/yourusername/industrial-hmi/releases/tag/v0.5.0
+[Unreleased]: https://github.com/bogdanbaloi/industrial-hmi/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/bogdanbaloi/industrial-hmi/releases/tag/v1.0.0
+[0.5.0]: https://github.com/bogdanbaloi/industrial-hmi/releases/tag/v0.5.0

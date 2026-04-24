@@ -1,6 +1,6 @@
 // Tests for app::core::reportFatalStartup / reportUnexpectedFatal in
 // console mode (consoleMode=true). The GUI path on Windows pops up a
-// MessageBoxW which isn't testable from a headless unit test — those
+// MessageBoxW which isn't testable from a headless unit test -- those
 // branches are exercised manually + in the scenario suite instead.
 // The console path writes a structured block to stderr, which we
 // capture by temporarily redirecting stderr through freopen.
@@ -25,7 +25,7 @@ namespace {
 /// Capture everything written to stderr inside a scope. Redirects the
 /// FILE* so `std::fprintf(stderr, ...)` lands in a file we can read
 /// back. One instance per TEST() keeps the fixture file confined to a
-/// per-test path in ctest's working directory — no collisions between
+/// per-test path in ctest's working directory -- no collisions between
 /// sequential tests, no portable-tmp-file drama (avoiding the
 /// deprecated `tmpnam` / POSIX-only `mkstemp`).
 class StderrCapture {
@@ -65,7 +65,7 @@ private:
 
 }  // namespace
 
-// reportFatalStartup — console mode
+// reportFatalStartup -- console mode
 
 TEST(StartupDialogTest, FatalConsoleIncludesTagAndBody) {
     StderrCapture cap{"stderr-fatal-body.txt"};
@@ -98,12 +98,12 @@ TEST(StartupDialogTest, FatalConsoleTagsDifferByErrorCode) {
 
 // (FatalConsoleIsNoexcept static_assert removed: Windows Clang's
 // `noexcept(expr)` operator evaluates to false here even with the
-// function declared noexcept — seems to be a overload-resolution quirk
+// function declared noexcept -- seems to be a overload-resolution quirk
 // around the std::string_view-from-literal argument. The noexcept
 // contract is still enforced at declaration site in StartupDialog.h,
 // which is the actual invariant we care about.)
 
-// reportUnexpectedFatal — console mode
+// reportUnexpectedFatal -- console mode
 
 TEST(StartupDialogTest, UnexpectedConsoleIncludesTagAndMessage) {
     StderrCapture cap{"stderr-unexpected.txt"};
@@ -116,7 +116,7 @@ TEST(StartupDialogTest, UnexpectedConsoleIncludesTagAndMessage) {
         << "body missing: " << out;
 }
 
-// UnexpectedConsoleIsNoexcept: same story — removed the static_assert
+// UnexpectedConsoleIsNoexcept: same story -- removed the static_assert
 // because Windows Clang spuriously evaluates noexcept(...) as false
 // here. The header declaration still enforces the contract for real
 // callers.

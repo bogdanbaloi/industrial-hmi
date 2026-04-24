@@ -27,12 +27,12 @@
 ## TODO
 
 ### Phase 1: Complete DatabaseManager Integration
-1. **Refactor query methods** → Result<T, DatabaseError>
+1. **Refactor query methods** -> Result<T, DatabaseError>
    - getAllProducts() - handle SQLITE_ERROR, SQLITE_BUSY
    - getProduct(id) - return NotFound on missing
    - searchProducts(query) - proper error propagation
 
-2. **Refactor mutation methods** → Result<T, DatabaseError>
+2. **Refactor mutation methods** -> Result<T, DatabaseError>
    - addProduct() - catch UniqueViolation (SQLITE_CONSTRAINT)
    - updateProduct() - return NotFound if missing
    - deleteProduct() (soft delete) - return NotFound if missing

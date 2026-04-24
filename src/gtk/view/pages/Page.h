@@ -16,7 +16,7 @@ class DialogManager;
 ///         - Lifecycle hooks: MainWindow dispatches the same three events
 ///           to every registered page uniformly.
 ///
-/// @pattern Open/Closed — adding a new page means deriving from `Page` and
+/// @pattern Open/Closed -- adding a new page means deriving from `Page` and
 ///          registering it with MainWindow; no page-specific wiring in the
 ///          main loop.
 ///

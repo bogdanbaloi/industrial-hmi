@@ -1,6 +1,6 @@
 // SimulatedModel.h (and therefore ProductionTypes.h with its
 // `enum class ProductionError { ... ERROR ... }`) must come before
-// ModelContext.h — the latter pulls Boost.Asio which on Windows
+// ModelContext.h -- the latter pulls Boost.Asio which on Windows
 // transitively includes wingdi.h, which `#define ERROR 0` and
 // poisons the enum identifier. Same reason main.cpp keeps
 // SimulatedModel include near the top.
@@ -31,12 +31,12 @@ int InitConsole::run() {
     auto& logger = bootstrap_.logger();
     logger.info("Application starting (console frontend)");
 
-    // Model — reuse the Simulated singleton that GTK also binds to.
+    // Model -- reuse the Simulated singleton that GTK also binds to.
     // Logger injection is the same pattern MainWindow uses.
     auto& model = model::SimulatedModel::instance();
     model.setLogger(logger);
 
-    // Presenters — DI construction so we don't rely on any singleton
+    // Presenters -- DI construction so we don't rely on any singleton
     // shortcut from inside the presenter. Makes the dependency graph
     // explicit at the composition root, identical to test wiring.
     alertCenter_        = std::make_unique<presenter::AlertCenter>();
@@ -44,7 +44,7 @@ int InitConsole::run() {
     dashboardPresenter_->setAlertCenter(*alertCenter_);
     productsPresenter_  = std::make_unique<ProductsPresenter>();  // DB singleton path
 
-    // View — injected with std::cout / std::cin so tests can plug in
+    // View -- injected with std::cout / std::cin so tests can plug in
     // string streams and run scenarios without touching terminal state.
     view_ = std::make_unique<ConsoleView>(std::cout, std::cin);
 
@@ -55,11 +55,11 @@ int InitConsole::run() {
     productsPresenter_->initialize();
     model.initializeDemoData();
 
-    // Simulation tick — drives the SimulatedModel the same way the
+    // Simulation tick -- drives the SimulatedModel the same way the
     // GTK path does via Glib::signal_timeout, except without GLib.
     tickThread_ = std::jthread([this](std::stop_token st) { tickLoop(st); });
 
-    // Event loop — ConsoleView owns the stdin reader thread; we block
+    // Event loop -- ConsoleView owns the stdin reader thread; we block
     // here until the user signals exit.
     view_->start();
     view_->waitForExit();
@@ -94,7 +94,7 @@ void InitConsole::wireActions() {
     // Presenter methods are captured by raw pointer on the stable
     // unique_ptr owned by this composition root, so the lambdas stay
     // valid for as long as the ConsoleView lives. AlertCenter is
-    // likewise captured by pointer — all three objects tear down
+    // likewise captured by pointer -- all three objects tear down
     // together in InitConsole::run()'s cleanup block.
     auto* dp = dashboardPresenter_.get();
     auto* pp = productsPresenter_.get();

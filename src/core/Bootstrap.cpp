@@ -29,13 +29,13 @@ Bootstrap::~Bootstrap() {
 }
 
 void Bootstrap::run() {
-    // Stage 1 — bootstrap logger (stderr only, INFO level).
+    // Stage 1 -- bootstrap logger (stderr only, INFO level).
     // Available before any config is read so stages 2+ can log warnings.
     logger_ = std::make_unique<Logger>(createConsoleLogger(LogLevel::INFO));
 
-    // Stage 1.5 — bind gettext to the OS locale BEFORE we touch config.
+    // Stage 1.5 -- bind gettext to the OS locale BEFORE we touch config.
     // If config turns out to be missing / corrupt, the fatal error
-    // message surfaced through StartupDialog needs to be translated —
+    // message surfaced through StartupDialog needs to be translated --
     // but the user's preferred language lives *inside* config, which
     // is the very thing that failed. "auto" falls back to the OS /
     // environment locale, which is the best signal we have at this
@@ -59,7 +59,7 @@ void Bootstrap::run() {
                   postLANGUAGE && *postLANGUAGE ? postLANGUAGE : "(unset)",
                   postLANG     && *postLANG     ? postLANG     : "(unset)");
 
-    // Stage 2 — ConfigManager::initialize(). Missing / corrupt config
+    // Stage 2 -- ConfigManager::initialize(). Missing / corrupt config
     // is treated as FATAL: the app refuses to start rather than
     // silently running with built-in defaults. Operational degradation
     // (log file, i18n fallback) remains non-fatal and just records
@@ -74,7 +74,7 @@ void Bootstrap::run() {
         // operator-facing message is equally actionable either way.
         //
         // Message is localised via gettext (bound above to OS locale).
-        // Missing translations degrade to the source English — which
+        // Missing translations degrade to the source English -- which
         // is acceptable for an unrecoverable deployment error.
         throw ConfigMissingError(std::vformat(
             _("Could not load configuration from {}. "
@@ -93,9 +93,9 @@ void Bootstrap::run() {
     }
 #endif
 
-    // Stage 3 — replace the bootstrap logger with a configured one
+    // Stage 3 -- replace the bootstrap logger with a configured one
     // (level / path / rotation / console-enable from config). Failure
-    // here is NOT fatal — we keep the bootstrap stderr logger and
+    // here is NOT fatal -- we keep the bootstrap stderr logger and
     // record a warning. The app is still usable without a log file.
     try {
         auto configured = std::make_unique<Logger>(
@@ -112,15 +112,15 @@ void Bootstrap::run() {
         warnings_.emplace_back(
             std::string("Log file could not be opened: ") + e.what()
             + ". Logging to console only.");
-        // Keep bootstrap logger — still functional, just not persisted.
+        // Keep bootstrap logger -- still functional, just not persisted.
     }
 
-    // Stage 4 — i18n. Policy lives in ConfigManager; Bootstrap just
+    // Stage 4 -- i18n. Policy lives in ConfigManager; Bootstrap just
     // triggers it. ConfigManager decides language and logs through
     // the current logger. Never throws.
     config.applyI18n();
 
-    // Stage 5 — database. Both frontends (GTK and console) read from
+    // Stage 5 -- database. Both frontends (GTK and console) read from
     // the same SQLite; failure to open it is fatal because every
     // products workflow depends on it, and a partial start would
     // surface as cryptic blank screens later.

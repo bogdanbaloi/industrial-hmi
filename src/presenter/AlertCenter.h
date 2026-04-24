@@ -23,7 +23,7 @@ struct AlertHistoryEntry {
     std::string    resolvedAt;
 };
 
-/// AlertCenter — process-wide store for operator-visible alerts.
+/// AlertCenter -- process-wide store for operator-visible alerts.
 ///
 /// @design Header-only service (no virtual members, no external deps) so
 ///         test binaries can link it without pulling GTK or the MVP
@@ -107,7 +107,7 @@ public:
         if (historyChanged) signalHistoryChanged_.emit();
     }
 
-    /// Thread-safe snapshot — callers get a copy they can render without
+    /// Thread-safe snapshot -- callers get a copy they can render without
     /// holding the lock. Cheap in practice; the list rarely exceeds a
     /// handful of entries.
     [[nodiscard]] std::vector<AlertViewModel> snapshot() const {

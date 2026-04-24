@@ -1,4 +1,4 @@
-// Tests for app::view::SettingsPage — View layer.
+// Tests for app::view::SettingsPage -- View layer.
 //
 // Exercises the private handler surface and verifies that the sigc::signal
 // bus to MainWindow fires (or stays silent under the syncingState_ guard)
@@ -36,7 +36,7 @@ protected:
         page_ = Gtk::make_managed<SettingsPage>(mockDM_);
     }
 
-    // Friend bridges — SettingsPage declares `friend class ::SettingsPageTest`.
+    // Friend bridges -- SettingsPage declares `friend class ::SettingsPageTest`.
     // TEST_F bodies don't inherit friendship, so we route through statics.
 
     static void callOnLanguageSelected(SettingsPage* p)     { p->onLanguageSelected(); }
@@ -295,9 +295,9 @@ TEST_F(SettingsPageTest, LanguageHandlerSilentDuringSync) {
     EXPECT_FALSE(emitted);
 }
 
-// Log level — changes the live Application::logger() level via
+// Log level -- changes the live Application::logger() level via
 // parseLogLevel(). Application::instance().logger() returns a lazy
-// NullLogger in tests, so setLevel is a no-op — but we still exercise
+// NullLogger in tests, so setLevel is a no-op -- but we still exercise
 // the parse + setLevel code path.
 
 TEST_F(SettingsPageTest, LogLevelSelectedAppliesToLogger) {
@@ -322,7 +322,7 @@ TEST_F(SettingsPageTest, LogLevelHandlerSilentDuringSync) {
     syncingState(page_) = false;
 }
 
-// Palette — onPaletteSelected is a legacy no-op handler retained for
+// Palette -- onPaletteSelected is a legacy no-op handler retained for
 // the header signature; the real work happens in the thumbnail card's
 // inline lambda. Calling the method should be a pure no-op.
 
@@ -330,7 +330,7 @@ TEST_F(SettingsPageTest, OnPaletteSelectedIsNoOp) {
     EXPECT_NO_THROW(callOnPaletteSelected(page_));
 }
 
-// highlightSelectedPaletteCard + applyModeLockForPalette — pure widget
+// highlightSelectedPaletteCard + applyModeLockForPalette -- pure widget
 // manipulation, no signals. We just verify they don't crash for any of
 // the palette ids (industrial, dracula, crt, blueprint, cockpit, paper,
 // nord, right).
@@ -349,7 +349,7 @@ TEST_F(SettingsPageTest, ApplyModeLockDarkOnlyDisablesLightRadio) {
 
     callApplyModeLock(page_, "dracula");
     EXPECT_FALSE(rl->get_sensitive())
-        << "dracula is dark-only → Light radio must be disabled";
+        << "dracula is dark-only -> Light radio must be disabled";
 }
 
 TEST_F(SettingsPageTest, ApplyModeLockLightOnlyDisablesDarkRadio) {
@@ -358,7 +358,7 @@ TEST_F(SettingsPageTest, ApplyModeLockLightOnlyDisablesDarkRadio) {
 
     callApplyModeLock(page_, "paper");
     EXPECT_FALSE(rd->get_sensitive())
-        << "paper is light-only → Dark radio must be disabled";
+        << "paper is light-only -> Dark radio must be disabled";
 }
 
 TEST_F(SettingsPageTest, ApplyModeLockRegularPaletteLeavesBothEnabled) {
@@ -372,7 +372,7 @@ TEST_F(SettingsPageTest, ApplyModeLockRegularPaletteLeavesBothEnabled) {
     EXPECT_TRUE(rl->get_sensitive());
 }
 
-// syncWithRuntimeState — public API that must NOT fire any signals
+// syncWithRuntimeState -- public API that must NOT fire any signals
 // (that's what syncingState_ is for).
 
 TEST_F(SettingsPageTest, SyncWithRuntimeStateEmitsNoSignals) {

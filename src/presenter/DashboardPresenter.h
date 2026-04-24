@@ -110,7 +110,7 @@ private:
     /// @param newState New state from state machine
     void handleSystemStateChanged(/* State enum */ int newState);
     
-    // ViewModel builders (transform Model data → ViewModels)
+    // ViewModel builders (transform Model data -> ViewModels)
     
     /// Build work unit ViewModel from database query
     /// @param workUnitId Work unit identifier

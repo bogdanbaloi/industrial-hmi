@@ -98,7 +98,7 @@ void Application::shutdown() {
 
     model::ModelContext::instance().stop();
 
-    // NOTE: Logger flush/shutdown is owned by Bootstrap — when the
+    // NOTE: Logger flush/shutdown is owned by Bootstrap -- when the
     // Bootstrap object in main() goes out of scope it will flush the
     // final records. Application only borrows the pointer.
     logger_ = nullptr;
@@ -108,7 +108,7 @@ void Application::shutdown() {
 Logger& Application::logger() {
     // Tests instantiate Presenters directly without ever calling
     // Application::initialize(). Those Presenters now emit debug/trace
-    // messages during normal flow — if `logger_` is null we'd crash on
+    // messages during normal flow -- if `logger_` is null we'd crash on
     // the first log call. Fall back to a lazy-constructed NullLogger so
     // unit tests stay hermetic.
     if (!logger_) {

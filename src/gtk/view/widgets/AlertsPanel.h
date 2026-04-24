@@ -13,14 +13,14 @@ namespace app::view {
 /// Sidebar widget that renders the current AlertCenter snapshot.
 ///
 /// @design Subscribes to AlertCenter::signalAlertsChanged and rebuilds
-///         its list each time — alert volume is tiny (handful of rows)
+///         its list each time -- alert volume is tiny (handful of rows)
 ///         so full redraws are simpler and faster than diffing. Listens
 ///         on whichever thread the signal fires, then marshals back to
 ///         the GTK main thread via Glib::signal_idle.
 ///
 ///         Two view modes controlled by the header toggle:
-///           Active  — current alerts (AlertCenter::snapshot())
-///           History — last N cleared alerts (AlertCenter::history())
+///           Active  -- current alerts (AlertCenter::snapshot())
+///           History -- last N cleared alerts (AlertCenter::history())
 ///         The action button adapts to the active view: Clear-all in
 ///         active mode, Clear-history in history mode.
 ///
@@ -31,7 +31,7 @@ public:
     explicit AlertsPanel(presenter::AlertCenter& alertCenter)
         : Gtk::Box(Gtk::Orientation::VERTICAL)
         , alertCenter_(alertCenter) {
-        // No set_vexpand(true) here — the internal ScrolledWindow
+        // No set_vexpand(true) here -- the internal ScrolledWindow
         // already carries vexpand, and adding vexpand to the panel
         // itself conflicts with a fixed-height footer (Blueprint
         // layout) where the container's height-request is the
@@ -48,8 +48,8 @@ public:
         // Both signals share a coalesced refresh: any number of
         // rapid-fire raises/clears collapse into a single `refresh()`
         // on the next GTK idle tick. We use sigc::mem_fun (not a bare
-        // `[this]` lambda) so sigc's trackable machinery — Gtk::Box
-        // inherits from sigc::trackable — auto-disconnects the slot
+        // `[this]` lambda) so sigc's trackable machinery -- Gtk::Box
+        // inherits from sigc::trackable -- auto-disconnects the slot
         // when AlertsPanel is destroyed. A plain lambda captures
         // `this` opaquely and would keep firing on a dangling pointer
         // during a MainWindow relayout.
@@ -81,7 +81,7 @@ public:
 
 private:
     // Queue a single GTK-thread refresh. Repeated calls while an idle
-    // is already pending collapse into one — cheaper redraw + avoids
+    // is already pending collapse into one -- cheaper redraw + avoids
     // a thundering herd when many alerts change in one tick.
     // connect() (not connect_once) returns a sigc::connection we can
     // disconnect from ~AlertsPanel() if the widget dies before the
@@ -150,7 +150,7 @@ private:
         // always shows at least one card row before internal
         // scrolling kicks in, regardless of how tight the enclosing
         // layout allocates to it (Blueprint's compact footer is the
-        // worst case — ~100px total for the whole panel).
+        // worst case -- ~100px total for the whole panel).
         constexpr int kScrollerMinContentHeight = 50;
         constexpr int kScrollerTopMargin        = 8;
 
@@ -235,7 +235,7 @@ private:
         top->append(*ts);
 
         if (!historyMode) {
-            // Per-alert dismiss. Calls clear(key) — if the underlying
+            // Per-alert dismiss. Calls clear(key) -- if the underlying
             // condition still holds, the next presenter tick will re-raise
             // the alert, which matches typical HMI "acknowledge" semantics.
             auto* dismiss = Gtk::make_managed<Gtk::Button>();

@@ -1,4 +1,4 @@
-// Tests for app::view::DashboardPage — View layer.
+// Tests for app::view::DashboardPage -- View layer.
 //
 // Verifies that button click handlers forward to the right presenter
 // method and display the expected confirmation dialogs via the injected

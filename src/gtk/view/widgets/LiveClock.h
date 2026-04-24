@@ -14,7 +14,7 @@
 namespace app::view {
 
 /// Two-line clock + date label for the sidebar footer, refreshed once
-/// per second. Pure view — no DI needed, just set up a
+/// per second. Pure view -- no DI needed, just set up a
 /// `Glib::signal_timeout` that updates the text.
 class LiveClock : public Gtk::Box {
 public:
@@ -63,7 +63,7 @@ private:
 #endif
 
         // Weekday + month abbreviations via our own gettext catalog
-        // rather than strftime — Windows CRT's LC_TIME doesn't follow
+        // rather than strftime -- Windows CRT's LC_TIME doesn't follow
         // LANGUAGE reliably, while our .mo files always match the
         // currently selected locale.
         static constexpr std::array<const char*, 7> kDays{

@@ -3,7 +3,7 @@
 // DatabaseManager's async helpers, which post to the Boost.Asio I/O
 // thread in ModelContext, then marshal the completion callback back
 // via Glib::signal_idle. A plain synchronous test harness cannot
-// observe that callback — we need a live Glib main loop to pump the
+// observe that callback -- we need a live Glib main loop to pump the
 // idle queue.
 //
 // Strategy:
@@ -55,7 +55,7 @@ bool pumpUntilCallback(Setup&& setup,
     // Safety net: if the completion callback never fires, escape after
     // `timeout` so the whole ctest run doesn't hang on a broken async
     // path. connect_once returns void (fire-and-forget), which is fine
-    // — the timer references a shared_ptr loop that stays alive, and
+    // -- the timer references a shared_ptr loop that stays alive, and
     // calling quit() on an already-stopped loop is a no-op.
     Glib::signal_timeout().connect_once(
         [loop, timedOut]() {
@@ -76,7 +76,7 @@ protected:
             << "Database initialization failed: " << result.errorMessage();
     }
 
-    /// Helper — synchronously resolve the id for a product by code.
+    /// Helper -- synchronously resolve the id for a product by code.
     /// Used to verify mutations landed in the row we expected.
     static int lookupIdByCode(const std::string& code) {
         for (const auto& p : DatabaseManager::instance().getAllProducts()) {

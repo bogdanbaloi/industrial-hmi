@@ -50,7 +50,7 @@ endif()
 string(REPLACE "\r\n" "\n" filtered_stdout "${raw_stdout}")
 
 # The logger shares stdout (per LoggerImpl ConsoleLogger). Its lines
-# look like  "HH:MM:SS.mmm [LEVEL] file.h:NN  message"  — the leading
+# look like  "HH:MM:SS.mmm [LEVEL] file.h:NN  message"  -- the leading
 # timestamp makes them non-deterministic. Strip them out so the
 # scenario diff only sees structural event lines ([WORK_UNIT], ...)
 # and our command output (--- STATUS ---, banner, etc.).
@@ -64,7 +64,7 @@ string(REGEX REPLACE " at [0-9]+:[0-9]+:[0-9]+"
                      filtered_stdout "${filtered_stdout}")
 
 # Product detail renders "created:  YYYY-MM-DD HH:MM:SS" from the DB
-# row's createdAt column. Same timestamp story — mask it.
+# row's createdAt column. Same timestamp story -- mask it.
 string(REGEX REPLACE "created: +[0-9-]+ [0-9:]+"
                      "created:  <TIMESTAMP>"
                      filtered_stdout "${filtered_stdout}")
