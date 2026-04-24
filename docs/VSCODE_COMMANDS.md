@@ -11,7 +11,7 @@ File > Open Folder > Select: industrial-hmi/
 **Command Palette** (`Ctrl+Shift+P`):
 ```
 CMake: Select a Kit
-→ Alege: "MSYS2 CLANG64"
+-> Alege: "MSYS2 CLANG64"
 ```
 
 ### 3. Build
@@ -105,7 +105,7 @@ CMake (twxs)
 
 ### 3. Configurare Preset:
 - Deschide proiectul în VSCode
-- `Ctrl+Shift+P` → `CMake: Select a Kit`
+- `Ctrl+Shift+P` -> `CMake: Select a Kit`
 - Alege: **MSYS2 CLANG64**
 
 ---
@@ -139,16 +139,16 @@ CMake (twxs)
 ```
 
 **Click pe:**
-- **Kit** → Schimbă compiler
-- **Build Type** → Debug/Release
-- **Build** → Build rapid
-- **Debug** → Start debugging
+- **Kit** -> Schimbă compiler
+- **Build Type** -> Debug/Release
+- **Build** -> Build rapid
+- **Debug** -> Start debugging
 
 ---
 
 ## Common Workflows
 
-### Workflow 1: Edit → Build → Run
+### Workflow 1: Edit -> Build -> Run
 ```
 1. Edit code
 2. Ctrl+Shift+B (build)
@@ -157,9 +157,9 @@ CMake (twxs)
 
 ### Workflow 2: Clean Build
 ```
-1. Ctrl+Shift+P → CMake: Delete Cache
-2. Ctrl+Shift+P → CMake: Configure
-3. Ctrl+Shift+B → Build
+1. Ctrl+Shift+P -> CMake: Delete Cache
+2. Ctrl+Shift+P -> CMake: Configure
+3. Ctrl+Shift+B -> Build
 ```
 
 ### Workflow 3: Quick Fix Compile Error
@@ -196,8 +196,8 @@ CMake (twxs)
 ### "Kit not found"
 **Solution:**
 ```
-Ctrl+Shift+P → CMake: Scan for Kits
-→ Alege MSYS2 CLANG64
+Ctrl+Shift+P -> CMake: Scan for Kits
+-> Alege MSYS2 CLANG64
 ```
 
 ### "GTK4 not found"
@@ -210,7 +210,7 @@ pacman -S mingw-w64-clang-x86_64-gtkmm-4.0
 ### IntelliSense errors dar compilează OK
 **Solution:**
 ```
-Ctrl+Shift+P → C/C++: Reset IntelliSense Database
+Ctrl+Shift+P -> C/C++: Reset IntelliSense Database
 ```
 
 ### Build fails cu "Ninja not found"
@@ -244,7 +244,7 @@ INDUSTRIAL-HMI/
 1. **Multi-cursor editing:** `Alt+Click`
 2. **Duplicate line:** `Shift+Alt+Down`
 3. **Comment line:** `Ctrl+/`
-4. **Format on save:** Settings → Editor: Format On Save
+4. **Format on save:** Settings -> Editor: Format On Save
 5. **Zen mode:** `Ctrl+K Z` (fullscreen coding)
 
 ---

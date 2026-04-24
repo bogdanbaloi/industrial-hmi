@@ -69,7 +69,7 @@ void DashboardPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) {
 }
 
 void DashboardPage::onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) {
-    // status enum → short label for the log
+    // status enum -> short label for the log
     const char* s = [&] {
         using S = presenter::EquipmentCardStatus;
         switch (vm.status) {
@@ -134,7 +134,7 @@ void DashboardPage::onError(const std::string& errorMessage) {
 // UI Construction
 
 void DashboardPage::buildUI() {
-    // Load the entire static layout from XML — all widget creation,
+    // Load the entire static layout from XML -- all widget creation,
     // spacing, CSS classes, and translatable labels live in the .ui file.
     auto builder = Gtk::Builder::create_from_file(
         app::config::defaults::kDashboardPageUI);
@@ -234,7 +234,7 @@ void DashboardPage::buildUI() {
         sigc::mem_fun(*this, &DashboardPage::onCalibrationButtonClicked));
 }
 
-// Event Handlers (User Actions → Presenter)
+// Event Handlers (User Actions -> Presenter)
 
 void DashboardPage::onStartButtonClicked() {
     log().debug("DashboardPage: Start button clicked");

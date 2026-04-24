@@ -26,8 +26,8 @@ constexpr int kRefreshIntervalStepMs = 500;
 
 // Available palettes shown in the Settings thumbnail picker.
 // NOTE: the `id` field must match:
-//   - ThemeManager::setPalette() — drives which .css file loads
-//   - .swatch-<id>-<0..3> CSS classes in sidebar.css — the color squares
+//   - ThemeManager::setPalette() -- drives which .css file loads
+//   - .swatch-<id>-<0..3> CSS classes in sidebar.css -- the color squares
 // Adding a theme = append one entry here + 4 CSS classes + a themes/<id>.css
 struct PaletteInfo {
     const char* id;
@@ -44,7 +44,7 @@ constexpr std::array<PaletteInfo, 8> kPalettes = {{
     {"right",      "Right Sidebar"},
 }};
 // Palettes that ship a distinct main-window .ui (structural change).
-// Must mirror chooseMainWindowUI() in MainWindow.cpp — used below to
+// Must mirror chooseMainWindowUI() in MainWindow.cpp -- used below to
 // hide the "Show log panel" checkbox when logs move to a popover.
 constexpr std::array<const char*, 1> kLayoutPalettesWithoutBottomLog = {
     "blueprint",
@@ -162,7 +162,7 @@ void SettingsPage::buildPaletteThumbnails() {
 
         auto* content = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 6);
 
-        // 4-swatch color strip — one CSS class per (palette, slot).
+        // 4-swatch color strip -- one CSS class per (palette, slot).
         auto* swatches = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 0);
         swatches->add_css_class("palette-swatch-row");
         for (int i = 0; i < 4; ++i) {
@@ -179,7 +179,7 @@ void SettingsPage::buildPaletteThumbnails() {
         name->set_xalign(0.5);
         content->append(*name);
 
-        // Mode-support badge — makes it obvious at a glance that
+        // Mode-support badge -- makes it obvious at a glance that
         // some palettes ship only one mode by design. Lives as a
         // second (smaller, dimmed) label under the palette name so
         // the user doesn't have to discover the constraint by
@@ -219,7 +219,7 @@ void SettingsPage::buildPaletteThumbnails() {
                 return;
             }
 
-            // Persist + highlight synchronously — config/card state
+            // Persist + highlight synchronously -- config/card state
             // is cheap and visible changes are desirable here.
             if (!config.setPalette(toStore)) {
                 logger.warn("Palette: failed to persist '{}' to config",

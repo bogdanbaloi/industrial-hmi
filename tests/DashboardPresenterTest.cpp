@@ -420,20 +420,20 @@ TEST_F(DashboardPresenterAlertsTest, EquipmentErrorRaisesCriticalAlert) {
 
 TEST_F(DashboardPresenterAlertsTest, EquipmentRecoveryClearsAlert) {
     initializeAndCaptureCallbacks();
-    equipmentCb_(EquipmentStatus{1, 0, 0, ""});    // Offline — raise
+    equipmentCb_(EquipmentStatus{1, 0, 0, ""});    // Offline -- raise
     ASSERT_EQ(alerts.snapshot().size(), 1u);
 
-    equipmentCb_(EquipmentStatus{1, 1, 85, ""});   // Online — clear
+    equipmentCb_(EquipmentStatus{1, 1, 85, ""});   // Online -- clear
     EXPECT_TRUE(alerts.snapshot().empty());
 }
 
 TEST_F(DashboardPresenterAlertsTest, EquipmentProcessingClearsAlert) {
-    // Status 2 (Processing) is also a non-fault state — must clear.
+    // Status 2 (Processing) is also a non-fault state -- must clear.
     initializeAndCaptureCallbacks();
-    equipmentCb_(EquipmentStatus{2, 3, 12, ""});   // Error — raise
+    equipmentCb_(EquipmentStatus{2, 3, 12, ""});   // Error -- raise
     ASSERT_EQ(alerts.snapshot().size(), 1u);
 
-    equipmentCb_(EquipmentStatus{2, 2, 60, ""});   // Processing — clear
+    equipmentCb_(EquipmentStatus{2, 2, 60, ""});   // Processing -- clear
     EXPECT_TRUE(alerts.snapshot().empty());
 }
 
@@ -490,7 +490,7 @@ TEST_F(DashboardPresenterAlertsTest, QualityWarningRaisesWarningAlert) {
 TEST_F(DashboardPresenterAlertsTest, QualityPassingClearsAlert) {
     initializeAndCaptureCallbacks();
 
-    // First drop below threshold — raise.
+    // First drop below threshold -- raise.
     QualityCheckpoint low{0, "Weight Check", 0, 100, 40, 60.0f, "Over"};
     EXPECT_CALL(model, getQualityCheckpoint(0u))
         .WillOnce(Return(low))
@@ -499,7 +499,7 @@ TEST_F(DashboardPresenterAlertsTest, QualityPassingClearsAlert) {
     qualityCb_(low);
     ASSERT_EQ(alerts.snapshot().size(), 1u);
 
-    // Now recover — clear.
+    // Now recover -- clear.
     QualityCheckpoint ok{0, "Weight Check", 0, 100, 2, 98.0f, ""};
     qualityCb_(ok);
     EXPECT_TRUE(alerts.snapshot().empty());
@@ -518,7 +518,7 @@ TEST_F(DashboardPresenterAlertsTest, QualityAndEquipmentAlertsCoexist) {
 }
 
 // When no AlertCenter is injected the presenter must silently skip alert
-// bookkeeping — this is the production vs test wiring difference.
+// bookkeeping -- this is the production vs test wiring difference.
 TEST_F(DashboardPresenterTest, NoAlertCenterMeansNoCrashOnEquipmentSignal) {
     MockProductionModel::EquipmentCallback cb;
     EXPECT_CALL(model, onEquipmentStatusChanged(_)).WillOnce(SaveArg<0>(&cb));

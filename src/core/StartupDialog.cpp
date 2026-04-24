@@ -42,7 +42,7 @@ void showNativeDialog(std::string_view title, std::string_view body) noexcept {
 
 void writeStderr(std::string_view tag,
                  std::string_view body) noexcept {
-    // Deliberately use the C API — std::format / iostreams could
+    // Deliberately use the C API -- std::format / iostreams could
     // themselves throw, and this function must never throw.
     std::fprintf(stderr, "\n*** %.*s ***\n%.*s\n\n",
                  static_cast<int>(tag.size()),  tag.data(),

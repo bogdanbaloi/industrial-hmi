@@ -85,7 +85,7 @@ TEST(AlertCenter, RaiseEmptyTimestampGetsStamped) {
     c.raise(makeAlert("k1", AlertSeverity::Info, "t", "m", /*timestamp*/ ""));
     const auto snap = c.snapshot();
     ASSERT_EQ(snap.size(), 1u);
-    // formatNow() returns HH:MM:SS — always contains two colons.
+    // formatNow() returns HH:MM:SS -- always contains two colons.
     EXPECT_FALSE(snap[0].timestamp.empty());
     EXPECT_NE(snap[0].timestamp.find(':'), std::string::npos);
 }
@@ -170,7 +170,7 @@ TEST(AlertCenter, ClearEmitsSignalOnlyWhenSomethingRemoved) {
     SignalCounter s{c};
 
     c.clear("missing");
-    EXPECT_EQ(s.count, 0);  // nothing to remove → silent
+    EXPECT_EQ(s.count, 0);  // nothing to remove -> silent
 
     c.clear("k1");
     EXPECT_EQ(s.count, 1);
@@ -181,7 +181,7 @@ TEST(AlertCenter, ClearAllEmitsSignalOnlyWhenListWasNonEmpty) {
     SignalCounter s{c};
 
     c.clearAll();
-    EXPECT_EQ(s.count, 0);  // already empty → silent
+    EXPECT_EQ(s.count, 0);  // already empty -> silent
 
     c.raise(makeAlert("k1"));
     c.clearAll();
@@ -190,7 +190,7 @@ TEST(AlertCenter, ClearAllEmitsSignalOnlyWhenListWasNonEmpty) {
 
 // history()
 
-// Separate counter for the history signal — parallels SignalCounter but
+// Separate counter for the history signal -- parallels SignalCounter but
 // subscribes to signalHistoryChanged.
 struct HistorySignalCounter {
     int count = 0;
@@ -304,7 +304,7 @@ TEST(AlertCenter, ClearAllEmitsHistorySignalOncePerCall) {
     c.raise(makeAlert("b"));
     HistorySignalCounter h{c};
     c.clearAll();
-    // Only one notification per batch clear — panel refreshes once.
+    // Only one notification per batch clear -- panel refreshes once.
     EXPECT_EQ(h.count, 1);
 }
 

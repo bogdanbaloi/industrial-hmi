@@ -177,7 +177,7 @@ TEST(ResultTest, AndThenCanReturnErrFromChain) {
     EXPECT_EQ(chained.error(), DatabaseError::QueryFailed);
 }
 
-// errorToString — pin down every enum -> message mapping so a future
+// errorToString -- pin down every enum -> message mapping so a future
 // reorder of the enum values doesn't silently drop a case
 
 using app::core::IOError;

@@ -104,7 +104,7 @@ TEST_F(StandardHandlerFixture, RecoveryHandlerIgnoresOtherTypes) {
 
 TEST_F(StandardHandlerFixture, RecoveryHandlerThrowingDoesNotCrash) {
     // A recovery handler that itself throws gets its error logged as
-    // "Recovery failed: ..." — swallowed by StandardExceptionHandler so
+    // "Recovery failed: ..." -- swallowed by StandardExceptionHandler so
     // the original exception path completes normally.
     handler_->registerRecoveryHandler(
         typeid(std::runtime_error).name(),

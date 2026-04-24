@@ -145,7 +145,7 @@ git push -u origin main
 - [ ] Exersat pitch-ul de 30 sec (cronometrat)
 - [ ] Memorate pivot phrases din CHEAT_SHEET
 - [ ] Testat screen sharing cu repository deschis
-- [ ] Pregătit 3 challenge stories (problem → solution → result)
+- [ ] Pregătit 3 challenge stories (problem -> solution -> result)
 
 ### Pentru GitHub:
 
@@ -164,7 +164,7 @@ Oct 2025 - Present
 
 • Designed complete MVP architecture for real-time industrial control system
 • Implemented multi-threaded event pipeline (4 threads) ensuring UI responsiveness
-• Optimized database queries 13x (200ms → 15ms) using prepared statements and JOINs
+• Optimized database queries 13x (200ms -> 15ms) using prepared statements and JOINs
 • Applied Observer pattern for decoupled component communication
 • Technologies: C++17, GTK4, OPC-UA, SQLite, Boost, CMake
 

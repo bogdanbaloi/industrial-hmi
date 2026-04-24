@@ -1,6 +1,6 @@
 #pragma once
 
-// Internationalization (i18n) — gettext wrapper (GTK-free)
+// Internationalization (i18n) -- gettext wrapper (GTK-free)
 //
 // Provides translation macros for user-facing strings:
 //   _("text")    - translate at runtime
@@ -10,7 +10,7 @@
 // Locale directory and domain binding happen via ConfigManager::applyI18n(),
 // which delegates the actual binding to initI18n() below.
 //
-// Depends only on libintl — no <glibmm/i18n.h>, no GTK. Usable from both
+// Depends only on libintl -- no <glibmm/i18n.h>, no GTK. Usable from both
 // the GTK front-end and the headless console.
 
 #ifndef GETTEXT_PACKAGE
@@ -19,7 +19,7 @@
 
 #include <libintl.h>
 
-// Mirror glibmm's macros exactly — behaviour identical, without the
+// Mirror glibmm's macros exactly -- behaviour identical, without the
 // glibmm transitive include.
 #ifndef _
 #  define _(String)  gettext(String)

@@ -4,7 +4,7 @@
 // plumbing via a CapturingLogger. This file targets the paths gcov
 // flagged as uncovered:
 //   * FileLogger constructor error path
-//   * FileLogger rotate() — the whole size-triggered rotation workflow,
+//   * FileLogger rotate() -- the whole size-triggered rotation workflow,
 //     including shifting existing rotated files and deleting the oldest
 //   * FileLogger / ConsoleLogger / CallbackLogger setLevel
 //   * CompositeLogger isEnabled (true if any child enabled) + setLevel
@@ -13,11 +13,11 @@
 //   * CallbackLogger reentrancy guard (writing_ atomic)
 //
 // LoggerBase subclasses expose only the virtual `log(level, msg, loc)`
-// — the typed `info()/error()` helpers live on the `Logger` facade.
+// -- the typed `info()/error()` helpers live on the `Logger` facade.
 // Tests call `.log(...)` directly so we can bypass the facade and
 // hit the subclass code paths precisely.
 //
-// No GTK, no network — pure filesystem + std::ofstream, so runs fast
+// No GTK, no network -- pure filesystem + std::ofstream, so runs fast
 // and hermetic in CI.
 
 #include "src/core/LoggerBase.h"
@@ -43,7 +43,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
-/// RAII scratch directory — cleaned on destruction so repeated runs
+/// RAII scratch directory -- cleaned on destruction so repeated runs
 /// don't accumulate log files and tests don't collide on the same path.
 class ScratchDir {
 public:
@@ -78,7 +78,7 @@ void writeManyLines(LoggerBase& logger, int n) {
 
 }  // namespace
 
-// FileLogger — construction
+// FileLogger -- construction
 
 TEST(FileLoggerTest, ConstructorThrowsOnUnwritablePath) {
     // Empty path causes std::ofstream::open to fail cleanly.
@@ -99,7 +99,7 @@ TEST(FileLoggerTest, ConstructorCreatesParentDirectories) {
     EXPECT_TRUE(fs::exists(nested));
 }
 
-// FileLogger — rotation
+// FileLogger -- rotation
 
 TEST(FileLoggerTest, RotatesWhenSizeLimitExceeded) {
     ScratchDir scratch;
@@ -116,7 +116,7 @@ TEST(FileLoggerTest, RotatesWhenSizeLimitExceeded) {
     // pre-rotation contents.
     EXPECT_TRUE(fs::exists(logPath));
     EXPECT_TRUE(fs::exists(scratch.path() / "rotate.1.log"))
-        << "rotate.1.log missing — rotation didn't fire";
+        << "rotate.1.log missing -- rotation didn't fire";
 }
 
 TEST(FileLoggerTest, ShiftsExistingRotatedFilesAcrossMultipleRotations) {
@@ -156,11 +156,11 @@ TEST(FileLoggerTest, RotationDeletesOldestFileBeyondMaxFiles) {
     // After rotation with maxFiles=2: cap.1.log now exists with the
     // previous primary file's content; cap.2.log was the pre-seeded
     // stub and is now (either) shifted-to-.3 or deleted depending on
-    // exact step order — either way, rotate()'s delete + shift loops ran.
+    // exact step order -- either way, rotate()'s delete + shift loops ran.
     EXPECT_TRUE(fs::exists(scratch.path() / "cap.1.log"));
 }
 
-// FileLogger — setLevel + shutdown
+// FileLogger -- setLevel + shutdown
 
 TEST(FileLoggerTest, SetLevelFiltersSubsequentChecks) {
     ScratchDir scratch;
@@ -193,7 +193,7 @@ TEST(FileLoggerTest, ShutdownClosesFileAndSubsequentLogsAreNoOp) {
     });
 }
 
-// ConsoleLogger — setLevel
+// ConsoleLogger -- setLevel
 
 TEST(ConsoleLoggerTest, SetLevelChangesIsEnabled) {
     ConsoleLogger logger(LogLevel::WARN);
@@ -204,7 +204,7 @@ TEST(ConsoleLoggerTest, SetLevelChangesIsEnabled) {
     EXPECT_TRUE(logger.isEnabled(LogLevel::TRACE));
 }
 
-// CompositeLogger — isEnabled + setLevel propagation + removeLastLogger
+// CompositeLogger -- isEnabled + setLevel propagation + removeLastLogger
 
 TEST(CompositeLoggerTest, IsEnabledTrueIfAnyChildEnabled) {
     CompositeLogger composite;
@@ -269,7 +269,7 @@ TEST(CompositeLoggerTest, RemoveLastLoggerOnEmptyIsNoOp) {
 
 TEST(CompositeLoggerTest, FlushAndShutdownReachAllChildren) {
     // The composite test mainly exists to execute the flush/shutdown
-    // loops (lines 226-236). We don't need to observe anything — success
+    // loops (lines 226-236). We don't need to observe anything -- success
     // is "no crash".
     CompositeLogger composite;
     composite.addLogger(std::make_unique<NullLogger>());
@@ -279,7 +279,7 @@ TEST(CompositeLoggerTest, FlushAndShutdownReachAllChildren) {
     EXPECT_NO_THROW(composite.shutdown());
 }
 
-// NullLogger — all methods are no-ops but still need coverage.
+// NullLogger -- all methods are no-ops but still need coverage.
 
 TEST(NullLoggerTest, LogIsNoOpAndDoesNotThrow) {
     NullLogger logger;
@@ -308,7 +308,7 @@ TEST(NullLoggerTest, SetLevelIsNoOp) {
         << "NullLogger stays disabled regardless of setLevel";
 }
 
-// CallbackLogger — isEnabled + setLevel + reentrancy
+// CallbackLogger -- isEnabled + setLevel + reentrancy
 
 TEST(CallbackLoggerTest, IsEnabledRespectsMinLevel) {
     CallbackLogger logger([](const std::string&) {}, LogLevel::WARN);
@@ -340,7 +340,7 @@ TEST(CallbackLoggerTest, ForwardsFormattedLineToCallback) {
 
 TEST(CallbackLoggerTest, DoesNotReenterOnNestedLog) {
     // The `writing_` atomic guards against a callback triggering another
-    // log() on the same logger — without it we'd recurse infinitely.
+    // log() on the same logger -- without it we'd recurse infinitely.
     CallbackLogger* loggerPtr = nullptr;
     int callCount = 0;
 

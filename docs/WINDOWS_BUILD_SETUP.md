@@ -155,16 +155,16 @@ ninja
 1. Open Command Palette: `Ctrl+Shift+P`
 2. Type: "CMake: Select Configure Preset"
 3. Choose: **Windows MSYS2 Debug (Clang64)**
-4. Build: `Ctrl+Shift+P` → "CMake: Build"
+4. Build: `Ctrl+Shift+P` -> "CMake: Build"
 
 ### Alternative: Select Kit
 
 If presets don't show:
 
-1. `Ctrl+Shift+P` → "CMake: Select a Kit"
+1. `Ctrl+Shift+P` -> "CMake: Select a Kit"
 2. Choose: **Clang 18.x.x (MSYS2)**
-3. Configure: `Ctrl+Shift+P` → "CMake: Configure"
-4. Build: `Ctrl+Shift+P` → "CMake: Build"
+3. Configure: `Ctrl+Shift+P` -> "CMake: Configure"
+4. Build: `Ctrl+Shift+P` -> "CMake: Build"
 
 ## Running the Application
 

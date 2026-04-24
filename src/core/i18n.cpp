@@ -19,11 +19,11 @@
 
 // GNU gettext exports this counter; every translation lookup checks it and
 // re-reads the catalog when it changes. Bumping it after re-binding the
-// domain is the standard way to force a live language switch — without it,
+// domain is the standard way to force a live language switch -- without it,
 // the first `_()` call caches the old locale and later calls keep returning
 // stale strings even after bindtextdomain/textdomain are invoked again.
 // Available on glibc and on MSYS2's libintl-8 runtime.
-// NOLINTNEXTLINE(readability-identifier-naming) — external C symbol.
+// NOLINTNEXTLINE(readability-identifier-naming) -- external C symbol.
 extern "C" int _nl_msg_cat_cntr;
 
 namespace app::core {
@@ -45,7 +45,7 @@ namespace {
 ///
 /// Lives in an anonymous namespace so it is TU-local (not truly
 /// "global"), but clang-tidy's cppcoreguidelines check fires on any
-/// non-const mutable — the state is intentional here, so silence the
+/// non-const mutable -- the state is intentional here, so silence the
 /// lint with a targeted NOLINT rather than pretzel-twisting through a
 /// function-local static.
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -56,7 +56,7 @@ bool gEnvOwned = false;
 // gettext honors the user's desktop language. We *overwrite* LANGUAGE
 // rather than respecting an existing value, because an earlier run of
 // this process may have pushed an explicit language into the
-// environment (e.g. the user switched to Deutsch then back to Auto) —
+// environment (e.g. the user switched to Deutsch then back to Auto) --
 // without this, "auto" would silently keep the previous explicit
 // choice. LANG/LC_ALL are read-only from our perspective: they come
 // from the shell or /etc/default/locale.
@@ -79,12 +79,12 @@ void propagateLangToLanguage() {
 #ifdef _WIN32
 // "auto" on Windows: resolve the user's desired language in three layers.
 //
-// First call (`gEnvOwned == false`) — we haven't touched the env yet,
+// First call (`gEnvOwned == false`) -- we haven't touched the env yet,
 // so anything in LANGUAGE/LANG was set by the launching shell and
 // represents a deliberate pre-launch choice. Respect it. Falls through
 // to GetUserDefaultLocaleName only when the shell provided nothing.
 //
-// Subsequent calls — typically when the user toggles Settings -> Auto
+// Subsequent calls -- typically when the user toggles Settings -> Auto
 // after previously picking an explicit language. At this point LANGUAGE
 // almost certainly reflects our own earlier `forceLanguage()` write.
 // Clear it so the OS detection below can actually run; otherwise "Auto"
@@ -156,7 +156,7 @@ void forceLanguage(const char* language) {
     gEnvOwned = true;
 #else
     // On glibc, gettext ignores LANGUAGE whenever LC_MESSAGES resolves
-    // to "C", "POSIX", *or* "C.UTF-8" — "C.UTF-8" specifically is
+    // to "C", "POSIX", *or* "C.UTF-8" -- "C.UTF-8" specifically is
     // treated as a no-translation locale even though it's UTF-aware.
     // So we must NOT overwrite LANG with the target language (e.g.
     // "de"), because setlocale would fail on systems without the
@@ -177,7 +177,7 @@ bool isAuto(const char* language) {
 // directory. That's fragile: launching `./build/debug/industrial-hmi.exe`
 // from the repo root leaves CWD at the repo root, so gettext would look
 // for `<repo-root>/locale/de/LC_MESSAGES/industrial-hmi.mo` which does
-// not exist — the catalogs live in `<exe-dir>/locale/`. Resolve the
+// not exist -- the catalogs live in `<exe-dir>/locale/`. Resolve the
 // directory ourselves so the binary works regardless of CWD.
 std::string resolveLocaleDir(const char* localeDir) {
     namespace fs = std::filesystem;
@@ -194,7 +194,7 @@ std::string resolveLocaleDir(const char* localeDir) {
         return fs::absolute(requested, ec).string();
     }
 
-    // 2) Executable-relative fallback — the catalogs ship next to
+    // 2) Executable-relative fallback -- the catalogs ship next to
     //    the binary when built via CMake (ADD_GETTEXT_CATALOGS copies
     //    them into build/<cfg>/locale/).
 #ifdef _WIN32
@@ -216,7 +216,7 @@ std::string resolveLocaleDir(const char* localeDir) {
     }
 #endif
 
-    // 3) Give up and pass through — gettext will fail silently and
+    // 3) Give up and pass through -- gettext will fail silently and
     //    _() will return source strings, which at least keeps the UI
     //    usable in English.
     return requested.string();
@@ -243,7 +243,7 @@ void initI18n(const char* localeDir, const char* language) {
     // which would silently defeat live language switching. Force
     // LC_MESSAGES to a real locale (en_US.UTF-8 is always present on
     // stock Ubuntu) so LANGUAGE is honored. Fall through quietly if
-    // even that isn't installed — translations are then best-effort.
+    // even that isn't installed -- translations are then best-effort.
     const char* curMsg = std::setlocale(LC_MESSAGES, nullptr);
     const bool msgIsC = !curMsg ||
                         std::strcmp(curMsg, "C") == 0 ||

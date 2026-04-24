@@ -21,7 +21,7 @@ class SimulatedModelTest : public ::testing::Test {
 protected:
     SimulatedModel& model() { return SimulatedModel::instance(); }
 
-    // Initialize demo data ONCE — callbacks persist in the singleton so
+    // Initialize demo data ONCE -- callbacks persist in the singleton so
     // re-initializing per test would fire stale callbacks from previous
     // tests that captured stack-local variables.
     static void SetUpTestSuite() {
@@ -102,7 +102,7 @@ TEST_F(SimulatedModelTest, SetEquipmentDisabledSetsOffline) {
 // Signal delivery (callbacks fire on subscribe)
 
 TEST_F(SimulatedModelTest, StateCallbackFiresOnTransition) {
-    // shared_ptr so the vector outlives the test — callback persists in singleton
+    // shared_ptr so the vector outlives the test -- callback persists in singleton
     auto states = std::make_shared<std::vector<SystemState>>();
     model().onSystemStateChanged([states](SystemState s) { states->push_back(s); });
 

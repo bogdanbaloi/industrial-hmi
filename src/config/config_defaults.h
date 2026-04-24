@@ -76,7 +76,7 @@ constexpr const char* kSidebarCSS   = "assets/styles/sidebar.css";
 constexpr const char* kDashboardCSS = "assets/styles/dashboard.css";
 constexpr const char* kProductsCSS  = "assets/styles/products.css";
 
-// Palette directory — one .css file per palette, loaded on top of the
+// Palette directory -- one .css file per palette, loaded on top of the
 // base stylesheets by ThemeManager. Filename = palette id (e.g.
 // "nord.css"). A palette of "industrial" or "" is a no-op (no
 // extra provider), falling back to the base dark/light look.

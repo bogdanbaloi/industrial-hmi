@@ -9,7 +9,7 @@ namespace app::view {
 
 /// Small sidebar badge that shows the current system-machine state.
 ///
-/// @design Pure view — driven by MainWindow which forwards state from
+/// @design Pure view -- driven by MainWindow which forwards state from
 ///         DashboardPresenter. A colored dot + label ("IDLE" /
 ///         "RUNNING" / "CALIBRATION" / "ERROR") mimics the status LEDs
 ///         you'd find on an industrial control panel.
@@ -40,7 +40,7 @@ public:
     /// (0=IDLE, 1=RUNNING, 2=ERROR, 3=CALIBRATION) to stay decoupled
     /// from the enum's header.
     void setState(int state) {
-        // Reset css classes for the dot — Gtk doesn't have a simple
+        // Reset css classes for the dot -- Gtk doesn't have a simple
         // "replace" so we remove the known ones before adding the new.
         for (const auto* cls : {"state-idle", "state-running",
                                  "state-error", "state-calibration"}) {

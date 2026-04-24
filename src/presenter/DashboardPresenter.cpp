@@ -13,7 +13,7 @@ namespace app {
 
 namespace {
 // Decode the raw int status codes flowing in from the Model so trace/
-// debug output reads as "Processing" instead of "2" — saves everyone
+// debug output reads as "Processing" instead of "2" -- saves everyone
 // from cross-referencing ProductionTypes.h when reading the log.
 const char* equipmentStatusName(int s) {
     switch (s) {

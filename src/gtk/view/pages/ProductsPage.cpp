@@ -59,7 +59,7 @@ void ProductsPage::onViewProductReady(const presenter::ViewProductDialogViewMode
     });
 }
 
-// UI Construction — static layout from XML, dynamic ColumnView from code.
+// UI Construction -- static layout from XML, dynamic ColumnView from code.
 void ProductsPage::buildUI() {
     auto builder = Gtk::Builder::create_from_file(
         app::config::defaults::kProductsPageUI);
@@ -84,7 +84,7 @@ void ProductsPage::buildUI() {
     searchEntry_->signal_search_changed().connect(
         sigc::mem_fun(*this, &ProductsPage::onSearchChanged));
 
-    // ColumnView (programmatic — factories + list model can't live in XML)
+    // ColumnView (programmatic -- factories + list model can't live in XML)
     listStore_ = Gio::ListStore<ProductObject>::create();
     selectionModel_ = Gtk::SingleSelection::create(listStore_);
 
@@ -196,7 +196,7 @@ void ProductsPage::showProductDetail(const presenter::ViewProductDialogViewModel
     // Mirror DialogManager::createMessageDialog: if the page isn't rooted
     // in a realized Gtk::Window (e.g. under a test harness without Xvfb
     // on Windows), dynamic_cast returns nullptr. Dereferencing that was
-    // a latent null-deref — use the parentless MessageDialog overload
+    // a latent null-deref -- use the parentless MessageDialog overload
     // instead, same defensive pattern DialogManager uses.
     auto* parent = dynamic_cast<Gtk::Window*>(get_root());
     auto* dialog = parent
@@ -269,7 +269,7 @@ int ProductsPage::getSelectedProductId() {
 }
 
 void ProductsPage::showAddProductDialog() {
-    // Defensive parent resolution — see showProductDetail for rationale.
+    // Defensive parent resolution -- see showProductDetail for rationale.
     auto* parent = dynamic_cast<Gtk::Window*>(get_root());
     auto* dialog = parent
         ? new Gtk::Dialog(_("Add New Product"), *parent)
@@ -400,7 +400,7 @@ void ProductsPage::showDeleteConfirmDialog(int productId, const std::string& pro
 }
 
 void ProductsPage::showEditProductDialog(const model::DatabaseManager::Product& product) {
-    // Defensive parent resolution — see showProductDetail for rationale.
+    // Defensive parent resolution -- see showProductDetail for rationale.
     auto* parent = dynamic_cast<Gtk::Window*>(get_root());
     auto* dialog = parent
         ? new Gtk::Dialog(_("Edit Product"), *parent)

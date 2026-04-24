@@ -23,7 +23,7 @@ namespace app::model {
 /// singleton.
 class SimulatedModel : public ProductionModel {
 public:
-    // Simulation parameters (not business logic — just demo noise shaping)
+    // Simulation parameters (not business logic -- just demo noise shaping)
     static constexpr std::size_t kEquipmentCount = 4;
     static constexpr float kQualityRateJitter = 0.3f;
     static constexpr int kMinUnitsPerTick = 1;
@@ -196,7 +196,7 @@ public:
     
     // Initialize with demo data
     // Demo-data literals (batch IDs, counts, pass rates, etc.) are data,
-    // not behavior — suppress magic-number lint for this block.
+    // not behavior -- suppress magic-number lint for this block.
     // NOLINTBEGIN(readability-magic-numbers,cppcoreguidelines-avoid-magic-numbers)
     void initializeDemoData() {
         if (logger_) {
@@ -314,7 +314,7 @@ private:
     mutable std::mutex mutex_;
     std::mt19937 rng_{kRngSeed};
 
-    // Optional logger — null when the test harness exercises the model
+    // Optional logger -- null when the test harness exercises the model
     // without a real Application; set by Application::initDatabase().
     app::core::Logger* logger_{nullptr};
 };

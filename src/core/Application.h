@@ -8,7 +8,7 @@
 
 namespace app::core {
 
-class Bootstrap;  // forward decl — defined in Bootstrap.h
+class Bootstrap;  // forward decl -- defined in Bootstrap.h
 
 /// Application lifecycle manager (GTK front-end)
 ///
@@ -31,7 +31,7 @@ public:
     Application& operator=(const Application&) = delete;
 
     /// Initialize GTK-specific subsystems on top of an already-run
-    /// Bootstrap. Borrows the Bootstrap's logger — the Bootstrap must
+    /// Bootstrap. Borrows the Bootstrap's logger -- the Bootstrap must
     /// out-live the Application (in practice: both are stack-owned by
     /// `main()` with Bootstrap declared first).
     ///
@@ -64,7 +64,7 @@ private:
 
     void showStartupWarnings();
 
-    Logger*                 logger_ = nullptr;   // non-owning — Bootstrap owns
+    Logger*                 logger_ = nullptr;   // non-owning -- Bootstrap owns
     std::vector<std::string> startupWarnings_;
     bool                    initialized_{false};
 };

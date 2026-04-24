@@ -79,7 +79,7 @@ private:
     void loadInitialValues();
 
     // Handlers (wired to widget signals; distinct from the Page virtual
-    // hooks of similar names — note the `Selected` / `Toggled` suffixes).
+    // hooks of similar names -- note the `Selected` / `Toggled` suffixes).
     void onLanguageSelected();
     void onThemeSelected();
     void onPaletteSelected();
@@ -92,7 +92,7 @@ private:
     // Guard: set while `syncWithRuntimeState` is writing back to the
     // widgets programmatically, so the side-effect toggled/changed signals
     // don't fire application-level handlers (would cause spurious
-    // double-apply — e.g. "Verbose logging enabled" twice on rebuild).
+    // double-apply -- e.g. "Verbose logging enabled" twice on rebuild).
     bool syncingState_ = false;
 
     // Populate the Palette section's card row (one clickable thumbnail

@@ -20,7 +20,7 @@ namespace app::console {
 /// Interactive headless front-end for the Industrial HMI.
 ///
 /// Implements `app::ViewObserver` so `DashboardPresenter` drives it the
-/// same way it drives the GTK pages — zero presenter-side branching per
+/// same way it drives the GTK pages -- zero presenter-side branching per
 /// front-end. Runs a std::jthread reading stdin, dispatches line-based
 /// commands, and prints presenter events to an injected output stream
 /// in a deterministic, parse-friendly format (`[CATEGORY] key=value`).
@@ -58,7 +58,7 @@ public:
     ConsoleView(ConsoleView&&)                 = delete;
     ConsoleView& operator=(ConsoleView&&)      = delete;
 
-    // Wiring — injected by InitConsole at startup. Safe to leave any of
+    // Wiring -- injected by InitConsole at startup. Safe to leave any of
     // them unbound; the reader just prints "command not wired" in that
     // case so commands added later don't silently no-op.
     void onStart(Action cb)            { cbStart_            = std::move(cb); }
@@ -87,9 +87,9 @@ public:
     /// command, EOF on stdin, or destructor-driven stop request).
     void waitForExit();
 
-    // ViewObserver — only the subset the console renders is overridden.
+    // ViewObserver -- only the subset the console renders is overridden.
     // The defaults in the base interface handle the dialog-specific
-    // callbacks (ViewProduct, ResetProcess…) as no-ops, which is the
+    // callbacks (ViewProduct, ResetProcess...) as no-ops, which is the
     // right behaviour for a line-oriented terminal UI.
     void onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) override;
     void onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) override;
@@ -124,7 +124,7 @@ private:
     std::mutex    outMutex_;
 
     // Injected actions. std::function so presenter type stays out of
-    // this header (Dependency Inversion — ConsoleView depends on the
+    // this header (Dependency Inversion -- ConsoleView depends on the
     // ViewObserver abstraction, not on DashboardPresenter).
     Action                 cbStart_;
     Action                 cbStop_;
@@ -148,7 +148,7 @@ private:
     std::optional<presenter::StatusZoneViewModel>             lastStatusZone_;
     std::optional<presenter::ProductsViewModel>               lastProducts_;
 
-    // Exit coordination — reader thread sets exit_ and notifies, main
+    // Exit coordination -- reader thread sets exit_ and notifies, main
     // thread waits on exitCv_ in waitForExit().
     std::mutex              exitMutex_;
     std::condition_variable exitCv_;

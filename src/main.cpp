@@ -32,7 +32,7 @@ constexpr bool kConsoleMode =
     false;
 #endif
 
-// Process exit codes — documented so CI / shell scripts can branch on them.
+// Process exit codes -- documented so CI / shell scripts can branch on them.
 // Marked [[maybe_unused]] because the set used by a given build depends
 // on which branch of the CONSOLE_MODE #ifdef is active (the GTK path
 // propagates the GTK main-loop's own return code via `app.run(...)`).
@@ -50,12 +50,12 @@ int main(int argc, char* argv[]) {
 
     // Windows UTF-8 setup (three layers all need cooperating):
     //
-    //   1. Win32 console codepage — applies when stdout is attached to
+    //   1. Win32 console codepage -- applies when stdout is attached to
     //      a real cmd.exe console.
-    //   2. CRT locale — controls how the C runtime interprets bytes
+    //   2. CRT locale -- controls how the C runtime interprets bytes
     //      in fprintf / wide-conversion paths. ".UTF-8" is supported
     //      from Windows 10 v1803; older systems silently fall back.
-    //   3. Binary mode on stdout — stops the CRT from doing LF->CRLF
+    //   3. Binary mode on stdout -- stops the CRT from doing LF->CRLF
     //      and codepage conversion when stdout is a pipe (Git Bash /
     //      mintty). Without this, UTF-8 sequences get mangled into
     //      Latin-1 mojibake even though bytes were written verbatim.

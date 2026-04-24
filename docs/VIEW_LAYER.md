@@ -38,7 +38,7 @@ void DashboardPage::onEquipmentCardChanged(const EquipmentCardViewModel& vm) {
 }
 ```
 
-### 3. User Actions → Presenter
+### 3. User Actions -> Presenter
 
 ```cpp
 void DashboardPage::onStartButtonClicked() {
@@ -53,34 +53,34 @@ void DashboardPage::onStartButtonClicked() {
 
 ## Complete Data Flow Example
 
-Let's trace a complete flow from hardware → UI update:
+Let's trace a complete flow from hardware -> UI update:
 
 ```
 1. PLC sends "equipment status changed" via OPC-UA
                     ↓
 2. OpcuaController (hardware thread)
-   → Receives raw data
-   → Emits equipmentStatusChanged(id, rawStatus) signal
+   -> Receives raw data
+   -> Emits equipmentStatusChanged(id, rawStatus) signal
                     ↓
 3. DashboardPresenter (presenter thread)
-   → Receives signal: handleEquipmentStatusUpdate(id, rawStatus)
-   → Queries database for additional info
-   → Builds ViewModel: buildEquipmentVM(id, rawStatus)
-   → Checks cache: if (vm != lastVM)
-   → Calls: notifyEquipmentCardChanged(vm)
+   -> Receives signal: handleEquipmentStatusUpdate(id, rawStatus)
+   -> Queries database for additional info
+   -> Builds ViewModel: buildEquipmentVM(id, rawStatus)
+   -> Checks cache: if (vm != lastVM)
+   -> Calls: notifyEquipmentCardChanged(vm)
                     ↓
 4. BasePresenter::notifyAll()
-   → Iterates all registered observers
-   → Calls: observer->onEquipmentCardChanged(vm)
+   -> Iterates all registered observers
+   -> Calls: observer->onEquipmentCardChanged(vm)
                     ↓
 5. DashboardPage (presenter thread - UNSAFE!)
-   → onEquipmentCardChanged(vm) called
-   → Marshals to GTK thread: Glib::signal_idle().connect_once(...)
+   -> onEquipmentCardChanged(vm) called
+   -> Marshals to GTK thread: Glib::signal_idle().connect_once(...)
                     ↓
 6. GTK main thread
-   → Lambda executes on GTK thread
-   → Safe to call: equipmentOperation->set_text(vm.statusMessage)
-   → UI updates!
+   -> Lambda executes on GTK thread
+   -> Safe to call: equipmentOperation->set_text(vm.statusMessage)
+   -> UI updates!
 ```
 
 **Key insight:** Data crosses **3 thread boundaries** safely using signals and Glib::signal_idle().

@@ -14,12 +14,12 @@ in manufacturing environments.
 - **Internationalization (i18n)** supporting 11 languages with in-app language selector and config persistence
 - **Dark / Light themes** with Adwaita design tokens, theme-aware gauge rendering
 - **8 color palettes** (Industrial, Nord, Paper, Right Sidebar, Dracula, CRT, Blueprint, Cockpit) with thumbnail picker, mode locks, and tooltips
-- **Alternate UI layouts** — baseline sidebar, right-sidebar mirror, Blueprint top-bar with alerts/logs in popovers — swapped at runtime via GtkBuilder
+- **Alternate UI layouts** -- baseline sidebar, right-sidebar mirror, Blueprint top-bar with alerts/logs in popovers -- swapped at runtime via GtkBuilder
 - **Live simulation** with configurable auto-refresh from background Boost.Asio I/O thread
-- **Two front-ends** sharing one presenter + model layer: GTK4 desktop (`industrial-hmi`) and headless console (`industrial-hmi-console`) — console is GTK-free, validates View-swap works
+- **Two front-ends** sharing one presenter + model layer: GTK4 desktop (`industrial-hmi`) and headless console (`industrial-hmi-console`) -- console is GTK-free, validates View-swap works
 - **Cross-platform** builds on Linux (GCC) and Windows (Clang / MSYS2)
 - **160+ unit tests** with GoogleTest / gmock across 12 test binaries
-- **5 scenario tests** pipe scripted input through the console binary and diff stdout against golden files — exercises the full Model → Presenter → View pipeline without a display server
+- **5 scenario tests** pipe scripted input through the console binary and diff stdout against golden files -- exercises the full Model -> Presenter -> View pipeline without a display server
 - **CI/CD pipeline** with GitHub Actions: build, test, coverage report, static analysis
 
 ## Architecture
@@ -144,11 +144,11 @@ via `config/app-config.json`. The `"auto"` setting respects the OS locale.
 
 Three classes of visual customization are exposed from the Settings page:
 
-**Theme** — Dark or Light mode, toggles the `.light-mode` class on the main
+**Theme** -- Dark or Light mode, toggles the `.light-mode` class on the main
 window. All Cairo widgets (`QualityGauge`, `TrendChart`) query
 `ThemeManager::isDarkMode()` at paint time so custom-drawn surfaces match.
 
-**Palette** — optional CSS overlay loaded on top of the base stylesheet at
+**Palette** -- optional CSS overlay loaded on top of the base stylesheet at
 `GTK_STYLE_PROVIDER_PRIORITY_USER + 1`, redefining colors without touching
 layout:
 
@@ -163,11 +163,11 @@ layout:
 | Blueprint | Dark only | Navy + cyan + cream, top-bar layout |
 | Cockpit | Dark only | Mission control, heavy instrument bezels |
 
-Mode-locked palettes are enforced in both directions — the incompatible Dark
+Mode-locked palettes are enforced in both directions -- the incompatible Dark
 or Light radio is disabled with a tooltip explaining why, and picking a
 locked palette auto-snaps the Theme to its supported mode.
 
-**Layout** — some palettes ship structurally different GtkBuilder trees:
+**Layout** -- some palettes ship structurally different GtkBuilder trees:
 Right Sidebar mirrors the sidebar to the right edge, Blueprint moves Alerts
 and Logs into top-bar popovers so the Dashboard reclaims vertical space.
 The layout is swapped at runtime via `MainWindow::reloadLayout` (detach old
@@ -226,7 +226,7 @@ Test suites:
 | test_products_page | Delete confirmation, soft-delete flow | 4 |
 
 Plus **5 scenario tests** that drive the headless console binary
-end-to-end (stdin pipe → stdout diff):
+end-to-end (stdin pipe -> stdout diff):
 
 | Scenario | Covers |
 |----------|--------|
@@ -240,7 +240,7 @@ Scenario inputs live in `tests/scenarios/*.txt`; expected outputs in
 `*.expected`. The runner (`tests/scenarios/run-scenario.cmake`) strips
 logger timestamp lines so only structural events and command output
 participate in the byte-exact comparison. No display server, no Xvfb,
-no GLib main loop — runs anywhere `ctest` runs.
+no GLib main loop -- runs anywhere `ctest` runs.
 
 Coverage reports are generated automatically in CI and available as
 downloadable artifacts on each GitHub Actions run.

@@ -61,7 +61,7 @@ MainWindow::MainWindow()
     // Create DialogManager (injected into pages)
     dialogManager_ = std::make_unique<app::view::DialogManager>(this);
 
-    // AlertCenter lives alongside the window — DashboardPresenter
+    // AlertCenter lives alongside the window -- DashboardPresenter
     // raises alerts into it from model callbacks, AlertsPanel (in
     // sidebar) renders the current snapshot.
     alertCenter_ = std::make_unique<app::presenter::AlertCenter>();
@@ -168,13 +168,13 @@ Gtk::Box* MainWindow::parseLayoutUI() {
 void MainWindow::loadUI() {
     if (auto* root = parseLayoutUI()) {
         set_child(*root);
-        // set_child has adopted root — safe to drop the builder ref now.
+        // set_child has adopted root -- safe to drop the builder ref now.
         pendingBuilder_.reset();
     }
 }
 
 void MainWindow::buildSidebarWidgets() {
-    // AlertsPanel mount — container is either in the sidebar (default
+    // AlertsPanel mount -- container is either in the sidebar (default
     // layout) or the footer strip (Blueprint layout). Widget ID is
     // the same either way, so this is layout-agnostic.
     if (alertsContainer_ && alertCenter_) {
@@ -182,7 +182,7 @@ void MainWindow::buildSidebarWidgets() {
         alertsContainer_->append(*alertsPanel_);
     }
 
-    // System status LED badge — driven by DashboardPresenter's signal.
+    // System status LED badge -- driven by DashboardPresenter's signal.
     if (systemStatusContainer_) {
         statusBadge_ = Gtk::make_managed<app::view::SystemStatusBadge>();
         systemStatusContainer_->append(*statusBadge_);
@@ -204,7 +204,7 @@ void MainWindow::buildSidebarWidgets() {
 void MainWindow::refreshSidebarTranslations() {
     // main-window.ui is only parsed once at startup, so GtkBuilder's
     // translation machinery doesn't run again after a runtime language
-    // switch. Re-assign the strings manually via `_()` — that hits the
+    // switch. Re-assign the strings manually via `_()` -- that hits the
     // freshly re-bound gettext catalog.
     if (appTitleLabel_)    appTitleLabel_->set_label(_("[BB] Industrial HMI"));
     if (appSubtitleLabel_) appSubtitleLabel_->set_label(_("MVP Architecture"));
@@ -267,7 +267,7 @@ void MainWindow::createAllPages() {
     productsPage_->initialize(productsPresenter_);
     registerPage(productsPage_);
 
-    // Settings (no presenter — pure view over ConfigManager/ThemeManager/Logger)
+    // Settings (no presenter -- pure view over ConfigManager/ThemeManager/Logger)
     settingsPage_ = Gtk::make_managed<app::view::SettingsPage>(*dialogManager_);
     registerPage(settingsPage_);
 
@@ -334,7 +334,7 @@ void MainWindow::wireSettingsSignals() {
             Glib::signal_idle().connect_once(
                 [this, id, toStore, needsRelayout]() {
                     auto& tm = app::view::ThemeManager::instance();
-                    // Palettes that ship only one mode by design —
+                    // Palettes that ship only one mode by design --
                     // snap the Theme to their supported mode before
                     // loading the CSS, otherwise a freshly-selected
                     // Dracula on a Light canvas would unload itself
@@ -439,13 +439,13 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
         mainNotebook_->set_current_page(activeTab);
     }
 
-    // 8) Re-translate sidebar widgets (branding + Close Application) —
+    // 8) Re-translate sidebar widgets (branding + Close Application) --
     //    they were loaded by GtkBuilder at startup, not touched by the
     //    page rebuild above.
     refreshSidebarTranslations();
 
     //    Also re-translate retained alert content (history rows
-    //    especially — active alerts will re-raise on the next model
+    //    especially -- active alerts will re-raise on the next model
     //    tick, but history is frozen until we poke it).
     if (alertCenter_) alertCenter_->retranslate();
 
@@ -487,8 +487,8 @@ void MainWindow::reloadLayout() {
     productsPresenter_.reset();
 
     // 5) Parse the new .ui into a DETACHED subtree (no set_child yet).
-    //    Member widget pointers — mainNotebook_, alertsContainer_, etc.
-    //    — now point into the freshly-built, not-yet-installed tree.
+    //    Member widget pointers -- mainNotebook_, alertsContainer_, etc.
+    //    -- now point into the freshly-built, not-yet-installed tree.
     //    The raw Page/alerts/clock pointers still reference widgets in
     //    the currently-displayed old tree, so we zero them out: the
     //    corresponding widgets will be destroyed when set_child swaps
@@ -513,7 +513,7 @@ void MainWindow::reloadLayout() {
         });
     }
 
-    // 7) Atomic swap — GTK destroys the old root (and everything under
+    // 7) Atomic swap -- GTK destroys the old root (and everything under
     //    it) in the same frame it installs the new, fully-populated
     //    root. No intermediate empty-notebook flash.
     if (newRoot) {

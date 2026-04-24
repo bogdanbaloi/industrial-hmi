@@ -253,7 +253,7 @@ public:
      * Example:
      *   template: "Delete \"{product_name}\"?"
      *   formatMessage(template, {{"product_name", "Product A"}})
-     *   → "Delete \"Product A\"?"
+     *   -> "Delete \"Product A\"?"
      */
     std::string formatMessage(const std::string& templateStr, 
                              const std::map<std::string, std::string>& vars) const {
@@ -391,7 +391,7 @@ private:
     }
 
     /// Swap a top-level `"<key>": "..."` string literal inside the
-    /// config file. Used by setLanguage/setPalette — a targeted
+    /// config file. Used by setLanguage/setPalette -- a targeted
     /// string replace that avoids bringing in a full JSON library
     /// and preserves hand-authored comments/formatting in the file.
     /// `insertionIfMissing` is the JSON fragment inserted right

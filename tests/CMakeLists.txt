@@ -117,7 +117,7 @@ add_test(NAME LoggerTest COMMAND test_logger)
 # The dispatcher was extracted from MainWindow::onKeyPressed so it can be
 # tested without instantiating MainWindow (which drags in Presenters,
 # DatabaseManager, ThemeManager, timers, and a fullscreen Notebook).
-# Links the source file directly — no GTK runtime, just gdk/gdk.h for the
+# Links the source file directly -- no GTK runtime, just gdk/gdk.h for the
 # GDK_KEY_* keysym macros via GTKMM_INCLUDE_DIRS.
 add_executable(test_main_window_key_dispatch
     MainWindowKeyDispatchTest.cpp
@@ -132,7 +132,7 @@ add_test(NAME MainWindowKeyDispatchTest COMMAND test_main_window_key_dispatch)
 
 # Core: LoggerImpl concrete classes
 # Exercises FileLogger rotation, Composite propagation, Null no-ops, and
-# CallbackLogger reentrancy guard — paths LoggerTest.cpp's CapturingLogger
+# CallbackLogger reentrancy guard -- paths LoggerTest.cpp's CapturingLogger
 # does not touch. Pure filesystem + std, no GTK.
 add_executable(test_logger_impl LoggerImplTest.cpp)
 target_link_libraries(test_logger_impl PRIVATE
@@ -169,7 +169,7 @@ target_link_libraries(test_startup_errors PRIVATE
 add_test(NAME StartupErrorsTest COMMAND test_startup_errors)
 
 # --- Core: ExceptionHandler (StandardExceptionHandler + safeExecute +
-#     ExceptionGuard). Links NullLogger from LoggerImpl.h only — no GTK.
+#     ExceptionGuard). Links NullLogger from LoggerImpl.h only -- no GTK.
 add_executable(test_exception_handler ExceptionHandlerTest.cpp)
 target_link_libraries(test_exception_handler PRIVATE
     ${TEST_COMMON_LIBS}
@@ -315,7 +315,7 @@ add_test(NAME ProductsPageTest COMMAND test_products_page
 
 # View: SettingsPage (handlers, sync guard, palette mode-lock)
 # buildUI loads settings-page.ui from assets, so CWD must be source root.
-# No DB dependency — handlers talk to ConfigManager / ThemeManager /
+# No DB dependency -- handlers talk to ConfigManager / ThemeManager /
 # Application::logger() singletons, all of which cope with being
 # uninitialized (defaults + NullLogger fallback).
 add_executable(test_settings_page
@@ -333,7 +333,7 @@ add_test(NAME SettingsPageTest COMMAND test_settings_page
 # View: DialogManager
 # Exercises every public method on DialogManager under a real GTK main
 # loop (gtk_init in ViewTestMain.cpp). Blocking variants (showConfirm,
-# showInput, showForm) spin their own inner Glib::MainLoop — the tests
+# showInput, showForm) spin their own inner Glib::MainLoop -- the tests
 # pre-arm a signal_timeout that dispatches Dialog::response() once the
 # inner loop starts pumping.
 add_executable(test_dialog_manager
@@ -361,14 +361,14 @@ if(WIN32)
     target_link_libraries(test_dialog_manager            PRIVATE ws2_32)
 endif()
 
-# Console scenario tests — end-to-end MVP regression suite
+# Console scenario tests -- end-to-end MVP regression suite
 # Each *.txt scenario is piped into industrial-hmi-console and the filtered
 # stdout is diffed against the matching *.expected file. The runner
 # (tests/scenarios/run-scenario.cmake) normalises line endings + strips
 # logger timestamp lines so only structural events and command output
 # participate in the match.
 #
-# No display server, no Xvfb, no GLib main loop — these run on any CI
+# No display server, no Xvfb, no GLib main loop -- these run on any CI
 # runner and give us cheap cross-platform regression coverage of the
 # full Model -> Presenter -> View pipeline.
 set(CONSOLE_SCENARIOS

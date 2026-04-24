@@ -53,7 +53,7 @@ public:
         currentTheme_ = theme;
         applyTheme(theme);
 
-        // Re-apply the palette — some palettes are mode-specific (Paper
+        // Re-apply the palette -- some palettes are mode-specific (Paper
         // is light-only, the rest are dark-only) and should unload
         // their provider when the active theme no longer matches.
         applyPalette();
@@ -157,7 +157,7 @@ private:
         }
 
         if (currentPalette_.empty() || currentPalette_ == "industrial") {
-            return;  // Baseline look — nothing extra to load.
+            return;  // Baseline look -- nothing extra to load.
         }
 
         // Palettes have a natural light/dark mode. Skip loading when
@@ -178,7 +178,7 @@ private:
             std::string(app::config::defaults::kPaletteDir) + "/"
             + currentPalette_ + ".css";
         if (!std::filesystem::exists(path)) {
-            g_warning("Palette '%s' not found at %s — keeping previous look",
+            g_warning("Palette '%s' not found at %s -- keeping previous look",
                       currentPalette_.c_str(), path.c_str());
             currentPalette_.clear();
             return;

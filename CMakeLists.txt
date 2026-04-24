@@ -231,7 +231,7 @@ target_link_libraries(objectsCore
     PUBLIC
         objectsModel
         objectsConfig
-        # NOTE: deliberately no gtkmm — this library is GTK-free by
+        # NOTE: deliberately no gtkmm -- this library is GTK-free by
         # construction so the headless console binary can link it
         # without dragging in a GUI toolkit.
 )
@@ -406,7 +406,7 @@ if(WIN32)
     target_link_libraries(industrial-hmi PRIVATE ws2_32 user32)
 endif()
 
-# Console Executable (Cross-Platform) — shares src/main.cpp with the GTK
+# Console Executable (Cross-Platform) -- shares src/main.cpp with the GTK
 # binary via #ifdef CONSOLE_MODE. Zero gtkmm on the link line.
 add_executable(industrial-hmi-console)
 target_sources(industrial-hmi-console PRIVATE src/main.cpp)
@@ -460,7 +460,7 @@ add_custom_target(CopyAssets ALL
 
 add_custom_target(CopyConfig ALL
     # Nuke the runtime copy first so user-modified fields (e.g. the
-    # last language chosen in Settings) don't survive a rebuild —
+    # last language chosen in Settings) don't survive a rebuild --
     # every build starts clean from the pristine source config.
     COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/config
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -469,7 +469,7 @@ add_custom_target(CopyConfig ALL
     COMMENT "Copying config files to build directory"
 )
 
-# CopyUIFiles removed — UI layouts and CSS now live under assets/ui and
+# CopyUIFiles removed -- UI layouts and CSS now live under assets/ui and
 # assets/styles, so CopyAssets already covers them.
 
 add_dependencies(industrial-hmi CopyAssets CopyConfig)

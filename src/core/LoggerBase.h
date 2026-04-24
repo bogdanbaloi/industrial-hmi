@@ -94,13 +94,13 @@ namespace detail {
 /// Wrapper that carries both a `std::format_string` and the call-site's
 /// `std::source_location`. C++20 default arguments evaluate at the call
 /// site, so declaring `loc` as a defaulted constructor parameter captures
-/// the user's file/line — which is what we want in log output.
+/// the user's file/line -- which is what we want in log output.
 ///
 /// Why this helper exists: a templated log method like
 ///     template<typename... Args>
 ///     void info(std::format_string<Args...> fmt, Args&&... args,
 ///               std::source_location loc = std::source_location::current());
-/// does *not* work — the variadic pack swallows the trailing argument, so
+/// does *not* work -- the variadic pack swallows the trailing argument, so
 /// the default never fires. Wrapping the format string in a small struct
 /// (deduced through `std::type_identity_t` on the Args pack so the
 /// parameter does not participate in template deduction) sidesteps the
@@ -151,7 +151,7 @@ public:
      * Template only in wrapper - vformat does actual work
      * Single instantiation regardless of argument types
      */
-    // Public API — the `FmtWithLoc` wrapper captures the caller's
+    // Public API -- the `FmtWithLoc` wrapper captures the caller's
     // source_location via a default argument on its constructor. We route
     // the real work through the first-parameter-location `<level>Impl()`
     // helpers below.
@@ -262,7 +262,7 @@ inline std::string formatTimestamp() {
     localtime_r(&time, &localTime);
 #endif
 
-    // HH:MM:SS.mmm — drop the date (user can see it via file mtime / wall
+    // HH:MM:SS.mmm -- drop the date (user can see it via file mtime / wall
     // clock) so each line in the live log panel stays readable.
     std::ostringstream oss;
     oss << std::put_time(&localTime, "%H:%M:%S");

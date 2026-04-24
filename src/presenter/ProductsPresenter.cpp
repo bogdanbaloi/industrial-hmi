@@ -2,7 +2,7 @@
 #include "src/model/DatabaseManager.h"
 #include "src/config/config_defaults.h"
 
-// See DashboardPresenter.cpp — nullable logger_ inherited from BasePresenter.
+// See DashboardPresenter.cpp -- nullable logger_ inherited from BasePresenter.
 #define LOG_IF(LEVEL, ...) do { if (logger_) logger_->LEVEL(__VA_ARGS__); } while (0)
 
 namespace app {
