@@ -7,6 +7,8 @@
 #include <string>
 #include <unordered_map>
 
+class SettingsPageTest;  // forward-declare the gtest fixture
+
 namespace app::view {
 
 /// Settings page - dedicated Notebook tab that centralizes user-facing
@@ -22,6 +24,7 @@ namespace app::view {
 ///   auto-refresh state, interval, and log level are session-only: they
 ///   take effect immediately but are not written back to app-config.json.
 class SettingsPage : public Page {
+    friend class ::SettingsPageTest;  // test access to private handlers + widgets
 public:
     explicit SettingsPage(DialogManager& dialogManager);
     ~SettingsPage() override = default;

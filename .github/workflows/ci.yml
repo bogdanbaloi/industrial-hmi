@@ -9,6 +9,12 @@ on:
 
 env:
   BUILD_TYPE: Release
+  # Opt into Node.js 24 for all JavaScript-based actions (upload-artifact,
+  # checkout, etc.). Node.js 20 is deprecated on GitHub runners as of
+  # Sep 2025 and will be removed June 2026; without this flag every v5
+  # action logs a deprecation warning. See:
+  # https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-ubuntu:
