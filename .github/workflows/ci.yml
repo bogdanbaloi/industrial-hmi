@@ -293,6 +293,68 @@ jobs:
         path: coverage/
         retention-days: 30
 
+  sanitizers:
+    name: Sanitizers (ASan + UBSan)
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
+          libgtest-dev libgmock-dev \
+          xvfb
+
+    # Build everything (binaries + tests) with ASan + UBSan instrumentation
+    # injected via -fsanitize=address,undefined. Runs in its own job so the
+    # release build / coverage build don't pay the ~2x slowdown.
+    #
+    # ENABLE_COVERAGE is left OFF on purpose -- gcov instrumentation
+    # overlaps with sanitizer instrumentation and the combination causes
+    # link-time symbol clashes on libasan vs libgcov.
+    - name: Configure (Debug + sanitizers)
+      run: |
+        cmake -S . -B build/sanitizers -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DENABLE_SANITIZERS=ON \
+          -DENABLE_COVERAGE=OFF
+
+    - name: Build
+      run: cmake --build build/sanitizers -- -j$(nproc)
+
+    # Run ctest with strict sanitizer options:
+    #   * halt_on_error=1 / abort_on_error=1 -- bail on the first issue so
+    #     the test reports the exact offending case (default is to keep
+    #     going and pile diagnostics).
+    #   * detect_leaks=0 -- LeakSanitizer is intentionally OFF.
+    #     Rationale: gtkmm + glibmm + GIO + Pango + sqlite cumulatively
+    #     allocate ~50 KB of process-lifetime caches (type registries,
+    #     font tables, signal handler tables, GMainContext per-thread
+    #     state) at gtk_init time. None of these are real leaks -- the
+    #     libraries deliberately don't free them because tearing them
+    #     down from atexit is racy with any pending sources. Maintaining
+    #     a suppression list that covers every gtkmm release version is
+    #     a treadmill that hides real leaks rather than catches them.
+    #     The high-value ASan checks (use-after-free, heap/stack buffer
+    #     overflow, use-after-scope, double-free) still run and still
+    #     catch the bugs we care about. UBSan (signed overflow, null
+    #     deref, misaligned access, OOB shift) runs unaffected.
+    #   * strict_string_checks + detect_stack_use_after_return -- extra
+    #     strictness on the checks we DO keep.
+    #   * print_stacktrace=1 -- UBSan emits a backtrace per finding.
+    - name: Run tests under sanitizers
+      working-directory: build/sanitizers
+      env:
+        ASAN_OPTIONS: "halt_on_error=1:abort_on_error=1:detect_leaks=0:strict_string_checks=1:detect_stack_use_after_return=1"
+        UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+      run: xvfb-run ctest --output-on-failure --no-tests=error
+
   documentation:
     name: Documentation
     runs-on: ubuntu-24.04
@@ -317,7 +379,7 @@ jobs:
   summary:
     name: Pipeline Summary
     runs-on: ubuntu-24.04
-    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, documentation]
+    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, documentation]
     if: always()
 
     steps:
@@ -331,4 +393,5 @@ jobs:
         echo "| Code Quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Clang-Tidy | ${{ needs.clang-tidy.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Coverage | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Sanitizers | ${{ needs.sanitizers.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY
