@@ -1,8 +1,14 @@
-// Tests for app::core::CsvSerializer
-// Pure C++ logic, no GTK dependency.
+// Tests for app::integration::CsvSerializer.
+//
+// CsvSerializer is the CSV concrete of the Serializer interface introduced
+// alongside JsonSerializer. Tests cover:
+//   * Output shape (UTF-8 BOM + header row + data rows, CRLF terminators)
+//   * RFC 4180 field escaping (commas, quotes, newlines)
+//   * Translated header support via constructor (i18n use case)
+//   * Round-trip parse-of-write (new -- the original CsvSerializer was
+//     write-only)
 
-#include "src/core/CsvSerializer.h"
-#include "src/model/Product.h"
+#include "src/integration/CsvSerializer.h"
 
 #include <gtest/gtest.h>
 
@@ -10,7 +16,7 @@
 #include <string>
 #include <vector>
 
-using app::core::CsvSerializer;
+using app::integration::CsvSerializer;
 using app::model::Product;
 
 namespace {
@@ -26,17 +32,12 @@ Product make(const std::string& code, const std::string& name,
     return p;
 }
 
-std::vector<std::string> defaultHeader() {
-    return {"Product Code", "Name", "Status", "Stock", "Quality %"};
-}
-
 // Split a CSV string into lines (CRLF-delimited).
 std::vector<std::string> lines(const std::string& csv) {
     std::vector<std::string> result;
     std::istringstream ss(csv);
     std::string line;
     while (std::getline(ss, line)) {
-        // Remove trailing \r left by CRLF
         if (!line.empty() && line.back() == '\r') line.pop_back();
         result.push_back(line);
     }
@@ -45,24 +46,23 @@ std::vector<std::string> lines(const std::string& csv) {
 
 }  // namespace
 
-// Basic output format
+// Output format
 
 TEST(CsvSerializerTest, EmptyListProducesHeaderOnly) {
+    CsvSerializer s;
     std::ostringstream out;
-    CsvSerializer::write(out, {}, defaultHeader());
+    s.writeProducts(out, {});
     auto l = lines(out.str());
 
-    // BOM + header line
     ASSERT_GE(l.size(), 1u);
-    // UTF-8 BOM is 3 bytes at the start
     EXPECT_EQ(out.str().substr(0, 3), "\xEF\xBB\xBF");
     EXPECT_EQ(l[0].substr(3), "Product Code,Name,Status,Stock,Quality %");
 }
 
 TEST(CsvSerializerTest, SingleRowSerializesCorrectly) {
+    CsvSerializer s;
     std::ostringstream out;
-    CsvSerializer::write(out, {make("PROD-001", "Widget A", "Active", 850, 98.1f)},
-                          defaultHeader());
+    s.writeProducts(out, {make("PROD-001", "Widget A", "Active", 850, 98.1f)});
     auto l = lines(out.str());
 
     ASSERT_GE(l.size(), 2u);
@@ -70,12 +70,12 @@ TEST(CsvSerializerTest, SingleRowSerializesCorrectly) {
 }
 
 TEST(CsvSerializerTest, MultipleRowsInOrder) {
+    CsvSerializer s;
     std::ostringstream out;
-    CsvSerializer::write(out,
+    s.writeProducts(out,
         {make("A", "Alpha", "Active", 1, 99.0f),
          make("B", "Beta", "Inactive", 0, 0.0f),
-         make("C", "Gamma", "Low Stock", 5, 92.3f)},
-        defaultHeader());
+         make("C", "Gamma", "Low Stock", 5, 92.3f)});
     auto l = lines(out.str());
 
     ASSERT_GE(l.size(), 4u);
@@ -84,12 +84,12 @@ TEST(CsvSerializerTest, MultipleRowsInOrder) {
     EXPECT_EQ(l[3], "C,Gamma,Low Stock,5,92.3");
 }
 
-// RFC 4180 field escaping
+// RFC 4180 escaping
 
 TEST(CsvSerializerTest, FieldWithCommaIsQuoted) {
+    CsvSerializer s;
     std::ostringstream out;
-    CsvSerializer::write(out, {make("X", "Foo, Bar", "Active", 1, 50.0f)},
-                          defaultHeader());
+    s.writeProducts(out, {make("X", "Foo, Bar", "Active", 1, 50.0f)});
     auto l = lines(out.str());
 
     ASSERT_GE(l.size(), 2u);
@@ -97,46 +97,92 @@ TEST(CsvSerializerTest, FieldWithCommaIsQuoted) {
 }
 
 TEST(CsvSerializerTest, FieldWithQuoteIsEscaped) {
+    CsvSerializer s;
     std::ostringstream out;
-    CsvSerializer::write(out, {make("X", "Size 2\"", "Active", 1, 50.0f)},
-                          defaultHeader());
+    s.writeProducts(out, {make("X", "Size 2\"", "Active", 1, 50.0f)});
     auto l = lines(out.str());
 
     ASSERT_GE(l.size(), 2u);
-    // Embedded quote doubled and the whole field wrapped
     EXPECT_NE(l[1].find("\"Size 2\"\"\""), std::string::npos);
 }
 
 TEST(CsvSerializerTest, FieldWithNewlineIsQuoted) {
+    CsvSerializer s;
     std::ostringstream out;
-    CsvSerializer::write(out, {make("X", "Line1\nLine2", "Active", 1, 50.0f)},
-                          defaultHeader());
-    // The escaped field should contain a literal newline inside quotes
+    s.writeProducts(out, {make("X", "Line1\nLine2", "Active", 1, 50.0f)});
     EXPECT_NE(out.str().find("\"Line1\nLine2\""), std::string::npos);
 }
 
-// Custom headers (i18n scenario)
+// Translated header (i18n)
 
-TEST(CsvSerializerTest, CustomTranslatedHeaderAppearsInOutput) {
+TEST(CsvSerializerTest, ConstructorTranslatedHeaderAppearsInOutput) {
+    CsvSerializer s({"Codice prodotto", "Nome", "Stato", "Scorta", "Qualita %"});
     std::ostringstream out;
-    std::vector<std::string> itHeader = {
-        "Codice prodotto", "Nome", "Stato", "Scorta", "Qualita %"};
-    CsvSerializer::write(out, {make("P", "Test", "Active", 1, 90.0f)}, itHeader);
+    s.writeProducts(out, {make("P", "Test", "Active", 1, 90.0f)});
     auto l = lines(out.str());
 
     ASSERT_GE(l.size(), 1u);
     EXPECT_NE(l[0].find("Codice prodotto"), std::string::npos);
-    EXPECT_NE(l[0].find("Qualita %"), std::string::npos);
+    EXPECT_NE(l[0].find("Qualita %"),       std::string::npos);
 }
 
-// UTF-8 BOM present
+// UTF-8 BOM
 
 TEST(CsvSerializerTest, OutputStartsWithUtf8Bom) {
+    CsvSerializer s;
     std::ostringstream out;
-    CsvSerializer::write(out, {}, defaultHeader());
-    const auto& s = out.str();
-    ASSERT_GE(s.size(), 3u);
-    EXPECT_EQ(static_cast<unsigned char>(s[0]), 0xEF);
-    EXPECT_EQ(static_cast<unsigned char>(s[1]), 0xBB);
-    EXPECT_EQ(static_cast<unsigned char>(s[2]), 0xBF);
+    s.writeProducts(out, {});
+    const auto& body = out.str();
+    ASSERT_GE(body.size(), 3u);
+    EXPECT_EQ(static_cast<unsigned char>(body[0]), 0xEF);
+    EXPECT_EQ(static_cast<unsigned char>(body[1]), 0xBB);
+    EXPECT_EQ(static_cast<unsigned char>(body[2]), 0xBF);
+}
+
+// Round-trip (new -- old CsvSerializer was write-only)
+
+TEST(CsvSerializerTest, RoundTripPreservesAllFields) {
+    CsvSerializer s;
+    std::vector<Product> original{
+        make("PROD-001", "Widget A",         "Active",    850, 98.1f),
+        make("PROD-002", "Beta with, comma", "Low Stock",   5, 72.5f),
+        make("PROD-003", "Quote\"Test",      "Inactive",    0,  0.0f),
+        make("PROD-004", "Multi\nline",      "Active",      3, 88.8f),
+    };
+
+    std::ostringstream out;
+    s.writeProducts(out, original);
+
+    std::istringstream in(out.str());
+    auto parsed = s.readProducts(in);
+
+    ASSERT_EQ(parsed.size(), original.size());
+    for (size_t i = 0; i < parsed.size(); ++i) {
+        EXPECT_EQ(parsed[i].productCode, original[i].productCode) << "row " << i;
+        EXPECT_EQ(parsed[i].name,        original[i].name)        << "row " << i;
+        EXPECT_EQ(parsed[i].status,      original[i].status)      << "row " << i;
+        EXPECT_EQ(parsed[i].stock,       original[i].stock)       << "row " << i;
+        EXPECT_FLOAT_EQ(parsed[i].qualityRate, original[i].qualityRate)
+            << "row " << i;
+    }
+}
+
+TEST(CsvSerializerTest, ReadThrowsOnMalformedRow) {
+    CsvSerializer s;
+    // Header OK, but data row has only 3 fields instead of 5.
+    std::istringstream in(
+        "Product Code,Name,Status,Stock,Quality %\r\n"
+        "PROD-001,Widget,Active\r\n");
+    // void-cast pacifies Windows Clang's -Werror=unused-result
+    // (readProducts is [[nodiscard]] but EXPECT_THROW drops the value).
+    EXPECT_THROW((void)s.readProducts(in), std::runtime_error);
+}
+
+// Metadata
+
+TEST(CsvSerializerTest, MetadataAccessors) {
+    CsvSerializer s;
+    EXPECT_EQ(s.formatName(),    "CSV");
+    EXPECT_EQ(s.fileExtension(), "csv");
+    EXPECT_EQ(s.mimeType(),      "text/csv");
 }

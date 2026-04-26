@@ -88,14 +88,25 @@ target_link_libraries(test_database_manager PRIVATE
 )
 add_test(NAME DatabaseManagerTest COMMAND test_database_manager)
 
-# Core: CsvSerializer (pure C++, no GTK)
+# Integration: CsvSerializer (pure C++, no GTK). Compiles the source
+# directly so the test binary stays on a minimal link line independent
+# of objectsIntegration.
 add_executable(test_csv_serializer CsvSerializerTest.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/CsvSerializer.cpp)
+    ${CMAKE_SOURCE_DIR}/src/integration/CsvSerializer.cpp)
 target_link_libraries(test_csv_serializer PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes
 )
 add_test(NAME CsvSerializerTest COMMAND test_csv_serializer)
+
+# Integration: JsonSerializer (pure C++, no GTK). Same pattern as CSV.
+add_executable(test_json_serializer JsonSerializerTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/JsonSerializer.cpp)
+target_link_libraries(test_json_serializer PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME JsonSerializerTest COMMAND test_json_serializer)
 
 # Model: SimulatedModel (singleton, no GTK)
 add_executable(test_simulated_model SimulatedModelTest.cpp)
@@ -283,6 +294,7 @@ set(VIEW_COMMON_LIBS
     objectsModel
     objectsCore
     objectsConfig
+    objectsIntegration
     Threads::Threads
 )
 
