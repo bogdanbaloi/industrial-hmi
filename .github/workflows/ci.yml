@@ -154,20 +154,19 @@ jobs:
 
     - name: Run clang-tidy on src/
       run: |
-        # -quiet suppresses the progress lines so only diagnostics remain.
+        # -quiet suppresses progress lines so only diagnostics remain.
         # -header-filter restricts warnings to our headers (ignores gtkmm etc.).
+        # WarningsAsErrors='*' in .clang-tidy makes any diagnostic a hard
+        # error, so xargs returns non-zero on the first offending file --
+        # no need for a post-hoc grep over the report. We still tee a
+        # copy for the upload artifact below.
+        set -o pipefail
         find src -name '*.cpp' -print0 | \
           xargs -0 clang-tidy \
             -p build/tidy \
             -quiet \
             -header-filter='src/.*' \
             2>&1 | tee clang-tidy-report.txt
-
-        # Fail the job if any warning/error was produced
-        if grep -qE '^\S+:[0-9]+:[0-9]+: (warning|error):' clang-tidy-report.txt; then
-          echo "::error::clang-tidy reported issues -- see report above"
-          exit 1
-        fi
 
     - name: Upload report as artifact
       if: always()

@@ -130,7 +130,12 @@ Checks: >
   -hicpp-use-override,
   -modernize-use-override
 
-WarningsAsErrors: ''
+# Strict mode: every enabled check is a hard error. Avoids the
+# "warning rains forever, nobody fixes them" failure mode. CI's
+# clang-tidy step relies on this -- when set to '*', the binary
+# exits non-zero on any diagnostic so the job fails without needing
+# a brittle post-hoc grep over the report file.
+WarningsAsErrors: '*'
 
 HeaderFilterRegex: '.*/(src|include)/.*\.(h|hpp)$'
 
