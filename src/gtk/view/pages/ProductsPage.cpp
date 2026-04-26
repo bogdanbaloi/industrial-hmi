@@ -5,7 +5,7 @@
 #include "src/gtk/view/ui_sizes.h"
 #include "src/config/config_defaults.h"
 #include "src/core/i18n.h"
-#include "src/core/CsvSerializer.h"
+#include "src/integration/CsvSerializer.h"
 #include "src/core/Application.h"
 
 #include <format>
@@ -532,7 +532,8 @@ void ProductsPage::exportToCsv(const std::string& path,
         return;
     }
 
-    app::core::CsvSerializer::write(out, products, header);
+    app::integration::CsvSerializer csv{header};
+    csv.writeProducts(out, products);
     out.close();
 
     auto* parent = dynamic_cast<Gtk::Window*>(get_root());

@@ -210,7 +210,6 @@ add_library(objectsCore OBJECT)
 target_sources(objectsCore
     PRIVATE
         src/core/i18n.cpp
-        src/core/CsvSerializer.cpp
         src/core/Bootstrap.cpp
         src/core/StartupDialog.cpp
     PUBLIC
@@ -222,7 +221,6 @@ target_sources(objectsCore
             src/core/Result.h
             src/core/ErrorHandling.h
             src/core/i18n.h
-            src/core/CsvSerializer.h
             src/core/Bootstrap.h
             src/core/StartupErrors.h
             src/core/StartupDialog.h
@@ -299,6 +297,27 @@ target_link_libraries(objectsPresenter
         Threads::Threads
 )
 
+# Integration Layer - Format-agnostic Serializer interface + CSV / JSON
+# concretes. Pure C++, no GTK, no presenter dep. View / Console layers
+# depend on this through the Serializer abstraction so adding a new
+# format is a single subclass with no upstream churn.
+add_library(objectsIntegration OBJECT)
+target_sources(objectsIntegration
+    PRIVATE
+        src/integration/CsvSerializer.cpp
+        src/integration/JsonSerializer.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/integration/Serializer.h
+            src/integration/CsvSerializer.h
+            src/integration/JsonSerializer.h
+)
+target_link_libraries(objectsIntegration
+    PUBLIC
+        objectsModel
+)
+
 # Console Layer - Headless front-end. Shares the Model + Presenter
 # layer with the GTK View, proving MVP's View-swap promise. Links zero
 # gtkmm (see architecture receipt in README).
@@ -361,6 +380,7 @@ target_link_libraries(objectsView
     PUBLIC
         objectsPresenter
         objectsAppGtk
+        objectsIntegration
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
 )
@@ -397,6 +417,7 @@ target_link_libraries(industrial-hmi
         objectsAppGtk
         objectsPresenter
         objectsView
+        objectsIntegration
         Threads::Threads
 )
 
@@ -418,6 +439,7 @@ target_link_libraries(industrial-hmi-console
         objectsCore
         objectsPresenter
         objectsConsole
+        objectsIntegration
         Threads::Threads
 )
 if(WIN32)
