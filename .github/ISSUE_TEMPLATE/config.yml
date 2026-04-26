@@ -1,0 +1,15 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/bogdanbaloi/industrial-hmi/security/policy
+    about: |
+      Report security issues privately through the SECURITY.md disclosure
+      policy. Do NOT open a public issue for security vulnerabilities.
+
+  - name: Question / discussion
+    url: https://github.com/bogdanbaloi/industrial-hmi/discussions
+    about: |
+      Have a question about how the project works, want to share an idea
+      that's not a concrete feature request, or need help building?
+      Open a discussion instead of an issue.

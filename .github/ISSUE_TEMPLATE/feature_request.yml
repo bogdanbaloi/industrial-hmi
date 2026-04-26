@@ -1,0 +1,84 @@
+name: Feature request
+description: Propose a new feature, enhancement, or design change
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests work best when they describe the **problem** you
+        hit before the solution you imagined. The repo maintainers may
+        have context that suggests a different approach to the same goal.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: |
+        What pain point are you trying to solve? Skip this only if the
+        feature is purely additive (e.g. "support a new color palette").
+      placeholder: |
+        e.g. "Operators have to manually re-enter the same product code
+        across 20+ machines per shift; there's no way to bulk-import."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        How would you like the feature to work? UX flow, CLI syntax,
+        config keys, etc. -- whatever's relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: |
+        Other approaches you thought about and rejected, with a one-line
+        reason for each. Helps the reviewer understand the design space.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Affected layer
+      description: Where would this feature live?
+      multiple: true
+      options:
+        - Model (DatabaseManager, SimulatedModel)
+        - Presenter (Dashboard, Products, AlertCenter)
+        - View / GTK (MainWindow, pages, widgets)
+        - View / Console (ConsoleView)
+        - Configuration (ConfigManager, JSON schema)
+        - i18n / translations
+        - Build / CI (CMake, GitHub Actions)
+        - Documentation
+        - Other (specify below)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: backwards_compat
+    attributes:
+      label: Backwards compatibility
+      options:
+        - label: This change can ship in a minor release (no breaking API or config changes)
+          required: false
+        - label: This change requires a major version bump (config schema, CLI, or public API breaks)
+          required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and didn't find a duplicate proposal
+          required: true
+        - label: I read the relevant section of the README and design docs
+          required: false

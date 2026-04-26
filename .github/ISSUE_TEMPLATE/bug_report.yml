@@ -1,0 +1,132 @@
+name: Bug report
+description: Report a defect, crash, or unexpected behaviour in industrial-hmi
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The more concrete
+        the reproduction is, the faster it gets fixed -- a 30-second
+        log snippet beats a 3-paragraph description every time.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing what went wrong.
+      placeholder: e.g. "Products page crashes with SIGSEGV when deleting last row in the list"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Number every step. If the bug requires a particular config or
+        database state, include the relevant `config/app-config.json`
+        snippet or how to seed the data.
+      placeholder: |
+        1. Start `industrial-hmi` with default config
+        2. Switch to Products tab (F4)
+        3. Click on row 6 (PROD-006)
+        4. Click Delete -> Confirm
+        5. Application crashes with stack trace in `logs/app.log`
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What did you think would happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: |
+        Include the relevant tail of `logs/app.log`, any stderr output,
+        and a stack trace if you have one. For crashes under sanitizers,
+        include the full ASan/UBSan report.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frontend
+    attributes:
+      label: Front-end
+      description: Which binary did you run?
+      options:
+        - GTK desktop (industrial-hmi)
+        - Headless console (industrial-hmi-console)
+        - Both
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Ubuntu 24.04
+        - Ubuntu 22.04 / Debian 12
+        - Other Linux (please specify in Environment)
+        - Windows 11 (MSYS2 CLANG64)
+        - Windows 10 (MSYS2 CLANG64)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: Build mode
+      options:
+        - Release (cmake --preset release)
+        - Debug (cmake --preset debug)
+        - Coverage (-DENABLE_COVERAGE=ON)
+        - Sanitizers (-DENABLE_SANITIZERS=ON)
+        - Custom (specify below)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: |
+        `industrial-hmi --version` output, or the SHA from `git rev-parse HEAD`
+        if you built from source.
+      placeholder: e.g. v1.1.0  or  124413f
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment details
+      description: |
+        Anything that might be relevant -- gtkmm version, locale,
+        display server (X11/Wayland), Xvfb if applicable, custom config
+        file location.
+      placeholder: |
+        - gtkmm-4.0 4.14.0
+        - LANG=ro_RO.UTF-8
+        - Wayland (GNOME 46)
+        - Custom config: ~/.config/industrial-hmi/app-config.json
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and didn't find a duplicate
+          required: true
+        - label: I can reproduce the bug on a clean checkout of `main`
+          required: false
