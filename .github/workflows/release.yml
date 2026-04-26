@@ -1,0 +1,209 @@
+name: Industrial HMI - Release
+
+# Tag-driven release pipeline. Pushing a tag like `v1.1.0` triggers:
+#   1. Parallel Linux + Windows release builds (no tests, no coverage --
+#      those are gated by the regular CI on main).
+#   2. Packaging into industrial-hmi-{linux,windows}-vX.Y.Z.{tar.gz,zip}.
+#   3. A GitHub Release with both archives attached and auto-generated
+#      release notes pulled from commit messages between this tag and
+#      the previous one.
+#
+# Usage:
+#   git tag -a v1.1.0 -m "Release 1.1.0"
+#   git push origin v1.1.0
+#
+# Pre-release tags (`v1.1.0-rc1`, `v1.1.0-beta`) are auto-detected and
+# the GitHub Release is marked as a pre-release.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  # Manual dispatch lets you re-run for an existing tag without re-pushing.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (must already exist on origin)'
+        required: true
+
+env:
+  BUILD_TYPE: Release
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+# Required so the publish job can create the GitHub Release entry.
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Release Build (Linux)
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        # workflow_dispatch may target a tag that's behind HEAD; fetch
+        # everything so the checkout below resolves any tag.
+        ref: ${{ github.event.inputs.tag || github.ref }}
+        fetch-depth: 0
+
+    - name: Resolve tag name
+      id: tag
+      run: |
+        # Both push-tag and workflow_dispatch route through here so
+        # downstream steps don't have to branch on event type.
+        if [ -n "${{ github.event.inputs.tag }}" ]; then
+          echo "value=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "value=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev
+
+    - name: Configure
+      run: cmake --preset release
+
+    - name: Build
+      run: cmake --build build/release -- -j$(nproc)
+
+    - name: Package
+      run: |
+        TAG="${{ steps.tag.outputs.value }}"
+        DIST=industrial-hmi-linux-${TAG}
+        mkdir -p "${DIST}"
+        cp build/release/industrial-hmi "${DIST}/"
+        cp build/release/industrial-hmi-console "${DIST}/"
+        cp -r build/release/assets "${DIST}/"
+        cp -r build/release/config "${DIST}/"
+        cp README.md LICENSE CHANGELOG.md "${DIST}/" 2>/dev/null || true
+        tar -czf "${DIST}.tar.gz" "${DIST}"
+        ls -lh "${DIST}.tar.gz"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v5
+      with:
+        name: linux-release
+        path: industrial-hmi-linux-*.tar.gz
+        retention-days: 7
+
+  build-windows:
+    name: Release Build (Windows)
+    runs-on: windows-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: CLANG64
+        update: true
+        install: >-
+          mingw-w64-clang-x86_64-toolchain
+          mingw-w64-clang-x86_64-cmake
+          mingw-w64-clang-x86_64-ninja
+          mingw-w64-clang-x86_64-gtkmm-4.0
+          mingw-w64-clang-x86_64-sqlite3
+          mingw-w64-clang-x86_64-boost
+          zip
+
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event.inputs.tag || github.ref }}
+        fetch-depth: 0
+
+    - name: Resolve tag name
+      id: tag
+      run: |
+        if [ -n "${{ github.event.inputs.tag }}" ]; then
+          echo "value=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "value=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Configure
+      run: cmake --preset windows-msys2-release
+
+    - name: Build
+      run: cmake --build build/release
+
+    - name: Package
+      run: |
+        TAG="${{ steps.tag.outputs.value }}"
+        DIST=industrial-hmi-windows-${TAG}
+        mkdir -p "${DIST}"
+        cp build/release/industrial-hmi.exe "${DIST}/"
+        cp build/release/industrial-hmi-console.exe "${DIST}/" 2>/dev/null || true
+        cp -r build/release/assets "${DIST}/"
+        cp -r build/release/config "${DIST}/"
+        cp README.md LICENSE CHANGELOG.md "${DIST}/" 2>/dev/null || true
+        # Bundle MSYS2 runtime DLLs the binary needs at launch -- without
+        # these, double-clicking on a system without MSYS2 installed
+        # produces "missing DLL" errors before main() even runs.
+        ldd build/release/industrial-hmi.exe \
+          | grep -i "/clang64/bin/" \
+          | awk '{print $3}' \
+          | xargs -I{} cp {} "${DIST}/" || true
+        zip -r "${DIST}.zip" "${DIST}"
+        ls -lh "${DIST}.zip"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v5
+      with:
+        name: windows-release
+        path: industrial-hmi-windows-*.zip
+        retention-days: 7
+
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-24.04
+    needs: [build-linux, build-windows]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event.inputs.tag || github.ref }}
+        fetch-depth: 0
+
+    - name: Download Linux artifact
+      uses: actions/download-artifact@v5
+      with:
+        name: linux-release
+        path: dist/
+
+    - name: Download Windows artifact
+      uses: actions/download-artifact@v5
+      with:
+        name: windows-release
+        path: dist/
+
+    - name: List release assets
+      run: ls -lh dist/
+
+    # Auto-detects pre-release from the tag name (e.g. v1.0.0-rc1).
+    # `generate_release_notes: true` lets GitHub assemble the notes
+    # from commits + merged PRs between this tag and the previous one --
+    # nothing to maintain manually.
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ needs.build-linux.outputs.tag }}
+        name: Industrial HMI ${{ needs.build-linux.outputs.tag }}
+        files: dist/*
+        generate_release_notes: true
+        prerelease: ${{ contains(needs.build-linux.outputs.tag, '-') }}
+        fail_on_unmatched_files: true
