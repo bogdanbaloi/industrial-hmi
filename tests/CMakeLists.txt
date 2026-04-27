@@ -108,6 +108,35 @@ target_link_libraries(test_json_serializer PRIVATE
 )
 add_test(NAME JsonSerializerTest COMMAND test_json_serializer)
 
+# Integration: IntegrationManager (pure C++, lifecycle composition).
+# Uses a FakeBackend test double declared inline in the .cpp.
+add_executable(test_integration_manager IntegrationManagerTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/IntegrationManager.cpp)
+target_link_libraries(test_integration_manager PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME IntegrationManagerTest COMMAND test_integration_manager)
+
+# Integration: TcpBackend (real loopback TCP, mocked Production +
+# Products interfaces). No GTK; needs Boost.Asio for the test client
+# socket so we link the same Boost target the production library uses.
+add_executable(test_tcp_backend TcpBackendTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/TcpBackend.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/JsonSerializer.cpp)
+target_link_libraries(test_tcp_backend PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    ${BOOST_TARGET}
+    Threads::Threads
+)
+if(WIN32)
+    # mswsock provides AcceptEx / GetAcceptExSockaddrs that Boost.Asio's
+    # IOCP-based async_accept needs alongside ws2_32 Winsock.
+    target_link_libraries(test_tcp_backend PRIVATE ws2_32 mswsock)
+endif()
+add_test(NAME TcpBackendTest COMMAND test_tcp_backend)
+
 # Model: SimulatedModel (singleton, no GTK)
 add_executable(test_simulated_model SimulatedModelTest.cpp)
 target_link_libraries(test_simulated_model PRIVATE
