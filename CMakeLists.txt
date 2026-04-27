@@ -308,6 +308,9 @@ target_sources(objectsIntegration
         src/integration/JsonSerializer.cpp
         src/integration/IntegrationManager.cpp
         src/integration/TcpBackend.cpp
+        src/integration/MqttPacket.cpp
+        src/integration/MqttPublisher.cpp
+        src/integration/ProductionTelemetryBridge.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -317,6 +320,10 @@ target_sources(objectsIntegration
             src/integration/IntegrationBackend.h
             src/integration/IntegrationManager.h
             src/integration/TcpBackend.h
+            src/integration/MqttPacket.h
+            src/integration/MqttPublisher.h
+            src/integration/TelemetryPublisher.h
+            src/integration/ProductionTelemetryBridge.h
 )
 target_link_libraries(objectsIntegration
     PUBLIC

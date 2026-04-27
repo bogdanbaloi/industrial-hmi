@@ -137,6 +137,49 @@ if(WIN32)
 endif()
 add_test(NAME TcpBackendTest COMMAND test_tcp_backend)
 
+# Integration: MQTT 3.1.1 wire-format primitives (pure C++, no I/O).
+# Tested in isolation so a regression in the framing code surfaces
+# before it can confuse a broker.
+add_executable(test_mqtt_packet MqttPacketTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/MqttPacket.cpp)
+target_link_libraries(test_mqtt_packet PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME MqttPacketTest COMMAND test_mqtt_packet)
+
+# Integration: MqttPublisher driven against an in-process mock broker.
+# Covers the live publish path: connect handshake, generic publish()
+# emits PUBLISH frames, clean disconnect. Generic only -- the
+# domain-to-MQTT mapping is exercised separately in
+# ProductionTelemetryBridgeTest.
+add_executable(test_mqtt_publisher MqttPublisherTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/MqttPublisher.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/MqttPacket.cpp)
+target_link_libraries(test_mqtt_publisher PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    ${BOOST_TARGET}
+    Threads::Threads
+)
+if(WIN32)
+    target_link_libraries(test_mqtt_publisher PRIVATE ws2_32 mswsock)
+endif()
+add_test(NAME MqttPublisherTest COMMAND test_mqtt_publisher)
+
+# Integration: ProductionTelemetryBridge -- domain-to-publisher mapping.
+# Uses a fake TelemetryPublisher (capturing) + MockProductionModel,
+# so this test never opens a socket.
+add_executable(test_production_telemetry_bridge
+    ProductionTelemetryBridgeTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/ProductionTelemetryBridge.cpp)
+target_link_libraries(test_production_telemetry_bridge PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME ProductionTelemetryBridgeTest
+         COMMAND test_production_telemetry_bridge)
+
 # Model: SimulatedModel (singleton, no GTK)
 add_executable(test_simulated_model SimulatedModelTest.cpp)
 target_link_libraries(test_simulated_model PRIVATE
