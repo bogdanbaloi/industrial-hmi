@@ -306,17 +306,33 @@ target_sources(objectsIntegration
     PRIVATE
         src/integration/CsvSerializer.cpp
         src/integration/JsonSerializer.cpp
+        src/integration/IntegrationManager.cpp
+        src/integration/TcpBackend.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
             src/integration/Serializer.h
             src/integration/CsvSerializer.h
             src/integration/JsonSerializer.h
+            src/integration/IntegrationBackend.h
+            src/integration/IntegrationManager.h
+            src/integration/TcpBackend.h
 )
 target_link_libraries(objectsIntegration
     PUBLIC
         objectsModel
+        ${BOOST_TARGET}
+        Threads::Threads
 )
+
+# Windows: TcpBackend's Boost.Asio acceptor uses IOCP AcceptEx /
+# GetAcceptExSockaddrs (in mswsock.lib) plus the usual ws2_32 Winsock.
+# Promote both to PUBLIC so every consumer (industrial-hmi,
+# industrial-hmi-console, view-layer test binaries) inherits them
+# transitively.
+if(WIN32)
+    target_link_libraries(objectsIntegration PUBLIC ws2_32 mswsock)
+endif()
 
 # Console Layer - Headless front-end. Shares the Model + Presenter
 # layer with the GTK View, proving MVP's View-swap promise. Links zero
@@ -421,10 +437,12 @@ target_link_libraries(industrial-hmi
         Threads::Threads
 )
 
-# Windows: Boost.Asio requires Winsock; StartupDialog needs user32 for
-# MessageBoxW (usually auto-linked, listed here for clarity + safety).
+# Windows: Boost.Asio requires Winsock + mswsock (AcceptEx,
+# GetAcceptExSockaddrs are in mswsock.lib, not ws2_32). StartupDialog
+# needs user32 for MessageBoxW (usually auto-linked, listed here for
+# clarity + safety).
 if(WIN32)
-    target_link_libraries(industrial-hmi PRIVATE ws2_32 user32)
+    target_link_libraries(industrial-hmi PRIVATE ws2_32 mswsock user32)
 endif()
 
 # Console Executable (Cross-Platform) -- shares src/main.cpp with the GTK
@@ -443,9 +461,10 @@ target_link_libraries(industrial-hmi-console
         Threads::Threads
 )
 if(WIN32)
-    # Boost.Asio still pulls Winsock. user32 is not needed (no MessageBoxW
-    # path from the console reporter) but stays harmless if added.
-    target_link_libraries(industrial-hmi-console PRIVATE ws2_32 user32)
+    # Boost.Asio's TCP server uses IOCP AcceptEx / GetAcceptExSockaddrs
+    # from mswsock.lib (alongside ws2_32). user32 stays harmless even
+    # though the console reporter never calls MessageBoxW.
+    target_link_libraries(industrial-hmi-console PRIVATE ws2_32 mswsock user32)
 endif()
 if(Intl_FOUND)
     target_include_directories(industrial-hmi-console PRIVATE ${Intl_INCLUDE_DIRS})
