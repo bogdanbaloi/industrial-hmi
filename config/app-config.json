@@ -244,5 +244,19 @@
     "max_file_size_mb": 5,
     "max_files": 3,
     "console": true
+  },
+
+  "network": {
+    "tcp": {
+      "enabled": false,
+      "port": 5555
+    },
+    "mqtt": {
+      "enabled": false,
+      "broker_host": "127.0.0.1",
+      "broker_port": 1883,
+      "client_id": "industrial-hmi",
+      "topic_prefix": "industrial-hmi"
+    }
   }
 }

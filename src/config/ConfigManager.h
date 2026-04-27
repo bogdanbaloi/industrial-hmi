@@ -244,6 +244,40 @@ public:
     bool getLogConsoleEnabled() const {
         return getValue("logging.console", "true") == "true";
     }
+
+    // Integration backends
+    //
+    // Both default to disabled so a fresh install never opens a port or
+    // dials out to a broker -- network exposure is opt-in per deployment.
+
+    [[nodiscard]] bool isTcpBackendEnabled() const {
+        return getValue("network.tcp.enabled", "false") == "true";
+    }
+
+    [[nodiscard]] int getTcpBackendPort() const {
+        return getInt("network.tcp.port", defaults::kTcpBackendPort);
+    }
+
+    [[nodiscard]] bool isMqttBackendEnabled() const {
+        return getValue("network.mqtt.enabled", "false") == "true";
+    }
+
+    [[nodiscard]] std::string getMqttBrokerHost() const {
+        return getValue("network.mqtt.broker_host", defaults::kMqttBrokerHost);
+    }
+
+    [[nodiscard]] int getMqttBrokerPort() const {
+        return getInt("network.mqtt.broker_port", defaults::kMqttBrokerPort);
+    }
+
+    [[nodiscard]] std::string getMqttClientId() const {
+        return getValue("network.mqtt.client_id", defaults::kMqttClientId);
+    }
+
+    [[nodiscard]] std::string getMqttTopicPrefix() const {
+        return getValue("network.mqtt.topic_prefix",
+                        defaults::kMqttTopicPrefix);
+    }
     
     // Template Support
     

@@ -1,9 +1,18 @@
 #include "src/core/Bootstrap.h"
 #include "src/core/StartupDialog.h"
 #include "src/core/StartupErrors.h"
+#include "src/config/ConfigManager.h"
+#include "src/integration/IntegrationManager.h"
+#include "src/integration/MqttPublisher.h"
+#include "src/integration/ProductionTelemetryBridge.h"
+#include "src/integration/TcpBackend.h"
+#include "src/model/DatabaseManager.h"
 #include "src/model/SimulatedModel.h"
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <memory>
+#include <utility>
 
 #ifdef _WIN32
 #  ifndef WIN32_LEAN_AND_MEAN
@@ -82,10 +91,61 @@ int main(int argc, char* argv[]) {
         app::core::Bootstrap bootstrap;
         bootstrap.run();
 
+        // Integration backends. Opt-in per deployment via app-config.json.
+        // Both front-ends (GTK + console) get the same network surface so
+        // the binary is identical in either build (zero gtkmm leak path
+        // even with TCP/MQTT enabled).
+        //
+        // Lifetime contract: manager + bridge live until the end of main,
+        // so backends keep running until the front-end exits and the
+        // catch-block / RAII shuts them down via stopAll().
+        auto& config = app::config::ConfigManager::instance();
+        app::integration::IntegrationManager integration;
+        std::unique_ptr<app::integration::ProductionTelemetryBridge>
+            productionBridge;
+
+        if (config.isTcpBackendEnabled()) {
+            integration.registerBackend(
+                std::make_unique<app::integration::TcpBackend>(
+                    static_cast<std::uint16_t>(config.getTcpBackendPort()),
+                    app::model::SimulatedModel::instance(),
+                    app::model::DatabaseManager::instance()));
+        }
+
+        if (config.isMqttBackendEnabled()) {
+            app::integration::MqttPublisher::Config mqttConfig;
+            mqttConfig.brokerHost = config.getMqttBrokerHost();
+            mqttConfig.brokerPort =
+                static_cast<std::uint16_t>(config.getMqttBrokerPort());
+            mqttConfig.clientId = config.getMqttClientId();
+            auto publisher =
+                std::make_unique<app::integration::MqttPublisher>(
+                    std::move(mqttConfig));
+
+            // The bridge subscribes to the production model and pushes
+            // through the publisher's TelemetryPublisher interface --
+            // it doesn't know or care that the underlying transport is
+            // MQTT. Swap in any other publisher (Kafka, AMQP, custom)
+            // with a single line change here.
+            app::integration::ProductionTelemetryBridge::Config bridgeConfig;
+            bridgeConfig.topicPrefix = config.getMqttTopicPrefix();
+            productionBridge =
+                std::make_unique<app::integration::ProductionTelemetryBridge>(
+                    *publisher,
+                    app::model::SimulatedModel::instance(),
+                    std::move(bridgeConfig));
+            productionBridge->wire();
+
+            integration.registerBackend(std::move(publisher));
+        }
+
+        integration.startAll();
+
 #ifdef CONSOLE_MODE
         (void)argc; (void)argv;
         app::console::InitConsole console(bootstrap);
         console.run();
+        integration.stopAll();
         return kExitOk;
 #else
         auto& app = app::core::Application::instance();
@@ -100,6 +160,7 @@ int main(int argc, char* argv[]) {
         app::model::SimulatedModel::instance().setLogger(app.logger());
 
         const int result = app.run(argc, argv);
+        integration.stopAll();
         app.shutdown();
         return result;
 #endif
