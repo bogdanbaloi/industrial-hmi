@@ -274,6 +274,136 @@ The console front-end exists not as a fallback but as a **swap proof**:
 it forces the View seam to be honest. If the presenter ever leaks GTK
 into its API, the console binary won't link. CI catches it.
 
+## Integration Layer (industrial framework, not just an HMI)
+
+The same architectural discipline that lets the GTK and console front-ends
+coexist also makes this codebase a **deployable framework**, not just a
+manufacturing HMI demo. Every long-lived I/O channel implements
+`IntegrationBackend`; every messaging-style sink implements
+`TelemetryPublisher`; the domain logic is a separate "bridge" class.
+Wiring three together is two lines in `main.cpp`.
+
+### Architecture
+
+```
+                +-------------------------+
+                |   IntegrationBackend    |   (lifecycle interface)
+                +-------------------------+
+                            ^
+              +-------------+-------------+
+              |                           |
+   +---------------------+    +---------------------------+
+   |    TcpBackend       |    |       MqttPublisher       |
+   |  (line protocol     |    |  (MQTT 3.1.1 hand-rolled  |
+   |   over TCP)         |    |   wire format, no paho)   |
+   +---------------------+    +---------------------------+
+                                       ^
+                                       | also implements
+                                       v
+                              +---------------------+
+                              |  TelemetryPublisher |   (abstract publish)
+                              +---------------------+
+                                       ^
+                                       | calls publish()
+                                       |
+                       +-------------------------------+
+                       |  ProductionTelemetryBridge    |
+                       |  (manufacturing bridge --     |
+                       |   one of N possible bridges)  |
+                       +-------------------------------+
+                                       ^
+                                       | subscribes signals
+                                       v
+                              +---------------------+
+                              |   ProductionModel   |
+                              +---------------------+
+```
+
+### Vertical reuse: same shell, different domain
+
+The MQTT publisher knows nothing about manufacturing. The bridge knows
+nothing about MQTT. To deploy this framework in another vertical you
+write **one** new bridge class against the same `TelemetryPublisher`:
+
+| Vertical                | Domain model            | Bridge          | Publisher reuse |
+|-------------------------|-------------------------|-----------------|-----------------|
+| Manufacturing (default) | `ProductionModel`       | `ProductionTelemetryBridge` | Ships in repo |
+| Pharma / lab            | `LabInstrumentModel`    | `LabTelemetryBridge`        | MqttPublisher unchanged |
+| Smart-building          | `HvacModel`             | `HvacTelemetryBridge`       | MqttPublisher unchanged |
+| Energy / SCADA          | `BreakerModel`          | `BreakerTelemetryBridge`    | MqttPublisher unchanged |
+
+A bridge is typically 50-100 lines of pure callback plumbing. The MQTT
+wire-format code, connection lifecycle, work-guard / heartbeat machinery,
+and CONNACK error handling all stay shared.
+
+### Configuration (opt-in per deployment)
+
+Both backends are **disabled by default** -- a fresh install never opens
+a port or dials out to a broker. Operators turn them on via
+`config/app-config.json`:
+
+```json
+"network": {
+  "tcp": {
+    "enabled": true,
+    "port": 5555
+  },
+  "mqtt": {
+    "enabled": true,
+    "broker_host": "broker.example.com",
+    "broker_port": 1883,
+    "client_id": "factory-42",
+    "topic_prefix": "factory-42/line-A"
+  }
+}
+```
+
+### TCP backend protocol
+
+Line-oriented text, mirrors the console binary's command set so the
+same shell scripts drive either:
+
+```bash
+$ printf 'status\nproducts\nquit\n' | nc localhost 5555
+{"state":"running","running":true}
+6
+{"productCode": "PROD-001", "name": "Product A", ...}
+{"productCode": "PROD-002", ...}
+...
+BYE
+```
+
+Supported commands: `status`, `products`, `eq <id> on|off`,
+`production start|stop|reset`, `help`, `quit`.
+
+### MQTT backend topics
+
+Hand-rolled MQTT 3.1.1 publisher (publish-only, QoS 0, no paho dep)
+over plain TCP. Topic schema configurable via `topic_prefix`:
+
+| Topic                                 | Payload example         |
+|---------------------------------------|-------------------------|
+| `<prefix>/state`                      | `running`               |
+| `<prefix>/equipment/<id>/state`       | `ok` / `fault`          |
+| `<prefix>/quality/<id>/rate`          | `98.5`                  |
+
+Subscribe with `mosquitto_sub -h broker.example.com -t 'factory-42/#' -v`.
+
+### Why hand-rolled MQTT?
+
+| Decision                  | Rationale |
+|---------------------------|-----------|
+| No paho-mqtt-cpp dep      | Zero new system packages; CI install time unchanged |
+| MQTT 3.1.1 only           | Full 5.0 properties + shared subscriptions out of scope |
+| Publish-only              | This is a telemetry source; subscribers are a future PR |
+| QoS 0                     | Industrial telemetry is transient; QoS 1/2 would need state machines for marginal benefit |
+| Plain TCP, no TLS         | Production deployments tunnel through stunnel; wire format unchanged |
+
+Coverage: `MqttPacketTest` (31 cases) verifies byte-exact wire format
+against the spec; `MqttPublisherTest` (10 cases) drives the publisher
+against an in-process mock broker; `ProductionTelemetryBridgeTest` (8
+cases) verifies the domain mapping in isolation.
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -282,8 +412,9 @@ into its API, the console binary won't link. CI catches it.
 | UI | GTK4 / gtkmm-4.0, Cairo for custom widgets |
 | Database | SQLite3 (in-memory, prepared statements) |
 | Async I/O | Boost.Asio io_context with work guard, posted via std::jthread |
+| Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled publisher (no paho dep) |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros) |
-| Testing | GoogleTest + gmock (31 ctest targets) |
+| Testing | GoogleTest + gmock (37 ctest targets) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |

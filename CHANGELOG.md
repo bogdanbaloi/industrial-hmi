@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Integration layer (framework reuse across verticals)
+
+- **`Serializer` interface** with `CsvSerializer` + `JsonSerializer`
+  concretes -- the legacy CsvSerializer was promoted to instance-based
+  and now sits behind the abstraction. Shared `objectsIntegration`
+  library; `objectsCore` stays GTK-free.
+- **`IntegrationBackend` interface** + **`IntegrationManager`**
+  composition root. Backends implement `start` / `stop` / `isRunning`
+  / `name`; the manager fans out lifecycle calls and tolerates
+  per-backend exceptions so one bad backend can't kill the others.
+- **`TelemetryPublisher` interface** -- agnostic `publish(topic,
+  payload)` surface that any messaging-style backend implements.
+  Decouples the domain bridge from the wire protocol so the same
+  shell ships across manufacturing / pharma / smart-building / energy
+  verticals.
+- **`TcpBackend`** -- line protocol over Boost.Asio (own io_context
+  + jthread, isolated from ModelContext). Mirrors the console
+  command set so the same scripts drive either via `nc localhost
+  5555`. Defensive `dynamic_cast<Gtk::Window*>` already in place
+  from PR #45 keeps the dialog parent path null-safe.
+- **`MqttPublisher`** -- hand-rolled MQTT 3.1.1 publisher in ~200
+  lines (CONNECT, CONNACK, PUBLISH, PINGREQ, PINGRESP, DISCONNECT)
+  with no paho/mqtt_cpp dependency. QoS 0, plain TCP, work_guard-
+  pinned io_context. Implements both `IntegrationBackend` and
+  `TelemetryPublisher` so it can drop into any bridge.
+- **`ProductionTelemetryBridge`** -- the manufacturing reference
+  bridge. Subscribes to `ProductionModel` signals and publishes
+  `<prefix>/state`, `<prefix>/equipment/<id>/state`,
+  `<prefix>/quality/<id>/rate`. ~80 lines; new verticals write
+  their own bridge against the same `TelemetryPublisher`.
+- **Config schema extension** -- `network.tcp.enabled / port` and
+  `network.mqtt.enabled / broker_host / broker_port / client_id /
+  topic_prefix`. Both default disabled; opt-in per deployment.
+- **Wiring in `main.cpp`** -- two if-blocks after Bootstrap register
+  TCP and / or MQTT depending on config. Same wiring path for GTK
+  and console binaries; the console binary stays GTK-free even
+  with both backends enabled (`nm` proves it).
+
+### Testing
+
+- **`MqttPacketTest`** (31 cases) -- byte-exact assertion of the
+  MQTT 3.1.1 wire format against spec sections 2.2.3 (variable-
+  length encoding), 1.5.3 (UTF-8 strings), 3.1 (CONNECT), 3.2
+  (CONNACK), 3.3 (PUBLISH), 3.12 (PINGREQ), 3.14 (DISCONNECT).
+- **`MqttPublisherTest`** (10 cases) -- in-process `MockMqttBroker`
+  TCP server captures the publisher's frames; covers handshake,
+  publish ordering, heartbeat cadence, clean disconnect,
+  ECONNREFUSED.
+- **`ProductionTelemetryBridgeTest`** (8 cases) -- callback
+  plumbing in isolation; uses a `CapturingPublisher` test double,
+  no socket I/O.
+- **`TcpBackendTest`** (18 cases) -- real loopback TCP, mocked
+  `ProductionModel` + `ProductsRepository`, exercises every
+  command + error path.
+- **`IntegrationManagerTest`** (9 cases) -- lifecycle composition
+  + per-backend exception tolerance.
+- **`CsvSerializerTest` extended** with round-trip + read-side tests
+  (the original was write-only).
+- **`JsonSerializerTest`** (15 cases) -- output shape, RFC 8259
+  string escaping, round-trip, parse errors, Liskov substitutability.
+- **37 ctest targets total** (was 31 in v1.1.0). Coverage stays
+  79%.
+
 ### Architecture
 
 - **Headless console front-end** (`industrial-hmi-console`) sharing Model +

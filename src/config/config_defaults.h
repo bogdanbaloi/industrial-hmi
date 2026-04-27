@@ -45,6 +45,15 @@ constexpr bool kLogConsoleEnabled = true;
 // Database
 constexpr const char* kDatabasePath = ":memory:";
 
+// Integration backends -- defaults match a typical local-development
+// setup. Both backends default to disabled in app-config.json; these
+// values fill in the blanks once the operator opts in.
+constexpr int kTcpBackendPort       = 5555;
+constexpr const char* kMqttBrokerHost  = "127.0.0.1";
+constexpr int kMqttBrokerPort       = 1883;
+constexpr const char* kMqttClientId    = "industrial-hmi";
+constexpr const char* kMqttTopicPrefix = "industrial-hmi";
+
 // Product status values (used in DB, UI, and presenter layers)
 constexpr const char* kStatusActive = "Active";
 constexpr const char* kStatusInactive = "Inactive";
