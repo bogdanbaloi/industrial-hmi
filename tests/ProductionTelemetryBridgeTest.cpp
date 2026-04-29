@@ -87,6 +87,10 @@ public:
     [[nodiscard]] app::model::WorkUnit getWorkUnit() const override {
         return {};
     }
+    [[nodiscard]] std::vector<app::model::EquipmentStatus>
+        getAllEquipment() const override { return {}; }
+    [[nodiscard]] std::vector<app::model::QualityCheckpoint>
+        getAllQualityCheckpoints() const override { return {}; }
 
     // Test fire helpers
     void fireSystemState(SystemState s) { if (stateCb_) stateCb_(s); }

@@ -30,6 +30,8 @@ public:
     MOCK_METHOD(model::SystemState, getState, (), (const, override));
     MOCK_METHOD(model::QualityCheckpoint, getQualityCheckpoint, (uint32_t id), (const, override));
     MOCK_METHOD(model::WorkUnit, getWorkUnit, (), (const, override));
+    MOCK_METHOD(std::vector<model::EquipmentStatus>, getAllEquipment, (), (const, override));
+    MOCK_METHOD(std::vector<model::QualityCheckpoint>, getAllQualityCheckpoints, (), (const, override));
 };
 
 }  // namespace app::test

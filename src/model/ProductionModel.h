@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <vector>
 
 namespace app::model {
 
@@ -46,6 +47,15 @@ public:
     [[nodiscard]] virtual SystemState getState() const = 0;
     [[nodiscard]] virtual QualityCheckpoint getQualityCheckpoint(uint32_t id) const = 0;
     [[nodiscard]] virtual WorkUnit getWorkUnit() const = 0;
+
+    /// Snapshot every known equipment line. Order is unspecified;
+    /// callers that need stable ordering should sort by `equipmentId`.
+    /// Returned by value -- safe to call from any thread.
+    [[nodiscard]] virtual std::vector<EquipmentStatus> getAllEquipment() const = 0;
+
+    /// Snapshot every known quality checkpoint. Same ordering /
+    /// threading contract as getAllEquipment().
+    [[nodiscard]] virtual std::vector<QualityCheckpoint> getAllQualityCheckpoints() const = 0;
 };
 
 }  // namespace app::model

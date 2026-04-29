@@ -28,7 +28,8 @@ changes get a major-version bump.
 
 | Command                       | Response                                              |
 |-------------------------------|-------------------------------------------------------|
-| `status`                      | one JSON line                                         |
+| `status`                      | one JSON line (state + running)                       |
+| `dashboard`                   | one JSON line (full snapshot for client hydration)    |
 | `products`                    | count line, then N JSON product lines                 |
 | `eq <id> on\|off`             | `OK` or `ERR <reason>`                                |
 | `production start\|stop\|reset` | `OK` or `ERR <reason>`                              |
@@ -54,6 +55,62 @@ Schema:
 |-----------|---------|-------------------------------------------------|
 | `state`   | string  | `idle`, `running`, `error`, `calibration`       |
 | `running` | boolean | `true` iff `state == "running"`                 |
+
+### `dashboard`
+
+Full snapshot of the production line in a single JSON line. Designed
+for tablet / web / mobile clients to hydrate their UI in one round trip
+on connect; live updates after that should arrive via MQTT.
+
+```
+> dashboard
+{"state":"running","running":true,"equipment":[{"id":0,"status":2,"supplyLevel":85,"message":"85K tablets/hr"},{"id":1,"status":1,"supplyLevel":95,"message":"Film coating"}],"quality":[{"id":0,"name":"Weight Check","status":0,"unitsInspected":645,"defectsFound":12,"passRate":98.1,"lastDefect":"Underweight"}],"workUnit":{"id":"WU-2024-001234","productId":"TAB-200","description":"Batch WU-2024-001234 | TAB-200","completed":3,"total":5}}
+```
+
+Top-level schema:
+
+| Field       | Type    | Notes                                       |
+|-------------|---------|---------------------------------------------|
+| `state`     | string  | Same values as `status`                     |
+| `running`   | boolean | Same as `status`                            |
+| `equipment` | array   | Every known equipment line                  |
+| `quality`   | array   | Every known quality checkpoint              |
+| `workUnit`  | object  | Current work unit on the line               |
+
+`equipment[]` element schema:
+
+| Field         | Type    | Notes                                       |
+|---------------|---------|---------------------------------------------|
+| `id`          | integer | Equipment id (0..N-1)                       |
+| `status`      | integer | `0` offline, `1` online, `2` processing, `3` error |
+| `supplyLevel` | integer | 0..100 percent                              |
+| `message`     | string  | Free-form status text (JSON-escaped)        |
+
+`quality[]` element schema:
+
+| Field            | Type    | Notes                                       |
+|------------------|---------|---------------------------------------------|
+| `id`             | integer | Checkpoint id                               |
+| `name`           | string  | Human-readable                              |
+| `status`         | integer | `0` passing, `1` warning, `2` critical      |
+| `unitsInspected` | integer | Cumulative count                            |
+| `defectsFound`   | integer | Cumulative count                            |
+| `passRate`       | number  | Percentage, one decimal place               |
+| `lastDefect`     | string  | Free-form (JSON-escaped); `""` if none      |
+
+`workUnit` schema:
+
+| Field         | Type    | Notes                                       |
+|---------------|---------|---------------------------------------------|
+| `id`          | string  | Work unit identifier                        |
+| `productId`   | string  | Product code being processed                |
+| `description` | string  | Human-readable summary                      |
+| `completed`   | integer | Operations completed in the current cycle   |
+| `total`       | integer | Total operations per cycle                  |
+
+Empty arrays (`"equipment":[]`, `"quality":[]`) and the empty work
+unit (`{"id":"","productId":"","description":"","completed":0,"total":0}`)
+are valid and signal a freshly-booted simulator with no data yet.
 
 ### `products`
 

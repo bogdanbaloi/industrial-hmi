@@ -73,6 +73,41 @@ const char* systemStateName(model::SystemState s) {
     return "unknown";
 }
 
+/// Escape a string per RFC 8259 (no surrounding quotes). Mirrors
+/// JsonSerializer::escapeString -- duplicated rather than exposed
+/// because the serializer's signature lives behind a private static
+/// and lifting it out would force a header / API change. ~15 lines is
+/// not worth that ripple.
+std::string escapeJson(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b";  break;
+            case '\f': out += "\\f";  break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            default:
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    out += std::format("\\u{:04x}",
+                                       static_cast<unsigned char>(c));
+                } else {
+                    out += c;
+                }
+        }
+    }
+    return out;
+}
+
+/// Format a quality rate with one decimal of precision (matches the
+/// `qualityRate` output in the products stream).
+std::string fmtRate(float rate) {
+    return std::vformat("{:.1f}", std::make_format_args(rate));
+}
+
 /// Marshal a single Product as one JSON line for the `products` stream.
 /// Reuses JsonSerializer for the field formatting / escape rules so we
 /// don't drift from the file-export format.
@@ -267,7 +302,9 @@ bool TcpBackend::dispatchCommand(const std::string& line, std::string& out) {
     if (cmd == "help") {
         out =
             "Available commands:\n"
-            "  status                    JSON snapshot (running, equipment count)\n"
+            "  status                    JSON snapshot (state, running)\n"
+            "  dashboard                 full JSON snapshot (state, equipment,\n"
+            "                            quality, workUnit) -- one line\n"
             "  products                  count line, then N JSON product objects\n"
             "  eq <id> on|off            toggle equipment (id is unsigned int)\n"
             "  production start|stop|reset\n"
@@ -283,6 +320,58 @@ bool TcpBackend::dispatchCommand(const std::string& line, std::string& out) {
             R"({{"state":"{}","running":{}}})" "\n",
             systemStateName(state),
             isRunning ? "true" : "false");
+        return true;
+    }
+
+    if (cmd == "dashboard") {
+        // Single-line JSON snapshot covering everything a tablet /
+        // web client needs to hydrate its initial render in one round
+        // trip. Live updates after that should arrive via MQTT.
+        const auto state = production_.getState();
+        const bool isRunning = state == model::SystemState::RUNNING;
+        const auto equipment = production_.getAllEquipment();
+        const auto checkpoints = production_.getAllQualityCheckpoints();
+        const auto workUnit = production_.getWorkUnit();
+
+        std::string body;
+        body.reserve(256 + equipment.size() * 96 + checkpoints.size() * 128);
+
+        body += std::format(
+            R"({{"state":"{}","running":{},"equipment":[)",
+            systemStateName(state),
+            isRunning ? "true" : "false");
+
+        for (std::size_t i = 0; i < equipment.size(); ++i) {
+            const auto& e = equipment[i];
+            body += std::format(
+                R"({{"id":{},"status":{},"supplyLevel":{},"message":"{}"}})",
+                e.equipmentId, e.status, e.supplyLevel, escapeJson(e.message));
+            if (i + 1 < equipment.size()) body += ',';
+        }
+
+        body += R"(],"quality":[)";
+        for (std::size_t i = 0; i < checkpoints.size(); ++i) {
+            const auto& c = checkpoints[i];
+            body += std::format(
+                R"({{"id":{},"name":"{}","status":{},"unitsInspected":{},)"
+                R"("defectsFound":{},"passRate":{},"lastDefect":"{}"}})",
+                c.checkpointId, escapeJson(c.name), c.status,
+                c.unitsInspected, c.defectsFound, fmtRate(c.passRate),
+                escapeJson(c.lastDefect));
+            if (i + 1 < checkpoints.size()) body += ',';
+        }
+
+        body += std::format(
+            R"(],"workUnit":{{"id":"{}","productId":"{}","description":"{}",)"
+            R"("completed":{},"total":{}}}}})",
+            escapeJson(workUnit.workUnitId),
+            escapeJson(workUnit.productId),
+            escapeJson(workUnit.description),
+            workUnit.completedOperations,
+            workUnit.totalOperations);
+
+        body += '\n';
+        out = std::move(body);
         return true;
     }
 

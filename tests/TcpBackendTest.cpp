@@ -57,6 +57,10 @@ public:
     MOCK_METHOD(app::model::QualityCheckpoint, getQualityCheckpoint,
                 (uint32_t), (const, override));
     MOCK_METHOD(app::model::WorkUnit, getWorkUnit, (), (const, override));
+    MOCK_METHOD(std::vector<app::model::EquipmentStatus>,
+                getAllEquipment, (), (const, override));
+    MOCK_METHOD(std::vector<app::model::QualityCheckpoint>,
+                getAllQualityCheckpoints, (), (const, override));
 };
 
 class MockProductsRepository : public ProductsRepository {
@@ -286,11 +290,72 @@ TEST(TcpBackendTest, HelpCommandPrintsBanner) {
 
     TcpClient client(model, repo);
     const std::string response =
-        client.sendCommand("help", /*lines=*/7);  // help banner is multi-line
+        client.sendCommand("help", /*lines=*/9);  // help banner is multi-line
 
     EXPECT_NE(response.find("Available commands"), std::string::npos);
     EXPECT_NE(response.find("status"),             std::string::npos);
+    EXPECT_NE(response.find("dashboard"),          std::string::npos);
     EXPECT_NE(response.find("products"),           std::string::npos);
+}
+
+TEST(TcpBackendTest, DashboardCommandReturnsFullSnapshotJson) {
+    MockProductionModel model;
+    MockProductsRepository repo;
+
+    EXPECT_CALL(model, getState())
+        .WillOnce(Return(SystemState::RUNNING));
+    EXPECT_CALL(model, getAllEquipment())
+        .WillOnce(Return(std::vector<app::model::EquipmentStatus>{
+            {0, /*status=*/2, /*supply=*/85, "85K tablets/hr"},
+            {1, /*status=*/1, /*supply=*/95, "Film coating"}}));
+    EXPECT_CALL(model, getAllQualityCheckpoints())
+        .WillOnce(Return(std::vector<app::model::QualityCheckpoint>{
+            {0, "Weight Check", /*status=*/0, 645, 12, 98.1f, "Underweight"}}));
+    EXPECT_CALL(model, getWorkUnit())
+        .WillOnce(Return(app::model::WorkUnit{
+            "WU-2024-001234", "TAB-200",
+            "Batch WU-2024-001234 | TAB-200", 3, 5}));
+
+    TcpClient client(model, repo);
+    const std::string response = client.sendCommand("dashboard");
+
+    // One-line response -- spot-check that every section is present
+    // and the values from the mocks made it through unmangled.
+    EXPECT_NE(response.find("\"state\":\"running\""),     std::string::npos);
+    EXPECT_NE(response.find("\"running\":true"),          std::string::npos);
+    EXPECT_NE(response.find("\"equipment\":["),           std::string::npos);
+    EXPECT_NE(response.find("\"id\":0"),                  std::string::npos);
+    EXPECT_NE(response.find("85K tablets/hr"),            std::string::npos);
+    EXPECT_NE(response.find("\"quality\":["),             std::string::npos);
+    EXPECT_NE(response.find("Weight Check"),              std::string::npos);
+    EXPECT_NE(response.find("\"passRate\":98.1"),         std::string::npos);
+    EXPECT_NE(response.find("\"workUnit\":"),             std::string::npos);
+    EXPECT_NE(response.find("WU-2024-001234"),            std::string::npos);
+    EXPECT_NE(response.find("\"completed\":3"),           std::string::npos);
+    EXPECT_NE(response.find("\"total\":5"),               std::string::npos);
+}
+
+TEST(TcpBackendTest, DashboardCommandEscapesQuotesInStrings) {
+    MockProductionModel model;
+    MockProductsRepository repo;
+
+    EXPECT_CALL(model, getState())
+        .WillOnce(Return(SystemState::IDLE));
+    EXPECT_CALL(model, getAllEquipment())
+        .WillOnce(Return(std::vector<app::model::EquipmentStatus>{
+            {0, 0, 0, "say \"hi\""}}));
+    EXPECT_CALL(model, getAllQualityCheckpoints())
+        .WillOnce(Return(std::vector<app::model::QualityCheckpoint>{}));
+    EXPECT_CALL(model, getWorkUnit())
+        .WillOnce(Return(app::model::WorkUnit{}));
+
+    TcpClient client(model, repo);
+    const std::string response = client.sendCommand("dashboard");
+
+    // The literal sequence \" must appear in the wire output, and the
+    // raw unescaped `"hi"` must NOT (which would close the JSON string
+    // prematurely and break parsing).
+    EXPECT_NE(response.find("say \\\"hi\\\""), std::string::npos);
 }
 
 // Protocol -- error paths

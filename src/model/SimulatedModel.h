@@ -145,6 +145,22 @@ public:
 
     [[nodiscard]] WorkUnit getWorkUnit() const override { return currentWorkUnit_; }
 
+    [[nodiscard]] std::vector<EquipmentStatus> getAllEquipment() const override {
+        const std::scoped_lock lock(mutex_);
+        std::vector<EquipmentStatus> out;
+        out.reserve(equipmentStatuses_.size());
+        for (const auto& [id, es] : equipmentStatuses_) out.push_back(es);
+        return out;
+    }
+
+    [[nodiscard]] std::vector<QualityCheckpoint> getAllQualityCheckpoints() const override {
+        const std::scoped_lock lock(mutex_);
+        std::vector<QualityCheckpoint> out;
+        out.reserve(qualityCheckpoints_.size());
+        for (const auto& [id, cp] : qualityCheckpoints_) out.push_back(cp);
+        return out;
+    }
+
     /// Advance simulation by one tick (called by auto refresh timer)
     void tickSimulation() {
         if (logger_) logger_->trace("Model: simulation tick");

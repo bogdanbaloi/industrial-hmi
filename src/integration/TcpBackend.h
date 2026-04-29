@@ -29,7 +29,10 @@ namespace app::integration {
 ///
 /// Wire protocol (newline-terminated, ASCII):
 ///   > products              -> count line, then N JSON object lines
-///   > status                -> single JSON line (snapshot)
+///   > status                -> single JSON line (state + running)
+///   > dashboard             -> single JSON line (state, equipment[],
+///                              quality[], workUnit) for tablet / web
+///                              client hydration
 ///   > eq <id> on|off        -> "OK" or "ERR <reason>"
 ///   > production start      -> "OK"
 ///   > production stop       -> "OK"
