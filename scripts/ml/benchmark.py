@@ -46,31 +46,6 @@ Usage:
         --fp32-onnx ../../assets/models/mobilenetv2_fp32.onnx \\
         --int8-onnx ../../assets/models/mobilenetv2_int8.onnx \\
         --output benchmark-results.json
-
-Talking points for an interview:
-
-    Q: "How do you benchmark inference correctly?"
-    A: Three rules. First, warm up -- the first 5-10 inferences are
-       slower for cache and JIT reasons; discard them. Second, run
-       enough iterations that percentile estimates stabilize; for
-       p99 you need at least 100 samples and ideally 1000. Third,
-       report percentiles, not averages -- averages hide tail behaviour
-       that dominates user-perceived performance.
-
-    Q: "Why CPU and not GPU?"
-    A: Industrial PCs typically don't have discrete GPUs; the
-       deployment target is the CPU. Reporting GPU numbers would
-       be misleading because the production hardware can't run
-       them. Also, GPU latency is dominated by host-device data
-       transfer for small batches (1 image), which often makes
-       CPU faster than GPU for single-image inference even before
-       considering hardware availability.
-
-    Q: "What hardware did you measure on?"
-    A: Always document this -- "p99 = 18ms" without a CPU model is
-       meaningless. The benchmark script writes hostname, CPU model,
-       and physical core count alongside the latency numbers, so
-       results stay reproducible and explainable.
 """
 from __future__ import annotations
 

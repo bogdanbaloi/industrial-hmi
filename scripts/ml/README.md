@@ -74,8 +74,7 @@ mobilenetv2_int8.onnx          2.45     6.30     8.10    17.90    200
 | `benchmark.py` | Warmup + measure inference latency; reports p50/p90/p95/p99 + writes JSON. |
 
 Each script is self-documenting -- the docstring at the top explains
-why it exists, the implementation explains how, and a "Talking points
-for an interview" section captures the questions a recruiter will ask.
+why it exists and the implementation explains how.
 
 ## Why the choices we made
 

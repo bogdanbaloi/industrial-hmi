@@ -48,33 +48,6 @@ Usage:
     python quantize_model.py \\
         --input  ../../assets/models/mobilenetv2_fp32.onnx \\
         --output ../../assets/models/mobilenetv2_int8.onnx
-
-Talking points for an interview:
-
-    Q: "Why dynamic and not static quantization?"
-    A: Dynamic gives 90% of the gain for 5% of the work. Static
-       quantization needs a calibration dataset of representative
-       inputs, plus tooling to feed it through the model and capture
-       activation distributions. For a deployment PoC, dynamic gets
-       you measurable wins without needing data infrastructure.
-       Static is the next step when you have the calibration data
-       AND the latency budget is still too tight.
-
-    Q: "What's the accuracy hit?"
-    A: For MobileNetV2 ImageNet top-1, typically 0.1-0.5 percentage
-       points. The model architecture matters -- networks with lots
-       of pointwise convolutions (which MobileNet relies on) tend to
-       quantize well; networks with custom activations or unusual
-       layer types may degrade more. Always measure on a held-out
-       validation set, never trust generic claims.
-
-    Q: "Why INT8 and not INT4 or FP16?"
-    A: INT8 is the deployment-mature sweet spot in 2025. CPUs have
-       native INT8 SIMD instructions (AVX-VNNI on x86, dot-product
-       on ARM). FP16 needs hardware support that not all CPUs have.
-       INT4 is research-stage on commodity hardware -- aggressive
-       on quantization noise. INT8 is what production inference
-       runtimes optimize for.
 """
 from __future__ import annotations
 

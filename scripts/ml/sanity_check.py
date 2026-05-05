@@ -36,34 +36,6 @@ Why this matters:
 
 The "sample image" path is configurable so you can swap in your own
 photos at QA time.
-
-Talking points for an interview:
-
-    Q: "Why does FP32 PyTorch not exactly match FP32 ONNX?"
-    A: Two reasons. First, FP32 is not associative -- (a + b) + c can
-       differ from a + (b + c) at the bit level when the values have
-       different magnitudes. PyTorch and ONNX may schedule the same
-       reduction (sum, mean) in different orders, producing values that
-       differ in the last few mantissa bits. Second, constant folding
-       during export pre-computes some operations at higher precision
-       and stores the results -- those won't bit-match a runtime PyTorch
-       computation. So we expect "close" (atol 1e-4 or 1e-5), not "exact".
-
-    Q: "What's the right tolerance for INT8 vs FP32?"
-    A: Don't compare pixel-level outputs -- they will differ. Compare
-       what you care about. For classification, that's top-1 label match
-       and confidence delta. For detection, that's IoU on bounding boxes
-       and mAP delta on a held-out set. The principle: pick a metric
-       that reflects the deployment-side decision the model drives, and
-       set the tolerance based on what the business can tolerate.
-
-    Q: "What if PyTorch and ONNX FP32 disagree?"
-    A: That's a regression and the build should fail. Likely causes:
-       wrong opset version (some ops have semantic changes between
-       versions), unsupported PyTorch op that exporter approximated,
-       or a custom layer not handled by torch.onnx.export. The fix
-       is usually to bump opset, replace the offending op, or write
-       a custom symbolic for it.
 """
 from __future__ import annotations
 

@@ -33,34 +33,6 @@ Usage:
 The output path is relative to the script's working directory; the
 caller is responsible for ensuring the parent folder exists (we do
 mkdir -p as a courtesy).
-
-Talking points for an interview:
-
-    Q: "What does torch.onnx.export actually do?"
-    A: It runs a forward pass with the dummy input you give it,
-       recording every tensor operation as it happens. That recording
-       becomes the ONNX graph. The output is a static computation
-       graph -- branches that depended on input values are baked in
-       at trace time. That's why dynamic axes (see DYNAMIC_AXES below)
-       have to be declared explicitly: any dimension that should stay
-       variable at inference time must be marked, otherwise the
-       exporter freezes whatever value the dummy input had.
-
-    Q: "Why opset 17?"
-    A: ONNX has versioned operator sets. Newer opsets add ops and
-       refine semantics; older runtimes may not know about them.
-       Opset 17 is the highest level supported by ONNX Runtime 1.20
-       (our target), and it covers everything MobileNetV2 needs.
-       Pinning a known-supported opset keeps the model portable.
-
-    Q: "Why eval() before export?"
-    A: PyTorch modules behave differently in train() vs eval() mode.
-       In train() dropout layers randomly zero activations and batch
-       normalization updates running statistics from the current batch.
-       Both are wrong for inference: dropout would inject randomness
-       into predictions, BN would corrupt its averaged stats with a
-       single dummy input. eval() switches them to deterministic
-       inference behaviour.
 """
 from __future__ import annotations
 
