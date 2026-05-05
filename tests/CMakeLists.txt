@@ -180,6 +180,41 @@ target_link_libraries(test_production_telemetry_bridge PRIVATE
 add_test(NAME ProductionTelemetryBridgeTest
          COMMAND test_production_telemetry_bridge)
 
+# ML: ImageNetLabels -- file/vector loader, BOM + CRLF tolerance, bounds.
+# Pure C++, no decoder dep, no ONNX. Compiles the source directly.
+add_executable(test_image_net_labels ImageNetLabelsTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/ml/ImageNetLabels.cpp)
+target_link_libraries(test_image_net_labels PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME ImageNetLabelsTest COMMAND test_image_net_labels)
+
+# ML: ImageNetPreprocessor -- pure-CPU resize + centre-crop + ImageNet
+# normalisation. No decoder dep, no ONNX. Tests use synthetic Image
+# values built directly in memory.
+add_executable(test_image_net_preprocessor ImageNetPreprocessorTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/ml/ImageNetPreprocessor.cpp)
+target_link_libraries(test_image_net_preprocessor PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME ImageNetPreprocessorTest COMMAND test_image_net_preprocessor)
+
+# ML: ImageDecoder -- stb_image-backed PNG / JPEG / BMP decoder. Test
+# compiles the source directly so we keep a flat link line; the
+# stb_image header lives under the FetchContent source dir, threaded
+# through PRIVATE include dirs the same way the production library
+# wires it.
+add_executable(test_image_decoder ImageDecoderTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/ml/ImageDecoder.cpp)
+target_include_directories(test_image_decoder PRIVATE ${stb_image_SOURCE_DIR})
+target_link_libraries(test_image_decoder PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME ImageDecoderTest COMMAND test_image_decoder)
+
 # Model: SimulatedModel (singleton, no GTK)
 add_executable(test_simulated_model SimulatedModelTest.cpp)
 target_link_libraries(test_simulated_model PRIVATE
