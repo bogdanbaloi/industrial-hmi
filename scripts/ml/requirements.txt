@@ -1,0 +1,30 @@
+# ML pipeline dependencies for the Phase 0 export + quantization +
+# benchmark scripts. Pinned to known-good versions so a fresh install
+# six months from now still produces the same .onnx files.
+#
+# Why each package:
+#   torch / torchvision  -- pre-trained MobileNetV2 weights and the
+#                           torch.onnx.export() function. We never train,
+#                           only consume the published checkpoint.
+#   onnx                 -- on-disk format reader/writer; needed by both
+#                           the exporter and the quantization tool to
+#                           parse and rewrite the model graph.
+#   onnxruntime          -- the inference engine. Same package the C++
+#                           side will link against in Phase 1; using it
+#                           here in Python guarantees the export is
+#                           consumable by the same runtime.
+#   pillow               -- image decoding (JPEG / PNG -> numpy array).
+#                           Used by sanity_check.py to feed a real photo
+#                           through the model.
+#   numpy                -- explicit pin even though torch already pulls
+#                           it in. The benchmark script does percentile
+#                           math directly on numpy arrays; pinning
+#                           prevents subtle dtype changes between minor
+#                           versions.
+
+torch==2.5.1
+torchvision==0.20.1
+onnx==1.17.0
+onnxruntime==1.20.1
+pillow==11.0.0
+numpy==2.1.3

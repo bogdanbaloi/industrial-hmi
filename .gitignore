@@ -37,3 +37,12 @@ Thumbs.db
 # Debug
 .gdb_history
 /core
+
+# ML pipeline artifacts -- regenerated from scripts/ml/*.py, do not
+# version-control binary models.
+assets/models/*.onnx
+scripts/ml/.venv/
+scripts/ml/__pycache__/
+scripts/ml/benchmark-results.json
+**/__pycache__/
+*.pyc
