@@ -389,10 +389,88 @@ jobs:
         echo "- Lines of code: $(find src -name '*.cpp' -o -name '*.h' -exec cat {} \; | wc -l)" >> $GITHUB_STEP_SUMMARY
         echo "- Commits: $(git rev-list --count HEAD)" >> $GITHUB_STEP_SUMMARY
 
+  ml-integration:
+    name: ML Integration (ONNX inference)
+    runs-on: ubuntu-24.04
+
+    # Drives the full Edge AI story end-to-end on every PR:
+    #   1. Run the Python pipeline to produce mobilenetv2_fp32.onnx +
+    #      mobilenetv2_int8.onnx + imagenet_labels.txt under assets/models/.
+    #   2. Pull a prebuilt ONNX Runtime via scripts/setup-onnxruntime.sh.
+    #   3. Configure the C++ build with BUILD_ML_CLASSIFIER=ON and run
+    #      the OnnxImageClassifier integration test.
+    #
+    # The job stays green even when the rest of the pipeline can't reach
+    # this point: any of the steps fail loudly so the CV-side claim of
+    # "integration test runs end-to-end on CI" is observable from the
+    # checks on each PR.
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install C++ Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
+          libgtest-dev libgmock-dev
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install Python pipeline deps
+      run: |
+        pip install --upgrade pip
+        pip install -r scripts/ml/requirements.txt
+
+    - name: Run ML pipeline (export FP32 + quantize INT8 + labels)
+      run: |
+        mkdir -p assets/models
+        python scripts/ml/export_model.py \
+          --output assets/models/mobilenetv2_fp32.onnx
+        python scripts/ml/quantize_model.py \
+          --input  assets/models/mobilenetv2_fp32.onnx \
+          --output assets/models/mobilenetv2_int8.onnx
+        # Labels file is committed under assets/models/, but regenerate
+        # in CI as a defence against accidental drift.
+        python scripts/ml/export_labels.py \
+          --output assets/models/imagenet_labels.txt
+
+    - name: Setup ONNX Runtime
+      run: bash scripts/setup-onnxruntime.sh
+
+    - name: Configure
+      run: |
+        cmake -S . -B build/ml -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTS=ON \
+          -DBUILD_ML_CLASSIFIER=ON \
+          -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime"
+
+    - name: Build ML targets
+      run: |
+        cmake --build build/ml \
+          --target test_image_classifier test_onnx_image_classifier \
+          -- -j$(nproc)
+
+    - name: Run integration test
+      working-directory: build/ml
+      env:
+        # ORT shared library lives in the prebuilt distribution; the
+        # binary is RPATH-less so we point the dynamic linker at it.
+        LD_LIBRARY_PATH: ${{ github.workspace }}/build/onnxruntime/lib
+      run: |
+        ctest --output-on-failure \
+          -R 'ImageClassifierTest|OnnxImageClassifierTest'
+
   summary:
     name: Pipeline Summary
     runs-on: ubuntu-24.04
-    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, documentation]
+    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, ml-integration, documentation]
     if: always()
 
     steps:
@@ -407,4 +485,5 @@ jobs:
         echo "| Clang-Tidy | ${{ needs.clang-tidy.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Coverage | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Sanitizers | ${{ needs.sanitizers.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| ML Integration | ${{ needs.ml-integration.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY
