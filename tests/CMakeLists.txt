@@ -215,6 +215,38 @@ target_link_libraries(test_image_decoder PRIVATE
 )
 add_test(NAME ImageDecoderTest COMMAND test_image_decoder)
 
+# ML: ImageClassifier interface contract -- exercised through the
+# header-only FakeImageClassifier. No model load, no ONNX Runtime,
+# pure C++. Pins the behaviour every concrete subclass must respect.
+add_executable(test_image_classifier ImageClassifierTest.cpp)
+target_link_libraries(test_image_classifier PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME ImageClassifierTest COMMAND test_image_classifier)
+
+# ML: OnnxImageClassifier integration -- builds only when the ONNX
+# Runtime classifier itself is enabled, since the test loads a real
+# .onnx file via ORT. The test skips at run time if the model file
+# is not present, so the binary is safe to run on any environment.
+if(BUILD_ML_CLASSIFIER)
+    add_executable(test_onnx_image_classifier OnnxImageClassifierTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/ml/OnnxImageClassifier.cpp
+        ${CMAKE_SOURCE_DIR}/src/ml/ImageDecoder.cpp
+        ${CMAKE_SOURCE_DIR}/src/ml/ImageNetPreprocessor.cpp
+        ${CMAKE_SOURCE_DIR}/src/ml/ImageNetLabels.cpp)
+    target_include_directories(test_onnx_image_classifier
+        SYSTEM PRIVATE ${stb_image_SOURCE_DIR})
+    target_link_libraries(test_onnx_image_classifier PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        OnnxRuntime::OnnxRuntime
+    )
+    add_test(NAME OnnxImageClassifierTest
+             COMMAND test_onnx_image_classifier
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endif()
+
 # Model: SimulatedModel (singleton, no GTK)
 add_executable(test_simulated_model SimulatedModelTest.cpp)
 target_link_libraries(test_simulated_model PRIVATE

@@ -143,6 +143,13 @@ jobs:
           libgtest-dev libgmock-dev \
           clang-tidy
 
+    # ONNX Runtime is needed at configure time so OnnxImageClassifier.cpp
+    # ends up in compile_commands.json with the right -I flags. Without
+    # it, clang-tidy falls back to default flags on that source file
+    # and fails to find <onnxruntime_cxx_api.h>.
+    - name: Setup ONNX Runtime
+      run: bash scripts/setup-onnxruntime.sh
+
     # Configure only -- we don't need a full build, just the
     # compile_commands.json database so clang-tidy can resolve includes.
     - name: Configure (generate compile_commands.json)
@@ -150,6 +157,8 @@ jobs:
         cmake -S . -B build/tidy -G Ninja \
           -DCMAKE_BUILD_TYPE=Debug \
           -DBUILD_TESTS=ON \
+          -DBUILD_ML_CLASSIFIER=ON \
+          -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime" \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
     - name: Run clang-tidy on src/
