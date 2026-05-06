@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Edge AI inference
+
+- **Phase 0 -- Python model preparation pipeline.** New `scripts/ml/`
+  folder with `export_model.py` (MobileNetV2 -> FP32 ONNX, opset 17,
+  dynamic batch axis), `quantize_model.py` (dynamic INT8 of `MatMul`
+  / `Linear` layers via `onnxruntime.quantization`),
+  `sanity_check.py` (PyTorch FP32 vs ONNX FP32 numerical, INT8 top-1
+  + confidence delta), `benchmark.py` (warmup + 200 measurement
+  iterations, p50 / p90 / p95 / p99 latency, hostname + CPU metadata
+  in JSON), and `export_labels.py` (one-shot fetch of the canonical
+  1000-class ImageNet labels). Result: 75% size reduction (13.3 MB
+  -> 3.5 MB) with top-1 match preserved.
+- **Phase 1a -- C++ foundation.** New `objectsMl` library with
+  `Image` (RGB POD), `ImageDecoder` (stb_image facade, RGB-forced),
+  `Preprocessor` interface + `ImageNetPreprocessor` (bilinear
+  resize 256 / centre-crop 224 / float32 normalize with torchvision
+  ImageNet mean+std, NCHW output), and `ImageNetLabels` (line-based
+  loader, BOM + CRLF tolerant). stb_image vendored via FetchContent
+  pinned to a specific commit, routed to `_deps/stb-vendor/` so
+  clang-tidy treats it as third-party.
+- **Phase 1b -- Inference layer.** `ImageClassifier` abstract
+  interface, header-only `FakeImageClassifier` for upstream tests,
+  and `OnnxImageClassifier` (ONNX Runtime backend, pimpl so ORT
+  headers stay out of the public surface). New CMake option
+  `BUILD_ML_CLASSIFIER` (default OFF) gates the ORT-dependent source
+  + test. Hand-rolled `cmake/FindOnnxRuntime.cmake` + one-shot
+  `scripts/setup-onnxruntime.sh` download helper.
+- **CI -- `ml-integration` job.** Runs the Python pipeline (export
+  + quantize + labels), pulls a prebuilt ONNX Runtime, configures
+  with `BUILD_ML_CLASSIFIER=ON`, and executes the
+  `OnnxImageClassifierTest` integration test against the freshly
+  produced model on every PR. End-to-end story validated in CI.
+
+### Testing -- ML
+
+- **`ImageNetLabelsTest`** (9 cases) -- vector + file constructors,
+  bounds, BOM and CRLF tolerance, missing / empty file errors.
+- **`ImageNetPreprocessorTest`** (8 cases) -- output shape, throws
+  on bad input, ImageNet normalisation maths against analytic
+  expected values.
+- **`ImageDecoderTest`** (4 cases) -- contract tests + a hand-rolled
+  1x1 BMP byte buffer to verify the RGB / channel-order pipeline.
+- **`ImageClassifierTest`** (7 cases) -- interface contract pinned
+  through `FakeImageClassifier`: descending confidence sort, k-bound,
+  k-zero / k-negative throws, label resolution, stable name.
+- **`OnnxImageClassifierTest`** (3 cases) -- end-to-end load / Run /
+  softmax / top-K / label resolution against the real INT8 model.
+  Skips gracefully when the model is absent.
+
 ### Integration layer (framework reuse across verticals)
 
 - **`Serializer` interface** with `CsvSerializer` + `JsonSerializer`

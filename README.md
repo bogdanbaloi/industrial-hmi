@@ -404,6 +404,74 @@ against the spec; `MqttPublisherTest` (10 cases) drives the publisher
 against an in-process mock broker; `ProductionTelemetryBridgeTest` (8
 cases) verifies the domain mapping in isolation.
 
+## Edge AI Inference
+
+A second integration vertical: load a quantized neural network and
+classify images on the same industrial PC the HMI runs on -- no
+cloud round-trip, no GPU required. The story is built in two phases
+that mirror the deployment-side workflow of a real Edge AI team.
+
+**Phase 0 -- Model preparation pipeline (Python).** Under
+`scripts/ml/`, four scripts produce the deployment artifact:
+
+| Script | Purpose |
+|---|---|
+| `export_model.py` | Pull pre-trained MobileNetV2 weights from torchvision, trace the forward pass, write an FP32 `.onnx` file (opset 17) |
+| `quantize_model.py` | Dynamic INT8 quantization of `MatMul` and `Linear` layers (no calibration data needed) |
+| `sanity_check.py` | Cross-validate PyTorch FP32 against ONNX FP32 (`atol 1e-4`); compare INT8 top-1 + confidence delta against FP32 |
+| `benchmark.py` | Warmup + 200 measurement iterations; reports p50/p90/p95/p99 latency with hostname + CPU metadata |
+| `export_labels.py` | One-shot fetch of the canonical 1000-class ImageNet label list to `assets/models/imagenet_labels.txt` |
+
+Phase 0 demonstrates the deployment-side knowledge that gets a model
+ready for production: ONNX export, dynamic quantization (75% size
+reduction on MobileNetV2), and a measurement methodology that reports
+percentiles instead of averages.
+
+**Phase 1 -- C++ inference layer.** Under `src/ml/`, an
+`ImageClassifier` interface plus an ONNX Runtime backend:
+
+```
+src/ml/
+  Image.h                       Decoded RGB pixel buffer (POD)
+  ImageDecoder.{h,cpp}          stb_image facade for PNG / JPEG / BMP
+  Preprocessor.h                Format-agnostic interface
+  ImageNetPreprocessor.{h,cpp}  Resize 256 / centre-crop 224 / normalize
+  ImageNetLabels.{h,cpp}        Class id -> label string (BOM tolerant)
+  Classification.h              {classId, label, confidence} POD
+  ImageClassifier.h             Abstract interface, throws on bad input
+  FakeImageClassifier.h         Header-only test double for upstream tests
+  OnnxImageClassifier.{h,cpp}   ORT-backed classifier (pimpl: ORT
+                                headers stay out of public surface)
+```
+
+The interface design follows MVP: presenters depend on
+`ImageClassifier&`, never on a concrete subclass. Swapping the runtime
+(libtorch, TensorRT, OpenVINO) is a new subclass; nothing upstream
+changes. `FakeImageClassifier` lets UI tests run without ONNX Runtime
+in their link line.
+
+The ORT-backed classifier is built behind a CMake option so the
+existing build path stays unchanged when the Edge AI pieces are not
+needed:
+
+```bash
+bash scripts/setup-onnxruntime.sh           # one-shot prebuilt download
+cmake -S . -B build/release -G Ninja \
+    -DBUILD_TESTS=ON \
+    -DBUILD_ML_CLASSIFIER=ON \
+    -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime"
+cmake --build build/release -- -j$(nproc)
+ctest --output-on-failure -R 'ImageClassifierTest|OnnxImageClassifierTest'
+```
+
+Coverage: 7 `ImageClassifierTest` cases pin the contract every
+concrete classifier must respect (sort by descending confidence,
+honour `k`, throw on `k <= 0`, stable name); 3 `OnnxImageClassifierTest`
+cases load the real INT8 model end-to-end (skip gracefully when the
+artifact is absent so the test binary stays runnable everywhere).
+The CI `ml-integration` job runs the Python pipeline + the C++ build
++ the integration test on every PR.
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -413,8 +481,9 @@ cases) verifies the domain mapping in isolation.
 | Database | SQLite3 (in-memory, prepared statements) |
 | Async I/O | Boost.Asio io_context with work guard, posted via std::jthread |
 | Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled publisher (no paho dep) |
+| Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros) |
-| Testing | GoogleTest + gmock (37 ctest targets) |
+| Testing | GoogleTest + gmock (40+ ctest targets) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |

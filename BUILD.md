@@ -105,6 +105,47 @@ Output: `install/industrial-hmi_<type>_<git-hash>.tar.gz`
 
 ---
 
+## Edge AI Inference (Optional)
+
+The Edge AI layer (`OnnxImageClassifier`) is opt-in through the
+`BUILD_ML_CLASSIFIER` CMake option. The default build does not depend
+on ONNX Runtime; turning the option on pulls a prebuilt distribution
+into `build/onnxruntime/` and links it into the existing
+`objectsMl` library.
+
+```bash
+# Step 1: download the prebuilt ONNX Runtime once.
+bash scripts/setup-onnxruntime.sh
+
+# Step 2: configure with the option turned on.
+cmake -S . -B build/release -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_TESTS=ON \
+    -DBUILD_ML_CLASSIFIER=ON \
+    -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime"
+
+# Step 3: build.
+cmake --build build/release -- -j$(nproc)
+```
+
+For the integration test (`OnnxImageClassifierTest`) to actually load
+a model -- rather than skip with "model not found" -- the Python
+pipeline under `scripts/ml/` must produce
+`assets/models/mobilenetv2_int8.onnx` first. See `scripts/ml/README.md`
+for the four-step pipeline.
+
+```bash
+# After the C++ build above:
+cd build/release
+LD_LIBRARY_PATH=$(pwd)/../onnxruntime/lib \
+    ctest --output-on-failure -R OnnxImageClassifierTest
+```
+
+The CI workflow's `ml-integration` job runs this exact sequence on
+every PR.
+
+---
+
 ## Running with Sanitizer Suppressions (Linux)
 
 Debug builds on Linux enable AddressSanitizer, which reports known
