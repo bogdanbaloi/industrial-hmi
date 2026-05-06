@@ -5,6 +5,7 @@
 #include "src/presenter/modelview/ControlPanelViewModel.h"
 #include "src/presenter/modelview/WorkUnitViewModel.h"
 #include "src/presenter/modelview/EquipmentCardViewModel.h"
+#include "src/presenter/modelview/InspectionResultViewModel.h"
 #include "src/presenter/modelview/PlaceholderViewModels.h"
 #include <string>
 
@@ -120,6 +121,31 @@ public:
 
     /// Called to hide the reset panel completely
     virtual void onResetProcessHide() {}
+
+    /// Edge AI inspection callbacks
+    ///
+    /// Lifecycle for one `inspectFile` call:
+    ///   1. `onInspectionStarted(path)`  -- view shows spinner / disables
+    ///      the inspect button so the operator cannot fire two requests
+    ///      while the first is in flight.
+    ///   2. Either `onInspectionCompleted(viewModel)` on success, OR
+    ///      `onInspectionFailed(path, message)` on decode / inference
+    ///      error. Exactly one of these fires per started call.
+    /// Called when an inspection run begins.
+    /// @param sourcePath absolute path of the image being inspected.
+    virtual void onInspectionStarted(const std::string& /*sourcePath*/) {}
+
+    /// Called when an inspection run completes successfully.
+    /// @param viewModel top-K classifications + latency + source path.
+    virtual void
+        onInspectionCompleted(const presenter::InspectionResultViewModel&
+                              /*viewModel*/) {}
+
+    /// Called when an inspection run fails.
+    /// @param sourcePath the path that failed.
+    /// @param errorMessage human-readable cause.
+    virtual void onInspectionFailed(const std::string& /*sourcePath*/,
+                                    const std::string& /*errorMessage*/) {}
 };
 
 }  // namespace app

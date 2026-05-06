@@ -308,22 +308,31 @@ target_sources(objectsPresenter
     PRIVATE
         src/presenter/DashboardPresenter.cpp
         src/presenter/ProductsPresenter.cpp
+        src/presenter/QualityInspectionPresenter.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
             src/presenter/BasePresenter.h
             src/presenter/DashboardPresenter.h
             src/presenter/ProductsPresenter.h
+            src/presenter/QualityInspectionPresenter.h
             src/presenter/ViewObserver.h
             src/presenter/modelview/EquipmentCardViewModel.h
             src/presenter/modelview/QualityCheckpointViewModel.h
             src/presenter/modelview/ControlPanelViewModel.h
             src/presenter/modelview/WorkUnitViewModel.h
+            src/presenter/modelview/InspectionResultViewModel.h
             src/presenter/modelview/PlaceholderViewModels.h
 )
+# QualityInspectionPresenter depends on the ML interfaces
+# (ImageClassifier, ImageDecoder). objectsMl is GTK-free and always
+# compiled, so the link addition is cost-free for non-ML builds; only
+# OnnxImageClassifier.cpp inside that lib is gated by
+# BUILD_ML_CLASSIFIER.
 target_link_libraries(objectsPresenter
     PUBLIC
         objectsModel
+        objectsMl
         ${BOOST_TARGET}
         Threads::Threads
 )
@@ -378,7 +387,14 @@ endif()
 # The ONNX-runtime-backed classifier (OnnxImageClassifier) compiles
 # only when BUILD_ML_CLASSIFIER=ON, so the foundation pieces stay
 # usable on builds without an ONNX Runtime install.
-add_library(objectsMl OBJECT)
+#
+# STATIC, not OBJECT: objectsPresenter depends on this for
+# QualityInspectionPresenter, and CMake OBJECT libraries do not
+# propagate their object files transitively through other OBJECT
+# libraries to downstream test binaries. STATIC archives propagate
+# correctly, and the linker dead-strips symbols not referenced by
+# the final binary so the size impact is nil.
+add_library(objectsMl STATIC)
 target_sources(objectsMl
     PRIVATE
         src/ml/ImageDecoder.cpp
