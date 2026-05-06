@@ -374,9 +374,11 @@ target_sources(objectsMl
             src/ml/ImageNetLabels.h
 )
 # stb_image.h sits in the FetchContent source dir; PRIVATE because no
-# header in our public surface re-exposes it. Consumers see only `Image`
-# and our own decoder facade.
-target_include_directories(objectsMl PRIVATE ${stb_image_SOURCE_DIR})
+# header in our public surface re-exposes it. SYSTEM marks the include
+# as third-party so clang-tidy skips diagnostics inside the header --
+# stb is C-style code that intentionally trips every modern C++ rule
+# (magic numbers, signed bitwise, manual malloc, identifier naming).
+target_include_directories(objectsMl SYSTEM PRIVATE ${stb_image_SOURCE_DIR})
 
 # Console Layer - Headless front-end. Shares the Model + Presenter
 # layer with the GTK View, proving MVP's View-swap promise. Links zero

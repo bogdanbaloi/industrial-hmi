@@ -204,11 +204,11 @@ add_test(NAME ImageNetPreprocessorTest COMMAND test_image_net_preprocessor)
 # ML: ImageDecoder -- stb_image-backed PNG / JPEG / BMP decoder. Test
 # compiles the source directly so we keep a flat link line; the
 # stb_image header lives under the FetchContent source dir, threaded
-# through PRIVATE include dirs the same way the production library
-# wires it.
+# through SYSTEM PRIVATE include dirs (matches the production library)
+# so clang-tidy treats it as third-party and stays out of it.
 add_executable(test_image_decoder ImageDecoderTest.cpp
     ${CMAKE_SOURCE_DIR}/src/ml/ImageDecoder.cpp)
-target_include_directories(test_image_decoder PRIVATE ${stb_image_SOURCE_DIR})
+target_include_directories(test_image_decoder SYSTEM PRIVATE ${stb_image_SOURCE_DIR})
 target_link_libraries(test_image_decoder PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes

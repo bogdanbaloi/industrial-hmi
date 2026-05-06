@@ -104,13 +104,13 @@ constexpr std::array<float, kChannels> kImageNetStd = {
             const float dx = xs - static_cast<float>(x0Raw);
 
             for (int c = 0; c < kChannels; ++c) {
-                const float p00 = static_cast<float>(
+                const auto p00 = static_cast<float>(
                     src.pixels[pixelIndex(x0, y0, c, src.width)]);
-                const float p10 = static_cast<float>(
+                const auto p10 = static_cast<float>(
                     src.pixels[pixelIndex(x1, y0, c, src.width)]);
-                const float p01 = static_cast<float>(
+                const auto p01 = static_cast<float>(
                     src.pixels[pixelIndex(x0, y1, c, src.width)]);
-                const float p11 = static_cast<float>(
+                const auto p11 = static_cast<float>(
                     src.pixels[pixelIndex(x1, y1, c, src.width)]);
 
                 const float top = (p00 * (1.0F - dx)) + (p10 * dx);
