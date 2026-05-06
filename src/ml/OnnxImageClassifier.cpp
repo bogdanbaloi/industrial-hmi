@@ -203,7 +203,7 @@ std::vector<Classification>
     }
 
     // 4. Extract logits as a flat float buffer.
-    const float* logits = outputs.front().GetTensorData<float>();
+    const auto* logits = outputs.front().GetTensorData<float>();
     const auto logitInfo = outputs.front().GetTensorTypeAndShapeInfo();
     const std::size_t logitCount = logitInfo.GetElementCount();
     if (logitCount < kMinLogitCount) {
