@@ -10,6 +10,11 @@ project(industrial-hmi
     DESCRIPTION "Industrial HMI MVP Architecture - Cross-Platform (Linux/Windows)"
     LANGUAGES CXX)
 
+# Custom Find* modules live in cmake/. Currently FindOnnxRuntime.cmake
+# only -- Microsoft does not ship a CMake config in their prebuilt
+# tarball, so we hand-rolled one.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # Platform Detection
 if(WIN32)
     # Detect MSYS2/MinGW environment (use pkg-config like Linux)
@@ -99,6 +104,12 @@ endif()
 
 # Unit Tests (opt-in)
 option(BUILD_TESTS "Build unit tests (requires GoogleTest + gmock)" OFF)
+
+# ML inference -- requires ONNX Runtime. Default OFF so the existing
+# build path (no Edge AI dependency) keeps working unchanged. CI turns
+# this ON for jobs that have ONNX Runtime provisioned.
+option(BUILD_ML_CLASSIFIER
+    "Compile OnnxImageClassifier (requires ONNX Runtime)" OFF)
 
 # Platform-Specific Definitions
 if(WIN32)
@@ -363,9 +374,10 @@ endif()
 
 # ML Layer - Edge inference foundation. Image decoding (stb_image),
 # preprocessing (resize / centre-crop / ImageNet normalise), label
-# table. The ONNX classifier slots in on top of these in a follow-up
-# commit; keeping them in their own library means the preprocessor and
-# label loader are testable without the ONNX Runtime dependency.
+# table, ImageClassifier interface + FakeImageClassifier test double.
+# The ONNX-runtime-backed classifier (OnnxImageClassifier) compiles
+# only when BUILD_ML_CLASSIFIER=ON, so the foundation pieces stay
+# usable on builds without an ONNX Runtime install.
 add_library(objectsMl OBJECT)
 target_sources(objectsMl
     PRIVATE
@@ -380,6 +392,9 @@ target_sources(objectsMl
             src/ml/Preprocessor.h
             src/ml/ImageNetPreprocessor.h
             src/ml/ImageNetLabels.h
+            src/ml/Classification.h
+            src/ml/ImageClassifier.h
+            src/ml/FakeImageClassifier.h
 )
 # stb_image.h sits in the FetchContent source dir; PRIVATE because no
 # header in our public surface re-exposes it. SYSTEM marks the include
@@ -387,6 +402,27 @@ target_sources(objectsMl
 # stb is C-style code that intentionally trips every modern C++ rule
 # (magic numbers, signed bitwise, manual malloc, identifier naming).
 target_include_directories(objectsMl SYSTEM PRIVATE ${stb_image_SOURCE_DIR})
+
+# Optional: compile OnnxImageClassifier and link the ONNX Runtime
+# session into the same object library when BUILD_ML_CLASSIFIER=ON.
+# The header (`OnnxImageClassifier.h`) is added regardless so consumers
+# get a stable include path, but the symbol is only available when the
+# implementation is compiled in.
+if(BUILD_ML_CLASSIFIER)
+    find_package(OnnxRuntime REQUIRED)
+    message(STATUS "ONNX Runtime: ${OnnxRuntime_VERSION} "
+                   "(${OnnxRuntime_LIBRARY})")
+    target_sources(objectsMl
+        PRIVATE
+            src/ml/OnnxImageClassifier.cpp
+        PUBLIC
+            FILE_SET HEADERS
+            FILES
+                src/ml/OnnxImageClassifier.h
+    )
+    target_link_libraries(objectsMl PUBLIC OnnxRuntime::OnnxRuntime)
+    target_compile_definitions(objectsMl PUBLIC HAVE_ONNX_RUNTIME=1)
+endif()
 
 # Console Layer - Headless front-end. Shares the Model + Presenter
 # layer with the GTK View, proving MVP's View-swap promise. Links zero
