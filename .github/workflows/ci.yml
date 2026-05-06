@@ -155,7 +155,11 @@ jobs:
     - name: Run clang-tidy on src/
       run: |
         # -quiet suppresses progress lines so only diagnostics remain.
-        # -header-filter restricts warnings to our headers (ignores gtkmm etc.).
+        # -header-filter='src/.*' is a substring-style filter that catches
+        # our own src/ subtree while keeping system gtkmm / glibmm /
+        # cairomm headers (under /usr/include/) out of the report. The
+        # vendored stb_image.h FetchContent dir is renamed to _deps/stb-
+        # vendor/ in CMakeLists.txt so it does NOT match this filter.
         # WarningsAsErrors='*' in .clang-tidy makes any diagnostic a hard
         # error, so xargs returns non-zero on the first offending file --
         # no need for a post-hoc grep over the report. We still tee a

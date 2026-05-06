@@ -157,6 +157,26 @@ set(GETTEXT_DOMAIN "industrial-hmi")
 find_package(Gettext)  # msgfmt + msgmerge (translators only need the former)
 find_package(Intl)     # libintl (MSVC/MinGW expose it as a separate library)
 
+# stb_image - public-domain single-header image decoder (PNG / JPEG / BMP /
+# ...). Used by src/ml/ImageDecoder.cpp; nothing else in the project sees
+# it. Pinned to a specific upstream commit for reproducibility; FetchContent
+# caches under build/_deps/ across builds so the network hit happens once.
+#
+# SOURCE_DIR is overridden away from the default `_deps/stb_image-src/`
+# because the CI clang-tidy step uses `-header-filter='src/.*'`, which
+# substring-matches paths containing "src/" anywhere -- including
+# "_deps/stb_image-src/". The resulting analyzer diagnostics inside the
+# vendored header would fail the build. Routing into `_deps/stb-vendor/`
+# keeps the regex unmatched so third-party code stays out of our checks.
+include(FetchContent)
+FetchContent_Declare(stb_image
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG        f0569113c93ad095470c54bf34a17b36646bbbb5
+    GIT_SHALLOW    FALSE
+    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/stb-vendor
+)
+FetchContent_MakeAvailable(stb_image)
+
 # Object Libraries (Modular Build Pattern)
 
 # Model Layer - Data and business logic simulation
@@ -341,6 +361,33 @@ if(WIN32)
     target_link_libraries(objectsIntegration PUBLIC ws2_32 mswsock)
 endif()
 
+# ML Layer - Edge inference foundation. Image decoding (stb_image),
+# preprocessing (resize / centre-crop / ImageNet normalise), label
+# table. The ONNX classifier slots in on top of these in a follow-up
+# commit; keeping them in their own library means the preprocessor and
+# label loader are testable without the ONNX Runtime dependency.
+add_library(objectsMl OBJECT)
+target_sources(objectsMl
+    PRIVATE
+        src/ml/ImageDecoder.cpp
+        src/ml/ImageNetPreprocessor.cpp
+        src/ml/ImageNetLabels.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/ml/Image.h
+            src/ml/ImageDecoder.h
+            src/ml/Preprocessor.h
+            src/ml/ImageNetPreprocessor.h
+            src/ml/ImageNetLabels.h
+)
+# stb_image.h sits in the FetchContent source dir; PRIVATE because no
+# header in our public surface re-exposes it. SYSTEM marks the include
+# as third-party so clang-tidy skips diagnostics inside the header --
+# stb is C-style code that intentionally trips every modern C++ rule
+# (magic numbers, signed bitwise, manual malloc, identifier naming).
+target_include_directories(objectsMl SYSTEM PRIVATE ${stb_image_SOURCE_DIR})
+
 # Console Layer - Headless front-end. Shares the Model + Presenter
 # layer with the GTK View, proving MVP's View-swap promise. Links zero
 # gtkmm (see architecture receipt in README).
@@ -441,6 +488,7 @@ target_link_libraries(industrial-hmi
         objectsPresenter
         objectsView
         objectsIntegration
+        objectsMl
         Threads::Threads
 )
 
@@ -465,6 +513,7 @@ target_link_libraries(industrial-hmi-console
         objectsPresenter
         objectsConsole
         objectsIntegration
+        objectsMl
         Threads::Threads
 )
 if(WIN32)
