@@ -225,6 +225,25 @@ target_link_libraries(test_image_classifier PRIVATE
 )
 add_test(NAME ImageClassifierTest COMMAND test_image_classifier)
 
+# Presenter: QualityInspectionPresenter -- glues ImageClassifier +
+# ImageDecoder + ViewObserver. Synchronous, pure C++; no ONNX
+# Runtime needed since the test injects a FakeImageClassifier. The
+# real ImageDecoder is used so the file-not-found error path is
+# exercised end-to-end, plus a tiny BMP fixture round-trips through
+# stb_image.
+add_executable(test_quality_inspection_presenter
+    QualityInspectionPresenterTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/presenter/QualityInspectionPresenter.cpp
+    ${CMAKE_SOURCE_DIR}/src/ml/ImageDecoder.cpp)
+target_include_directories(test_quality_inspection_presenter
+    SYSTEM PRIVATE ${stb_image_SOURCE_DIR})
+target_link_libraries(test_quality_inspection_presenter PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME QualityInspectionPresenterTest
+         COMMAND test_quality_inspection_presenter)
+
 # ML: OnnxImageClassifier integration -- builds only when the ONNX
 # Runtime classifier itself is enabled, since the test loads a real
 # .onnx file via ORT. The test skips at run time if the model file
