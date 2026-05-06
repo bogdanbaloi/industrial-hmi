@@ -161,11 +161,19 @@ find_package(Intl)     # libintl (MSVC/MinGW expose it as a separate library)
 # ...). Used by src/ml/ImageDecoder.cpp; nothing else in the project sees
 # it. Pinned to a specific upstream commit for reproducibility; FetchContent
 # caches under build/_deps/ across builds so the network hit happens once.
+#
+# SOURCE_DIR is overridden away from the default `_deps/stb_image-src/`
+# because the CI clang-tidy step uses `-header-filter='src/.*'`, which
+# substring-matches paths containing "src/" anywhere -- including
+# "_deps/stb_image-src/". The resulting analyzer diagnostics inside the
+# vendored header would fail the build. Routing into `_deps/stb-vendor/`
+# keeps the regex unmatched so third-party code stays out of our checks.
 include(FetchContent)
 FetchContent_Declare(stb_image
     GIT_REPOSITORY https://github.com/nothings/stb.git
     GIT_TAG        f0569113c93ad095470c54bf34a17b36646bbbb5
     GIT_SHALLOW    FALSE
+    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/stb-vendor
 )
 FetchContent_MakeAvailable(stb_image)
 
