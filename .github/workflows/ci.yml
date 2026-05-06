@@ -155,12 +155,11 @@ jobs:
     - name: Run clang-tidy on src/
       run: |
         # -quiet suppresses progress lines so only diagnostics remain.
-        # No -header-filter override here: the in-tree .clang-tidy already
-        # sets HeaderFilterRegex to '.*/(src|include)/.*\.(h|hpp)$', which
-        # is anchored on the /src/ path component. The previous CLI flag
-        # ('src/.*') was a substring match that incidentally also caught
-        # vendored deps with "src" anywhere in their path
-        # (e.g. _deps/stb_image-src/), polluting the diagnostics.
+        # -header-filter='src/.*' is a substring-style filter that catches
+        # our own src/ subtree while keeping system gtkmm / glibmm /
+        # cairomm headers (under /usr/include/) out of the report. The
+        # vendored stb_image.h FetchContent dir is renamed to _deps/stb-
+        # vendor/ in CMakeLists.txt so it does NOT match this filter.
         # WarningsAsErrors='*' in .clang-tidy makes any diagnostic a hard
         # error, so xargs returns non-zero on the first offending file --
         # no need for a post-hoc grep over the report. We still tee a
@@ -170,6 +169,7 @@ jobs:
           xargs -0 clang-tidy \
             -p build/tidy \
             -quiet \
+            -header-filter='src/.*' \
             2>&1 | tee clang-tidy-report.txt
 
     - name: Upload report as artifact

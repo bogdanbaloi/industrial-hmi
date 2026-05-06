@@ -43,6 +43,12 @@
 # - cert-msc32-c / cert-msc51-cpp: SimulatedModel uses a seeded RNG for
 #   reproducible demo data by design.
 # - concurrency-mt-unsafe: one-shot setenv/setlocale during init.
+# - clang-analyzer-unix.Malloc: path-sensitive analyses ignore
+#   HeaderFilterRegex and report through call traces into vendored
+#   third-party headers (notably stb_image.h, which deliberately uses
+#   raw malloc / free for portability). The check is a false-positive
+#   generator in our codebase; suppressing it surgically beats wrapping
+#   every stb call in NOLINT.
 
 Checks: >
   *,
@@ -122,6 +128,7 @@ Checks: >
   -cert-msc51-cpp,
   -cert-dcl21-cpp,
   -concurrency-mt-unsafe,
+  -clang-analyzer-unix.Malloc,
   -portability-avoid-pragma-once,
   -hicpp-use-equals-delete,
   -modernize-use-equals-delete,
