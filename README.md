@@ -169,14 +169,38 @@ src/
     ConsoleView         ViewObserver impl + jthread stdin reader
     InitConsole         Composition root for the console binary
 
+  integration/          Format-agnostic data + telemetry backends
+    Serializer          CSV / JSON concretes (interface-driven)
+    IntegrationBackend  start / stop / isRunning lifecycle abstraction
+    IntegrationManager  Composition root, per-backend exception tolerance
+    TcpBackend          Line-protocol server over Boost.Asio
+    TelemetryPublisher  Generic publish(topic, payload) interface
+    MqttPacket          Hand-rolled MQTT 3.1.1 wire format
+    MqttPublisher       MQTT publisher (no paho dep, work-guarded io_context)
+    ProductionTelemetryBridge   Manufacturing reference bridge
+
+  ml/                   Edge AI inference (BUILD_ML_CLASSIFIER=ON)
+    Image / ImageDecoder        RGB POD + stb_image decoder facade
+    Preprocessor / ImageNetPreprocessor   Resize / centre-crop / normalize
+    ImageNetLabels      Class id -> label string loader
+    Classification      {classId, label, confidence} POD
+    ImageClassifier     Abstract interface + FakeImageClassifier double
+    OnnxImageClassifier ONNX Runtime backend (pimpl, ORT out of public API)
+
 assets/
   ui/                   GtkBuilder XML layouts (multi-layout)
   styles/               Base CSS + 8 palette overlays
   icons/  images/       App resources
+  models/               imagenet_labels.txt (.onnx artifacts gitignored)
+
+scripts/
+  ml/                   Python pipeline: export / quantize / sanity / benchmark
+  setup-onnxruntime.sh  Prebuilt ONNX Runtime download helper
 
 po/                     gettext catalogs (11 languages)
 config/                 app-config.json
-tests/                  31 ctest targets (see Testing section)
+cmake/                  FindOnnxRuntime.cmake
+tests/                  40+ ctest targets (see Testing section)
 ```
 
 ## Test Strategy
