@@ -44,16 +44,27 @@ using DestroyFn = void (*)(ImageClassifier*);
 /// `dlopen("name")` only searches the system paths + `LD_LIBRARY_PATH`,
 /// so we also try `./name` to pick up the plugin sitting next to the
 /// binary at run time.
-const std::array<const char*, 2> kPluginFilenames = {
+///
+/// MSYS2 / MinGW toolchains build SHARED MODULE libraries with a
+/// `lib` prefix on Windows (Linux convention) instead of the bare
+/// MSVC convention -- so we probe both `industrial_ml_ort.dll` and
+/// `libindustrial_ml_ort.dll` on Windows.
+const std::array<const char*, 4> kPluginFilenames = {
 #if defined(_WIN32)
     "industrial_ml_ort.dll",
     ".\\industrial_ml_ort.dll",
+    "libindustrial_ml_ort.dll",
+    ".\\libindustrial_ml_ort.dll",
 #elif defined(__APPLE__)
     "libindustrial_ml_ort.dylib",
     "./libindustrial_ml_ort.dylib",
+    "industrial_ml_ort.dylib",
+    "./industrial_ml_ort.dylib",
 #else
     "libindustrial_ml_ort.so",
     "./libindustrial_ml_ort.so",
+    "industrial_ml_ort.so",
+    "./industrial_ml_ort.so",
 #endif
 };
 
