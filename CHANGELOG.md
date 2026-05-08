@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Edge AI inference -- runtime plugin
+
+- **`industrial_ml_ort` shared module + facade pattern.** All ORT-
+  touching code moved into a dedicated SHARED MODULE library that
+  `OnnxImageClassifier.cpp` `dlopen`s / `LoadLibrary`s on first
+  construction. The host binary `industrial-hmi.exe` no longer links
+  libonnxruntime; ORT enters the process address space only when an
+  inspection actually happens. Avoids the runtime conflict between
+  ORT's bundled dependencies (abseil, MLAS, custom allocators) and
+  GTK4's libglib allocator that otherwise corrupts the heap during
+  widget class registration on Linux + Windows GUI paths.
+- C++ exports a stable C ABI (`industrial_ml_create_onnx_classifier`,
+  `industrial_ml_destroy_classifier`) so the facade -- plugin contract
+  is compiler-agnostic. Cross-DLL ownership is symmetrical: each side
+  owns what it allocates, the host calls the plugin's destroy
+  function pointer to release the classifier instance.
+- New `cmake/FindOnnxRuntime.cmake` only used by the plugin target;
+  the facade in `objectsMl` only needs `<dlfcn.h>` / `<windows.h>`.
+
+### Edge AI inference -- UI integration
+
+- **Phase 2a -- `QualityInspectionPresenter`.** Synchronous orchestrator
+  with DI on `const ImageClassifier&` + `const ImageDecoder&`. Notifies
+  `ViewObserver::onInspectionStarted/Completed/Failed` exactly once per
+  call; never throws (catches exceptions from the decoder / classifier
+  and routes them through the failed callback). 6 GoogleTest cases.
+- **Phase 2b -- `QualityInspectionPage` (GTK4).** Notebook tab with
+  `Gtk::FileDialog` picker (PNG / JPEG / BMP filter), `Gtk::Picture`
+  preview, top-K results list with `Gtk::LevelBar` confidence bars.
+  Each inspection runs on a `std::jthread` member; observer callbacks
+  arrive on the worker thread and marshal back to the GTK main loop
+  via `Glib::signal_idle.connect_once` -- the same pattern
+  `DatabaseManager` uses for SQLite callbacks.
+- **Phase 2c -- `MainWindow` integration.** When `BUILD_ML_CLASSIFIER`
+  is on AND `assets/models/mobilenetv2_int8.onnx` + `imagenet_labels.txt`
+  are present, the window instantiates the decoder + labels +
+  `OnnxImageClassifier` + presenter + page and registers the page in
+  the Notebook. Missing artefacts log a warning and skip the tab so
+  the rest of the UI keeps working unchanged.
+- `objectsMl` converted from OBJECT to STATIC: needed so
+  `objectsPresenter` (also OBJECT) can transitively propagate
+  `ImageDecoder` symbols to test binaries; the linker dead-strips
+  unused symbols so the size impact is nil.
+
 ### Edge AI inference
 
 - **Phase 0 -- Python model preparation pipeline.** New `scripts/ml/`

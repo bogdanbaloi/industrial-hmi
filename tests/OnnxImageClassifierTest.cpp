@@ -19,8 +19,6 @@
 #include "src/ml/Classification.h"
 #include "src/ml/Image.h"
 #include "src/ml/ImageDecoder.h"
-#include "src/ml/ImageNetLabels.h"
-#include "src/ml/ImageNetPreprocessor.h"
 #include "src/ml/OnnxImageClassifier.h"
 
 #include <gtest/gtest.h>
@@ -98,11 +96,8 @@ TEST(OnnxImageClassifierTest, LoadsModelAndProducesTopK) {
                      << "scripts/ml/quantize_model.py first.";
     }
 
-    const app::ml::ImageNetPreprocessor preprocessor;
-    const app::ml::ImageNetLabels labels(resolveLabelsPath());
-
     const app::ml::OnnxImageClassifier classifier(
-        resolveModelPath(), preprocessor, labels);
+        resolveModelPath(), resolveLabelsPath());
 
     EXPECT_FALSE(classifier.name().empty());
 
@@ -130,13 +125,11 @@ TEST(OnnxImageClassifierTest, MissingModelPathThrowsAtConstruction) {
         GTEST_SKIP() << "Labels missing; cannot construct classifier "
                      << "to test the model-not-found path.";
     }
-    const app::ml::ImageNetPreprocessor preprocessor;
-    const app::ml::ImageNetLabels labels(resolveLabelsPath());
 
     EXPECT_THROW(
         app::ml::OnnxImageClassifier(
             std::filesystem::path("/no/such/model.onnx"),
-            preprocessor, labels),
+            resolveLabelsPath()),
         std::runtime_error);
 }
 
@@ -144,10 +137,8 @@ TEST(OnnxImageClassifierTest, KZeroThrows) {
     if (!prerequisitesPresent()) {
         GTEST_SKIP() << "Model or labels not found.";
     }
-    const app::ml::ImageNetPreprocessor preprocessor;
-    const app::ml::ImageNetLabels labels(resolveLabelsPath());
     const app::ml::OnnxImageClassifier classifier(
-        resolveModelPath(), preprocessor, labels);
+        resolveModelPath(), resolveLabelsPath());
 
     EXPECT_THROW(
         (void)classifier.classifyTopK(loadFixtureOrSynth(), 0),

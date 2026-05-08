@@ -144,6 +144,39 @@ LD_LIBRARY_PATH=$(pwd)/../onnxruntime/lib \
 The CI workflow's `ml-integration` job runs this exact sequence on
 every PR.
 
+### Architecture: ONNX Runtime as a runtime plugin
+
+The host binary (`industrial-hmi.exe`) does NOT link libonnxruntime.
+Instead, all ORT-touching code lives in a separate shared module
+(`industrial_ml_ort.{dll,so,dylib}`) that the facade `dlopen`s /
+`LoadLibrary`s on first construction of `OnnxImageClassifier`. The
+host binary's `DT_NEEDED` set is identical with and without
+`BUILD_ML_CLASSIFIER` -- ORT only enters the address space when the
+operator clicks the Inspection tab.
+
+This decoupling exists because ORT's prebuilt distribution bundles a
+large set of dependencies (abseil, MLAS, custom allocators) that, when
+loaded into a GTK4 process eagerly, can interact in
+hard-to-predict ways with libglib's allocator across the GTK widget
+class registration path. Loading via plugin keeps the boot path of
+the GUI free of any ORT-side initialization.
+
+### Known issue: WSL live demo
+
+The `industrial-hmi` GUI binary crashes during GTK widget class
+registration (`gtk_widget_class_add_binding_signal`) when launched
+inside WSL2 (Ubuntu 24.04) with `BUILD_ML_CLASSIFIER=ON`. The crash
+reproduces even with the plugin module on disk but never loaded
+(no model file present), so it is not caused by the ORT shared
+library being mapped into the process. The `OnnxImageClassifierTest`
+integration test exercises the full plugin path (load + Run + softmax
++ label resolution) and passes; the GitHub CI `ml-integration` job
+runs on native Ubuntu 24.04 (not WSL) and the test binary path is
+clean. The WSL2 GTK4 corruption appears to be specific to the WSL2
+environment + the `BUILD_ML_CLASSIFIER=ON` link line and is not on
+the deployment path. For visual demos, build on native Linux or
+MSYS2 / Windows.
+
 ---
 
 ## Running with Sanitizer Suppressions (Linux)
