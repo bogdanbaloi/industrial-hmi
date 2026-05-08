@@ -1,5 +1,6 @@
 #include "src/gtk/view/pages/QualityInspectionPage.h"
 
+#include "src/config/config_defaults.h"
 #include "src/core/i18n.h"
 #include "src/gtk/view/DialogManager.h"
 
@@ -9,6 +10,7 @@
 #include <glibmm/main.h>
 #include <glibmm/refptr.h>
 #include <glibmm/ustring.h>
+#include <gtkmm/builder.h>
 #include <gtkmm/filedialog.h>
 #include <gtkmm/filefilter.h>
 
@@ -24,18 +26,6 @@ namespace app::view {
 
 namespace {
 
-/// Margins / spacing in pixels. Pulled out as named constants so the
-/// page reads as configuration rather than a wall of magic literals.
-constexpr int kRootSpacing = 12;
-constexpr int kRootMarginPx = 16;
-constexpr int kToolbarSpacing = 8;
-constexpr int kResultRowSpacing = 6;
-constexpr int kResultsBoxSpacing = 4;
-constexpr int kPreviewMinHeight = 240;
-
-/// Percentage scale factor: 0.42 confidence -> "42.0%".
-constexpr float kPercentScale = 100.0F;
-
 /// Mime types supported by the stb_image-backed decoder. Listed in
 /// the file dialog filter so the picker shows only files we can
 /// actually decode.
@@ -45,29 +35,43 @@ const std::array<const char*, 3> kSupportedMimeTypes = {
     "image/bmp",
 };
 
-/// Build a single result row -- "1. tench, Tinca tinca   42.0%" with
-/// a level bar underneath. Pure helper, no widget reuse: the page
-/// rebuilds the result rows on every Completed callback.
+/// Percentage scale: confidence in [0, 1] -> "42.0%".
+constexpr float kPercentScale = 100.0F;
+
+/// Build a single result row in the right-side results panel. Layout:
+///
+///     [#1]  tench, Tinca tinca                    42.0%
+///           [============================----------------]   (LevelBar)
+///
+/// Pure helper -- the page rebuilds the result rows on every Completed
+/// callback, so each row is a fresh widget tree.
 [[nodiscard]] std::unique_ptr<Gtk::Box>
     makeResultRow(int rank, const ml::Classification& entry) {
-    auto row = std::make_unique<Gtk::Box>(
-        Gtk::Orientation::VERTICAL, kResultRowSpacing);
-    row->set_margin(kResultRowSpacing);
+    auto row = std::make_unique<Gtk::Box>(Gtk::Orientation::VERTICAL, 4);
+    row->add_css_class("inspection-row");
 
     auto* heading = Gtk::make_managed<Gtk::Box>(
-        Gtk::Orientation::HORIZONTAL, kResultRowSpacing);
+        Gtk::Orientation::HORIZONTAL, 8);
 
-    auto* labelText = Gtk::make_managed<Gtk::Label>(
-        std::format("{}. {}", rank, entry.label));
+    auto* rankLabel = Gtk::make_managed<Gtk::Label>(
+        std::format("#{}", rank));
+    rankLabel->add_css_class("inspection-rank");
+    rankLabel->set_halign(Gtk::Align::START);
+    heading->append(*rankLabel);
+
+    auto* labelText = Gtk::make_managed<Gtk::Label>(entry.label);
+    labelText->add_css_class("inspection-label");
     labelText->set_halign(Gtk::Align::START);
     labelText->set_hexpand(true);
+    labelText->set_ellipsize(Pango::EllipsizeMode::END);
+    heading->append(*labelText);
 
     auto* percent = Gtk::make_managed<Gtk::Label>(
         std::format("{:.1f}%", entry.confidence * kPercentScale));
+    percent->add_css_class("inspection-confidence");
     percent->set_halign(Gtk::Align::END);
-
-    heading->append(*labelText);
     heading->append(*percent);
+
     row->append(*heading);
 
     auto* bar = Gtk::make_managed<Gtk::LevelBar>();
@@ -83,18 +87,27 @@ const std::array<const char*, 3> kSupportedMimeTypes = {
 
 QualityInspectionPage::QualityInspectionPage(DialogManager& dialogManager)
     : Page(dialogManager) {
-    set_spacing(kRootSpacing);
-    set_margin(kRootMarginPx);
     buildUi();
+    applyStyles();
+}
+
+void QualityInspectionPage::applyStyles() {
+    cssProvider_ = Gtk::CssProvider::create();
+    try {
+        cssProvider_->load_from_path(app::config::defaults::kInspectionCSS);
+        Gtk::StyleContext::add_provider_for_display(
+            Gdk::Display::get_default(),
+            cssProvider_,
+            GTK_STYLE_PROVIDER_PRIORITY_USER);
+    } catch (const Glib::Error&) {
+        // Stylesheet missing -- non-fatal, page renders with default GTK theme.
+    }
 }
 
 QualityInspectionPage::~QualityInspectionPage() {
     if (presenter_) {
         presenter_->removeObserver(this);
     }
-    // jthread destructor sends stop_request and joins; the worker
-    // body is a synchronous presenter call so it will return on its
-    // own. No explicit stop required.
 }
 
 void QualityInspectionPage::initialize(
@@ -110,32 +123,23 @@ Glib::ustring QualityInspectionPage::pageTitle() const {
 }
 
 void QualityInspectionPage::buildUi() {
-    // Toolbar row -- choose file + idle status label.
-    toolbarRow_.set_spacing(kToolbarSpacing);
-    chooseButton_.set_label(_("Choose image..."));
-    chooseButton_.signal_clicked().connect(
-        sigc::mem_fun(*this, &QualityInspectionPage::onChooseFileClicked));
-    statusLabel_.set_label(_("Pick an image to classify."));
-    statusLabel_.set_halign(Gtk::Align::START);
-    statusLabel_.set_hexpand(true);
-    toolbarRow_.append(chooseButton_);
-    toolbarRow_.append(statusLabel_);
-    append(toolbarRow_);
+    auto builder = Gtk::Builder::create_from_file(
+        app::config::defaults::kInspectionPageUI);
 
-    // Preview -- empty until the user picks a file.
-    preview_.set_can_shrink(true);
-    preview_.set_size_request(-1, kPreviewMinHeight);
-    preview_.set_vexpand(true);
-    append(preview_);
+    if (auto* root = builder->get_widget<Gtk::Box>("inspection_root")) {
+        append(*root);
+    }
 
-    // Results list inside a frame so the section is visually distinct
-    // from the preview above it. The frame label tracks the configured
-    // top-K via the presenter once initialise() runs.
-    resultsBox_.set_spacing(kResultsBoxSpacing);
-    resultsBox_.set_margin(kResultsBoxSpacing);
-    resultsFrame_.set_child(resultsBox_);
-    resultsFrame_.set_label(_("Top results"));
-    append(resultsFrame_);
+    chooseButton_ = builder->get_widget<Gtk::Button>("btn_choose_image");
+    statusLabel_  = builder->get_widget<Gtk::Label>("lbl_status");
+    preview_      = builder->get_widget<Gtk::Picture>("preview_image");
+    resultsBox_   = builder->get_widget<Gtk::Box>("results_box");
+
+    if (chooseButton_ != nullptr) {
+        chooseButton_->signal_clicked().connect(
+            sigc::mem_fun(*this,
+                          &QualityInspectionPage::onChooseFileClicked));
+    }
 }
 
 void QualityInspectionPage::onChooseFileClicked() {
@@ -177,21 +181,17 @@ void QualityInspectionPage::onChooseFileClicked() {
 
 void QualityInspectionPage::runInspection(const std::string& path) {
     if (!presenter_) {
-        renderFailed(path,
-                     std::string("Presenter not initialised"));
+        renderFailed(path, std::string("Presenter not initialised"));
         return;
     }
 
-    // Disable the button while the worker runs; the renderCompleted /
-    // renderFailed callbacks re-enable it. set_filename loads the
-    // preview synchronously so the operator sees the chosen image
-    // immediately, even before the model returns.
-    chooseButton_.set_sensitive(false);
-    preview_.set_filename(path);
+    if (chooseButton_ != nullptr) {
+        chooseButton_->set_sensitive(false);
+    }
+    if (preview_ != nullptr) {
+        preview_->set_filename(path);
+    }
 
-    // jthread destructor on reassignment joins the previous worker
-    // (no overlap), then we kick off the new one. The lambda owns
-    // its captured path string.
     worker_ = std::jthread([this, path]() {
         presenter_->inspectFile(path);
     });
@@ -223,40 +223,63 @@ void QualityInspectionPage::onInspectionFailed(
 }
 
 void QualityInspectionPage::renderStarted(std::string /*sourcePath*/) {
-    statusLabel_.set_label(_("Inspecting..."));
+    if (statusLabel_ != nullptr) {
+        statusLabel_->set_label(_("Inspecting..."));
+        statusLabel_->remove_css_class("error");
+        statusLabel_->remove_css_class("success");
+    }
     clearResultRows();
 }
 
 void QualityInspectionPage::renderCompleted(
     presenter::InspectionResultViewModel viewModel) {
-    chooseButton_.set_sensitive(true);
-
-    statusLabel_.set_label(
-        Glib::ustring::compose("%1 ms", viewModel.latency.count()));
+    if (chooseButton_ != nullptr) {
+        chooseButton_->set_sensitive(true);
+    }
+    if (statusLabel_ != nullptr) {
+        statusLabel_->remove_css_class("error");
+        statusLabel_->add_css_class("success");
+        statusLabel_->set_label(
+            Glib::ustring::compose(
+                "%1: %2 ms",
+                _("Inferred in"),
+                viewModel.latency.count()));
+    }
 
     clearResultRows();
-    int rank = 1;
-    for (const auto& entry : viewModel.results) {
-        resultsBox_.append(*makeResultRow(rank, entry).release());
-        ++rank;
+    if (resultsBox_ != nullptr) {
+        int rank = 1;
+        for (const auto& entry : viewModel.results) {
+            resultsBox_->append(*makeResultRow(rank, entry).release());
+            ++rank;
+        }
     }
 }
 
 void QualityInspectionPage::renderFailed(std::string /*sourcePath*/,
                                          std::string errorMessage) {
-    chooseButton_.set_sensitive(true);
-    statusLabel_.set_label(
-        Glib::ustring::compose("%1: %2",
-                               _("Inspection failed"),
-                               errorMessage));
+    if (chooseButton_ != nullptr) {
+        chooseButton_->set_sensitive(true);
+    }
+    if (statusLabel_ != nullptr) {
+        statusLabel_->remove_css_class("success");
+        statusLabel_->add_css_class("error");
+        statusLabel_->set_label(
+            Glib::ustring::compose("%1: %2",
+                                   _("Inspection failed"),
+                                   errorMessage));
+    }
     clearResultRows();
 }
 
 void QualityInspectionPage::clearResultRows() {
-    auto* child = resultsBox_.get_first_child();
+    if (resultsBox_ == nullptr) {
+        return;
+    }
+    auto* child = resultsBox_->get_first_child();
     while (child != nullptr) {
         auto* next = child->get_next_sibling();
-        resultsBox_.remove(*child);
+        resultsBox_->remove(*child);
         child = next;
     }
 }

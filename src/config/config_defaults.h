@@ -75,15 +75,17 @@ constexpr const char* kMainWindowUI    = "assets/ui/main-window.ui";
 // MainWindow.cpp stays agnostic about which file was loaded.
 constexpr const char* kMainWindowBlueprintUI = "assets/ui/main-window-blueprint.ui";
 constexpr const char* kMainWindowRightUI     = "assets/ui/main-window-right.ui";
-constexpr const char* kDashboardPageUI = "assets/ui/dashboard-page.ui";
-constexpr const char* kProductsPageUI  = "assets/ui/products-page.ui";
-constexpr const char* kSettingsPageUI  = "assets/ui/settings-page.ui";
+constexpr const char* kDashboardPageUI  = "assets/ui/dashboard-page.ui";
+constexpr const char* kProductsPageUI   = "assets/ui/products-page.ui";
+constexpr const char* kSettingsPageUI   = "assets/ui/settings-page.ui";
+constexpr const char* kInspectionPageUI = "assets/ui/inspection-page.ui";
 
 // CSS stylesheets
-constexpr const char* kThemeCSS     = "assets/styles/adwaita-theme.css";
-constexpr const char* kSidebarCSS   = "assets/styles/sidebar.css";
-constexpr const char* kDashboardCSS = "assets/styles/dashboard.css";
-constexpr const char* kProductsCSS  = "assets/styles/products.css";
+constexpr const char* kThemeCSS      = "assets/styles/adwaita-theme.css";
+constexpr const char* kSidebarCSS    = "assets/styles/sidebar.css";
+constexpr const char* kDashboardCSS  = "assets/styles/dashboard.css";
+constexpr const char* kProductsCSS   = "assets/styles/products.css";
+constexpr const char* kInspectionCSS = "assets/styles/inspection.css";
 
 // Palette directory -- one .css file per palette, loaded on top of the
 // base stylesheets by ThemeManager. Filename = palette id (e.g.
