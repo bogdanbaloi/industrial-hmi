@@ -368,6 +368,71 @@ jobs:
         UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
       run: xvfb-run ctest --output-on-failure --no-tests=error
 
+  tsan:
+    name: ThreadSanitizer
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    # GCC 13 + libstdc++ + -fsanitize=thread errors out on
+    # std::atomic_thread_fence (used internally by std::shared_ptr's
+    # refcount). The Clang TSan does not have this restriction, so we
+    # install clang for this job only -- the rest of CI keeps using GCC.
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential clang cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
+          libgtest-dev libgmock-dev \
+          xvfb
+
+    # TSan lives in its own job because libtsan is mutually exclusive with
+    # libasan at link time -- both intercept the same C runtime hooks. Same
+    # rationale that splits ASan from coverage above.
+    #
+    # The high-value targets here are the threading primitives the project
+    # actually uses: std::jthread (ConsoleView stdin reader,
+    # QualityInspectionPage worker), std::mutex on BasePresenter's observer
+    # list, the GMainContext idle-marshaling pattern in DatabaseManager and
+    # the QualityInspectionPage callback path, the MQTT/TCP backend
+    # publisher threads. A real race in any of those lives undefined-behavior
+    # land that ASan cannot see.
+    - name: Configure (Debug + TSan, Clang)
+      env:
+        CC: clang
+        CXX: clang++
+      run: |
+        cmake -S . -B build/tsan -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DENABLE_TSAN=ON \
+          -DENABLE_SANITIZERS=OFF \
+          -DENABLE_COVERAGE=OFF
+
+    - name: Build
+      run: cmake --build build/tsan -- -j$(nproc)
+
+    # Run ctest under TSan. Options:
+    #   * halt_on_error=1 -- bail on the first race so the report points
+    #     squarely at the offending test (default is to keep running and
+    #     pile reports).
+    #   * second_deadlock_stack=1 -- when TSan flags a deadlock, dump
+    #     both threads' stacks instead of just the second one.
+    #   * history_size=7 -- maximum (8MB per thread) memory-access history;
+    #     more context in race reports at the cost of RAM. CI VMs have it.
+    #   * suppressions=tsan.supp -- if/when we accumulate known-benign
+    #     races (gtkmm internals, third-party globals) we route them
+    #     through a suppression file rather than annotating source.
+    #     File is optional; TSan ignores a missing path gracefully.
+    - name: Run tests under TSan
+      working-directory: build/tsan
+      env:
+        TSAN_OPTIONS: "halt_on_error=1:second_deadlock_stack=1:history_size=7:suppressions=${{ github.workspace }}/tsan.supp"
+      run: xvfb-run ctest --output-on-failure --no-tests=error --label-exclude gui
+
   documentation:
     name: Documentation
     runs-on: ubuntu-24.04
@@ -470,7 +535,7 @@ jobs:
   summary:
     name: Pipeline Summary
     runs-on: ubuntu-24.04
-    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, ml-integration, documentation]
+    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, tsan, ml-integration, documentation]
     if: always()
 
     steps:
@@ -485,5 +550,6 @@ jobs:
         echo "| Clang-Tidy | ${{ needs.clang-tidy.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Coverage | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Sanitizers | ${{ needs.sanitizers.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| ThreadSanitizer | ${{ needs.tsan.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| ML Integration | ${{ needs.ml-integration.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY

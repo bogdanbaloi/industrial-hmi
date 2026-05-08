@@ -71,12 +71,31 @@ public:
         stop();
     }
 
+    // Synchronous accept on the worker thread is paired with a
+    // synchronous close on main -- but boost::asio::basic_socket_acceptor
+    // is NOT thread-safe across accept/close, so calling close() while
+    // accept() is in flight races on the acceptor's implementation
+    // state (TSan caught this). The fix: self-connect to the listening
+    // port, which unblocks accept(); the worker observes stopped_ ==
+    // true and returns; only after thread_.join() (no concurrent
+    // access) do we close the acceptor on the main thread.
     void stop() {
         if (stopped_.exchange(true)) return;
+        if (thread_.joinable()) {
+            boost::asio::io_context wakerIo;
+            tcp::socket waker(wakerIo);
+            boost::system::error_code ec;
+            waker.connect(
+                tcp::endpoint(boost::asio::ip::make_address("127.0.0.1"),
+                              port_),
+                ec);
+            // Ignore connect failure -- if the worker already exited
+            // (acceptor died, port closed) the join below still works.
+            thread_.join();
+        }
         boost::system::error_code ec;
         acceptor_.close(ec);
         io_.stop();
-        if (thread_.joinable()) thread_.join();
     }
 
     [[nodiscard]] std::uint16_t port() const noexcept { return port_; }
@@ -102,7 +121,10 @@ private:
             tcp::socket socket(io_);
             boost::system::error_code ec;
             acceptor_.accept(socket, ec);
-            if (ec) return;
+            // stop() may have woken us via self-connect; the dummy
+            // socket then disconnects without sending CONNECT. Bail
+            // before handleClient blocks on a phantom protocol read.
+            if (ec || stopped_.load(std::memory_order_acquire)) return;
             handleClient(socket);
         } catch (...) {
             // Acceptor was closed during stop() -- exit cleanly.

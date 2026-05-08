@@ -67,23 +67,46 @@ else()
 endif()
 
 # Sanitizers (Debug builds - GCC/Clang only)
-option(ENABLE_SANITIZERS "Enable sanitizers (AddressSanitizer, UBSanitizer)" OFF)
+# ASan + UBSan and TSan are mutually exclusive at the linker level (libasan
+# and libtsan both intercept the same C runtime hooks), so each lives behind
+# its own flag and is exercised by a separate CI job.
+option(ENABLE_SANITIZERS "Enable sanitizers (AddressSanitizer + UBSanitizer)" OFF)
+option(ENABLE_TSAN       "Enable ThreadSanitizer (mutually exclusive with ENABLE_SANITIZERS)" OFF)
+
+if(ENABLE_SANITIZERS AND ENABLE_TSAN)
+    message(FATAL_ERROR
+        "ENABLE_SANITIZERS and ENABLE_TSAN cannot be combined: "
+        "libasan and libtsan conflict at link time. Pick one.")
+endif()
 
 if(ENABLE_SANITIZERS AND NOT MSVC)
     message(STATUS "Sanitizers enabled: AddressSanitizer + UndefinedBehaviorSanitizer")
-    
+
     set(SANITIZER_FLAGS
         -fsanitize=address           # AddressSanitizer - detect memory errors
         -fsanitize=undefined         # UndefinedBehaviorSanitizer - detect UB
         -fno-omit-frame-pointer      # Better stack traces
         -g                           # Debug symbols
     )
-    
+
     add_compile_options(${SANITIZER_FLAGS})
     add_link_options(${SANITIZER_FLAGS})
-    
-    # Optional: Thread sanitizer (conflicts with AddressSanitizer)
-    # -fsanitize=thread
+endif()
+
+if(ENABLE_TSAN AND NOT MSVC)
+    message(STATUS "ThreadSanitizer enabled")
+
+    # TSan requires PIE on most distros; -fno-omit-frame-pointer keeps the
+    # stack traces meaningful (TSan's race reports walk both the racing
+    # thread's stack and the previously-accessing thread's stack).
+    set(TSAN_FLAGS
+        -fsanitize=thread
+        -fno-omit-frame-pointer
+        -g
+    )
+
+    add_compile_options(${TSAN_FLAGS})
+    add_link_options(${TSAN_FLAGS})
 endif()
 
 # Code Coverage (Debug builds - GCC/Clang only)

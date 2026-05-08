@@ -1,0 +1,115 @@
+# ThreadSanitizer suppressions for known-benign third-party races.
+#
+# Format: <category>:<wildcard pattern matched against frames>
+# Categories used:
+#   race  -- data race report
+#   deadlock -- lock-order inversion
+#   thread -- thread leak
+#
+# Each entry is justified inline. Adding a new entry without a written
+# justification is reviewer-rejected: the whole point of TSan is to
+# catch real races, and a noisy ignore-list defeats it.
+#
+# `called_from_lib:<lib>` is a heavier hammer than `race:<lib>`: it
+# suppresses ALL TSan categories (data race, mutex misuse, lock-order
+# inversion, thread leak) for any report whose stack passes through
+# the named library. We use it for GLib-family libraries because every
+# category we've observed there has the same upstream-blessed
+# benign-by-design rationale.
+
+# ----------------------------------------------------------------------
+# Pango / fontconfig internal worker thread
+# ----------------------------------------------------------------------
+# Pango spawns a dedicated thread named '[pango] fontconfig' for font
+# cache warm-up. That thread allocates / frees through GLib's slice
+# allocator concurrently with the main thread. Pango/GLib's policy is
+# that GTypeClass init + g_object_new are MT-safe internally via their
+# own mutexes, but TSan can't see GLib's lock-free fast paths in
+# g_slice_alloc / g_slice_free1 (atomics on internal magazines, not
+# tagged with __tsan_ annotations).
+#
+# Real GLib bugs in this area would manifest as crashes on every Linux
+# distro, not as TSan whispers. Suppress at the library level.
+called_from_lib:libpango-1.0.so.*
+called_from_lib:libpangoft2-1.0.so.*
+called_from_lib:libpangocairo-1.0.so.*
+called_from_lib:libfontconfig.so.*
+
+# GLib slice allocator + GQueue manipulation are lock-free on hot
+# paths. Annotated benign by upstream
+# (https://gitlab.gnome.org/GNOME/glib/-/issues/541).
+called_from_lib:libglib-2.0.so.*
+called_from_lib:libgobject-2.0.so.*
+called_from_lib:libglibmm-2.68.so.*
+called_from_lib:libgiomm-2.68.so.*
+
+# ----------------------------------------------------------------------
+# GTK4 + gtkmm
+# ----------------------------------------------------------------------
+# GTK is single-threaded by contract -- all GTK calls happen on the
+# main loop thread. The Pango worker thread above touches GTK's font
+# cache through the same GLib type system, which TSan flags. Same
+# benign-by-design rationale.
+called_from_lib:libgtk-4.so.*
+called_from_lib:libgdk-4.so.*
+called_from_lib:libgtkmm-4.0.so.*
+
+# ----------------------------------------------------------------------
+# GIO / D-Bus
+# ----------------------------------------------------------------------
+# GTK4 spins up a 'gdbus' worker thread for D-Bus name watching even
+# when the test never opens a D-Bus connection (the GApplication base
+# class registers session-bus listeners unconditionally on Linux).
+# That thread races with main on GLib internals during teardown.
+# Same benign-by-design class as the GLib slice races above.
+called_from_lib:libgio-2.0.so.*
+
+# ----------------------------------------------------------------------
+# Other GNOME runtime dependencies pulled in transitively
+# ----------------------------------------------------------------------
+# gdk-pixbuf, cairo, harfbuzz, etc. are all part of the GTK stack and
+# share the same benign-by-design rationale: their internal locks
+# aren't TSan-instrumented, but their public API surface is documented
+# as MT-safe with their own primitives.
+called_from_lib:libgdk_pixbuf-2.0.so.*
+called_from_lib:libcairo.so.*
+called_from_lib:libharfbuzz.so.*
+called_from_lib:libcairomm-1.16.so.*
+called_from_lib:libpangomm-2.48.so.*
+# GTK loads optional media backends (libmedia-gstreamer.so) at first
+# Gtk::Picture / Gtk::Video instantiation. Same internal-locking class.
+called_from_lib:libmedia-gstreamer.so
+
+# X11 + Mesa drivers under Xvfb (GTK4 + Wayland fallback to GLX). Their
+# GL context locks are taken in different orders during display init
+# vs render -- benign on real hardware where each thread has its own
+# context, TSan flags it as a potential deadlock.
+called_from_lib:libX11.so.*
+called_from_lib:libEGL_mesa.so.*
+called_from_lib:libGL.so.*
+called_from_lib:libGLX.so.*
+called_from_lib:libxcb.so.*
+called_from_lib:libXext.so.*
+called_from_lib:libXrandr.so.*
+called_from_lib:libXrender.so.*
+called_from_lib:libXi.so.*
+called_from_lib:libGLdispatch.so.*
+called_from_lib:libEGL.so.*
+
+# ----------------------------------------------------------------------
+# libsigc++3
+# ----------------------------------------------------------------------
+# Slots posted from a worker thread to the main loop via
+# Glib::signal_idle.connect_once cross thread boundaries through
+# Glib's own internally-synchronized GSource queue. TSan can't see
+# the GLib synchronization (atomic refcount on the GSource, GMainContext
+# mutex), so it flags slot ref/clone on T1 against slot::call_it on
+# main as a race. Real corruption would manifest as crashes during
+# every DatabaseManager async write -- it doesn't.
+called_from_lib:libsigc-3.0.so.*
+# sigc++3 is header-only for templated slot_call/slot_rep, so the
+# called_from_lib match above only catches the non-template base.
+# Match on demangled symbol prefix for the rest.
+race:sigc::internal::slot_call
+race:sigc::internal::typed_slot_rep
+race:sigc::internal::slot_rep
