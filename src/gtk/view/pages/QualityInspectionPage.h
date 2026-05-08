@@ -6,6 +6,8 @@
 #include "src/presenter/modelview/InspectionResultViewModel.h"
 
 #include <gtkmm.h>
+#include <gtkmm/cssprovider.h>
+#include <glibmm/refptr.h>
 
 #include <memory>
 #include <string>
@@ -82,6 +84,7 @@ public:
 
 private:
     void buildUi();
+    void applyStyles();
     void onChooseFileClicked();
     void runInspection(const std::string& path);
 
@@ -99,13 +102,18 @@ private:
 
     std::shared_ptr<presenter::QualityInspectionPresenter> presenter_;
 
-    // Widgets -- members so we can update them from observer callbacks.
-    Gtk::Box        toolbarRow_{Gtk::Orientation::HORIZONTAL};
-    Gtk::Button     chooseButton_;
-    Gtk::Label      statusLabel_;
-    Gtk::Picture    preview_;
-    Gtk::Frame      resultsFrame_;
-    Gtk::Box        resultsBox_{Gtk::Orientation::VERTICAL};
+    // Widgets -- pointers into the GtkBuilder-owned tree loaded from
+    // assets/ui/inspection-page.ui. Lifetime is tied to the page (we
+    // append the root Box; everything else hangs off it).
+    Gtk::Button*  chooseButton_ = nullptr;
+    Gtk::Label*   statusLabel_  = nullptr;
+    Gtk::Picture* preview_      = nullptr;
+    Gtk::Box*     resultsBox_   = nullptr;
+
+    /// Page-scoped CSS provider so the inspection.css rules only
+    /// apply while this page is alive. Same pattern Dashboard /
+    /// Products pages use.
+    Glib::RefPtr<Gtk::CssProvider> cssProvider_;
 
     /// Background thread that drives one inspection. Storing it as a
     /// member means the previous run is joined automatically when the

@@ -14,6 +14,7 @@ namespace app {
 
     namespace presenter {
         class AlertCenter;
+        class QualityInspectionPresenter;
     }
 
     namespace view {
@@ -21,6 +22,7 @@ namespace app {
         class DashboardPage;
         class ProductsPage;
         class SettingsPage;
+        class QualityInspectionPage;
         class DialogManager;
         class AlertsPanel;
         class SystemStatusBadge;
@@ -30,6 +32,11 @@ namespace app {
     namespace core {
         class Logger;
         class ExceptionHandler;
+    }
+
+    namespace ml {
+        class ImageDecoder;
+        class OnnxImageClassifier;
     }
 }
 
@@ -150,6 +157,18 @@ private:
     app::view::ProductsPage*                 productsPage_  = nullptr;
 
     app::view::SettingsPage*                 settingsPage_  = nullptr;
+
+    // Edge AI inspection -- only instantiated when BUILD_ML_CLASSIFIER
+    // is on AND the model + labels artefacts are present on disk. The
+    // members live behind unique_ptr in the same conditional so a
+    // build without ONNX Runtime drops the symbols entirely.
+#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
+    std::unique_ptr<app::ml::ImageDecoder>             inspectionDecoder_;
+    std::unique_ptr<app::ml::OnnxImageClassifier>      inspectionClassifier_;
+    std::shared_ptr<app::presenter::QualityInspectionPresenter>
+                                                       inspectionPresenter_;
+    app::view::QualityInspectionPage*                  inspectionPage_ = nullptr;
+#endif
 
     // Sidebar Alert center + view -- owned by the window, shared with
     // DashboardPresenter which raises/clears alerts on state transitions.

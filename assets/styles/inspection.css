@@ -1,0 +1,98 @@
+/* Edge AI Inspection Page Styles */
+
+/* Dark mode defaults */
+
+.inspection-status {
+    font-size: 14px;
+    color: #b0bec5;
+}
+
+.inspection-status.error {
+    color: #ef9a9a;
+}
+
+.inspection-status.success {
+    color: #a5d6a7;
+}
+
+.inspection-card {
+    background: #263238;
+    border: 1px solid #37474f;
+    border-radius: 8px;
+}
+
+.inspection-hint {
+    font-size: 14px;
+    color: #78909c;
+    font-style: italic;
+}
+
+.inspection-rank {
+    font-size: 12px;
+    font-weight: 700;
+    color: #607d8b;
+    min-width: 24px;
+}
+
+.inspection-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #ECEFF1;
+}
+
+.inspection-confidence {
+    font-size: 14px;
+    font-weight: 700;
+    color: #80cbc4;
+    min-width: 64px;
+}
+
+.inspection-row {
+    padding: 6px 4px;
+}
+
+.inspection-row levelbar trough {
+    min-height: 6px;
+    border-radius: 3px;
+    background: #1e272c;
+}
+
+.inspection-row levelbar block.filled {
+    background: linear-gradient(to right, #4dd0e1, #80cbc4);
+    border-radius: 3px;
+    min-height: 6px;
+}
+
+/* Light mode overrides */
+window.light-mode .inspection-status {
+    color: #546E7A;
+}
+
+window.light-mode .inspection-card {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+}
+
+window.light-mode .inspection-hint {
+    color: #90a4ae;
+}
+
+window.light-mode .inspection-rank {
+    color: #90a4ae;
+}
+
+window.light-mode .inspection-label {
+    color: #263238;
+}
+
+window.light-mode .inspection-confidence {
+    color: #00796b;
+}
+
+window.light-mode .inspection-row levelbar trough {
+    background: #eceff1;
+}
+
+window.light-mode .inspection-row levelbar block.filled {
+    background: linear-gradient(to right, #00acc1, #26a69a);
+}

@@ -496,6 +496,33 @@ artifact is absent so the test binary stays runnable everywhere).
 The CI `ml-integration` job runs the Python pipeline + the C++ build
 + the integration test on every PR.
 
+**Phase 2 -- HMI integration.** The inference layer wires into the
+GTK front-end as a new Notebook tab:
+
+```
+src/presenter/
+  QualityInspectionPresenter.{h,cpp}    Sync orchestrator: file path ->
+                                        decode -> classify -> top-K ->
+                                        ViewObserver callbacks
+src/presenter/modelview/
+  InspectionResultViewModel.h           top-K rows + source path + latency
+src/gtk/view/pages/
+  QualityInspectionPage.{h,cpp}         File picker, preview, results list
+                                        with LevelBar confidence bars
+```
+
+Threading is the same pattern the rest of the app uses for async work:
+each inspection runs on a `std::jthread` member of the page; observer
+callbacks arrive on the worker thread and marshal back to the GTK main
+loop via `Glib::signal_idle.connect_once`. Reassigning the jthread
+joins the previous run, so concurrent fires serialise by construction.
+
+`MainWindow::createAllPages()` only registers the tab when the
+`BUILD_ML_CLASSIFIER` build option is on AND the model + labels are
+on disk under `assets/models/`. Missing artefacts log a warning and
+skip the tab; the rest of the UI keeps working. 6 presenter
+GoogleTest cases pin the success / failure / cancellation paths.
+
 ## Tech Stack
 
 | Layer | Technology |

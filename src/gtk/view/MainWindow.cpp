@@ -25,6 +25,15 @@
 #include "src/core/ExceptionHandler.h"
 #include "src/core/i18n.h"
 #include "src/gtk/view/AboutDialog.h"
+
+#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
+#  include "src/gtk/view/pages/QualityInspectionPage.h"
+#  include "src/ml/ImageDecoder.h"
+#  include "src/ml/OnnxImageClassifier.h"
+#  include "src/presenter/QualityInspectionPresenter.h"
+#endif
+
+#include <filesystem>
 #include <fstream>
 
 
@@ -271,6 +280,55 @@ void MainWindow::createAllPages() {
     settingsPage_ = Gtk::make_managed<app::view::SettingsPage>(*dialogManager_);
     registerPage(settingsPage_);
 
+#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
+    // Edge AI inspection page. Only registered when both the ONNX
+    // model and the ImageNet labels file are on disk. Missing either
+    // is a soft skip -- the rest of the UI keeps working without the
+    // tab, and a log line points at the Python pipeline.
+    {
+        const std::filesystem::path modelPath(
+            "assets/models/mobilenetv2_int8.onnx");
+        const std::filesystem::path labelsPath(
+            "assets/models/imagenet_labels.txt");
+
+        if (!std::filesystem::exists(modelPath) ||
+            !std::filesystem::exists(labelsPath)) {
+            logger.warn(
+                "Edge AI: skipping Inspection tab -- model or labels "
+                "missing under assets/models/. Run scripts/ml/quantize_model.py "
+                "and scripts/ml/export_labels.py to generate them.");
+        } else {
+            try {
+                inspectionDecoder_ =
+                    std::make_unique<app::ml::ImageDecoder>();
+                // Plugin-loading classifier; ORT shared library is NOT
+                // pulled into industrial-hmi.exe at boot. The dlopen
+                // happens here on first construction.
+                inspectionClassifier_ =
+                    std::make_unique<app::ml::OnnxImageClassifier>(
+                        modelPath, labelsPath);
+                inspectionPresenter_ = std::make_shared<
+                    app::presenter::QualityInspectionPresenter>(
+                        *inspectionClassifier_, *inspectionDecoder_);
+                inspectionPresenter_->setLogger(logger);
+
+                inspectionPage_ = Gtk::make_managed<
+                    app::view::QualityInspectionPage>(*dialogManager_);
+                inspectionPage_->initialize(inspectionPresenter_);
+                inspectionPresenter_->initialize();
+                registerPage(inspectionPage_);
+                logger.info(
+                    "Edge AI: Inspection tab registered (model={})",
+                    modelPath.string());
+            } catch (const std::exception& exc) {
+                logger.error(
+                    "Edge AI: failed to wire Inspection tab: {}",
+                    exc.what());
+            }
+        }
+    }
+#endif
+
     dashboardPresenter_->initialize();
     productsPresenter_->initialize();
 
@@ -289,6 +347,15 @@ void MainWindow::clearPages() {
     dashboardPage_ = nullptr;
     productsPage_  = nullptr;
     settingsPage_  = nullptr;
+#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
+    // mainNotebook_->remove_page above destroyed QualityInspectionPage;
+    // its destructor unregistered itself from the presenter, so the
+    // tear-down below is safe.
+    inspectionPage_ = nullptr;
+    inspectionPresenter_.reset();
+    inspectionClassifier_.reset();
+    inspectionDecoder_.reset();
+#endif
 }
 
 void MainWindow::wireSettingsSignals() {

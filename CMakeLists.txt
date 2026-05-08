@@ -419,15 +419,29 @@ target_sources(objectsMl
 # (magic numbers, signed bitwise, manual malloc, identifier naming).
 target_include_directories(objectsMl SYSTEM PRIVATE ${stb_image_SOURCE_DIR})
 
-# Optional: compile OnnxImageClassifier and link the ONNX Runtime
-# session into the same object library when BUILD_ML_CLASSIFIER=ON.
-# The header (`OnnxImageClassifier.h`) is added regardless so consumers
-# get a stable include path, but the symbol is only available when the
-# implementation is compiled in.
+# Optional: compile OnnxImageClassifier facade + the runtime plugin
+# when BUILD_ML_CLASSIFIER=ON.
+#
+# Architecture: the host binary (`industrial-hmi.exe`) NEVER links
+# libonnxruntime directly. Instead, ORT-touching code lives in a
+# separate SHARED MODULE library (`industrial_ml_ort.{dll,so,dylib}`)
+# loaded at runtime via dlopen / LoadLibrary on the first
+# `OnnxImageClassifier` construction. This keeps the GTK4 process
+# boot path clean of the symbol-resolution conflicts that otherwise
+# crash gtkmm widget registration when libonnxruntime is in the
+# address space.
+#
+# objectsMl contains only the dlopen facade + foundation pieces and
+# does NOT link libonnxruntime. The plugin module compiles
+# onnx_plugin.cpp + a private rebuild of the foundation sources it
+# needs (Image, Preprocessor, Labels) so it is a self-contained unit
+# the loader can drop in next to the binary.
 if(BUILD_ML_CLASSIFIER)
     find_package(OnnxRuntime REQUIRED)
     message(STATUS "ONNX Runtime: ${OnnxRuntime_VERSION} "
                    "(${OnnxRuntime_LIBRARY})")
+
+    # Facade compiled INTO objectsMl. Pure dlopen wrapper; no ORT link.
     target_sources(objectsMl
         PRIVATE
             src/ml/OnnxImageClassifier.cpp
@@ -436,8 +450,39 @@ if(BUILD_ML_CLASSIFIER)
             FILES
                 src/ml/OnnxImageClassifier.h
     )
-    target_link_libraries(objectsMl PUBLIC OnnxRuntime::OnnxRuntime)
-    target_compile_definitions(objectsMl PUBLIC HAVE_ONNX_RUNTIME=1)
+    if(NOT WIN32)
+        target_link_libraries(objectsMl PUBLIC ${CMAKE_DL_LIBS})
+    endif()
+    target_compile_definitions(objectsMl PUBLIC INDUSTRIAL_HMI_HAS_ML_PLUGIN=1)
+
+    # Plugin module. SHARED MODULE so it is dlopen-only (cannot be
+    # link-time consumed by other targets). Output name forced to
+    # "industrial_ml_ort" without per-platform "lib" prefix on Windows
+    # so dlopen finds it under a uniform filename.
+    add_library(industrial_ml_ort MODULE
+        src/ml/onnx_plugin.cpp
+        src/ml/ImageNetPreprocessor.cpp
+        src/ml/ImageNetLabels.cpp
+    )
+    target_include_directories(industrial_ml_ort
+        PRIVATE ${CMAKE_SOURCE_DIR})
+    target_link_libraries(industrial_ml_ort
+        PRIVATE OnnxRuntime::OnnxRuntime)
+    set_target_properties(industrial_ml_ort PROPERTIES
+        OUTPUT_NAME industrial_ml_ort
+        POSITION_INDEPENDENT_CODE ON
+        # Drop the plugin next to the host binary so dlopen / LoadLibrary
+        # finds it via the platform default loader path (current
+        # working directory on Windows, $ORIGIN-style on Linux when
+        # LD_LIBRARY_PATH covers it).
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    # Hide all non-exported symbols so the plugin's private copy of
+    # the foundation sources cannot accidentally leak into another
+    # consumer that dlopens with RTLD_GLOBAL.
+    if(NOT MSVC)
+        target_compile_options(industrial_ml_ort PRIVATE -fvisibility=hidden)
+    endif()
 endif()
 
 # Console Layer - Headless front-end. Shares the Model + Presenter
@@ -552,6 +597,14 @@ target_link_libraries(industrial-hmi
 # clarity + safety).
 if(WIN32)
     target_link_libraries(industrial-hmi PRIVATE ws2_32 mswsock user32)
+endif()
+
+# Make industrial-hmi pull the ML plugin into the build by dependency,
+# WITHOUT linking it. The plugin is loaded at runtime via dlopen /
+# LoadLibrary; pre-building it ensures the artefact sits next to the
+# binary so the loader actually finds it on first inspection.
+if(BUILD_ML_CLASSIFIER)
+    add_dependencies(industrial-hmi industrial_ml_ort)
 endif()
 
 # Console Executable (Cross-Platform) -- shares src/main.cpp with the GTK

@@ -3,8 +3,6 @@
 #include "src/ml/Classification.h"
 #include "src/ml/Image.h"
 #include "src/ml/ImageClassifier.h"
-#include "src/ml/ImageNetLabels.h"
-#include "src/ml/Preprocessor.h"
 
 #include <filesystem>
 #include <memory>
@@ -13,46 +11,52 @@
 
 namespace app::ml {
 
-/// `ImageClassifier` backed by an ONNX Runtime session.
+/// `ImageClassifier` backed by an ONNX Runtime session, loaded as a
+/// runtime plugin.
 ///
-/// The constructor takes ownership of the inference session created from
-/// `modelPath`; thereafter every `classifyTopK` call:
+/// Why a plugin and not a direct link?
 ///
-///     1. Runs the input image through the supplied `Preprocessor`,
-///        producing the NCHW float tensor the model expects on its
-///        single input port.
-///     2. Hands the tensor to the ONNX Runtime session.
-///     3. Reads the logits tensor, applies softmax, picks the top-K
-///        indices.
-///     4. Resolves indices to human-readable strings via `ImageNetLabels`.
+/// ONNX Runtime ships as a large prebuilt shared library that bundles
+/// its own copies of common system dependencies (abseil, protobuf,
+/// MLAS kernels, custom allocators). When linked directly into a GTK4
+/// process the resulting symbol-resolution interactions can corrupt
+/// the libc heap before `main()` even runs the GTK loop -- both on
+/// WSL2/Linux and on MSYS2/Windows in our environment.
 ///
-/// SOLID:
-///   * S -- the class is the glue between three collaborators
-///         (preprocessor, labels, ORT session). Each collaborator owns
-///         its own job. This file only orchestrates.
-///   * L -- substitutable wherever `ImageClassifier&` appears; the
-///         throwing contract matches the abstract base.
-///   * D -- the constructor takes references to the abstractions
-///         (`const Preprocessor&`, `const ImageNetLabels&`), not
-///         concrete classes, so a test can pair an `OnnxImageClassifier`
-///         with a deterministic preprocessor or in-memory labels.
+/// To keep the GTK binary boot path clean we route the ORT-touching
+/// code through a separate shared-module library (`industrial_ml_ort.dll`
+/// on Windows / `libindustrial_ml_ort.so` on Linux) that is `dlopen`-ed
+/// (or `LoadLibrary`-ed) on first construction of this class. The
+/// host binary never holds a `DT_NEEDED` reference to libonnxruntime;
+/// the dynamic linker only pulls it in when the plugin module is
+/// loaded, which is the moment the user actually requests an
+/// inspection.
 ///
-/// Threading: ONNX Runtime sessions are NOT thread-safe for concurrent
-/// `Run` calls. If the future GUI calls into one classifier from
-/// multiple threads, wrap with an executor or per-thread session pool
-/// at that boundary; this class will not synchronise internally.
+/// Public contract:
 ///
-/// Pimpl: ORT headers stay out of the public surface so consumers
-/// compiled without ONNX Runtime headers (the foundation tests, for
-/// instance) still link against the rest of the ML library.
+///   * Construction throws `std::runtime_error` if the plugin module
+///     cannot be located OR if the model file fails to load. Failures
+///     to find the plugin produce a message that names the search
+///     paths so deployments can fix the layout.
+///   * `classifyTopK` and `name` forward to the loaded plugin instance.
+///   * Destruction tears down the plugin instance + drops the dlopen
+///     handle; the library may stay mapped if other instances exist
+///     (the loader caches the handle for the process lifetime).
+///
+/// SOLID: same as before -- presenters depend on `ImageClassifier&`,
+/// not on the plugin loader. The plugin pattern is an implementation
+/// detail, transparent to upstream code.
 class OnnxImageClassifier final : public ImageClassifier {
 public:
-    /// Load `modelPath` into a CPU-execution-provider session. Throws
-    /// `std::runtime_error` if the file is missing or ORT fails to
-    /// build the session (corrupted opset, unsupported op).
-    OnnxImageClassifier(std::filesystem::path modelPath,
-                        const Preprocessor& preprocessor,
-                        const ImageNetLabels& labels);
+    /// Construct from on-disk artefact paths.
+    ///
+    /// `modelPath`  -- exported `.onnx` file (FP32 or INT8).
+    /// `labelsPath` -- one-label-per-line text file (UTF-8). The plugin
+    ///                 owns its own copy; `ImageNetLabels` instances on
+    ///                 the host side are not exchanged across the DLL
+    ///                 boundary to keep the C ABI minimal.
+    OnnxImageClassifier(const std::filesystem::path& modelPath,
+                        const std::filesystem::path& labelsPath);
 
     ~OnnxImageClassifier() override;
 
@@ -67,13 +71,33 @@ public:
     [[nodiscard]] std::string name() const override;
 
 private:
-    /// Holds the ORT environment + session. Forward-declared here, defined
-    /// in the .cpp so the ORT headers never escape this translation unit.
-    struct Session;
+    /// Lazy plugin load. Called from `classifyTopK`, idempotent. Resolves
+    /// the plugin module + creates the underlying classifier on first
+    /// call; subsequent calls return immediately. Marked `const` because
+    /// the lazy mutation is a transparent cache: callers see only the
+    /// classify behaviour.
+    void ensureSessionLoaded() const;
 
-    std::unique_ptr<Session> session_;
-    const Preprocessor& preprocessor_;
-    const ImageNetLabels& labels_;
+    /// Construction-time inputs kept around so `ensureSessionLoaded` can
+    /// invoke the plugin entry point on first inspect. Held as values
+    /// because the constructor validates them once and we want the
+    /// classifier to be self-contained.
+    std::filesystem::path modelPath_;
+    std::filesystem::path labelsPath_;
+
+    /// Plugin-owned `ImageClassifier` produced by the plugin's create
+    /// entry point. Allocated by the plugin, deleted by the plugin --
+    /// the destructor calls back through a destroy function pointer
+    /// resolved at first inspection. `mutable` so the lazy-load
+    /// path can populate it from inside `classifyTopK`.
+    mutable ImageClassifier* pluginImpl_ = nullptr;
+
+    /// Pointer to the plugin's destroy entry point. Cached so the
+    /// destructor never pays the cost of another `dlsym`.
+    mutable void (*pluginDestroy_)(ImageClassifier*) = nullptr;
+
+    /// Display-friendly name. Cached at construction so `name()` does
+    /// not have to cross the plugin boundary on every call.
     std::string name_;
 };
 

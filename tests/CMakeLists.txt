@@ -249,21 +249,32 @@ add_test(NAME QualityInspectionPresenterTest
 # .onnx file via ORT. The test skips at run time if the model file
 # is not present, so the binary is safe to run on any environment.
 if(BUILD_ML_CLASSIFIER)
+    # The test exercises the plugin pattern end-to-end: the facade
+    # dlopens the plugin module, instantiates the classifier, runs
+    # inference on a real .onnx model. Compiles only the foundation
+    # sources + the facade; ORT linkage lives in the plugin.
     add_executable(test_onnx_image_classifier OnnxImageClassifierTest.cpp
         ${CMAKE_SOURCE_DIR}/src/ml/OnnxImageClassifier.cpp
-        ${CMAKE_SOURCE_DIR}/src/ml/ImageDecoder.cpp
-        ${CMAKE_SOURCE_DIR}/src/ml/ImageNetPreprocessor.cpp
-        ${CMAKE_SOURCE_DIR}/src/ml/ImageNetLabels.cpp)
+        ${CMAKE_SOURCE_DIR}/src/ml/ImageDecoder.cpp)
     target_include_directories(test_onnx_image_classifier
         SYSTEM PRIVATE ${stb_image_SOURCE_DIR})
     target_link_libraries(test_onnx_image_classifier PRIVATE
         ${TEST_COMMON_LIBS}
         tests_includes
-        OnnxRuntime::OnnxRuntime
+        ${CMAKE_DL_LIBS}
     )
+    # Build dep so the plugin is on disk before the test runs.
+    add_dependencies(test_onnx_image_classifier industrial_ml_ort)
+    # Test runs from build dir so the plugin module sitting next to
+    # the test binary is findable via the platform default loader path
+    # (current working dir on Windows; LD_LIBRARY_PATH or $ORIGIN on
+    # Linux -- CI sets LD_LIBRARY_PATH explicitly).
     add_test(NAME OnnxImageClassifierTest
              COMMAND test_onnx_image_classifier
-             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+             WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    set_tests_properties(OnnxImageClassifierTest PROPERTIES
+        ENVIRONMENT
+        "INDUSTRIAL_HMI_INT8_MODEL=${CMAKE_SOURCE_DIR}/assets/models/mobilenetv2_int8.onnx;INDUSTRIAL_HMI_LABELS=${CMAKE_SOURCE_DIR}/assets/models/imagenet_labels.txt")
 endif()
 
 # Model: SimulatedModel (singleton, no GTK)
