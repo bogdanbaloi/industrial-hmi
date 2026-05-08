@@ -93,11 +93,18 @@ void MqttPublisher::stopImpl() noexcept {
         const auto bytes = mqtt::buildDisconnect();
         (void)asio::write(session_->socket, asio::buffer(bytes), ignoredEc);
 
-        session_->heartbeatTimer.cancel();
-        // Release the work_guard so the worker thread's run() returns
-        // once the in-flight handlers drain. Without this the thread
-        // would block forever even after io_->stop().
-        session_->workGuard.reset();
+        // Post timer cancel + work_guard release on the io_context's
+        // executor so they serialise with the heartbeat callback that
+        // runs on the worker thread (the callback calls
+        // timer.expires_after() which races with timer.cancel() if both
+        // happen on different threads -- boost::asio::basic_waitable_timer
+        // is not thread-safe across these calls; TSan caught it).
+        // Releasing the work_guard from inside the executor unblocks
+        // run() the same way the previous direct reset did.
+        asio::post(*io_, [this]() {
+            session_->heartbeatTimer.cancel();
+            session_->workGuard.reset();
+        });
     }
 
     // Stop the io_context, join the worker, then reset for a future start().
