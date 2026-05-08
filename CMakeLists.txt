@@ -211,6 +211,52 @@ FetchContent_Declare(stb_image
 )
 FetchContent_MakeAvailable(stb_image)
 
+# open62541 -- OPC-UA stack (MPL 2.0). Industrial protocol used by the
+# OPC-UA server backend (src/integration/opcua/). Default OFF so the
+# baseline build stays small; CI turns this ON for the integration job.
+#
+# Pinned to v1.5.4 (current stable as of writing). Built as a STATIC
+# library to avoid DLL-deployment headaches on Windows -- adds ~2.4MB
+# to the host binary, which is acceptable given the alternative is
+# shipping libopen62541.dll alongside every release artefact.
+#
+# UA_NAMESPACE_ZERO=REDUCED ships only the OPC-UA Foundation node
+# definitions we actually use (Server, Variable, Method, BaseObject).
+# FULL adds historical access, alarms+events, programs, etc. -- all
+# out of scope for this project's reference implementation.
+#
+# SOURCE_DIR routing (same rationale as stb_image above): clang-tidy
+# uses -header-filter='src/.*' which substring-matches "src/" anywhere
+# including "_deps/open62541-src/". Routing to "_deps/open62541-vendor/"
+# keeps the vendored C source out of our static-analysis surface.
+option(BUILD_OPCUA_BACKEND
+    "Compile OPC-UA backend (downloads + builds open62541)" OFF)
+
+if(BUILD_OPCUA_BACKEND)
+    message(STATUS "OPC-UA backend enabled -- fetching open62541 v1.5.4")
+
+    # Suppress diagnostics from the vendored C code; we treat warnings
+    # as errors in our own targets but open62541 is third-party and
+    # ships with its own clean build at upstream.
+    set(UA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(UA_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+    set(UA_NAMESPACE_ZERO REDUCED CACHE STRING "" FORCE)
+    set(BUILD_SHARED_LIBS_save ${BUILD_SHARED_LIBS})
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(open62541
+        GIT_REPOSITORY https://github.com/open62541/open62541.git
+        GIT_TAG        v1.5.4
+        GIT_SHALLOW    TRUE
+        SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/open62541-vendor
+    )
+    FetchContent_MakeAvailable(open62541)
+
+    # Restore the project-wide BUILD_SHARED_LIBS preference so any
+    # downstream FetchContent declarations use the original value.
+    set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_save} CACHE BOOL "" FORCE)
+endif()
+
 # Object Libraries (Modular Build Pattern)
 
 # Model Layer - Data and business logic simulation
@@ -402,6 +448,45 @@ target_link_libraries(objectsIntegration
 # transitively.
 if(WIN32)
     target_link_libraries(objectsIntegration PUBLIC ws2_32 mswsock)
+endif()
+
+# OPC-UA Layer - Industrial protocol backend. Lives in its own object
+# library so the open62541 dependency is contained: only consumers that
+# need OPC-UA pull in libopen62541.a (~5MB static). The interfaces in
+# src/integration/opcua/ stay open62541-free so unit tests can mock
+# the server abstraction without dragging in the C stack.
+#
+# Compiled only when BUILD_OPCUA_BACKEND=ON; the host binary still
+# builds and runs without OPC-UA when this is off (the IntegrationManager
+# simply doesn't register an OpcUaBackend).
+if(BUILD_OPCUA_BACKEND)
+    add_library(objectsOpcUa OBJECT)
+    target_sources(objectsOpcUa
+        PRIVATE
+            src/integration/opcua/Open62541Server.cpp
+        PUBLIC
+            FILE_SET HEADERS
+            FILES
+                src/integration/opcua/OpcUaConfig.h
+                src/integration/opcua/OpcUaServer.h
+                src/integration/opcua/OpcUaCommandSink.h
+                src/integration/opcua/OpcUaNodeMap.h
+                src/integration/opcua/Open62541Server.h
+    )
+    target_link_libraries(objectsOpcUa
+        PUBLIC
+            objectsCore       # Logger, used by Open62541Server
+            open62541::open62541
+            Threads::Threads
+    )
+    target_include_directories(objectsOpcUa
+        PUBLIC
+            ${CMAKE_SOURCE_DIR}
+    )
+    target_compile_definitions(objectsOpcUa
+        PUBLIC
+            INDUSTRIAL_HMI_HAS_OPCUA_BACKEND=1
+    )
 endif()
 
 # ML Layer - Edge inference foundation. Image decoding (stb_image),
