@@ -200,6 +200,16 @@ void OnnxImageClassifier::ensureSessionLoaded() const {
     ensurePluginLoaded();
     const auto& state = sharedState();
 
+    // ensurePluginLoaded throws on failure, so reaching this line
+    // guarantees both function pointers are non-null. The explicit
+    // assertion is here to give clang-analyzer the dataflow it needs
+    // (the analyzer cannot see that the throw above precludes the
+    // null-deref on state.createFn below).
+    if (state.createFn == nullptr || state.destroyFn == nullptr) {
+        throw std::runtime_error(
+            "OnnxImageClassifier: plugin entry points missing after load.");
+    }
+
     constexpr std::size_t kErrorBufferSize = 512;
     std::array<char, kErrorBufferSize> errorBuffer{};
     pluginImpl_ = state.createFn(

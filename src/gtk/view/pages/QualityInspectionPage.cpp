@@ -99,9 +99,13 @@ void QualityInspectionPage::applyStyles() {
             Gdk::Display::get_default(),
             cssProvider_,
             GTK_STYLE_PROVIDER_PRIORITY_USER);
-    } catch (const Glib::Error&) {
-        // Stylesheet missing -- non-fatal, page renders with default GTK theme.
     }
+    // Stylesheet missing is non-fatal -- the page falls back to the
+    // default GTK theme. No logger is wired in at this point so we
+    // cannot report; an absent CSS file shows up as a visual hint
+    // anyway. NOLINT silences clang-tidy's bugprone-empty-catch.
+    // NOLINTNEXTLINE(bugprone-empty-catch)
+    catch (const Glib::Error&) {}
 }
 
 QualityInspectionPage::~QualityInspectionPage() {

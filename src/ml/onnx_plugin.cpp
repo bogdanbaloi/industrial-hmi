@@ -242,6 +242,10 @@ void copyError(char* buffer, std::size_t bufferSize, const char* msg) {
 
 }  // namespace app::ml::plugin
 
+// snake_case is intentional: this is a C ABI entry point dlopen-ed by
+// name from the host. C library convention beats the project's
+// camelBack rule for cross-language stability.
+// NOLINTNEXTLINE(readability-identifier-naming)
 INDUSTRIAL_ML_API
 app::ml::ImageClassifier*
 industrial_ml_create_onnx_classifier(const char* modelPath,
@@ -267,6 +271,8 @@ industrial_ml_create_onnx_classifier(const char* modelPath,
     }
 }
 
+// snake_case is intentional: see industrial_ml_create_onnx_classifier.
+// NOLINTNEXTLINE(readability-identifier-naming)
 INDUSTRIAL_ML_API
 void industrial_ml_destroy_classifier(app::ml::ImageClassifier* p) {
     delete p;

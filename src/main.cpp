@@ -54,30 +54,6 @@ constexpr bool kConsoleMode =
 
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
-#  ifndef CONSOLE_MODE
-    // GTK frontend (WIN32 subsystem) launched from MSYS2 bash inherits
-    // a TERM environment variable like "xterm-256color" or "cygwin".
-    // GLib's logger reads TERM at startup and, when it spots a value
-    // it recognises as a colour-capable terminal, switches stderr
-    // output to ANSI-escaped strings. The Windows console handle
-    // inherited from the MSYS2 pty does not behave like a real TTY,
-    // and the resulting GVariant builder calls during the first GTK
-    // widget class registration crash the libc heap before any
-    // window appears.
-    //
-    // SetEnvironmentVariableA(name, NULL) removes the variable from
-    // the process environment block. _putenv_s only updates the CRT
-    // copy of the environment; GLib uses GetEnvironmentVariable
-    // (Win32 API) which reads from the EB, so the CRT-only call
-    // would not be visible to GLib. Belt + suspenders: clear both.
-    ::SetEnvironmentVariableA("TERM", nullptr);
-    _putenv_s("TERM", "");
-
-    // Detach the inherited console for the same reason -- belt and
-    // suspenders.
-    ::FreeConsole();
-#  endif
-
     // Use Cairo renderer on Windows to avoid GL flicker in GTK4.
     _putenv_s("GSK_RENDERER", "cairo");
 
