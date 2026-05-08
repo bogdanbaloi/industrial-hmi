@@ -169,7 +169,9 @@ void ensurePluginLoaded() {
 
 OnnxImageClassifier::OnnxImageClassifier(
     const std::filesystem::path& modelPath,
-    const std::filesystem::path& labelsPath) {
+    const std::filesystem::path& labelsPath)
+    : modelPath_(modelPath),
+      labelsPath_(labelsPath) {
     if (!std::filesystem::exists(modelPath)) {
         throw std::runtime_error(
             "OnnxImageClassifier: model file not found: " +
@@ -181,14 +183,28 @@ OnnxImageClassifier::OnnxImageClassifier(
             labelsPath.string());
     }
 
+    name_ = "ONNX (" + modelPath.filename().string() + ")";
+}
+
+void OnnxImageClassifier::ensureSessionLoaded() const {
+    if (pluginImpl_ != nullptr) {
+        return;
+    }
+
+    // Lazy plugin load: dlopen / LoadLibrary only fires on the first
+    // classifyTopK call. This keeps libonnxruntime + its bundled
+    // dependencies out of the host process's address space during the
+    // GTK boot path -- previously, eager loading at MainWindow
+    // construction triggered a heap interaction with libglib that
+    // crashed the GUI before it ever rendered.
     ensurePluginLoaded();
     const auto& state = sharedState();
 
     constexpr std::size_t kErrorBufferSize = 512;
     std::array<char, kErrorBufferSize> errorBuffer{};
     pluginImpl_ = state.createFn(
-        modelPath.string().c_str(),
-        labelsPath.string().c_str(),
+        modelPath_.string().c_str(),
+        labelsPath_.string().c_str(),
         errorBuffer.data(),
         errorBuffer.size());
     pluginDestroy_ = state.destroyFn;
@@ -200,8 +216,6 @@ OnnxImageClassifier::OnnxImageClassifier(
             "OnnxImageClassifier: plugin failed to instantiate session: " +
             detail);
     }
-
-    name_ = "ONNX (" + modelPath.filename().string() + ")";
 }
 
 OnnxImageClassifier::~OnnxImageClassifier() {
@@ -212,10 +226,7 @@ OnnxImageClassifier::~OnnxImageClassifier() {
 
 std::vector<Classification>
 OnnxImageClassifier::classifyTopK(const Image& image, int k) const {
-    if (pluginImpl_ == nullptr) {
-        throw std::runtime_error(
-            "OnnxImageClassifier: plugin instance is null.");
-    }
+    ensureSessionLoaded();
     return pluginImpl_->classifyTopK(image, k);
 }
 

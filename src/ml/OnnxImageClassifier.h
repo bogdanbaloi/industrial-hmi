@@ -71,15 +71,30 @@ public:
     [[nodiscard]] std::string name() const override;
 
 private:
+    /// Lazy plugin load. Called from `classifyTopK`, idempotent. Resolves
+    /// the plugin module + creates the underlying classifier on first
+    /// call; subsequent calls return immediately. Marked `const` because
+    /// the lazy mutation is a transparent cache: callers see only the
+    /// classify behaviour.
+    void ensureSessionLoaded() const;
+
+    /// Construction-time inputs kept around so `ensureSessionLoaded` can
+    /// invoke the plugin entry point on first inspect. Held as values
+    /// because the constructor validates them once and we want the
+    /// classifier to be self-contained.
+    std::filesystem::path modelPath_;
+    std::filesystem::path labelsPath_;
+
     /// Plugin-owned `ImageClassifier` produced by the plugin's create
     /// entry point. Allocated by the plugin, deleted by the plugin --
     /// the destructor calls back through a destroy function pointer
-    /// resolved at construction.
-    ImageClassifier* pluginImpl_ = nullptr;
+    /// resolved at first inspection. `mutable` so the lazy-load
+    /// path can populate it from inside `classifyTopK`.
+    mutable ImageClassifier* pluginImpl_ = nullptr;
 
     /// Pointer to the plugin's destroy entry point. Cached so the
     /// destructor never pays the cost of another `dlsym`.
-    void (*pluginDestroy_)(ImageClassifier*) = nullptr;
+    mutable void (*pluginDestroy_)(ImageClassifier*) = nullptr;
 
     /// Display-friendly name. Cached at construction so `name()` does
     /// not have to cross the plugin boundary on every call.
