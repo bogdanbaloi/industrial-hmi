@@ -65,9 +65,12 @@ int main(int argc, char* argv[]) {
     // widget class registration crash the libc heap before any
     // window appears.
     //
-    // Empty value via _putenv_s clears the variable from the process
-    // environment. cmd.exe / Explorer launches do not set TERM, so
-    // this is a no-op there.
+    // SetEnvironmentVariableA(name, NULL) removes the variable from
+    // the process environment block. _putenv_s only updates the CRT
+    // copy of the environment; GLib uses GetEnvironmentVariable
+    // (Win32 API) which reads from the EB, so the CRT-only call
+    // would not be visible to GLib. Belt + suspenders: clear both.
+    ::SetEnvironmentVariableA("TERM", nullptr);
     _putenv_s("TERM", "");
 
     // Detach the inherited console for the same reason -- belt and
