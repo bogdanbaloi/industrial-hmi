@@ -159,9 +159,13 @@ void QualityInspectionPage::onChooseFileClicked() {
             if (file) {
                 runInspection(file->get_path());
             }
-        } catch (const Glib::Error&) {
-            // User cancelled -- not an error path.
         }
+        // User cancelled the picker -- Gtk::FileDialog signals this by
+        // throwing Glib::Error("Dismissed by user") and there is no
+        // separate API to detect cancellation, so an empty catch is
+        // the documented happy-path handler.
+        // NOLINTNEXTLINE(bugprone-empty-catch)
+        catch (const Glib::Error&) {}
     };
 
     if (parentWindow != nullptr) {
