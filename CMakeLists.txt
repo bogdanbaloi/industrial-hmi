@@ -470,7 +470,13 @@ if(BUILD_ML_CLASSIFIER)
         PRIVATE OnnxRuntime::OnnxRuntime)
     set_target_properties(industrial_ml_ort PROPERTIES
         OUTPUT_NAME industrial_ml_ort
-        POSITION_INDEPENDENT_CODE ON)
+        POSITION_INDEPENDENT_CODE ON
+        # Drop the plugin next to the host binary so dlopen / LoadLibrary
+        # finds it via the platform default loader path (current
+        # working directory on Windows, $ORIGIN-style on Linux when
+        # LD_LIBRARY_PATH covers it).
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     # Hide all non-exported symbols so the plugin's private copy of
     # the foundation sources cannot accidentally leak into another
     # consumer that dlopens with RTLD_GLOBAL.
@@ -591,6 +597,14 @@ target_link_libraries(industrial-hmi
 # clarity + safety).
 if(WIN32)
     target_link_libraries(industrial-hmi PRIVATE ws2_32 mswsock user32)
+endif()
+
+# Make industrial-hmi pull the ML plugin into the build by dependency,
+# WITHOUT linking it. The plugin is loaded at runtime via dlopen /
+# LoadLibrary; pre-building it ensures the artefact sits next to the
+# binary so the loader actually finds it on first inspection.
+if(BUILD_ML_CLASSIFIER)
+    add_dependencies(industrial-hmi industrial_ml_ort)
 endif()
 
 # Console Executable (Cross-Platform) -- shares src/main.cpp with the GTK
