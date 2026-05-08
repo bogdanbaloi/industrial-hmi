@@ -55,19 +55,23 @@ constexpr bool kConsoleMode =
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
 #  ifndef CONSOLE_MODE
-    // GTK frontend (WIN32 subsystem) launched from a console-mode
-    // parent (cmd.exe, MSYS2 bash) inherits the parent's console
-    // handles. Some launch paths -- specifically MSYS2's pty
-    // implementation -- pass a pseudo-TTY into the child whose
-    // semantics interact badly with GLib's logging + GTK's class
-    // registration code on first widget allocation, crashing the
-    // process before any window appears.
+    // GTK frontend (WIN32 subsystem) launched from MSYS2 bash inherits
+    // a TERM environment variable like "xterm-256color" or "cygwin".
+    // GLib's logger reads TERM at startup and, when it spots a value
+    // it recognises as a colour-capable terminal, switches stderr
+    // output to ANSI-escaped strings. The Windows console handle
+    // inherited from the MSYS2 pty does not behave like a real TTY,
+    // and the resulting GVariant builder calls during the first GTK
+    // widget class registration crash the libc heap before any
+    // window appears.
     //
-    // Detach immediately. After this call the process has no
-    // console; stdio handles become invalid until the user opens a
-    // log file (which the existing Logger already does separately).
-    // Safe for cmd.exe / Explorer launch too -- the FreeConsole()
-    // is a no-op when no console is attached.
+    // Empty value via _putenv_s clears the variable from the process
+    // environment. cmd.exe / Explorer launches do not set TERM, so
+    // this is a no-op there.
+    _putenv_s("TERM", "");
+
+    // Detach the inherited console for the same reason -- belt and
+    // suspenders.
     ::FreeConsole();
 #  endif
 
