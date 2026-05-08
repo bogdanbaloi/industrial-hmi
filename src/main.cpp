@@ -54,6 +54,23 @@ constexpr bool kConsoleMode =
 
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
+#  ifndef CONSOLE_MODE
+    // GTK frontend (WIN32 subsystem) launched from a console-mode
+    // parent (cmd.exe, MSYS2 bash) inherits the parent's console
+    // handles. Some launch paths -- specifically MSYS2's pty
+    // implementation -- pass a pseudo-TTY into the child whose
+    // semantics interact badly with GLib's logging + GTK's class
+    // registration code on first widget allocation, crashing the
+    // process before any window appears.
+    //
+    // Detach immediately. After this call the process has no
+    // console; stdio handles become invalid until the user opens a
+    // log file (which the existing Logger already does separately).
+    // Safe for cmd.exe / Explorer launch too -- the FreeConsole()
+    // is a no-op when no console is attached.
+    ::FreeConsole();
+#  endif
+
     // Use Cairo renderer on Windows to avoid GL flicker in GTK4.
     _putenv_s("GSK_RENDERER", "cairo");
 
