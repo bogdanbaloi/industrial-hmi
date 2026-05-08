@@ -480,6 +480,7 @@ target_link_libraries(test_dashboard_page PRIVATE ${VIEW_COMMON_LIBS})
 target_link_libraries(test_dashboard_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME DashboardPageTest COMMAND test_dashboard_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(DashboardPageTest PROPERTIES LABELS "gui")
 
 # View: ProductsPage
 add_executable(test_products_page
@@ -493,6 +494,7 @@ target_link_libraries(test_products_page PRIVATE ${VIEW_COMMON_LIBS})
 target_link_libraries(test_products_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME ProductsPageTest COMMAND test_products_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(ProductsPageTest PROPERTIES LABELS "gui")
 
 # View: SettingsPage (handlers, sync guard, palette mode-lock)
 # buildUI loads settings-page.ui from assets, so CWD must be source root.
@@ -510,6 +512,7 @@ target_link_libraries(test_settings_page PRIVATE ${VIEW_COMMON_LIBS})
 target_link_libraries(test_settings_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME SettingsPageTest COMMAND test_settings_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(SettingsPageTest PROPERTIES LABELS "gui")
 
 # View: DialogManager
 # Exercises every public method on DialogManager under a real GTK main
@@ -528,6 +531,7 @@ target_link_libraries(test_dialog_manager PRIVATE ${VIEW_COMMON_LIBS})
 target_link_libraries(test_dialog_manager PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME DialogManagerTest COMMAND test_dialog_manager
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(DialogManagerTest PROPERTIES LABELS "gui")
 
 # Boost.Asio on Windows references WSAStartup / WSACleanup from Winsock;
 # every objectsModel-linked target needs ws2_32.
