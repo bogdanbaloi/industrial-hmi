@@ -465,6 +465,7 @@ if(BUILD_OPCUA_BACKEND)
         PRIVATE
             src/integration/opcua/Open62541Server.cpp
             src/integration/opcua/FactoryNodeMap.cpp
+            src/integration/opcua/OpcUaBackend.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
@@ -474,11 +475,13 @@ if(BUILD_OPCUA_BACKEND)
                 src/integration/opcua/OpcUaNodeMap.h
                 src/integration/opcua/Open62541Server.h
                 src/integration/opcua/FactoryNodeMap.h
+                src/integration/opcua/OpcUaBackend.h
     )
     target_link_libraries(objectsOpcUa
         PUBLIC
-            objectsCore       # Logger, used by Open62541Server
-            objectsModel      # ProductionModel, used by FactoryNodeMap
+            objectsCore         # Logger, used by Open62541Server
+            objectsModel        # ProductionModel, used by FactoryNodeMap
+            objectsIntegration  # IntegrationBackend, base of OpcUaBackend
             open62541::open62541
             Threads::Threads
     )
