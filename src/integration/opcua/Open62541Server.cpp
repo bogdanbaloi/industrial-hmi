@@ -254,6 +254,153 @@ bool Open62541Server::writeString(std::string_view path,
     return rc == UA_STATUSCODE_GOOD;
 }
 
+namespace {
+
+/// Split "Factory/Lines/Line0" -> ("Factory/Lines", "Line0"). Returns
+/// empty parent for top-level (parent is Objects folder).
+std::pair<std::string, std::string>
+splitParentLeaf(std::string_view browsePath) {
+    const auto pos = browsePath.rfind('/');
+    if (pos == std::string_view::npos) {
+        return {std::string{}, std::string{browsePath}};
+    }
+    return {std::string{browsePath.substr(0, pos)},
+            std::string{browsePath.substr(pos + 1)}};
+}
+
+/// Resolve a parent path to a NodeId, defaulting to Objects folder
+/// when the path is empty (top-level child of Objects/).
+UA_NodeId resolveParent(UA_Server* server, std::string_view parentPath) {
+    if (parentPath.empty()) {
+        return UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
+    }
+    return resolveNode(server, parentPath);
+}
+
+}  // namespace
+
+bool Open62541Server::addObject(std::string_view browsePath) {
+    if (impl_->server == nullptr) return false;
+
+    auto [parent, leaf] = splitParentLeaf(browsePath);
+    UA_NodeId parentId = resolveParent(impl_->server, parent);
+    if (UA_NodeId_isNull(&parentId)) return false;
+
+    UA_ObjectAttributes attr = UA_ObjectAttributes_default;
+    attr.displayName = UA_LOCALIZEDTEXT_ALLOC("en-US", leaf.c_str());
+
+    const UA_StatusCode rc = UA_Server_addObjectNode(
+        impl_->server,
+        UA_NODEID_NULL,                 // server picks the NodeId
+        parentId,
+        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+        UA_QUALIFIEDNAME(1, leaf.data()),
+        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+        attr,
+        nullptr,
+        nullptr);
+
+    UA_LocalizedText_clear(&attr.displayName);
+    if (parent.empty() == false) UA_NodeId_clear(&parentId);
+
+    return rc == UA_STATUSCODE_GOOD;
+}
+
+namespace {
+
+template <typename T>
+bool addVariableImpl(UA_Server* server,
+                     std::string_view browsePath,
+                     const UA_DataType& type,
+                     const T& initial) {
+    if (server == nullptr) return false;
+
+    auto [parent, leaf] = splitParentLeaf(browsePath);
+    UA_NodeId parentId = resolveParent(server, parent);
+    if (UA_NodeId_isNull(&parentId)) return false;
+
+    UA_VariableAttributes attr = UA_VariableAttributes_default;
+    attr.displayName = UA_LOCALIZEDTEXT_ALLOC("en-US", leaf.c_str());
+    attr.dataType = type.typeId;
+    attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+    UA_Variant_setScalarCopy(&attr.value, &initial, &type);
+
+    const UA_StatusCode rc = UA_Server_addVariableNode(
+        server,
+        UA_NODEID_NULL,
+        parentId,
+        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+        UA_QUALIFIEDNAME(1, leaf.data()),
+        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+        attr,
+        nullptr,
+        nullptr);
+
+    UA_LocalizedText_clear(&attr.displayName);
+    UA_Variant_clear(&attr.value);
+    if (parent.empty() == false) UA_NodeId_clear(&parentId);
+
+    return rc == UA_STATUSCODE_GOOD;
+}
+
+}  // namespace
+
+bool Open62541Server::addFloatVariable(std::string_view path,
+                                       float initial) {
+    return addVariableImpl(impl_->server, path,
+                           UA_TYPES[UA_TYPES_FLOAT], initial);
+}
+
+bool Open62541Server::addInt32Variable(std::string_view path,
+                                       std::int32_t initial) {
+    return addVariableImpl(impl_->server, path,
+                           UA_TYPES[UA_TYPES_INT32], initial);
+}
+
+bool Open62541Server::addBoolVariable(std::string_view path,
+                                      bool initial) {
+    UA_Boolean v = initial ? UA_TRUE : UA_FALSE;
+    return addVariableImpl(impl_->server, path,
+                           UA_TYPES[UA_TYPES_BOOLEAN], v);
+}
+
+bool Open62541Server::addStringVariable(std::string_view path,
+                                        std::string_view initial) {
+    if (impl_->server == nullptr) return false;
+
+    auto [parent, leaf] = splitParentLeaf(path);
+    UA_NodeId parentId = resolveParent(impl_->server, parent);
+    if (UA_NodeId_isNull(&parentId)) return false;
+
+    std::string copy(initial);
+    UA_String s;
+    s.length = copy.size();
+    s.data = reinterpret_cast<UA_Byte*>(copy.data());
+
+    UA_VariableAttributes attr = UA_VariableAttributes_default;
+    attr.displayName = UA_LOCALIZEDTEXT_ALLOC("en-US", leaf.c_str());
+    attr.dataType = UA_TYPES[UA_TYPES_STRING].typeId;
+    attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+    UA_Variant_setScalarCopy(&attr.value, &s, &UA_TYPES[UA_TYPES_STRING]);
+
+    const UA_StatusCode rc = UA_Server_addVariableNode(
+        impl_->server,
+        UA_NODEID_NULL,
+        parentId,
+        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+        UA_QUALIFIEDNAME(1, leaf.data()),
+        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+        attr,
+        nullptr,
+        nullptr);
+
+    UA_LocalizedText_clear(&attr.displayName);
+    UA_Variant_clear(&attr.value);
+    if (parent.empty() == false) UA_NodeId_clear(&parentId);
+
+    return rc == UA_STATUSCODE_GOOD;
+}
+
 void Open62541Server::runIterateLoop() noexcept {
     while (running_.load(std::memory_order_acquire)) {
         // run_iterate returns a sleep hint in ms but we cap at the

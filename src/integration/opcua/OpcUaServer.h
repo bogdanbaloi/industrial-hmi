@@ -90,6 +90,34 @@ public:
         writeString(std::string_view nodeBrowsePath,
                     std::string_view value) noexcept = 0;
 
+    /// Create an Object folder node. `browsePath` is slash-separated
+    /// under `Objects/`; intermediate parents must already exist.
+    /// e.g. `addObject("Factory")` then `addObject("Factory/Lines")`.
+    /// Returns false on duplicate or missing parent.
+    ///
+    /// Why path-strings instead of returning typed NodeIds: keeps the
+    /// interface stack-free of `UA_NodeId` (open62541 detail) and
+    /// makes mocks trivial to write -- a test double can just record
+    /// the paths without simulating an address space.
+    [[nodiscard]] virtual bool
+        addObject(std::string_view browsePath) = 0;
+
+    /// Create a typed Variable leaf with an initial value. Same path
+    /// rules as `addObject`. Subsequent updates go through the
+    /// `writeXxx` family above.
+    [[nodiscard]] virtual bool
+        addFloatVariable(std::string_view browsePath, float initial) = 0;
+
+    [[nodiscard]] virtual bool
+        addInt32Variable(std::string_view browsePath, std::int32_t initial) = 0;
+
+    [[nodiscard]] virtual bool
+        addBoolVariable(std::string_view browsePath, bool initial) = 0;
+
+    [[nodiscard]] virtual bool
+        addStringVariable(std::string_view browsePath,
+                          std::string_view initial) = 0;
+
 protected:
     OpcUaServer() = default;
 };

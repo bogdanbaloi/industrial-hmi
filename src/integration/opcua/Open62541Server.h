@@ -82,6 +82,18 @@ public:
         writeString(std::string_view nodeBrowsePath,
                     std::string_view value) noexcept override;
 
+    [[nodiscard]] bool
+        addObject(std::string_view browsePath) override;
+    [[nodiscard]] bool
+        addFloatVariable(std::string_view browsePath, float initial) override;
+    [[nodiscard]] bool
+        addInt32Variable(std::string_view browsePath, std::int32_t initial) override;
+    [[nodiscard]] bool
+        addBoolVariable(std::string_view browsePath, bool initial) override;
+    [[nodiscard]] bool
+        addStringVariable(std::string_view browsePath,
+                          std::string_view initial) override;
+
 private:
     /// Pimpl holder so the header stays open62541-free. Real definition
     /// in the .cpp where `<open62541/...>` is included.
