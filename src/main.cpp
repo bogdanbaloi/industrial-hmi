@@ -6,6 +6,12 @@
 #include "src/integration/MqttPublisher.h"
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+#  include "src/integration/opcua/FactoryNodeMap.h"
+#  include "src/integration/opcua/OpcUaBackend.h"
+#  include "src/integration/opcua/OpcUaConfig.h"
+#  include "src/integration/opcua/Open62541Server.h"
+#endif
 #include "src/model/DatabaseManager.h"
 #include "src/model/SimulatedModel.h"
 #include <cstdint>
@@ -138,6 +144,34 @@ int main(int argc, char* argv[]) {
 
             integration.registerBackend(std::move(publisher));
         }
+
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+        // OPC-UA server backend. Disabled by default; opt-in per
+        // deployment via app-config.json. Compiled out entirely when
+        // BUILD_OPCUA_BACKEND=OFF, so the host binary stays small for
+        // deployments that don't speak OPC-UA.
+        if (config.isOpcUaBackendEnabled()) {
+            app::integration::opcua::OpcUaConfig opcuaConfig;
+            opcuaConfig.port =
+                static_cast<std::uint16_t>(config.getOpcUaServerPort());
+            opcuaConfig.applicationUri = config.getOpcUaApplicationUri();
+            opcuaConfig.applicationName = config.getOpcUaApplicationName();
+
+            auto opcuaServer =
+                std::make_unique<app::integration::opcua::Open62541Server>(
+                    std::move(opcuaConfig), bootstrap.logger());
+            auto opcuaNodeMap =
+                std::make_unique<app::integration::opcua::FactoryNodeMap>(
+                    app::model::SimulatedModel::instance(),
+                    bootstrap.logger());
+
+            integration.registerBackend(
+                std::make_unique<app::integration::opcua::OpcUaBackend>(
+                    std::move(opcuaServer),
+                    std::move(opcuaNodeMap),
+                    bootstrap.logger()));
+        }
+#endif
 
         integration.startAll();
 

@@ -704,6 +704,9 @@ target_link_libraries(industrial-hmi
         objectsMl
         Threads::Threads
 )
+if(BUILD_OPCUA_BACKEND)
+    target_link_libraries(industrial-hmi PRIVATE objectsOpcUa)
+endif()
 
 # Windows: Boost.Asio requires Winsock + mswsock (AcceptEx,
 # GetAcceptExSockaddrs are in mswsock.lib, not ws2_32). StartupDialog
@@ -737,6 +740,9 @@ target_link_libraries(industrial-hmi-console
         objectsMl
         Threads::Threads
 )
+if(BUILD_OPCUA_BACKEND)
+    target_link_libraries(industrial-hmi-console PRIVATE objectsOpcUa)
+endif()
 if(WIN32)
     # Boost.Asio's TCP server uses IOCP AcceptEx / GetAcceptExSockaddrs
     # from mswsock.lib (alongside ws2_32). user32 stays harmless even
