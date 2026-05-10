@@ -209,6 +209,25 @@ target_link_libraries(test_factory_node_map PRIVATE
 )
 add_test(NAME FactoryNodeMapTest COMMAND test_factory_node_map)
 
+# OPC-UA: end-to-end roundtrip via real open62541 client.
+# Only built when BUILD_OPCUA_BACKEND=ON because this test DOES link
+# the open62541 library -- the only test that does. Spins up a real
+# Open62541Server on localhost, connects with a real UA_Client,
+# browses the address space, reads back a written value. Catches
+# any wire-format regression that the mock-based unit tests can't see.
+if(BUILD_OPCUA_BACKEND)
+    add_executable(test_open62541_server_integration
+        Open62541ServerIntegrationTest.cpp)
+    target_link_libraries(test_open62541_server_integration PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        objectsOpcUa
+        objectsCore
+    )
+    add_test(NAME Open62541ServerIntegrationTest
+             COMMAND test_open62541_server_integration)
+endif()
+
 # ML: ImageNetLabels -- file/vector loader, BOM + CRLF tolerance, bounds.
 # Pure C++, no decoder dep, no ONNX. Compiles the source directly.
 add_executable(test_image_net_labels ImageNetLabelsTest.cpp
