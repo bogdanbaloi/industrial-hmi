@@ -193,6 +193,12 @@ target_link_libraries(test_opcua_backend PRIVATE
     tests_includes
     objectsCore  # ConsoleLogger
 )
+if(WIN32)
+    # objectsCore -> Bootstrap.cpp pulls in Boost.Asio transitively,
+    # which references WSAStartup / WSACleanup from Winsock. Same flag
+    # every other Asio-touching test target on Windows carries.
+    target_link_libraries(test_opcua_backend PRIVATE ws2_32 mswsock)
+endif()
 add_test(NAME OpcUaBackendTest COMMAND test_opcua_backend)
 
 # OPC-UA: FactoryNodeMap -- domain-to-address-space mapping.
@@ -207,6 +213,9 @@ target_link_libraries(test_factory_node_map PRIVATE
     tests_includes
     objectsCore  # ConsoleLogger
 )
+if(WIN32)
+    target_link_libraries(test_factory_node_map PRIVATE ws2_32 mswsock)
+endif()
 add_test(NAME FactoryNodeMapTest COMMAND test_factory_node_map)
 
 # OPC-UA: end-to-end roundtrip via real open62541 client.
@@ -224,6 +233,10 @@ if(BUILD_OPCUA_BACKEND)
         objectsOpcUa
         objectsCore
     )
+    if(WIN32)
+        target_link_libraries(test_open62541_server_integration
+                              PRIVATE ws2_32 mswsock)
+    endif()
     add_test(NAME Open62541ServerIntegrationTest
              COMMAND test_open62541_server_integration)
 endif()
