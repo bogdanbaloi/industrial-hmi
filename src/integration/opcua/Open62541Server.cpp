@@ -98,13 +98,14 @@ bool writeScalar(UA_Server* server,
 
     UA_Variant var;
     UA_Variant_init(&var);
-    // open62541's setScalar takes a non-const pointer but doesn't
-    // mutate the value; const_cast is the documented usage in their
-    // tutorials. The cast is safe because UA_Server_writeValue copies
-    // the variant before queuing the write.
-    UA_Variant_setScalar(&var, const_cast<T*>(&value), &type);
+    // setScalarCopy takes a const void* and copies into the variant,
+    // avoiding the const_cast trap that the non-copy setScalar would
+    // require. UA_Server_writeValue then takes the variant by value
+    // and serialises it, so the copy is unavoidable anyway.
+    UA_Variant_setScalarCopy(&var, &value, &type);
 
     const UA_StatusCode rc = UA_Server_writeValue(server, nodeId, var);
+    UA_Variant_clear(&var);
     UA_NodeId_clear(&nodeId);
     return rc == UA_STATUSCODE_GOOD;
 }
@@ -238,18 +239,19 @@ bool Open62541Server::writeString(std::string_view path,
     UA_NodeId nodeId = resolveNode(impl_->server, path);
     if (UA_NodeId_isNull(&nodeId)) return false;
 
-    // UA_String is a length+pointer pair; we don't need to allocate
-    // because UA_Server_writeValue copies before queueing.
-    std::string copy(value);
-    UA_String s;
-    s.length = copy.size();
-    s.data = reinterpret_cast<UA_Byte*>(copy.data());
+    // UA_String_fromChars copies into a fresh allocation owned by the
+    // variant; no reinterpret_cast or const-stripping needed. The
+    // matching UA_String_clear runs as part of UA_Variant_clear below.
+    const std::string copy(value);
+    UA_String s = UA_String_fromChars(copy.c_str());
 
     UA_Variant var;
     UA_Variant_init(&var);
-    UA_Variant_setScalar(&var, &s, &UA_TYPES[UA_TYPES_STRING]);
+    UA_Variant_setScalarCopy(&var, &s, &UA_TYPES[UA_TYPES_STRING]);
     const UA_StatusCode rc =
         UA_Server_writeValue(impl_->server, nodeId, var);
+    UA_String_clear(&s);
+    UA_Variant_clear(&var);
     UA_NodeId_clear(&nodeId);
     return rc == UA_STATUSCODE_GOOD;
 }
@@ -301,7 +303,7 @@ bool Open62541Server::addObject(std::string_view browsePath) {
         nullptr);
 
     UA_LocalizedText_clear(&attr.displayName);
-    if (parent.empty() == false) UA_NodeId_clear(&parentId);
+    if (!parent.empty()) UA_NodeId_clear(&parentId);
 
     return rc == UA_STATUSCODE_GOOD;
 }
@@ -338,7 +340,7 @@ bool addVariableImpl(UA_Server* server,
 
     UA_LocalizedText_clear(&attr.displayName);
     UA_Variant_clear(&attr.value);
-    if (parent.empty() == false) UA_NodeId_clear(&parentId);
+    if (!parent.empty()) UA_NodeId_clear(&parentId);
 
     return rc == UA_STATUSCODE_GOOD;
 }
@@ -372,10 +374,8 @@ bool Open62541Server::addStringVariable(std::string_view path,
     UA_NodeId parentId = resolveParent(impl_->server, parent);
     if (UA_NodeId_isNull(&parentId)) return false;
 
-    std::string copy(initial);
-    UA_String s;
-    s.length = copy.size();
-    s.data = reinterpret_cast<UA_Byte*>(copy.data());
+    const std::string copy(initial);
+    UA_String s = UA_String_fromChars(copy.c_str());
 
     UA_VariableAttributes attr = UA_VariableAttributes_default;
     attr.displayName = UA_LOCALIZEDTEXT_ALLOC("en-US", leaf.c_str());
@@ -396,7 +396,8 @@ bool Open62541Server::addStringVariable(std::string_view path,
 
     UA_LocalizedText_clear(&attr.displayName);
     UA_Variant_clear(&attr.value);
-    if (parent.empty() == false) UA_NodeId_clear(&parentId);
+    UA_String_clear(&s);
+    if (!parent.empty()) UA_NodeId_clear(&parentId);
 
     return rc == UA_STATUSCODE_GOOD;
 }
