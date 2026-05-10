@@ -77,4 +77,17 @@ std::string OpcUaBackend::metricsSummary() const {
                        server_->connectedSessions());
 }
 
+BackendState OpcUaBackend::connectionState() const noexcept {
+    // Server not running -> Disconnected.
+    if (!server_->isRunning()) {
+        return BackendState::Disconnected;
+    }
+    // Listening but no client sessions -> Connecting (idle listening).
+    // Green `Connected` is reserved for "an actual peer is talking".
+    if (server_->connectedSessions() == 0) {
+        return BackendState::Connecting;
+    }
+    return BackendState::Connected;
+}
+
 }  // namespace app::integration::opcua

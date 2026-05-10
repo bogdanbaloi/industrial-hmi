@@ -191,6 +191,21 @@ std::string TcpBackend::metricsSummary() const {
                        activeClients_.load(std::memory_order_acquire));
 }
 
+BackendState TcpBackend::connectionState() const noexcept {
+    // Acceptor not running -> nothing to talk to.
+    if (!running_.load(std::memory_order_acquire)) {
+        return BackendState::Disconnected;
+    }
+    // Listening but no peers attached -> "Connecting" (listening idle).
+    // The green `Connected` LED is reserved for "actively carrying
+    // traffic"; it would be misleading to show green on a server that
+    // nobody has connected to yet.
+    if (activeClients_.load(std::memory_order_acquire) == 0) {
+        return BackendState::Connecting;
+    }
+    return BackendState::Connected;
+}
+
 void TcpBackend::stop() {
     stopImpl();
 }
