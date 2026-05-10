@@ -278,6 +278,27 @@ public:
         return getValue("network.mqtt.topic_prefix",
                         defaults::kMqttTopicPrefix);
     }
+
+    // OPC-UA backend (server role). Defaults to disabled like the
+    // other backends; turning it on starts a UA_Server bound to the
+    // configured port and exposes the Factory address space.
+    [[nodiscard]] bool isOpcUaBackendEnabled() const {
+        return getValue("network.opcua.enabled", "false") == "true";
+    }
+
+    [[nodiscard]] int getOpcUaServerPort() const {
+        return getInt("network.opcua.port", defaults::kOpcUaServerPort);
+    }
+
+    [[nodiscard]] std::string getOpcUaApplicationUri() const {
+        return getValue("network.opcua.application_uri",
+                        defaults::kOpcUaApplicationUri);
+    }
+
+    [[nodiscard]] std::string getOpcUaApplicationName() const {
+        return getValue("network.opcua.application_name",
+                        defaults::kOpcUaApplicationName);
+    }
     
     // Template Support
     

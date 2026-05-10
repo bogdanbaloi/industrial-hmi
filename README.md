@@ -428,6 +428,48 @@ against the spec; `MqttPublisherTest` (10 cases) drives the publisher
 against an in-process mock broker; `ProductionTelemetryBridgeTest` (8
 cases) verifies the domain mapping in isolation.
 
+### OPC-UA backend (industrial protocol)
+
+OPC-UA is the standard industrial automation protocol -- Siemens,
+Beckhoff, Rockwell PLCs all expose telemetry through it natively.
+The third backend exposes `ProductionModel` state as a browsable
+OPC-UA address space rooted at `Objects/Factory/`:
+
+```
+Objects/Factory/
+  State                                Int32   (SystemState enum)
+  EquipmentLines/
+    Line<id>/{Status, SupplyLevel, Message}
+  QualityCheckpoints/
+    Checkpoint<id>/{Name, Status, PassRate, UnitsInspected, ...}
+  WorkUnit/
+    {Id, ProductId, CompletedOperations, TotalOperations}
+```
+
+Architecture is interface-first (4 pure abstracts in
+`src/integration/opcua/`):
+- `OpcUaServer` -- lifecycle + typed write surface
+- `OpcUaNodeMap` -- strategy: domain state -> address-space writes
+- `OpcUaCommandSink` -- inbound method dispatch (Phase 3)
+- `OpcUaConfig` -- value type for endpoint settings
+
+Concrete impls:
+- `Open62541Server` -- wraps the open62541 v1.5.4 C stack via pimpl
+- `FactoryNodeMap` -- manufacturing-domain mapping (replaceable for
+  pharma / energy / smart-building deployments)
+- `OpcUaBackend` -- facade: composes the above behind
+  `IntegrationBackend` so `IntegrationManager` orchestrates OPC-UA
+  identically to TCP / MQTT
+
+Build is opt-in via `-DBUILD_OPCUA_BACKEND=ON`; FetchContent pulls
+open62541 and statically links it (~2.4 MB binary contribution).
+The host binary builds and runs unchanged when the flag is off.
+
+Coverage: `OpcUaBackendTest` + `FactoryNodeMapTest` (12 mock-based
+unit tests, no open62541 dep) plus `Open62541ServerIntegrationTest`
+(real server + real client over loopback, validates wire-format
+roundtrip via `UA_Client_readValueAttribute`).
+
 ## Edge AI Inference
 
 A second integration vertical: load a quantized neural network and

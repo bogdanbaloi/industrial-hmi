@@ -158,8 +158,19 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug \
           -DBUILD_TESTS=ON \
           -DBUILD_ML_CLASSIFIER=ON \
+          -DBUILD_OPCUA_BACKEND=ON \
           -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime" \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    # open62541 generates several headers (nodeids.h, statuscode.h,
+    # transport_generated.h, ...) at build time from XML/CSV inputs.
+    # clang-tidy follows #include <open62541/...> when analysing our
+    # OPC-UA wrappers and fails on "file not found" if the generators
+    # haven't run yet. Build the open62541 target first so the
+    # generated headers exist on disk before clang-tidy reads
+    # compile_commands.json.
+    - name: Pre-build open62541 generated headers
+      run: cmake --build build/tidy --target open62541 -- -j$(nproc)
 
     - name: Run clang-tidy on src/
       run: |
@@ -532,10 +543,60 @@ jobs:
         ctest --output-on-failure \
           -R 'ImageClassifierTest|OnnxImageClassifierTest'
 
+  opcua-integration:
+    name: OPC-UA Integration (open62541)
+    runs-on: ubuntu-24.04
+
+    # Drives the full OPC-UA backend story end-to-end on every PR:
+    #   1. FetchContent pulls open62541 v1.5.4 from upstream and builds
+    #      it as a static library inside the project's build tree.
+    #   2. Compiles objectsOpcUa (interfaces + concrete server +
+    #      FactoryNodeMap + facade) and links it into the host binaries.
+    #   3. Runs the unit tests (mock-based, no open62541 dep) AND the
+    #      integration test (real UA_Server + real UA_Client over
+    #      loopback, validates wire-format roundtrip).
+    #
+    # Stays in its own job so the baseline build doesn't pay the
+    # ~3 minute open62541 compile cost when the OPC-UA backend isn't
+    # in scope. The tests that DO depend on open62541 (the integration
+    # test) are also limited to this job.
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install C++ Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libboost-dev \
+          libgtest-dev libgmock-dev
+
+    - name: Configure
+      run: |
+        cmake -S . -B build/opcua -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTS=ON \
+          -DBUILD_OPCUA_BACKEND=ON
+
+    - name: Build OPC-UA targets
+      run: |
+        cmake --build build/opcua \
+          --target test_opcua_backend test_factory_node_map \
+                   test_open62541_server_integration \
+          -- -j$(nproc)
+
+    - name: Run OPC-UA tests
+      working-directory: build/opcua
+      run: |
+        ctest --output-on-failure \
+          -R 'OpcUaBackendTest|FactoryNodeMapTest|Open62541ServerIntegrationTest'
+
   summary:
     name: Pipeline Summary
     runs-on: ubuntu-24.04
-    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, tsan, ml-integration, documentation]
+    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, tsan, ml-integration, opcua-integration, documentation]
     if: always()
 
     steps:
@@ -552,4 +613,5 @@ jobs:
         echo "| Sanitizers | ${{ needs.sanitizers.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| ThreadSanitizer | ${{ needs.tsan.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| ML Integration | ${{ needs.ml-integration.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| OPC-UA Integration | ${{ needs.opcua-integration.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY

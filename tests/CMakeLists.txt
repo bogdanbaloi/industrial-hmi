@@ -180,6 +180,67 @@ target_link_libraries(test_production_telemetry_bridge PRIVATE
 add_test(NAME ProductionTelemetryBridgeTest
          COMMAND test_production_telemetry_bridge)
 
+# OPC-UA: OpcUaBackend facade -- lifecycle ordering on mocked
+# OpcUaServer + OpcUaNodeMap. NEVER pulls in open62541 (the interfaces
+# are header-only, the mock implementations live in MockOpcUaServer.h).
+# Compiles regardless of BUILD_OPCUA_BACKEND because the test surface
+# is interface-only.
+add_executable(test_opcua_backend
+    OpcUaBackendTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/opcua/OpcUaBackend.cpp)
+target_link_libraries(test_opcua_backend PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsCore  # ConsoleLogger
+)
+if(WIN32)
+    # objectsCore -> Bootstrap.cpp pulls in Boost.Asio transitively,
+    # which references WSAStartup / WSACleanup from Winsock. Same flag
+    # every other Asio-touching test target on Windows carries.
+    target_link_libraries(test_opcua_backend PRIVATE ws2_32 mswsock)
+endif()
+add_test(NAME OpcUaBackendTest COMMAND test_opcua_backend)
+
+# OPC-UA: FactoryNodeMap -- domain-to-address-space mapping.
+# Mocked OpcUaServer captures every add* / write* call; mocked
+# ProductionModel fires synthetic signals via SaveArg. No open62541
+# dependency for the same reason as OpcUaBackendTest.
+add_executable(test_factory_node_map
+    FactoryNodeMapTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/opcua/FactoryNodeMap.cpp)
+target_link_libraries(test_factory_node_map PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsCore  # ConsoleLogger
+)
+if(WIN32)
+    target_link_libraries(test_factory_node_map PRIVATE ws2_32 mswsock)
+endif()
+add_test(NAME FactoryNodeMapTest COMMAND test_factory_node_map)
+
+# OPC-UA: end-to-end roundtrip via real open62541 client.
+# Only built when BUILD_OPCUA_BACKEND=ON because this test DOES link
+# the open62541 library -- the only test that does. Spins up a real
+# Open62541Server on localhost, connects with a real UA_Client,
+# browses the address space, reads back a written value. Catches
+# any wire-format regression that the mock-based unit tests can't see.
+if(BUILD_OPCUA_BACKEND)
+    add_executable(test_open62541_server_integration
+        Open62541ServerIntegrationTest.cpp)
+    target_link_libraries(test_open62541_server_integration PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        objectsOpcUa
+        objectsCore
+    )
+    if(WIN32)
+        target_link_libraries(test_open62541_server_integration
+                              PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME Open62541ServerIntegrationTest
+             COMMAND test_open62541_server_integration)
+endif()
+
 # ML: ImageNetLabels -- file/vector loader, BOM + CRLF tolerance, bounds.
 # Pure C++, no decoder dep, no ONNX. Compiles the source directly.
 add_executable(test_image_net_labels ImageNetLabelsTest.cpp

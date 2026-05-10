@@ -54,6 +54,13 @@ constexpr int kMqttBrokerPort       = 1883;
 constexpr const char* kMqttClientId    = "industrial-hmi";
 constexpr const char* kMqttTopicPrefix = "industrial-hmi";
 
+// OPC-UA server backend. IANA-assigned default port for OPC-UA Binary
+// is 4840; URI / name are advertised in GetEndpoints replies so clients
+// can identify the server in their address books.
+constexpr int kOpcUaServerPort = 4840;
+constexpr const char* kOpcUaApplicationUri  = "urn:industrial-hmi:server";
+constexpr const char* kOpcUaApplicationName = "Industrial HMI OPC-UA Server";
+
 // Product status values (used in DB, UI, and presenter layers)
 constexpr const char* kStatusActive = "Active";
 constexpr const char* kStatusInactive = "Inactive";

@@ -6,6 +6,12 @@
 #include "src/integration/MqttPublisher.h"
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+#  include "src/integration/opcua/FactoryNodeMap.h"
+#  include "src/integration/opcua/OpcUaBackend.h"
+#  include "src/integration/opcua/OpcUaConfig.h"
+#  include "src/integration/opcua/Open62541Server.h"
+#endif
 #include "src/model/DatabaseManager.h"
 #include "src/model/SimulatedModel.h"
 #include <cstdint>
@@ -49,6 +55,35 @@ constexpr bool kConsoleMode =
 [[maybe_unused]] constexpr int kExitUnexpectedFatal = 1;
 [[maybe_unused]] constexpr int kExitStartupFatal    = 2;
 [[maybe_unused]] constexpr int kExitUnknownFatal    = 3;
+
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+/// Build + register the OPC-UA backend with the IntegrationManager.
+/// Extracted from main() to keep the latter under the
+/// readability-function-size threshold; the wiring is mechanical
+/// enough that pulling it into a helper hurts nothing.
+void registerOpcUaBackend(app::integration::IntegrationManager& integration,
+                          app::config::ConfigManager& config,
+                          app::core::Logger& logger) {
+    app::integration::opcua::OpcUaConfig opcuaConfig;
+    opcuaConfig.port =
+        static_cast<std::uint16_t>(config.getOpcUaServerPort());
+    opcuaConfig.applicationUri = config.getOpcUaApplicationUri();
+    opcuaConfig.applicationName = config.getOpcUaApplicationName();
+
+    auto opcuaServer =
+        std::make_unique<app::integration::opcua::Open62541Server>(
+            std::move(opcuaConfig), logger);
+    auto opcuaNodeMap =
+        std::make_unique<app::integration::opcua::FactoryNodeMap>(
+            app::model::SimulatedModel::instance(), logger);
+
+    integration.registerBackend(
+        std::make_unique<app::integration::opcua::OpcUaBackend>(
+            std::move(opcuaServer),
+            std::move(opcuaNodeMap),
+            logger));
+}
+#endif
 
 }  // namespace
 
@@ -138,6 +173,17 @@ int main(int argc, char* argv[]) {
 
             integration.registerBackend(std::move(publisher));
         }
+
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+        // OPC-UA server backend. Disabled by default; opt-in per
+        // deployment via app-config.json. Compiled out entirely when
+        // BUILD_OPCUA_BACKEND=OFF, so the host binary stays small for
+        // deployments that don't speak OPC-UA. Wiring extracted to a
+        // helper to keep main() under the function-size threshold.
+        if (config.isOpcUaBackendEnabled()) {
+            registerOpcUaBackend(integration, config, bootstrap.logger());
+        }
+#endif
 
         integration.startAll();
 
