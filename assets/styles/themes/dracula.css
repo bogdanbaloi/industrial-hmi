@@ -37,6 +37,31 @@
 .system-status-dot.state-error       { color: #ff5555; }
 .system-status-dot.state-calibration { color: #ffb86c; }
 
+/* Backend health bar (dracula). Overlay tint so the card sits flush
+   with the sidebar instead of reading as a mismatched darker block. */
+.backend-health-bar {
+    background-color: rgba(248, 248, 242, 0.04);
+    border: 1px solid rgba(189, 147, 249, 0.35);
+    border-radius: 6px;
+}
+.backend-health-header {
+    color: #bd93f9;
+    border-bottom-color: rgba(189, 147, 249, 0.25);
+}
+.backend-health-label { color: #f8f8f2; }
+.backend-pill.state-disconnected {
+    background-color: rgba(98, 114, 164, 0.16); border-color: #6272a4; color: #6272a4;
+}
+.backend-pill.state-connecting {
+    background-color: rgba(255, 184, 108, 0.18); border-color: #ffb86c; color: #ffb86c;
+}
+.backend-pill.state-connected {
+    background-color: rgba(80, 250, 123, 0.18); border-color: #50fa7b; color: #50fa7b;
+}
+.backend-pill.state-degraded {
+    background-color: rgba(255, 85, 85, 0.20); border-color: #ff5555; color: #ff5555;
+}
+
 button.sidebar-estop,
 .sidebar button.sidebar-estop {
     background: #ff5555;

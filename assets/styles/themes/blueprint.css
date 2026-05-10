@@ -85,6 +85,52 @@ combobox * {
 .system-status-dot.state-error       { color: #FF5252; }
 .system-status-dot.state-calibration { color: #FFB74D; }
 
+/* Backend health bar (blueprint -- navy canvas, cream text, cyan accents) */
+.backend-health-bar {
+    background-color: rgba(0, 188, 212, 0.06);
+    border: 1px solid rgba(0, 188, 212, 0.40);
+    border-radius: 4px;
+}
+.backend-health-header {
+    color: #4DD0E1;
+    border-bottom-color: rgba(0, 188, 212, 0.30);
+    letter-spacing: 2px;
+}
+.backend-health-label { color: #F5EFE0; }
+
+.backend-pill.state-disconnected {
+    background-color: rgba(201, 192, 164, 0.08);
+    border-color: #C9C0A4;
+    color: #C9C0A4;
+}
+.backend-pill.state-connecting {
+    background-color: rgba(255, 183, 77, 0.16);
+    border-color: #FFB74D;
+    color: #FFB74D;
+}
+.backend-pill.state-connected {
+    background-color: rgba(129, 199, 132, 0.16);
+    border-color: #81C784;
+    color: #81C784;
+}
+.backend-pill.state-degraded {
+    background-color: rgba(255, 82, 82, 0.18);
+    border-color: #FF5252;
+    color: #FF5252;
+}
+
+/* Compact strip variant in Blueprint top bar. Just dot+name pairs;
+   the dot carries the state color, the label uses cream like the
+   rest of the top-bar typography. */
+.backend-health-chip {
+    background-color: rgba(0, 188, 212, 0.06);
+    border: 1px solid rgba(0, 188, 212, 0.30);
+}
+.backend-health-dot.state-disconnected { color: #C9C0A4; }
+.backend-health-dot.state-connecting   { color: #FFB74D; }
+.backend-health-dot.state-connected    { color: #81C784; }
+.backend-health-dot.state-degraded     { color: #FF5252; }
+
 /* Top-bar alerts button */
 /* Blueprint routes alerts through a top-bar popover instead of a
    bottom footer, so the launcher button gets a bit of emphasis to

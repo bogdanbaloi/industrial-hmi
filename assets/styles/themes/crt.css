@@ -73,6 +73,32 @@ window { background-color: #000000; }
 .system-status-dot.state-error       { color: #FF3333; }
 .system-status-dot.state-calibration { color: #FFB000; }
 
+/* Backend health bar (CRT phosphor) */
+.backend-health-bar {
+    background-color: #000000;
+    border: 1px solid #00FF41;
+    border-radius: 0;
+}
+.backend-health-header {
+    color: #00FF41;
+    border-bottom-color: rgba(0, 255, 65, 0.40);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+.backend-health-label { color: #00FF41; letter-spacing: 2px; text-transform: uppercase; }
+.backend-pill.state-disconnected {
+    background-color: transparent; border-color: #008F11; color: #008F11;
+}
+.backend-pill.state-connecting {
+    background-color: rgba(255, 176, 0, 0.18); border-color: #FFB000; color: #FFB000;
+}
+.backend-pill.state-connected {
+    background-color: rgba(0, 255, 65, 0.18); border-color: #00FF41; color: #00FF41;
+}
+.backend-pill.state-degraded {
+    background-color: rgba(255, 51, 51, 0.20); border-color: #FF3333; color: #FF3333;
+}
+
 button.sidebar-estop,
 .sidebar button.sidebar-estop {
     background: #FF3333;

@@ -44,6 +44,40 @@
 .system-status-dot.state-error       { color: #BF616A; }
 .system-status-dot.state-calibration { color: #EBCB8B; }
 
+/* Backend health bar (nord -- dark). Overlay tint instead of a solid
+   color so the card sits flush with the sidebar background rather
+   than reading as a mismatched lighter block. */
+.backend-health-bar {
+    background-color: rgba(216, 222, 233, 0.04);
+    border: 1px solid rgba(136, 192, 208, 0.30);
+    border-radius: 6px;
+}
+.backend-health-header {
+    color: #88C0D0;
+    border-bottom-color: rgba(136, 192, 208, 0.25);
+}
+/* Backend health label colour. Nord's sidebar is light (Snow Storm)
+   in both Dark and Light app themes -- the unprefixed `.sidebar`
+   rules below re-paint it to #ECEFF4 regardless of the light-mode
+   class. Label always sits on a pale surface and needs dark text.
+   Type-selector chain bumps specificity above the base sidebar.css
+   rule cleanly, no !important. */
+box.backend-health-bar box.backend-health-entry label.backend-health-label {
+    color: #1A1F26;
+}
+.backend-pill.state-disconnected {
+    background-color: rgba(216, 222, 233, 0.06); border-color: #4C566A; color: #D8DEE9;
+}
+.backend-pill.state-connecting {
+    background-color: rgba(235, 203, 139, 0.16); border-color: #EBCB8B; color: #EBCB8B;
+}
+.backend-pill.state-connected {
+    background-color: rgba(163, 190, 140, 0.18); border-color: #A3BE8C; color: #A3BE8C;
+}
+.backend-pill.state-degraded {
+    background-color: rgba(191, 97, 106, 0.20); border-color: #BF616A; color: #BF616A;
+}
+
 /* E-STOP button */
 button.sidebar-estop,
 .sidebar button.sidebar-estop {
@@ -134,6 +168,29 @@ button.alert-dismiss:hover   { color: #ECEFF4; background: rgba(216,222,233,0.08
 .system-status-dot.state-running  { color: #5E8564; }
 .system-status-dot.state-error    { color: #A54B55; }
 .system-status-dot.state-calibration { color: #B5932E; }
+
+/* Backend health bar (nord -- light) */
+window.light-mode .backend-health-bar {
+    background-color: #ECEFF4;
+    border-color: #D8DEE9;
+}
+window.light-mode .backend-health-header {
+    color: #5E81AC;
+    border-bottom-color: #D8DEE9;
+}
+/* light-mode label color inherits from sidebar.css */
+window.light-mode .backend-pill.state-disconnected {
+    background-color: rgba(76, 86, 106, 0.08); border-color: #4C566A; color: #4C566A;
+}
+window.light-mode .backend-pill.state-connecting {
+    background-color: rgba(181, 147, 46, 0.12); border-color: #B5932E; color: #B5932E;
+}
+window.light-mode .backend-pill.state-connected {
+    background-color: rgba(94, 133, 100, 0.14); border-color: #5E8564; color: #5E8564;
+}
+window.light-mode .backend-pill.state-degraded {
+    background-color: rgba(165, 75, 85, 0.14); border-color: #A54B55; color: #A54B55;
+}
 
 .alert-card {
     background-color: rgba(46, 52, 64, 0.05);

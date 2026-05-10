@@ -159,8 +159,9 @@ Gtk::Box* MainWindow::parseLayoutUI() {
     logPanel_              = pendingBuilder_->get_widget<Gtk::Box>("log_panel");
     logTextView_           = pendingBuilder_->get_widget<Gtk::TextView>("log_text_view");
     alertsContainer_       = pendingBuilder_->get_widget<Gtk::Box>("alerts_container");
-    systemStatusContainer_ = pendingBuilder_->get_widget<Gtk::Box>("system_status_container");
-    clockContainer_        = pendingBuilder_->get_widget<Gtk::Box>("clock_container");
+    systemStatusContainer_  = pendingBuilder_->get_widget<Gtk::Box>("system_status_container");
+    backendHealthContainer_ = pendingBuilder_->get_widget<Gtk::Box>("backend_health_container");
+    clockContainer_         = pendingBuilder_->get_widget<Gtk::Box>("clock_container");
     estopButton_           = pendingBuilder_->get_widget<Gtk::Button>("estop_button");
     // Only present in Blueprint layout (nullptr elsewhere).
     // get_widget<T>() emits a Gtk-CRITICAL when the id is missing,
@@ -214,19 +215,35 @@ void MainWindow::buildSidebarWidgets() {
                 });
         }
 
-        // Backend-health bar mounts in the same container, immediately
-        // beneath the system status badge. Only built when an
-        // IntegrationManager was injected via Application -- a
-        // deployment running zero backends gets no bar at all.
+    }
+
+    // Backend-health bar -- mounted in its own container so it reads as
+    // a separate sidebar block from the system-state badge above. Only
+    // built when an IntegrationManager was injected via Application; a
+    // deployment running zero backends gets no bar at all.
+    if (backendHealthContainer_) {
         if (auto* manager =
                 app::core::Application::instance().integrationManager()) {
+            // Compact strip on Blueprint (top-bar host has no vertical
+            // budget for a card); full sidebar card everywhere else.
+            const auto layout =
+                app::config::ConfigManager::instance().getPalette() ==
+                        "blueprint"
+                    ? app::view::BackendHealthBar::Layout::Compact
+                    : app::view::BackendHealthBar::Layout::Sidebar;
             backendHealthBar_ =
-                Gtk::make_managed<app::view::BackendHealthBar>();
-            systemStatusContainer_->append(*backendHealthBar_);
+                Gtk::make_managed<app::view::BackendHealthBar>(layout);
+            backendHealthContainer_->append(*backendHealthBar_);
 
             backendHealthPresenter_ =
                 std::make_unique<app::BackendHealthPresenter>(*manager);
             backendHealthPresenter_->addObserver(this);
+
+            // Synchronous first poll so the bar already has its rows
+            // populated by the time the window paints -- otherwise the
+            // user sees an empty header for ~1s and then the entries
+            // pop in on the first timer tick.
+            backendHealthPresenter_->poll();
 
             // 1 Hz poll. Cheap (atomic loads + small string format)
             // and matches operator perception -- a 200ms latency on a

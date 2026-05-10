@@ -76,6 +76,18 @@
           </object>
         </child>
 
+        <!-- Backend health strip. Blueprint hosts the bar in compact
+             mode (horizontal dot+name pairs, no card chrome) so it
+             sits cleanly among the other status indicators in the top
+             bar. MainWindow appends the bar only when an
+             IntegrationManager was injected. -->
+        <child>
+          <object class="GtkBox" id="backend_health_container">
+            <property name="orientation">horizontal</property>
+            <property name="valign">center</property>
+          </object>
+        </child>
+
         <!-- Alerts popover trigger — Blueprint has no bottom alerts
              footer, so a top-bar button holds the AlertsPanel in a
              popover. alerts_container here keeps the same widget ID

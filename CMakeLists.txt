@@ -255,6 +255,22 @@ if(BUILD_OPCUA_BACKEND)
     # Restore the project-wide BUILD_SHARED_LIBS preference so any
     # downstream FetchContent declarations use the original value.
     set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_save} CACHE BOOL "" FORCE)
+
+    # open62541's generated namespace0_generated.c emits string literals
+    # well past C99's 4095-char minimum-supported length. Upstream's
+    # own build adds -Wno-overlength-strings, but our project-wide
+    # -Wpedantic + -Werror (added AFTER their per-target flags) re-
+    # enables the warning and escalates it to error on Clang 21
+    # (MSYS2 Clang64). Demote it back to a non-error on each open62541
+    # target so the vendored C source compiles cleanly without
+    # touching upstream code.
+    foreach(_o62541_target IN ITEMS open62541-object open62541-plugins)
+        if(TARGET ${_o62541_target})
+            target_compile_options(${_o62541_target} PRIVATE
+                -Wno-error=overlength-strings
+                -Wno-error=pedantic)
+        endif()
+    endforeach()
 endif()
 
 # Object Libraries (Modular Build Pattern)
