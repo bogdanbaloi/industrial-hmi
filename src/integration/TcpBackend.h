@@ -74,6 +74,11 @@ public:
     }
     [[nodiscard]] std::string name() const override { return "TCP"; }
     [[nodiscard]] std::string metricsSummary() const override;
+    /// Server semantics: `Connecting` while the acceptor is open with
+    /// no clients attached (listening, idle), `Connected` only once at
+    /// least one peer has hooked up. Operators see the green LED only
+    /// when the link is actually carrying traffic.
+    [[nodiscard]] BackendState connectionState() const noexcept override;
 
     /// Live count of currently-attached client sockets. Incremented in
     /// the accept loop, decremented on connection-handler exit.

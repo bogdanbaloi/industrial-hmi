@@ -99,6 +99,29 @@ TEST(OpcUaBackendTest, IsRunningReflectsServerState) {
     EXPECT_TRUE(f.backend->isRunning());
 }
 
+TEST(OpcUaBackendTest, ConnectionStateReflectsListeningVsActiveSessions) {
+    using app::integration::BackendState;
+    Fixture f = makeFixture();
+
+    // Server stopped -> Disconnected.
+    EXPECT_CALL(*f.server, isRunning())
+        .WillOnce(Return(false))
+        // Server up, no sessions -> Connecting (listening idle).
+        .WillOnce(Return(true))
+        // Server up, sessions attached -> Connected.
+        .WillOnce(Return(true))
+        // Catch-all for the destructor's stop()-guard call.
+        .WillRepeatedly(Return(false));
+    EXPECT_CALL(*f.server, connectedSessions())
+        .WillOnce(Return(0U))
+        .WillOnce(Return(2U))
+        .WillRepeatedly(Return(0U));
+
+    EXPECT_EQ(f.backend->connectionState(), BackendState::Disconnected);
+    EXPECT_EQ(f.backend->connectionState(), BackendState::Connecting);
+    EXPECT_EQ(f.backend->connectionState(), BackendState::Connected);
+}
+
 TEST(OpcUaBackendTest, StartCallsCollaboratorsInLifecycleOrder) {
     Fixture f = makeFixture();
 

@@ -81,6 +81,12 @@ public:
     [[nodiscard]] bool isRunning() const override;
     [[nodiscard]] std::string name() const override;
     [[nodiscard]] std::string metricsSummary() const override;
+    /// Server semantics: `Connecting` while the server is listening
+    /// without any client sessions attached; `Connected` only once at
+    /// least one session has been established. The green LED is
+    /// reserved for "actually carrying traffic".
+    [[nodiscard]] integration::BackendState
+        connectionState() const noexcept override;
 
 private:
     std::unique_ptr<OpcUaServer> server_;

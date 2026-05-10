@@ -155,6 +155,21 @@ TEST(TcpBackendTest, BindsToOsAssignedPortWhenZero) {
     EXPECT_FALSE(backend.isRunning());
 }
 
+TEST(TcpBackendTest, ConnectionStateReflectsListeningWithoutClients) {
+    using app::integration::BackendState;
+    MockProductionModel model;
+    MockProductsRepository repo;
+    TcpBackend backend(0, model, repo);
+
+    EXPECT_EQ(backend.connectionState(), BackendState::Disconnected);
+    backend.start();
+    // Listening but no clients hooked up yet -> Connecting (not Connected).
+    // The green LED is reserved for "an actual peer is talking".
+    EXPECT_EQ(backend.connectionState(), BackendState::Connecting);
+    backend.stop();
+    EXPECT_EQ(backend.connectionState(), BackendState::Disconnected);
+}
+
 TEST(TcpBackendTest, NameIsTcp) {
     MockProductionModel model;
     MockProductsRepository repo;
