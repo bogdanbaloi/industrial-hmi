@@ -56,6 +56,35 @@ constexpr bool kConsoleMode =
 [[maybe_unused]] constexpr int kExitStartupFatal    = 2;
 [[maybe_unused]] constexpr int kExitUnknownFatal    = 3;
 
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+/// Build + register the OPC-UA backend with the IntegrationManager.
+/// Extracted from main() to keep the latter under the
+/// readability-function-size threshold; the wiring is mechanical
+/// enough that pulling it into a helper hurts nothing.
+void registerOpcUaBackend(app::integration::IntegrationManager& integration,
+                          app::config::ConfigManager& config,
+                          app::core::Logger& logger) {
+    app::integration::opcua::OpcUaConfig opcuaConfig;
+    opcuaConfig.port =
+        static_cast<std::uint16_t>(config.getOpcUaServerPort());
+    opcuaConfig.applicationUri = config.getOpcUaApplicationUri();
+    opcuaConfig.applicationName = config.getOpcUaApplicationName();
+
+    auto opcuaServer =
+        std::make_unique<app::integration::opcua::Open62541Server>(
+            std::move(opcuaConfig), logger);
+    auto opcuaNodeMap =
+        std::make_unique<app::integration::opcua::FactoryNodeMap>(
+            app::model::SimulatedModel::instance(), logger);
+
+    integration.registerBackend(
+        std::make_unique<app::integration::opcua::OpcUaBackend>(
+            std::move(opcuaServer),
+            std::move(opcuaNodeMap),
+            logger));
+}
+#endif
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -149,27 +178,10 @@ int main(int argc, char* argv[]) {
         // OPC-UA server backend. Disabled by default; opt-in per
         // deployment via app-config.json. Compiled out entirely when
         // BUILD_OPCUA_BACKEND=OFF, so the host binary stays small for
-        // deployments that don't speak OPC-UA.
+        // deployments that don't speak OPC-UA. Wiring extracted to a
+        // helper to keep main() under the function-size threshold.
         if (config.isOpcUaBackendEnabled()) {
-            app::integration::opcua::OpcUaConfig opcuaConfig;
-            opcuaConfig.port =
-                static_cast<std::uint16_t>(config.getOpcUaServerPort());
-            opcuaConfig.applicationUri = config.getOpcUaApplicationUri();
-            opcuaConfig.applicationName = config.getOpcUaApplicationName();
-
-            auto opcuaServer =
-                std::make_unique<app::integration::opcua::Open62541Server>(
-                    std::move(opcuaConfig), bootstrap.logger());
-            auto opcuaNodeMap =
-                std::make_unique<app::integration::opcua::FactoryNodeMap>(
-                    app::model::SimulatedModel::instance(),
-                    bootstrap.logger());
-
-            integration.registerBackend(
-                std::make_unique<app::integration::opcua::OpcUaBackend>(
-                    std::move(opcuaServer),
-                    std::move(opcuaNodeMap),
-                    bootstrap.logger()));
+            registerOpcUaBackend(integration, config, bootstrap.logger());
         }
 #endif
 

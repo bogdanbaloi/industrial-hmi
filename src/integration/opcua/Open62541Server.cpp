@@ -228,7 +228,7 @@ bool Open62541Server::writeBool(std::string_view path,
                                 bool value) noexcept {
     // UA_Boolean is a typedef for unsigned char; pass through the
     // matching storage to satisfy the variant API.
-    UA_Boolean boolValue = value ? UA_TRUE : UA_FALSE;
+    UA_Boolean boolValue = value;
     return writeScalar(impl_->server, path,
                        UA_TYPES[UA_TYPES_BOOLEAN], boolValue);
 }
@@ -361,7 +361,7 @@ bool Open62541Server::addInt32Variable(std::string_view path,
 
 bool Open62541Server::addBoolVariable(std::string_view path,
                                       bool initial) {
-    UA_Boolean v = initial ? UA_TRUE : UA_FALSE;
+    UA_Boolean v = initial;
     return addVariableImpl(impl_->server, path,
                            UA_TYPES[UA_TYPES_BOOLEAN], v);
 }

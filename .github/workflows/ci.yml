@@ -162,6 +162,16 @@ jobs:
           -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime" \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
+    # open62541 generates several headers (nodeids.h, statuscode.h,
+    # transport_generated.h, ...) at build time from XML/CSV inputs.
+    # clang-tidy follows #include <open62541/...> when analysing our
+    # OPC-UA wrappers and fails on "file not found" if the generators
+    # haven't run yet. Build the open62541 target first so the
+    # generated headers exist on disk before clang-tidy reads
+    # compile_commands.json.
+    - name: Pre-build open62541 generated headers
+      run: cmake --build build/tidy --target open62541 -- -j$(nproc)
+
     - name: Run clang-tidy on src/
       run: |
         # -quiet suppresses progress lines so only diagnostics remain.

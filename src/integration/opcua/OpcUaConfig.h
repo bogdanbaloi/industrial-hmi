@@ -17,9 +17,10 @@ namespace app::integration::opcua {
 /// avoid clashes with vendor PLCs already listening on 4840.
 struct OpcUaConfig {
     /// Listen port for the OPC-UA Binary endpoint. IANA-assigned
-    /// default is 4840. Setting to 0 lets the OS pick an ephemeral
-    /// port (used by integration tests to run concurrently without
-    /// port-in-use collisions).
+    /// default is 4840 (registered service "opcua-tcp"). Setting to 0
+    /// lets the OS pick an ephemeral port (used by integration tests
+    /// to run concurrently without port-in-use collisions).
+    // NOLINTNEXTLINE(readability-magic-numbers,cppcoreguidelines-avoid-magic-numbers)
     std::uint16_t port = 4840;
 
     /// URN advertised in the GetEndpoints response. Clients use this
