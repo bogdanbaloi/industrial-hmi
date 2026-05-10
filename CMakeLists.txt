@@ -378,6 +378,7 @@ target_sources(objectsPresenter
         src/presenter/DashboardPresenter.cpp
         src/presenter/ProductsPresenter.cpp
         src/presenter/QualityInspectionPresenter.cpp
+        src/presenter/BackendHealthPresenter.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -385,7 +386,9 @@ target_sources(objectsPresenter
             src/presenter/DashboardPresenter.h
             src/presenter/ProductsPresenter.h
             src/presenter/QualityInspectionPresenter.h
+            src/presenter/BackendHealthPresenter.h
             src/presenter/ViewObserver.h
+            src/presenter/modelview/BackendHealthViewModel.h
             src/presenter/modelview/EquipmentCardViewModel.h
             src/presenter/modelview/QualityCheckpointViewModel.h
             src/presenter/modelview/ControlPanelViewModel.h
@@ -393,15 +396,14 @@ target_sources(objectsPresenter
             src/presenter/modelview/InspectionResultViewModel.h
             src/presenter/modelview/PlaceholderViewModels.h
 )
-# QualityInspectionPresenter depends on the ML interfaces
-# (ImageClassifier, ImageDecoder). objectsMl is GTK-free and always
-# compiled, so the link addition is cost-free for non-ML builds; only
-# OnnxImageClassifier.cpp inside that lib is gated by
-# BUILD_ML_CLASSIFIER.
+# QualityInspectionPresenter depends on the ML interfaces; the Backend
+# Health presenter depends on objectsIntegration (IntegrationManager +
+# IntegrationBackend). Both are GTK-free.
 target_link_libraries(objectsPresenter
     PUBLIC
         objectsModel
         objectsMl
+        objectsIntegration
         ${BOOST_TARGET}
         Threads::Threads
 )

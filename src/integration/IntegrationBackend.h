@@ -4,6 +4,26 @@
 
 namespace app::integration {
 
+/// Coarse-grained health classification surfaced to the UI.
+///
+/// Kept deliberately small: the dashboard renders these as a coloured
+/// dot, so adding states should be driven by a UI need, not by every
+/// possible internal failure mode (those live in metricsSummary()).
+enum class BackendState {
+    /// Not started, or stopped cleanly. Default for a fresh backend.
+    Disconnected,
+    /// `start()` returned, but the channel hasn't reached a usable
+    /// state yet (TCP listener not yet bound, MQTT broker handshake
+    /// in flight, OPC-UA endpoint advertising).
+    Connecting,
+    /// Healthy: actually serving / publishing right now.
+    Connected,
+    /// Running but with errors -- broker dropped, connection reset,
+    /// last publish() failed. Backends keep retrying internally; the
+    /// dashboard surfaces the degraded badge so operators notice.
+    Degraded,
+};
+
 /// Long-lived I/O backend that exposes the application over a network
 /// protocol (TCP, MQTT, gRPC, ...).
 ///
@@ -59,6 +79,26 @@ public:
     /// Short stable name for log messages and status displays
     /// (e.g. "TCP", "MQTT"). Not localised.
     [[nodiscard]] virtual std::string name() const = 0;
+
+    /// Coarse-grained health classification for the dashboard
+    /// backend-health bar. Default impl returns `Connected` whenever
+    /// `isRunning()` is true and `Disconnected` otherwise -- enough for
+    /// backends that have no degraded mode to model. Concretes that
+    /// can detect connecting / degraded states (MQTT during handshake,
+    /// TCP after a publish failure) override.
+    [[nodiscard]] virtual BackendState connectionState() const noexcept {
+        return isRunning() ? BackendState::Connected
+                           : BackendState::Disconnected;
+    }
+
+    /// Single-line human-readable metrics for the tooltip on the
+    /// dashboard health badge. Examples: "2 clients", "broker
+    /// 192.168.1.10:1883", "1 OPC-UA session". Default returns the
+    /// empty string -- backends that have nothing meaningful to
+    /// report leave it blank and the UI hides the tooltip.
+    [[nodiscard]] virtual std::string metricsSummary() const {
+        return {};
+    }
 
 protected:
     IntegrationBackend() = default;

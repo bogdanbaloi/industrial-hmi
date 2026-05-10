@@ -80,6 +80,7 @@ public:
 
     [[nodiscard]] bool isRunning() const override;
     [[nodiscard]] std::string name() const override;
+    [[nodiscard]] std::string metricsSummary() const override;
 
 private:
     std::unique_ptr<OpcUaServer> server_;

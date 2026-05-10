@@ -6,11 +6,13 @@
 #include <vector>
 #include <filesystem>
 #include "src/core/LoggerBase.h"
+#include "src/presenter/ViewObserver.h"
 
 // Forward declarations
 namespace app {
     class DashboardPresenter;
     class ProductsPresenter;
+    class BackendHealthPresenter;
 
     namespace presenter {
         class AlertCenter;
@@ -27,6 +29,7 @@ namespace app {
         class AlertsPanel;
         class SystemStatusBadge;
         class LiveClock;
+        class BackendHealthBar;
     }
 
     namespace core {
@@ -51,10 +54,17 @@ namespace app {
 /// - Tear down + rebuild pages when the user picks a new language, so
 ///   every `_()` call and every `translatable="yes"` property in the .ui
 ///   files resolves against the new catalog without an app restart.
-class MainWindow : public Gtk::ApplicationWindow {
+class MainWindow : public Gtk::ApplicationWindow,
+                   public app::ViewObserver {
 public:
     MainWindow();
     ~MainWindow() override;
+
+    // ViewObserver: only the backend-health hook is overridden; the
+    // base class's empty defaults handle every other notification
+    // (the page widgets are the regular observers for those).
+    void onBackendHealthChanged(
+        const app::presenter::BackendHealthViewModel& viewModel) override;
 
 private:
     // UI initialization
@@ -176,6 +186,15 @@ private:
     app::view::AlertsPanel*                      alertsPanel_ = nullptr;
     app::view::SystemStatusBadge*                statusBadge_ = nullptr;
     app::view::LiveClock*                        clock_       = nullptr;
+
+    // Backend-health bar -- only constructed when an
+    // IntegrationManager is wired in via Application::setIntegration-
+    // Manager. Polled at 1 Hz from a Glib timer that re-arms in poll-
+    // and-notify style; the connection is held here so the
+    // destructor disconnects it safely.
+    std::unique_ptr<app::BackendHealthPresenter> backendHealthPresenter_;
+    app::view::BackendHealthBar*                 backendHealthBar_ = nullptr;
+    sigc::connection                             backendHealthTimer_;
 };
 
 #endif  // MAIN_WINDOW_H

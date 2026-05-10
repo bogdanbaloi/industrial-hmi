@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/presenter/modelview/ActuatorCardViewModel.h"
+#include "src/presenter/modelview/BackendHealthViewModel.h"
 #include "src/presenter/modelview/QualityCheckpointViewModel.h"
 #include "src/presenter/modelview/ControlPanelViewModel.h"
 #include "src/presenter/modelview/WorkUnitViewModel.h"
@@ -98,6 +99,12 @@ public:
     /// @param viewModel Button availability based on current system state
     /// @design This is driven by a state machine in the presenter - view just renders
     virtual void onControlPanelChanged(const presenter::ControlPanelViewModel& /*viewModel*/) {}
+
+    /// Called when the integration-backend health snapshot refreshes.
+    /// Driven by `BackendHealthPresenter::poll()` on a polling timer
+    /// (the manager itself doesn't push events when a backend's
+    /// internal state shifts -- the presenter polls + diffs).
+    virtual void onBackendHealthChanged(const presenter::BackendHealthViewModel& /*viewModel*/) {}
 
     /// Called when a process step completes or fails
     /// @param viewModel Step identifier, completion status, coordinates

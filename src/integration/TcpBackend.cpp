@@ -185,6 +185,12 @@ void TcpBackend::start() {
     thread_ = std::jthread([this]() { runIoLoop(); });
 }
 
+std::string TcpBackend::metricsSummary() const {
+    return std::format("port {} | {} clients",
+                       boundPort_.load(std::memory_order_acquire),
+                       activeClients_.load(std::memory_order_acquire));
+}
+
 void TcpBackend::stop() {
     stopImpl();
 }
@@ -223,6 +229,26 @@ void TcpBackend::handleConnection(void* tcpSocketPtr) {
     // Adopt the socket the caller released via unique_ptr::release().
     std::unique_ptr<tcp::socket> socket(static_cast<tcp::socket*>(tcpSocketPtr));
     if (!socket) return;
+
+    // Bump the live-clients counter for the dashboard health badge.
+    // The decrement runs in a small RAII helper so the count stays
+    // accurate even on early returns / exceptions through the main
+    // loop below.
+    struct ClientCountGuard {
+        explicit ClientCountGuard(std::atomic<std::size_t>& c) : counter(c) {
+            counter.fetch_add(1, std::memory_order_acq_rel);
+        }
+        ~ClientCountGuard() {
+            counter.fetch_sub(1, std::memory_order_acq_rel);
+        }
+        ClientCountGuard(const ClientCountGuard&)            = delete;
+        ClientCountGuard& operator=(const ClientCountGuard&) = delete;
+        ClientCountGuard(ClientCountGuard&&)                 = delete;
+        ClientCountGuard& operator=(ClientCountGuard&&)      = delete;
+
+        std::atomic<std::size_t>& counter;
+    };
+    const ClientCountGuard countGuard(activeClients_);
 
     boost::system::error_code ec;
     asio::streambuf buf;
