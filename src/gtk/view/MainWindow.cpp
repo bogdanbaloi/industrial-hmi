@@ -248,6 +248,7 @@ void MainWindow::buildSidebarWidgets() {
             // 1 Hz poll. Cheap (atomic loads + small string format)
             // and matches operator perception -- a 200ms latency on a
             // status dot is invisible.
+            constexpr unsigned int kBackendPollIntervalMs = 1000;
             backendHealthTimer_ = Glib::signal_timeout().connect(
                 [this]() {
                     if (backendHealthPresenter_) {
@@ -255,7 +256,7 @@ void MainWindow::buildSidebarWidgets() {
                     }
                     return true;  // re-arm
                 },
-                /*interval_ms=*/1000);
+                /*interval=*/kBackendPollIntervalMs);
         }
     }
 
