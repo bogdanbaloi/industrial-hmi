@@ -5,6 +5,7 @@
 #include "src/integration/opcua/OpcUaServer.h"
 
 #include <cassert>
+#include <format>
 #include <utility>
 
 namespace app::integration::opcua {
@@ -67,6 +68,13 @@ bool OpcUaBackend::isRunning() const {
 
 std::string OpcUaBackend::name() const {
     return "OPC-UA";
+}
+
+std::string OpcUaBackend::metricsSummary() const {
+    if (!server_->isRunning()) return {};
+    return std::format("port {} | {} sessions",
+                       server_->boundPort(),
+                       server_->connectedSessions());
 }
 
 }  // namespace app::integration::opcua

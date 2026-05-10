@@ -83,6 +83,20 @@
           </object>
         </child>
 
+        <!-- Backend health bar mount point. Sits between the alerts
+             panel and the E-STOP button so it's visually distinct from
+             the system-state badge at the top of the sidebar -- the
+             whole alerts panel separates them. MainWindow appends the
+             bar only when an IntegrationManager was injected. -->
+        <child>
+          <object class="GtkBox" id="backend_health_container">
+            <property name="orientation">vertical</property>
+            <property name="margin-start">20</property>
+            <property name="margin-end">20</property>
+            <property name="margin-bottom">8</property>
+          </object>
+        </child>
+
         <!-- Emergency Stop button. Hooked up in MainWindow to the
              DashboardPresenter's stop command so the operator can
              cut production from any tab. -->

@@ -180,6 +180,21 @@ target_link_libraries(test_production_telemetry_bridge PRIVATE
 add_test(NAME ProductionTelemetryBridgeTest
          COMMAND test_production_telemetry_bridge)
 
+# Presenter: BackendHealthPresenter -- IntegrationManager backends ->
+# BackendHealthViewModel via the existing Observer hook. Uses a tiny
+# FakeBackend test double declared inline so no real network code is
+# pulled in.
+add_executable(test_backend_health_presenter
+    BackendHealthPresenterTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/presenter/BackendHealthPresenter.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/IntegrationManager.cpp)
+target_link_libraries(test_backend_health_presenter PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME BackendHealthPresenterTest
+         COMMAND test_backend_health_presenter)
+
 # OPC-UA: OpcUaBackend facade -- lifecycle ordering on mocked
 # OpcUaServer + OpcUaNodeMap. NEVER pulls in open62541 (the interfaces
 # are header-only, the mock implementations live in MockOpcUaServer.h).

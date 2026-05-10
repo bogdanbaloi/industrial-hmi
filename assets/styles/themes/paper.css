@@ -65,6 +65,39 @@ notebook stack > * {
 .system-status-dot.state-error       { color: #B71C1C; }
 .system-status-dot.state-calibration { color: #E65100; }
 
+/* Backend health bar (paper -- light canvas) */
+.backend-health-bar {
+    background-color: #F5F6F8;
+    border: 1px solid #CBD3DD;
+    border-radius: 6px;
+}
+.backend-health-header {
+    color: #4A5568;
+    border-bottom-color: #CBD3DD;
+}
+.backend-health-label { color: #1C1F26; }
+
+.backend-pill.state-disconnected {
+    background-color: #ECEFF1;
+    border-color: #8A95A5;
+    color: #4A5568;
+}
+.backend-pill.state-connecting {
+    background-color: #FFF3E0;
+    border-color: #E65100;
+    color: #BF360C;
+}
+.backend-pill.state-connected {
+    background-color: #E8F5E9;
+    border-color: #2E7D32;
+    color: #1B5E20;
+}
+.backend-pill.state-degraded {
+    background-color: #FFEBEE;
+    border-color: #B71C1C;
+    color: #B71C1C;
+}
+
 button.sidebar-estop,
 window .sidebar button.sidebar-estop {
     background: #B71C1C;

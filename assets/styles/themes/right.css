@@ -41,6 +41,32 @@
 .system-status-dot.state-error       { color: #EF5350; }
 .system-status-dot.state-calibration { color: #FFB74D; }
 
+/* Backend health bar (right) */
+.backend-health-bar {
+    background-color: rgba(0, 212, 177, 0.05);
+    border: 1px solid rgba(0, 212, 177, 0.40);
+    border-radius: 6px;
+}
+.backend-health-header {
+    color: #00D4B1;
+    border-bottom-color: rgba(0, 212, 177, 0.30);
+}
+/* label color inherits from base sidebar.css (Right is dark+light --
+   overriding the unprefixed rule at higher provider priority would
+   break the light-mode override from the base stylesheet). */
+.backend-pill.state-disconnected {
+    background-color: rgba(160, 180, 195, 0.08); border-color: #A0B4C3; color: #A0B4C3;
+}
+.backend-pill.state-connecting {
+    background-color: rgba(255, 183, 77, 0.16); border-color: #FFB74D; color: #FFB74D;
+}
+.backend-pill.state-connected {
+    background-color: rgba(0, 212, 177, 0.18); border-color: #00D4B1; color: #00D4B1;
+}
+.backend-pill.state-degraded {
+    background-color: rgba(239, 83, 80, 0.20); border-color: #EF5350; color: #EF5350;
+}
+
 button.sidebar-estop,
 .sidebar button.sidebar-estop {
     background: #B71C1C;

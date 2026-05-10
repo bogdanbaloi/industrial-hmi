@@ -127,6 +127,37 @@ void MqttPublisher::runIoLoop() {
     }
 }
 
+BackendState MqttPublisher::connectionState() const noexcept {
+    // The publisher reaches `Connected` only after CONNECT/CONNACK
+    // succeeded -- the worker thread is alive AND the session is
+    // armed. start() either completes the handshake synchronously
+    // (running_ flips true after CONNACK) or throws and rolls back to
+    // running_ == false, so there's no observable "Connecting" window
+    // here. If the heartbeat callback later flips running_ off after a
+    // socket write failure, we surface that as Degraded so operators
+    // see a yellow dot instead of an indistinguishable Disconnected
+    // baseline.
+    if (running_.load(std::memory_order_acquire)) {
+        return BackendState::Connected;
+    }
+    // The worker thread sets running_ = false on io_context::run()
+    // exception (broker dropped, socket reset). publishedCount_ being
+    // non-zero proves we DID reach Connected at some point in this
+    // process lifetime; a transition to running_=false from there is
+    // a degradation, not a clean shutdown.
+    if (publishedCount_.load(std::memory_order_acquire) > 0) {
+        return BackendState::Degraded;
+    }
+    return BackendState::Disconnected;
+}
+
+std::string MqttPublisher::metricsSummary() const {
+    return std::format("broker {}:{} | {} publishes",
+                       config_.brokerHost,
+                       config_.brokerPort,
+                       publishedCount_.load(std::memory_order_acquire));
+}
+
 void MqttPublisher::connectToBroker() {
     auto& socket = session_->socket;
 

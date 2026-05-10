@@ -117,6 +117,17 @@
           </object>
         </child>
 
+        <!-- Backend health bar mount point. MainWindow appends the
+             bar only when an IntegrationManager was injected. -->
+        <child>
+          <object class="GtkBox" id="backend_health_container">
+            <property name="orientation">vertical</property>
+            <property name="margin-start">20</property>
+            <property name="margin-end">20</property>
+            <property name="margin-bottom">8</property>
+          </object>
+        </child>
+
         <child>
           <object class="GtkButton" id="estop_button">
             <property name="label" translatable="yes">E-STOP</property>

@@ -67,6 +67,16 @@ public:
         return lastStartErrors_;
     }
 
+    /// Read-only iteration over the registered backends. Used by the
+    /// dashboard health presenter to poll name() / connectionState() /
+    /// metricsSummary() on each entry. The manager retains ownership;
+    /// the caller must not store the references past the manager's
+    /// lifetime.
+    [[nodiscard]] const std::vector<std::unique_ptr<IntegrationBackend>>&
+        backends() const noexcept {
+        return backends_;
+    }
+
 private:
     std::vector<std::unique_ptr<IntegrationBackend>> backends_;
     std::vector<std::string> lastStartErrors_;

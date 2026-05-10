@@ -73,6 +73,13 @@ public:
         return running_.load(std::memory_order_acquire);
     }
     [[nodiscard]] std::string name() const override { return "TCP"; }
+    [[nodiscard]] std::string metricsSummary() const override;
+
+    /// Live count of currently-attached client sockets. Incremented in
+    /// the accept loop, decremented on connection-handler exit.
+    [[nodiscard]] std::size_t activeClients() const noexcept {
+        return activeClients_.load(std::memory_order_acquire);
+    }
 
     /// Actual port the acceptor bound to. Equals the constructor's
     /// `port` for non-zero values; for `port == 0` returns whatever the
@@ -114,6 +121,7 @@ private:
     std::unique_ptr<boost::asio::io_context> io_;
     std::jthread thread_;
     std::atomic<bool> running_{false};
+    std::atomic<std::size_t> activeClients_{0};
 };
 
 }  // namespace app::integration

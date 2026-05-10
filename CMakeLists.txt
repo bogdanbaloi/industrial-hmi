@@ -255,6 +255,22 @@ if(BUILD_OPCUA_BACKEND)
     # Restore the project-wide BUILD_SHARED_LIBS preference so any
     # downstream FetchContent declarations use the original value.
     set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_save} CACHE BOOL "" FORCE)
+
+    # open62541's generated namespace0_generated.c emits string literals
+    # well past C99's 4095-char minimum-supported length. Upstream's
+    # own build adds -Wno-overlength-strings, but our project-wide
+    # -Wpedantic + -Werror (added AFTER their per-target flags) re-
+    # enables the warning and escalates it to error on Clang 21
+    # (MSYS2 Clang64). Demote it back to a non-error on each open62541
+    # target so the vendored C source compiles cleanly without
+    # touching upstream code.
+    foreach(_o62541_target IN ITEMS open62541-object open62541-plugins)
+        if(TARGET ${_o62541_target})
+            target_compile_options(${_o62541_target} PRIVATE
+                -Wno-error=overlength-strings
+                -Wno-error=pedantic)
+        endif()
+    endforeach()
 endif()
 
 # Object Libraries (Modular Build Pattern)
@@ -378,6 +394,7 @@ target_sources(objectsPresenter
         src/presenter/DashboardPresenter.cpp
         src/presenter/ProductsPresenter.cpp
         src/presenter/QualityInspectionPresenter.cpp
+        src/presenter/BackendHealthPresenter.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -385,7 +402,9 @@ target_sources(objectsPresenter
             src/presenter/DashboardPresenter.h
             src/presenter/ProductsPresenter.h
             src/presenter/QualityInspectionPresenter.h
+            src/presenter/BackendHealthPresenter.h
             src/presenter/ViewObserver.h
+            src/presenter/modelview/BackendHealthViewModel.h
             src/presenter/modelview/EquipmentCardViewModel.h
             src/presenter/modelview/QualityCheckpointViewModel.h
             src/presenter/modelview/ControlPanelViewModel.h
@@ -393,15 +412,14 @@ target_sources(objectsPresenter
             src/presenter/modelview/InspectionResultViewModel.h
             src/presenter/modelview/PlaceholderViewModels.h
 )
-# QualityInspectionPresenter depends on the ML interfaces
-# (ImageClassifier, ImageDecoder). objectsMl is GTK-free and always
-# compiled, so the link addition is cost-free for non-ML builds; only
-# OnnxImageClassifier.cpp inside that lib is gated by
-# BUILD_ML_CLASSIFIER.
+# QualityInspectionPresenter depends on the ML interfaces; the Backend
+# Health presenter depends on objectsIntegration (IntegrationManager +
+# IntegrationBackend). Both are GTK-free.
 target_link_libraries(objectsPresenter
     PUBLIC
         objectsModel
         objectsMl
+        objectsIntegration
         ${BOOST_TARGET}
         Threads::Threads
 )

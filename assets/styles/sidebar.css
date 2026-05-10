@@ -374,6 +374,124 @@ window.light-mode .alert-card.alert-critical { background-color: rgba(239, 83, 8
 window.light-mode .system-status-label { color: #263238; }
 
 /*
+   Backend health bar -- vertical stack of named status rows, one per
+   registered IntegrationBackend, with a section header so the strip
+   reads as its own block in the sidebar (rather than visually
+   continuing from the system-status badge above).
+   States: disconnected (grey), connecting (yellow), connected (green),
+   degraded (red).
+*/
+.backend-health-bar {
+    padding: 12px 14px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+window.light-mode .backend-health-bar {
+    background-color: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.10);
+}
+
+.backend-health-header {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    color: #B0BEC5;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+window.light-mode .backend-health-header {
+    color: #455A64;
+    border-bottom-color: rgba(0, 0, 0, 0.10);
+}
+
+.backend-health-entry {
+    padding: 4px 0;
+}
+
+/* Compact strip variant -- used when the bar lives in a horizontal
+   top-bar slot (Blueprint layout). Just a row of name + colored dot
+   pairs, no card border, no header. */
+.backend-health-strip {
+    padding: 0;
+}
+.backend-health-chip {
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.backend-health-dot {
+    font-size: 12px;
+    color: #78909C;
+    min-width: 10px;
+}
+.backend-health-dot.state-disconnected { color: #78909C; }
+.backend-health-dot.state-connecting   { color: #FFB300; }
+.backend-health-dot.state-connected    { color: #4CAF50; }
+.backend-health-dot.state-degraded     { color: #EF5350; }
+.backend-health-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+/* Default colours -- no !important so palette CSS providers (loaded
+   at higher GTK priority) can override per-palette. */
+.backend-health-bar .backend-health-label                   { color: #ECEFF1; }
+window.light-mode .backend-health-bar .backend-health-label { color: #1A1F26; }
+
+/* Status pill -- sits on the right of each row, color-coded by state. */
+.backend-pill {
+    padding: 3px 12px;
+    margin: 2px 0;
+    border-radius: 999px;          /* full-rounded ends */
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+}
+.backend-pill.state-disconnected {
+    background-color: rgba(120, 144, 156, 0.12);
+    border-color: rgba(120, 144, 156, 0.55);
+    color: #B0BEC5;
+}
+.backend-pill.state-connecting {
+    background-color: rgba(255, 179, 0, 0.18);
+    border-color: rgba(255, 179, 0, 0.70);
+    color: #FFB300;
+}
+.backend-pill.state-connected {
+    background-color: rgba(76, 175, 80, 0.18);
+    border-color: rgba(76, 175, 80, 0.70);
+    color: #81C784;
+}
+.backend-pill.state-degraded {
+    background-color: rgba(239, 83, 80, 0.20);
+    border-color: rgba(239, 83, 80, 0.75);
+    color: #EF5350;
+}
+
+window.light-mode .backend-pill.state-disconnected {
+    background-color: rgba(120, 144, 156, 0.10);
+    border-color: rgba(96, 125, 139, 0.55);
+    color: #546E7A;
+}
+window.light-mode .backend-pill.state-connecting {
+    background-color: rgba(255, 143, 0, 0.14);
+    border-color: rgba(255, 143, 0, 0.70);
+    color: #E65100;
+}
+window.light-mode .backend-pill.state-connected {
+    background-color: rgba(46, 125, 50, 0.12);
+    border-color: rgba(46, 125, 50, 0.65);
+    color: #2E7D32;
+}
+window.light-mode .backend-pill.state-degraded {
+    background-color: rgba(198, 40, 40, 0.14);
+    border-color: rgba(198, 40, 40, 0.65);
+    color: #C62828;
+}
+
+/*
    E-STOP  (button.sidebar-estop has specificity 0-1-1, tying with
    .sidebar button so the later rule wins and we get a red button.)
    */

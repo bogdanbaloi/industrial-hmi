@@ -97,6 +97,8 @@ public:
         return running_.load(std::memory_order_acquire);
     }
     [[nodiscard]] std::string name() const override { return "MQTT"; }
+    [[nodiscard]] BackendState connectionState() const noexcept override;
+    [[nodiscard]] std::string metricsSummary() const override;
 
     // TelemetryPublisher
     void publish(const std::string& topic,

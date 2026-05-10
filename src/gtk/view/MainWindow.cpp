@@ -11,8 +11,10 @@
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/gtk/view/pages/SettingsPage.h"
 #include "src/gtk/view/widgets/AlertsPanel.h"
+#include "src/gtk/view/widgets/BackendHealthBar.h"
 #include "src/gtk/view/widgets/SystemStatusBadge.h"
 #include "src/gtk/view/widgets/LiveClock.h"
+#include "src/presenter/BackendHealthPresenter.h"
 #include "src/presenter/AlertCenter.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/presenter/ProductsPresenter.h"
@@ -123,7 +125,17 @@ MainWindow::MainWindow()
         app::view::ThemeManager::instance().isDarkMode() ? "Dark" : "Light");
 }
 
-MainWindow::~MainWindow() = default;
+MainWindow::~MainWindow() {
+    // Disconnect the backend-health timer BEFORE the presenter goes
+    // out of scope -- otherwise a fire in flight after teardown would
+    // dereference a destroyed presenter.
+    if (backendHealthTimer_.connected()) {
+        backendHealthTimer_.disconnect();
+    }
+    if (backendHealthPresenter_) {
+        backendHealthPresenter_->removeObserver(this);
+    }
+}
 
 const char* MainWindow::chooseMainWindowUI(const std::string& palette) {
     // Palettes with a structurally different layout get their own .ui.
@@ -147,8 +159,9 @@ Gtk::Box* MainWindow::parseLayoutUI() {
     logPanel_              = pendingBuilder_->get_widget<Gtk::Box>("log_panel");
     logTextView_           = pendingBuilder_->get_widget<Gtk::TextView>("log_text_view");
     alertsContainer_       = pendingBuilder_->get_widget<Gtk::Box>("alerts_container");
-    systemStatusContainer_ = pendingBuilder_->get_widget<Gtk::Box>("system_status_container");
-    clockContainer_        = pendingBuilder_->get_widget<Gtk::Box>("clock_container");
+    systemStatusContainer_  = pendingBuilder_->get_widget<Gtk::Box>("system_status_container");
+    backendHealthContainer_ = pendingBuilder_->get_widget<Gtk::Box>("backend_health_container");
+    clockContainer_         = pendingBuilder_->get_widget<Gtk::Box>("clock_container");
     estopButton_           = pendingBuilder_->get_widget<Gtk::Button>("estop_button");
     // Only present in Blueprint layout (nullptr elsewhere).
     // get_widget<T>() emits a Gtk-CRITICAL when the id is missing,
@@ -201,6 +214,50 @@ void MainWindow::buildSidebarWidgets() {
                     if (statusBadge_) statusBadge_->setState(state);
                 });
         }
+
+    }
+
+    // Backend-health bar -- mounted in its own container so it reads as
+    // a separate sidebar block from the system-state badge above. Only
+    // built when an IntegrationManager was injected via Application; a
+    // deployment running zero backends gets no bar at all.
+    if (backendHealthContainer_) {
+        if (auto* manager =
+                app::core::Application::instance().integrationManager()) {
+            // Compact strip on Blueprint (top-bar host has no vertical
+            // budget for a card); full sidebar card everywhere else.
+            const auto layout =
+                app::config::ConfigManager::instance().getPalette() ==
+                        "blueprint"
+                    ? app::view::BackendHealthBar::Layout::Compact
+                    : app::view::BackendHealthBar::Layout::Sidebar;
+            backendHealthBar_ =
+                Gtk::make_managed<app::view::BackendHealthBar>(layout);
+            backendHealthContainer_->append(*backendHealthBar_);
+
+            backendHealthPresenter_ =
+                std::make_unique<app::BackendHealthPresenter>(*manager);
+            backendHealthPresenter_->addObserver(this);
+
+            // Synchronous first poll so the bar already has its rows
+            // populated by the time the window paints -- otherwise the
+            // user sees an empty header for ~1s and then the entries
+            // pop in on the first timer tick.
+            backendHealthPresenter_->poll();
+
+            // 1 Hz poll. Cheap (atomic loads + small string format)
+            // and matches operator perception -- a 200ms latency on a
+            // status dot is invisible.
+            constexpr unsigned int kBackendPollIntervalMs = 1000;
+            backendHealthTimer_ = Glib::signal_timeout().connect(
+                [this]() {
+                    if (backendHealthPresenter_) {
+                        backendHealthPresenter_->poll();
+                    }
+                    return true;  // re-arm
+                },
+                /*interval=*/kBackendPollIntervalMs);
+        }
     }
 
     // Live clock.
@@ -208,6 +265,11 @@ void MainWindow::buildSidebarWidgets() {
         clock_ = Gtk::make_managed<app::view::LiveClock>();
         clockContainer_->append(*clock_);
     }
+}
+
+void MainWindow::onBackendHealthChanged(
+    const app::presenter::BackendHealthViewModel& viewModel) {
+    if (backendHealthBar_) backendHealthBar_->update(viewModel);
 }
 
 void MainWindow::refreshSidebarTranslations() {

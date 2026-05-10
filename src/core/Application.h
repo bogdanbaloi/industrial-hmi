@@ -6,6 +6,10 @@
 #include <vector>
 #include <functional>
 
+namespace app::integration {
+class IntegrationManager;  // forward decl -- non-owning pointer
+}
+
 namespace app::core {
 
 class Bootstrap;  // forward decl -- defined in Bootstrap.h
@@ -58,6 +62,19 @@ public:
     [[nodiscard]] bool hasStartupWarnings() const { return !startupWarnings_.empty(); }
     [[nodiscard]] const std::vector<std::string>& startupWarnings() const { return startupWarnings_; }
 
+    /// Inject the IntegrationManager so MainWindow can mount the
+    /// backend-health bar in the sidebar. Optional -- when null, the
+    /// bar is hidden and no polling timer is armed. main() calls this
+    /// after constructing the manager but before run(). Non-owning;
+    /// the manager outlives the Application by stack discipline.
+    void setIntegrationManager(integration::IntegrationManager* manager) noexcept {
+        integrationManager_ = manager;
+    }
+
+    [[nodiscard]] integration::IntegrationManager* integrationManager() const noexcept {
+        return integrationManager_;
+    }
+
 private:
     Application() = default;
     ~Application();
@@ -65,6 +82,7 @@ private:
     void showStartupWarnings();
 
     Logger*                 logger_ = nullptr;   // non-owning -- Bootstrap owns
+    integration::IntegrationManager* integrationManager_ = nullptr;  // non-owning
     std::vector<std::string> startupWarnings_;
     bool                    initialized_{false};
 };

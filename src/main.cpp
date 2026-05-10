@@ -195,6 +195,11 @@ int main(int argc, char* argv[]) {
         return kExitOk;
 #else
         auto& app = app::core::Application::instance();
+        // Inject the manager so MainWindow can mount the backend-
+        // health bar in the sidebar. Pointer stays valid through
+        // app.run() because `integration` lives on the same stack
+        // frame just above us.
+        app.setIntegrationManager(&integration);
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 
         // Inject the app-wide logger into the SimulatedModel singleton so
