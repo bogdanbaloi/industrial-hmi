@@ -487,6 +487,7 @@ if(BUILD_OPCUA_BACKEND)
             src/integration/opcua/Open62541Server.cpp
             src/integration/opcua/FactoryNodeMap.cpp
             src/integration/opcua/OpcUaBackend.cpp
+            src/integration/opcua/Open62541Client.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
@@ -497,6 +498,8 @@ if(BUILD_OPCUA_BACKEND)
                 src/integration/opcua/Open62541Server.h
                 src/integration/opcua/FactoryNodeMap.h
                 src/integration/opcua/OpcUaBackend.h
+                src/integration/opcua/OpcUaClient.h
+                src/integration/opcua/Open62541Client.h
     )
     target_link_libraries(objectsOpcUa
         PUBLIC

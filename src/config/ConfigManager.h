@@ -312,7 +312,30 @@ public:
         return getValue("network.opcua.application_name",
                         defaults::kOpcUaApplicationName);
     }
-    
+
+    // OPC-UA client (inbound role). Off by default -- needs an
+    // external endpoint to dial. When enabled, the IntegrationManager
+    // owns an Open62541Client alongside the server; both surface their
+    // own pill in the I/O bar.
+    [[nodiscard]] bool isOpcUaClientEnabled() const {
+        return getValue("network.opcua.client.enabled", "false") == "true";
+    }
+
+    [[nodiscard]] std::string getOpcUaClientEndpoint() const {
+        return getValue("network.opcua.client.endpoint",
+                        defaults::kOpcUaClientEndpoint);
+    }
+
+    [[nodiscard]] std::string getOpcUaClientApplicationUri() const {
+        return getValue("network.opcua.client.application_uri",
+                        defaults::kOpcUaClientApplicationUri);
+    }
+
+    [[nodiscard]] std::string getOpcUaClientApplicationName() const {
+        return getValue("network.opcua.client.application_name",
+                        defaults::kOpcUaClientApplicationName);
+    }
+
     // Template Support
     
     /**
