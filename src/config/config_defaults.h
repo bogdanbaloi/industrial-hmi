@@ -65,6 +65,13 @@ constexpr int kOpcUaServerPort = 4840;
 constexpr const char* kOpcUaApplicationUri  = "urn:industrial-hmi:server";
 constexpr const char* kOpcUaApplicationName = "Industrial HMI OPC-UA Server";
 
+/// OPC-UA *client* defaults. Loopback to the in-process server so a
+/// local demo "just works"; production deployments point this at a
+/// PLC's discovery URL.
+constexpr const char* kOpcUaClientEndpoint        = "opc.tcp://127.0.0.1:4840";
+constexpr const char* kOpcUaClientApplicationUri  = "urn:industrial-hmi:client";
+constexpr const char* kOpcUaClientApplicationName = "Industrial HMI OPC-UA Client";
+
 // Product status values (used in DB, UI, and presenter layers)
 constexpr const char* kStatusActive = "Active";
 constexpr const char* kStatusInactive = "Inactive";

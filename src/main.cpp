@@ -11,6 +11,7 @@
 #  include "src/integration/opcua/FactoryNodeMap.h"
 #  include "src/integration/opcua/OpcUaBackend.h"
 #  include "src/integration/opcua/OpcUaConfig.h"
+#  include "src/integration/opcua/Open62541Client.h"
 #  include "src/integration/opcua/Open62541Server.h"
 #endif
 #include "src/model/DatabaseManager.h"
@@ -137,6 +138,22 @@ void registerOpcUaBackend(app::integration::IntegrationManager& integration,
             std::move(opcuaNodeMap),
             logger));
 }
+
+/// Build + register the OPC-UA *client* backend (inbound role). Same
+/// pattern as registerOpcUaBackend above; kept on its own so it stays
+/// opt-in independently and the main() body keeps a flat list of
+/// composition calls.
+void registerOpcUaClient(app::integration::IntegrationManager& integration,
+                         app::config::ConfigManager& config,
+                         app::core::Logger& logger) {
+    app::integration::opcua::Open62541Client::Config clientConfig;
+    clientConfig.endpointUrl     = config.getOpcUaClientEndpoint();
+    clientConfig.applicationUri  = config.getOpcUaClientApplicationUri();
+    clientConfig.applicationName = config.getOpcUaClientApplicationName();
+    integration.registerBackend(
+        std::make_unique<app::integration::opcua::Open62541Client>(
+            std::move(clientConfig), logger));
+}
 #endif
 
 }  // namespace
@@ -216,6 +233,9 @@ int main(int argc, char* argv[]) {
         // helper to keep main() under the function-size threshold.
         if (config.isOpcUaBackendEnabled()) {
             registerOpcUaBackend(integration, config, bootstrap.logger());
+        }
+        if (config.isOpcUaClientEnabled()) {
+            registerOpcUaClient(integration, config, bootstrap.logger());
         }
 #endif
 

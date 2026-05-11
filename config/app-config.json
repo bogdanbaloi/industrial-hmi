@@ -268,7 +268,11 @@
     },
     "opcua": {
       "enabled": true,
-      "port": 4840
+      "port": 4840,
+      "client": {
+        "enabled": false,
+        "endpoint": "opc.tcp://127.0.0.1:4840"
+      }
     }
   }
 }
