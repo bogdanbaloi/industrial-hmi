@@ -83,6 +83,10 @@ constexpr std::uint8_t kPublishFlagsMask  = 0x0FU;
 constexpr std::uint8_t kPublishQosShift   = 1U;
 constexpr std::uint8_t kPublishQosMask    = 0x03U;
 
+/// Mask for the upper nibble of an MQTT fixed-header byte -- isolates
+/// the packet-type bits from the low-nibble flag bits.
+constexpr std::uint8_t kFixedHeaderTypeMask = 0xF0U;
+
 /// MQTT 3.1.1 caps keep-alive at 65535 seconds (16-bit field,
 /// section 3.1.2.10).
 constexpr std::chrono::seconds kMaxKeepAlive{65535};
@@ -106,8 +110,8 @@ std::uint16_t readUint16BigEndian(const std::vector<std::uint8_t>& bytes,
         throw std::runtime_error(
             "MQTT: truncated buffer reading 2-byte field");
     }
-    const std::uint16_t high = bytes[cursor++];
-    const std::uint16_t low  = bytes[cursor++];
+    const auto high = static_cast<unsigned>(bytes[cursor++]);
+    const auto low  = static_cast<unsigned>(bytes[cursor++]);
     return static_cast<std::uint16_t>((high << kHighShift) | low);
 }
 
@@ -354,14 +358,17 @@ ParsedPublish parsePublish(const std::vector<std::uint8_t>& bytes) {
         throw std::runtime_error("MQTT PUBLISH: empty buffer");
     }
     const auto fixedHeader = bytes[0];
-    if ((fixedHeader & 0xF0U) !=
+    if ((fixedHeader & kFixedHeaderTypeMask) !=
             static_cast<std::uint8_t>(PacketType::Publish)) {
         throw std::runtime_error(std::format(
             "MQTT PUBLISH: bad fixed header byte 0x{:02x}", fixedHeader));
     }
-    const auto qos = static_cast<std::uint8_t>(
-        (fixedHeader & kPublishFlagsMask) >> kPublishQosShift) &
-        kPublishQosMask;
+    // Cast to unsigned before bit-shifting so hicpp-signed-bitwise stays
+    // quiet (uint8_t promotes to int otherwise).
+    const auto flagsNibble = static_cast<unsigned>(fixedHeader) &
+                             static_cast<unsigned>(kPublishFlagsMask);
+    const auto qos = (flagsNibble >> kPublishQosShift) &
+                     static_cast<unsigned>(kPublishQosMask);
     if (qos != 0) {
         // We don't track packet identifiers for QoS 1/2; subscriber
         // would owe PUBACK/PUBREC otherwise. The simpler scope is

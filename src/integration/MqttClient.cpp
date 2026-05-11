@@ -333,6 +333,13 @@ void MqttClient::sendSubscribeFrame(const std::string& topicFilter) {
     }
 }
 
+// The three read-loop steps form a cyclic chain via boost::asio
+// `async_read` completion handlers (startReadLoop -> read length byte
+// -> read body -> startReadLoop again). clang-tidy
+// `misc-no-recursion` flags the cycle because the boost templates make
+// it look like recursion, but in practice the io_context unwinds the
+// stack between handlers. Suppress on the three step entry points.
+// NOLINTNEXTLINE(misc-no-recursion)
 void MqttClient::startReadLoop() {
     if (!session_) return;
     session_->readRemainingLengthBytes.clear();
@@ -343,6 +350,7 @@ void MqttClient::startReadLoop() {
     // it byte by byte.
     asio::async_read(
         session_->socket, asio::buffer(&session_->readFixedHeader, 1),
+        // NOLINTNEXTLINE(misc-no-recursion)
         [this](const boost::system::error_code& ec, std::size_t /*n*/) {
             if (ec) {
                 // operation_aborted = stop() cancelled us, normal path.
@@ -357,10 +365,12 @@ void MqttClient::startReadLoop() {
         });
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void MqttClient::readRemainingLengthByte() {
     if (!session_) return;
     asio::async_read(
         session_->socket, asio::buffer(&session_->readLengthByte, 1),
+        // NOLINTNEXTLINE(misc-no-recursion)
         [this](const boost::system::error_code& ec, std::size_t /*n*/) {
             if (ec) {
                 if (ec != asio::error::operation_aborted) {
@@ -402,11 +412,13 @@ void MqttClient::readRemainingLengthByte() {
         });
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void MqttClient::readFrameBody(std::uint32_t bodyLen) {
     if (!session_) return;
     session_->readBody.resize(bodyLen);
     asio::async_read(
         session_->socket, asio::buffer(session_->readBody),
+        // NOLINTNEXTLINE(misc-no-recursion)
         [this](const boost::system::error_code& ec, std::size_t /*n*/) {
             if (ec) {
                 if (ec != asio::error::operation_aborted) {
@@ -445,20 +457,24 @@ void MqttClient::dispatchFrame(
             const auto parsed = mqtt::parsePublish(packet);
             deliverInboundPublish(parsed.topic, parsed.payload);
             receivedCount_.fetch_add(1, std::memory_order_release);
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch)
             // Malformed PUBLISH (QoS > 0, truncated, etc.). Skip but
             // keep the connection alive; the broker may be sending us
-            // frames we don't yet support.
+            // frames we don't yet support. No logger available this
+            // deep in the io thread and there is nowhere meaningful
+            // to surface a single bad frame.
         }
         break;
     }
+    // Acknowledgements + keep-alive replies all share "no state to
+    // update beyond the connection being alive". Default is the same
+    // shape today (silent drop) but is semantically a different case
+    // -- a protocol-violation from the broker -- which would grow a
+    // logger call here once we wire one in.
+    // NOLINTNEXTLINE(bugprone-branch-clone)
     case PacketType::SubAck:
     case PacketType::UnsubAck:
     case PacketType::PingResp:
-        // No state to update beyond the connection being alive. We
-        // accept any SUBACK/UNSUBACK; failure codes would surface as
-        // a missing inbound delivery, which the test bridge can
-        // assert against.
         break;
     default:
         // Unexpected packet types from a broker (CONNECT etc.) are
