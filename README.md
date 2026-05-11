@@ -39,13 +39,15 @@ core.
 - **11 UI languages** via gettext, runtime switch (no restart) -- the
   page tree is rebuilt so every `_()` and every `translatable="yes"`
   re-resolves against the new catalog.
-- **Bidirectional industrial integration** -- one MQTT socket carries
-  both outbound telemetry (`ProductionTelemetryBridge` -> broker) and
-  inbound sensor traffic (broker -> `SensorIngestBridge` -> `ProductionModel`),
-  the way real-world MQTT libraries are shaped. Add TCP control surface
-  + OPC-UA server on top: four protocols total, all hand-rolled where
-  the spec is small, all surfaced via a uniform `IntegrationBackend`
-  in the dashboard's I/O panel.
+- **Bidirectional industrial integration on every protocol that
+  supports it** -- MQTT carries outbound telemetry and inbound sensor
+  traffic on one socket (publish + subscribe bridges). OPC-UA runs
+  the HMI as both server (SCADA reads our state) and client (we read
+  PLC telemetry), the canonical "data hub" topology. TCP exposes a
+  command surface for external supervisors. Every channel surfaces a
+  uniform `IntegrationBackend` pill in the dashboard's I/O panel,
+  with state semantics tuned per protocol (Connecting vs. Connected
+  reflects "service up" vs. "an actual peer talking").
 - **Cross-platform CI** on Ubuntu 24.04 (GCC 13 + pkg-config) and
   Windows MSYS2 CLANG64; clang-tidy + cppcheck gates every PR.
 
@@ -187,6 +189,11 @@ src/
     MqttClient          MQTT client (full duplex on one socket, no paho)
     ProductionTelemetryBridge   Manufacturing -> MQTT outbound bridge
     SensorIngestBridge          MQTT -> Manufacturing inbound bridge
+    opcua/              OPC-UA (BUILD_OPCUA_BACKEND=ON), open62541-backed
+      OpcUaServer / Open62541Server   Server role (browseable address space)
+      FactoryNodeMap                  Domain mapping for the server role
+      OpcUaBackend                    IntegrationBackend facade (server)
+      OpcUaClient / Open62541Client   Client role (subscribe to remote PLC)
 
   ml/                   Edge AI inference (BUILD_ML_CLASSIFIER=ON)
     Image / ImageDecoder        RGB POD + stb_image decoder facade
@@ -403,6 +410,14 @@ a port or dials out to a broker. Operators turn them on via
       "enabled": true,
       "topic_prefix": "factory-42/sensors"
     }
+  },
+  "opcua": {
+    "enabled": true,
+    "port": 4840,
+    "client": {
+      "enabled": true,
+      "endpoint": "opc.tcp://plc-1.factory-42.local:4840"
+    }
   }
 }
 ```
@@ -491,12 +506,26 @@ mock broker, both publish and subscribe round-trips;
 `SensorIngestBridgeTest` (6 cases) verify the two domain bridges in
 isolation against a fake `TelemetryPublisher` / `TelemetrySubscriber`.
 
-### OPC-UA backend (industrial protocol)
+### OPC-UA backend (industrial protocol, bidirectional)
 
 OPC-UA is the standard industrial automation protocol -- Siemens,
-Beckhoff, Rockwell PLCs all expose telemetry through it natively.
-The third backend exposes `ProductionModel` state as a browsable
-OPC-UA address space rooted at `Objects/Factory/`:
+Beckhoff, Rockwell PLCs all expose telemetry through it natively. The
+HMI plays **both** roles depending on how it sits in the topology:
+
+- **server**: expose `ProductionModel` state for a supervisory layer
+  (SCADA / MES) to subscribe to. The third backend in the I/O panel.
+- **client**: dial a PLC's OPC-UA endpoint, subscribe to its nodes,
+  feed values into the model. A separate pill in the I/O panel.
+
+Each role is opt-in via config, so a deployment can run either alone
+or both at once. The "data hub" pattern -- HMI as a relay between
+field-bus PLCs and supervisory dashboards -- is the canonical
+industrial topology this enables.
+
+#### Server role (outbound, browseable address space)
+
+Exposes `ProductionModel` state as a browsable OPC-UA address space
+rooted at `Objects/Factory/`:
 
 ```
 Objects/Factory/
@@ -524,14 +553,44 @@ Concrete impls:
   `IntegrationBackend` so `IntegrationManager` orchestrates OPC-UA
   identically to TCP / MQTT
 
+#### Client role (inbound, subscribe to a PLC)
+
+Inverse direction: HMI dials a remote OPC-UA endpoint (real PLC,
+simulator, or our own server on loopback for testing) and creates
+monitored items on its nodes. The same `OpcUaServer` write surface
+that the server role uses to push our state is mirrored by typed
+subscribe callbacks on the client side:
+
+```
+remote OPC-UA server          Open62541Client                ProductionModel
+(PLC / simulator / loopback)        |                              ^
+   |                                | subscribe(path, callback)    |
+   | DataChangeNotification -----> | -- typed dispatch --> bridge ->|
+```
+
+The client is itself an `IntegrationBackend` so it shares the I/O
+panel pill semantics with every other backend:
+
+- `OpcUaClient` (abstract) -- subscribe API + IntegrationBackend
+  lifecycle. Mirror of `OpcUaServer`.
+- `Open62541Client` (concrete) -- wraps `UA_Client*` via pimpl. One
+  `UA_Client_run_iterate` worker thread drains Publish responses;
+  pre-start `subscribe()` calls are queued and replayed once the
+  session is up (same pattern as `MqttClient::subscribe`).
+
+#### Build + coverage
+
 Build is opt-in via `-DBUILD_OPCUA_BACKEND=ON`; FetchContent pulls
-open62541 and statically links it (~2.4 MB binary contribution).
-The host binary builds and runs unchanged when the flag is off.
+open62541 and statically links it (~2.4 MB binary contribution). The
+host binary builds and runs unchanged when the flag is off.
 
 Coverage: `OpcUaBackendTest` + `FactoryNodeMapTest` (12 mock-based
-unit tests, no open62541 dep) plus `Open62541ServerIntegrationTest`
-(real server + real client over loopback, validates wire-format
-roundtrip via `UA_Client_readValueAttribute`).
+unit tests, no open62541 dep) plus two integration tests that link
+the real C stack and run server + client on loopback --
+`Open62541ServerIntegrationTest` validates the address-space write
+side, `Open62541ClientIntegrationTest` validates monitored-item
+dispatch + the subscribe-before-start / subscribe-after-start /
+lifecycle state matrix.
 
 ## Edge AI Inference
 
