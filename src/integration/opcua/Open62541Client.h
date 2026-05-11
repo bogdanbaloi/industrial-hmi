@@ -18,6 +18,21 @@ namespace app::core { class Logger; }
 
 namespace app::integration::opcua {
 
+/// Default cadence at which the worker thread polls
+/// `UA_Client_run_iterate`. Low enough that operator-perceptible
+/// state changes (sub-second on the I/O panel pill) land promptly;
+/// high enough that the thread doesn't burn a CPU. 50 ms is the
+/// typical industrial sweet spot for an HMI client.
+inline constexpr std::chrono::milliseconds kDefaultOpcUaClientIterateInterval{
+    50};
+
+/// Default publishing interval the client requests when creating a
+/// subscription on the server (milliseconds). 200 ms = 5 Hz, which
+/// matches the cadence the GTK dashboard updates the I/O panel pills
+/// and keeps notification-to-screen latency invisible to operators.
+/// The server may negotiate this down per its own scheduler.
+inline constexpr double kDefaultOpcUaClientPublishingIntervalMs = 200.0;
+
 /// Concrete `OpcUaClient` backed by the open62541 v1.5.x C stack.
 ///
 /// Owns a `UA_Client*` via pimpl so the header stays free of the C
@@ -56,13 +71,13 @@ public:
         /// connect doesn't block the entire app boot.
         std::chrono::seconds connectTimeout{10};
         /// Iterate cadence on the worker thread. Lower = faster
-        /// notification latency, higher = less CPU. 50 ms is a typical
-        /// industrial sweet spot.
-        std::chrono::milliseconds iterateInterval{50};
+        /// notification latency, higher = less CPU.
+        std::chrono::milliseconds iterateInterval{
+            kDefaultOpcUaClientIterateInterval};
         /// Publishing interval requested when we create the
         /// subscription on the server (milliseconds). Server may
         /// negotiate down.
-        double publishingIntervalMs{200.0};
+        double publishingIntervalMs{kDefaultOpcUaClientPublishingIntervalMs};
     };
 
     /// Tag for the typed callback the open62541 data-change handler
