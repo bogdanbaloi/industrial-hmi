@@ -267,6 +267,26 @@ if(BUILD_OPCUA_BACKEND)
     endif()
     add_test(NAME Open62541ServerIntegrationTest
              COMMAND test_open62541_server_integration)
+
+    # Open62541Client integration -- mirror of the server test for the
+    # inbound direction. Spawns server + client in-process, asserts
+    # subscribed callbacks fire on server-side writes. Validates
+    # subscription create / monitored item arm / variant decode end-
+    # to-end on the wire.
+    add_executable(test_open62541_client_integration
+        Open62541ClientIntegrationTest.cpp)
+    target_link_libraries(test_open62541_client_integration PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        objectsOpcUa
+        objectsCore
+    )
+    if(WIN32)
+        target_link_libraries(test_open62541_client_integration
+                              PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME Open62541ClientIntegrationTest
+             COMMAND test_open62541_client_integration)
 endif()
 
 # ML: ImageNetLabels -- file/vector loader, BOM + CRLF tolerance, bounds.
