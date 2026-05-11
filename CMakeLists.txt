@@ -438,6 +438,7 @@ target_sources(objectsIntegration
         src/integration/MqttPacket.cpp
         src/integration/MqttClient.cpp
         src/integration/ProductionTelemetryBridge.cpp
+        src/integration/SensorIngestBridge.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -450,7 +451,9 @@ target_sources(objectsIntegration
             src/integration/MqttPacket.h
             src/integration/MqttClient.h
             src/integration/TelemetryPublisher.h
+            src/integration/TelemetrySubscriber.h
             src/integration/ProductionTelemetryBridge.h
+            src/integration/SensorIngestBridge.h
 )
 target_link_libraries(objectsIntegration
     PUBLIC

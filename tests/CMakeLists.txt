@@ -180,6 +180,19 @@ target_link_libraries(test_production_telemetry_bridge PRIVATE
 add_test(NAME ProductionTelemetryBridgeTest
          COMMAND test_production_telemetry_bridge)
 
+# Integration: SensorIngestBridge -- inbound counterpart, MQTT-payload
+# to Model mutation. Uses a fake TelemetrySubscriber (captures topic ->
+# callback) + MockProductionModel, no socket.
+add_executable(test_sensor_ingest_bridge
+    SensorIngestBridgeTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/SensorIngestBridge.cpp)
+target_link_libraries(test_sensor_ingest_bridge PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME SensorIngestBridgeTest
+         COMMAND test_sensor_ingest_bridge)
+
 # Presenter: BackendHealthPresenter -- IntegrationManager backends ->
 # BackendHealthViewModel via the existing Observer hook. Uses a tiny
 # FakeBackend test double declared inline so no real network code is

@@ -4,6 +4,7 @@
 #include "src/config/ConfigManager.h"
 #include "src/integration/IntegrationManager.h"
 #include "src/integration/MqttClient.h"
+#include "src/integration/SensorIngestBridge.h"
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
@@ -138,6 +139,8 @@ int main(int argc, char* argv[]) {
         app::integration::IntegrationManager integration;
         std::unique_ptr<app::integration::ProductionTelemetryBridge>
             productionBridge;
+        std::unique_ptr<app::integration::SensorIngestBridge>
+            sensorIngestBridge;
 
         if (config.isTcpBackendEnabled()) {
             integration.registerBackend(
@@ -170,6 +173,23 @@ int main(int argc, char* argv[]) {
                     app::model::SimulatedModel::instance(),
                     std::move(bridgeConfig));
             productionBridge->wire();
+
+            // Inbound counterpart: the same MqttClient also drives a
+            // SensorIngestBridge that subscribes to sensor topics and
+            // pushes state changes back into the model. One socket,
+            // two roles, two bridges. Wire it before transferring
+            // ownership of the client into the manager so we still
+            // hold a live reference for the bridge constructor.
+            if (config.isMqttSubscriberEnabled()) {
+                app::integration::SensorIngestBridge::Config sensorCfg;
+                sensorCfg.topicPrefix = config.getMqttSensorTopicPrefix();
+                sensorIngestBridge =
+                    std::make_unique<app::integration::SensorIngestBridge>(
+                        *publisher,
+                        app::model::SimulatedModel::instance(),
+                        std::move(sensorCfg));
+                sensorIngestBridge->wire();
+            }
 
             integration.registerBackend(std::move(publisher));
         }
