@@ -38,7 +38,7 @@ namespace app::integration {
 ///     untouched.
 ///   * L -- accepts any TelemetryPublisher subclass.
 ///   * D -- depends on TelemetryPublisher abstraction; never on
-///     MqttPublisher concrete.
+///     MqttClient concrete.
 ///
 /// Threading:
 ///   * wire() is called once on the construction thread. Model

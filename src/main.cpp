@@ -3,7 +3,8 @@
 #include "src/core/StartupErrors.h"
 #include "src/config/ConfigManager.h"
 #include "src/integration/IntegrationManager.h"
-#include "src/integration/MqttPublisher.h"
+#include "src/integration/MqttClient.h"
+#include "src/integration/SensorIngestBridge.h"
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
@@ -55,6 +56,59 @@ constexpr bool kConsoleMode =
 [[maybe_unused]] constexpr int kExitUnexpectedFatal = 1;
 [[maybe_unused]] constexpr int kExitStartupFatal    = 2;
 [[maybe_unused]] constexpr int kExitUnknownFatal    = 3;
+
+/// Build + register the MQTT backend with the IntegrationManager,
+/// plus the outbound ProductionTelemetryBridge and (optionally) the
+/// inbound SensorIngestBridge. Extracted from main() to keep the
+/// latter under the readability-function-size threshold.
+///
+/// The bridges are owned via out-params because they need to outlive
+/// this helper -- the caller's stack frame keeps them alive until the
+/// front-end exits.
+void registerMqttBackend(
+    app::integration::IntegrationManager& integration,
+    app::config::ConfigManager& config,
+    std::unique_ptr<app::integration::ProductionTelemetryBridge>&
+        productionBridgeOut,
+    std::unique_ptr<app::integration::SensorIngestBridge>&
+        sensorIngestBridgeOut) {
+    app::integration::MqttClient::Config mqttConfig;
+    mqttConfig.brokerHost = config.getMqttBrokerHost();
+    mqttConfig.brokerPort =
+        static_cast<std::uint16_t>(config.getMqttBrokerPort());
+    mqttConfig.clientId = config.getMqttClientId();
+    auto client =
+        std::make_unique<app::integration::MqttClient>(std::move(mqttConfig));
+
+    // The outbound bridge subscribes to the production model and pushes
+    // through the client's TelemetryPublisher interface -- it doesn't
+    // know or care that the underlying transport is MQTT.
+    app::integration::ProductionTelemetryBridge::Config bridgeConfig;
+    bridgeConfig.topicPrefix = config.getMqttTopicPrefix();
+    productionBridgeOut =
+        std::make_unique<app::integration::ProductionTelemetryBridge>(
+            *client,
+            app::model::SimulatedModel::instance(),
+            std::move(bridgeConfig));
+    productionBridgeOut->wire();
+
+    // Inbound counterpart: same MqttClient also drives SensorIngestBridge.
+    // One socket, two roles, two bridges. Wired before transferring
+    // ownership of the client into the manager so the bridge constructor
+    // gets a live reference.
+    if (config.isMqttSubscriberEnabled()) {
+        app::integration::SensorIngestBridge::Config sensorCfg;
+        sensorCfg.topicPrefix = config.getMqttSensorTopicPrefix();
+        sensorIngestBridgeOut =
+            std::make_unique<app::integration::SensorIngestBridge>(
+                *client,
+                app::model::SimulatedModel::instance(),
+                std::move(sensorCfg));
+        sensorIngestBridgeOut->wire();
+    }
+
+    integration.registerBackend(std::move(client));
+}
 
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
 /// Build + register the OPC-UA backend with the IntegrationManager.
@@ -138,6 +192,8 @@ int main(int argc, char* argv[]) {
         app::integration::IntegrationManager integration;
         std::unique_ptr<app::integration::ProductionTelemetryBridge>
             productionBridge;
+        std::unique_ptr<app::integration::SensorIngestBridge>
+            sensorIngestBridge;
 
         if (config.isTcpBackendEnabled()) {
             integration.registerBackend(
@@ -148,30 +204,8 @@ int main(int argc, char* argv[]) {
         }
 
         if (config.isMqttBackendEnabled()) {
-            app::integration::MqttPublisher::Config mqttConfig;
-            mqttConfig.brokerHost = config.getMqttBrokerHost();
-            mqttConfig.brokerPort =
-                static_cast<std::uint16_t>(config.getMqttBrokerPort());
-            mqttConfig.clientId = config.getMqttClientId();
-            auto publisher =
-                std::make_unique<app::integration::MqttPublisher>(
-                    std::move(mqttConfig));
-
-            // The bridge subscribes to the production model and pushes
-            // through the publisher's TelemetryPublisher interface --
-            // it doesn't know or care that the underlying transport is
-            // MQTT. Swap in any other publisher (Kafka, AMQP, custom)
-            // with a single line change here.
-            app::integration::ProductionTelemetryBridge::Config bridgeConfig;
-            bridgeConfig.topicPrefix = config.getMqttTopicPrefix();
-            productionBridge =
-                std::make_unique<app::integration::ProductionTelemetryBridge>(
-                    *publisher,
-                    app::model::SimulatedModel::instance(),
-                    std::move(bridgeConfig));
-            productionBridge->wire();
-
-            integration.registerBackend(std::move(publisher));
+            registerMqttBackend(integration, config,
+                                productionBridge, sensorIngestBridge);
         }
 
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND

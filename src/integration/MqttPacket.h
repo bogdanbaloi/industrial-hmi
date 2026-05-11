@@ -34,12 +34,27 @@ namespace app::integration::mqtt {
 /// MQTT control packet types (high nibble of the fixed header byte).
 /// Values per spec section 2.2.1 "MQTT Control Packet type".
 enum class PacketType : std::uint8_t {
-    Connect    = 0x10,
-    ConnAck    = 0x20,
-    Publish    = 0x30,
-    PingReq    = 0xC0,
-    PingResp   = 0xD0,
-    Disconnect = 0xE0,
+    Connect     = 0x10,
+    ConnAck     = 0x20,
+    Publish     = 0x30,
+    Subscribe   = 0x80,
+    SubAck      = 0x90,
+    Unsubscribe = 0xA0,
+    UnsubAck    = 0xB0,
+    PingReq     = 0xC0,
+    PingResp    = 0xD0,
+    Disconnect  = 0xE0,
+};
+
+/// SUBACK return codes per MQTT 3.1.1 section 3.9.3. A broker emits
+/// one of these per topic filter in the matching SUBSCRIBE. The first
+/// three describe the maximum QoS granted; the failure code indicates
+/// the broker refused (e.g. ACL denied).
+enum class SubAckCode : std::uint8_t {
+    GrantedQos0 = 0x00,
+    GrantedQos1 = 0x01,
+    GrantedQos2 = 0x02,
+    Failure     = 0x80,
 };
 
 /// CONNACK return codes per MQTT 3.1.1 section 3.2.2.3.
@@ -118,5 +133,57 @@ inline constexpr std::size_t kConnAckPacketSize = 4U;
 /// wrong remaining length, truncated buffer).
 [[nodiscard]] ConnAckCode
     parseConnAck(const std::vector<std::uint8_t>& bytes);
+
+/// Build a SUBSCRIBE packet for one topic filter (spec section 3.8).
+/// QoS 0 only -- we don't track acknowledgement state for higher QoS.
+///
+/// @param packetId  16-bit identifier the broker will echo in SUBACK;
+///                  caller supplies a unique value per inflight
+///                  SUBSCRIBE so the response can be correlated.
+/// @param topic     Topic filter (may include `+` / `#` wildcards).
+[[nodiscard]] std::vector<std::uint8_t>
+    buildSubscribe(std::uint16_t packetId, const std::string& topic);
+
+/// Build an UNSUBSCRIBE packet for one topic filter (spec section 3.10).
+///
+/// @param packetId  16-bit identifier the broker will echo in UNSUBACK.
+/// @param topic     Topic filter previously subscribed to.
+[[nodiscard]] std::vector<std::uint8_t>
+    buildUnsubscribe(std::uint16_t packetId, const std::string& topic);
+
+/// Parsed SUBACK response (spec section 3.9). Holds the broker's
+/// echoed packet identifier and the granted QoS code for the single
+/// topic filter we sent. Multi-topic SUBSCRIBE would carry more codes
+/// in the payload; we keep the surface minimal.
+struct ParsedSubAck {
+    std::uint16_t packetId;
+    SubAckCode    returnCode;
+};
+
+/// Parse a SUBACK packet from a broker response. Single-topic only
+/// (matching what `buildSubscribe` emits). Throws on bad header byte,
+/// truncated buffer, or wrong remaining length.
+[[nodiscard]] ParsedSubAck
+    parseSubAck(const std::vector<std::uint8_t>& bytes);
+
+/// Parsed UNSUBACK -- carries only the echoed packet identifier
+/// (spec section 3.11; no per-topic codes).
+[[nodiscard]] std::uint16_t
+    parseUnsubAck(const std::vector<std::uint8_t>& bytes);
+
+/// Parsed incoming PUBLISH frame. Subscribers consume these off the
+/// wire and deliver `(topic, payload)` to application callbacks.
+/// QoS 0 only: no packet ID, no DUP retry. The struct intentionally
+/// keeps owning copies so the callback can outlive the buffer.
+struct ParsedPublish {
+    std::string topic;
+    std::string payload;
+};
+
+/// Parse a PUBLISH frame (QoS 0). `bytes` must be the complete packet
+/// (fixed header + remaining-length prefix + body). Throws on bad
+/// header byte (non-PUBLISH), QoS > 0 flags, or truncation.
+[[nodiscard]] ParsedPublish
+    parsePublish(const std::vector<std::uint8_t>& bytes);
 
 }  // namespace app::integration::mqtt

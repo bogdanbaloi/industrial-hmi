@@ -58,7 +58,7 @@ constexpr std::uint16_t kTestPort = 14840;
 
 /// open62541's connect can race the server's accept loop the very
 /// first millisecond after start(). One tiny sleep matches the same
-/// pattern used by MqttPublisherTest and keeps the test stable
+/// pattern used by MqttClientTest and keeps the test stable
 /// across CI runners with different scheduler latency.
 constexpr std::chrono::milliseconds kSettleDelay{200};
 

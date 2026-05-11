@@ -33,7 +33,7 @@ namespace app::integration {
 ///   * I -- intentionally narrow: 2 methods. RPC-style (request/
 ///     response) backends have their own separate interface.
 ///   * D -- bridges depend on this abstraction, never on the
-///     concrete MqttPublisher / KafkaPublisher / etc.
+///     concrete MqttClient / KafkaPublisher / etc.
 class TelemetryPublisher {
 public:
     virtual ~TelemetryPublisher() = default;

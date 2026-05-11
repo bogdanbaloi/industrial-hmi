@@ -53,6 +53,10 @@ constexpr const char* kMqttBrokerHost  = "127.0.0.1";
 constexpr int kMqttBrokerPort       = 1883;
 constexpr const char* kMqttClientId    = "industrial-hmi";
 constexpr const char* kMqttTopicPrefix = "industrial-hmi";
+/// Default topic prefix for the inbound subscriber. Distinct from
+/// kMqttTopicPrefix so publish vs. subscribe namespaces can be tuned
+/// independently per deployment.
+constexpr const char* kMqttSensorTopicPrefix = "industrial-hmi-sensors";
 
 // OPC-UA server backend. IANA-assigned default port for OPC-UA Binary
 // is 4840; URI / name are advertised in GetEndpoints replies so clients

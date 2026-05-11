@@ -1,4 +1,4 @@
-// Tests for app::integration::MqttPublisher.
+// Tests for app::integration::MqttClient.
 //
 // Brings up an in-process MockMqttBroker (a tiny Asio TCP server)
 // that:
@@ -10,7 +10,7 @@
 // All tests run on loopback. No external broker, no fixtures other
 // than gtest/gmock.
 
-#include "src/integration/MqttPublisher.h"
+#include "src/integration/MqttClient.h"
 
 #include "src/integration/MqttPacket.h"
 
@@ -27,7 +27,7 @@
 #include <thread>
 #include <vector>
 
-using app::integration::MqttPublisher;
+using app::integration::MqttClient;
 namespace mqtt = app::integration::mqtt;
 
 namespace asio = boost::asio;
@@ -57,7 +57,7 @@ std::uint16_t readUint16BigEndian(const std::vector<std::uint8_t>& buf,
 }
 
 /// Tiny in-process MQTT broker. Just enough behaviour to let
-/// MqttPublisher complete its CONNECT handshake and observe the
+/// MqttClient complete its CONNECT handshake and observe the
 /// PUBLISH frames it emits afterwards.
 class MockMqttBroker {
 public:
@@ -114,6 +114,24 @@ public:
     [[nodiscard]] std::size_t pingReqCount() const noexcept {
         return pingReqCount_.load(std::memory_order_acquire);
     }
+    [[nodiscard]] bool sawSubscribe() const noexcept {
+        return sawSubscribe_.load(std::memory_order_acquire);
+    }
+    [[nodiscard]] std::string lastSubscribedTopic() const {
+        const std::scoped_lock lock(mutex_);
+        return lastSubscribedTopic_;
+    }
+
+    /// On the next inbound SUBSCRIBE, the broker queues a PUBLISH
+    /// echo of (`topic`, `payload`) back to the client. Lets tests
+    /// drive the subscriber read path without spinning a second
+    /// real MQTT client.
+    void echoOnNextSubscribe(std::string topic, std::string payload) {
+        const std::scoped_lock lock(mutex_);
+        echoTopic_   = std::move(topic);
+        echoPayload_ = std::move(payload);
+        echoArmed_   = true;
+    }
 
 private:
     void runAcceptLoop() {
@@ -152,7 +170,7 @@ private:
             while (!stopped_.load(std::memory_order_acquire)) {
                 const auto bytes = readFullPacket(socket);
                 if (bytes.empty()) break;
-                handleClientPacket(bytes);
+                handleClientPacket(bytes, socket);
                 if (sawDisconnect_.load(std::memory_order_acquire)) break;
             }
         } catch (...) {
@@ -162,7 +180,8 @@ private:
         socket.close(ec);
     }
 
-    void handleClientPacket(const std::vector<std::uint8_t>& bytes) {
+    void handleClientPacket(const std::vector<std::uint8_t>& bytes,
+                            tcp::socket& socket) {
         if (bytes.empty()) return;
         const auto type = static_cast<std::uint8_t>(bytes[0] & 0xF0);
 
@@ -185,8 +204,66 @@ private:
                               mqtt::PacketType::PingReq)) {
             pingReqCount_.fetch_add(1, std::memory_order_release);
         } else if (type == static_cast<std::uint8_t>(
+                              mqtt::PacketType::Subscribe)) {
+            handleSubscribe(bytes, socket);
+        } else if (type == static_cast<std::uint8_t>(
                               mqtt::PacketType::Disconnect)) {
             sawDisconnect_.store(true, std::memory_order_release);
+        }
+    }
+
+    /// Parse the topic filter out of a SUBSCRIBE, reply with SUBACK,
+    /// and -- if a previous `echoOnNextSubscribe(...)` call armed an
+    /// echo -- push a PUBLISH down the wire so the test can verify
+    /// the client's read loop dispatches it.
+    void handleSubscribe(const std::vector<std::uint8_t>& bytes,
+                         tcp::socket& socket) {
+        // SUBSCRIBE wire format (spec 3.8):
+        //   fixed header (1) + remaining length (1..4) +
+        //   variable header: packet identifier (2) +
+        //   payload: topic filter (length-prefixed string) + QoS byte.
+        std::size_t cursor = 1;
+        (void)mqtt::decodeRemainingLength(bytes, cursor);
+        const auto packetId = readUint16BigEndian(bytes, cursor);
+        cursor += sizeof(std::uint16_t);
+        const auto topicLen = readUint16BigEndian(bytes, cursor);
+        cursor += sizeof(std::uint16_t);
+        std::string topic(bytes.begin() + cursor,
+                          bytes.begin() + cursor + topicLen);
+
+        sawSubscribe_.store(true, std::memory_order_release);
+        std::string echoTopic;
+        std::string echoPayload;
+        bool armed = false;
+        {
+            const std::scoped_lock lock(mutex_);
+            lastSubscribedTopic_ = topic;
+            if (echoArmed_) {
+                echoTopic   = echoTopic_;
+                echoPayload = echoPayload_;
+                armed       = true;
+                echoArmed_  = false;
+            }
+        }
+
+        // Send SUBACK granting QoS 0 (spec 3.9).
+        const std::vector<std::uint8_t> suback{
+            static_cast<std::uint8_t>(mqtt::PacketType::SubAck),
+            0x03,
+            static_cast<std::uint8_t>((packetId >> 8U) & 0xFFU),
+            static_cast<std::uint8_t>(packetId & 0xFFU),
+            0x00  // GrantedQos0
+        };
+        boost::system::error_code ec;
+        asio::write(socket, asio::buffer(suback), ec);
+
+        if (armed && !ec) {
+            // Push a PUBLISH frame back down the client's socket so
+            // its read loop has something to dispatch. Build via the
+            // same encoder the production code uses to guarantee wire
+            // compatibility.
+            const auto publish = mqtt::buildPublish(echoTopic, echoPayload);
+            asio::write(socket, asio::buffer(publish), ec);
         }
     }
 
@@ -239,12 +316,17 @@ private:
     std::vector<PublishedFrame> frames_;
     std::atomic<bool> sawConnect_{false};
     std::atomic<bool> sawDisconnect_{false};
+    std::atomic<bool> sawSubscribe_{false};
     std::atomic<std::size_t> pingReqCount_{0};
     std::atomic<bool> stopped_{false};
+    std::string lastSubscribedTopic_;
+    std::string echoTopic_;
+    std::string echoPayload_;
+    bool echoArmed_{false};
 };
 
-MqttPublisher::Config makeConfig(std::uint16_t port) {
-    MqttPublisher::Config c;
+MqttClient::Config makeConfig(std::uint16_t port) {
+    MqttClient::Config c;
     c.brokerHost = "127.0.0.1";
     c.brokerPort = port;
     c.clientId = "test-client";
@@ -257,9 +339,9 @@ MqttPublisher::Config makeConfig(std::uint16_t port) {
 
 // Lifecycle
 
-TEST(MqttPublisherTest, ConnectsAndCompletesCONNECTHandshake) {
+TEST(MqttClientTest, ConnectsAndCompletesCONNECTHandshake) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
 
     pub.start();
     EXPECT_TRUE(pub.isRunning());
@@ -272,7 +354,7 @@ TEST(MqttPublisherTest, ConnectsAndCompletesCONNECTHandshake) {
     EXPECT_FALSE(pub.isRunning());
 }
 
-TEST(MqttPublisherTest, RaisesOnConnectionRefused) {
+TEST(MqttClientTest, RaisesOnConnectionRefused) {
     // Bind to a dead port (use a port that should not have a listener).
     // We grab an OS-assigned port via the broker helper, then stop it
     // immediately so the publisher's connect attempt sees ECONNREFUSED.
@@ -281,27 +363,27 @@ TEST(MqttPublisherTest, RaisesOnConnectionRefused) {
         MockMqttBroker broker;
         deadPort = broker.port();
     }
-    MqttPublisher pub(makeConfig(deadPort));
+    MqttClient pub(makeConfig(deadPort));
     EXPECT_THROW(pub.start(), std::exception);
     EXPECT_FALSE(pub.isRunning());
 }
 
-TEST(MqttPublisherTest, NameIsMqtt) {
-    MqttPublisher pub(makeConfig(0));
+TEST(MqttClientTest, NameIsMqtt) {
+    MqttClient pub(makeConfig(0));
     EXPECT_EQ(pub.name(), "MQTT");
 }
 
-TEST(MqttPublisherTest, StartIsIdempotent) {
+TEST(MqttClientTest, StartIsIdempotent) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     EXPECT_NO_THROW(pub.start());  // second call is a no-op
     pub.stop();
 }
 
-TEST(MqttPublisherTest, StopIsIdempotent) {
+TEST(MqttClientTest, StopIsIdempotent) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     pub.stop();
     EXPECT_NO_THROW(pub.stop());
@@ -309,9 +391,9 @@ TEST(MqttPublisherTest, StopIsIdempotent) {
 
 // Publish path
 
-TEST(MqttPublisherTest, PublishEmitsPublishFrame) {
+TEST(MqttClientTest, PublishEmitsPublishFrame) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     std::this_thread::sleep_for(kBrokerSettleDelay);
 
@@ -327,9 +409,9 @@ TEST(MqttPublisherTest, PublishEmitsPublishFrame) {
     pub.stop();
 }
 
-TEST(MqttPublisherTest, PublishMultipleFramesPreservesOrder) {
+TEST(MqttClientTest, PublishMultipleFramesPreservesOrder) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     std::this_thread::sleep_for(kBrokerSettleDelay);
 
@@ -347,8 +429,8 @@ TEST(MqttPublisherTest, PublishMultipleFramesPreservesOrder) {
     pub.stop();
 }
 
-TEST(MqttPublisherTest, PublishWhileNotRunningIsNoOp) {
-    MqttPublisher pub(makeConfig(0));
+TEST(MqttClientTest, PublishWhileNotRunningIsNoOp) {
+    MqttClient pub(makeConfig(0));
     EXPECT_NO_THROW(pub.publish("t", "p"));
     EXPECT_EQ(pub.publishedCount(), 0U);
     EXPECT_FALSE(pub.canPublish());
@@ -356,9 +438,9 @@ TEST(MqttPublisherTest, PublishWhileNotRunningIsNoOp) {
 
 // Heartbeat
 
-TEST(MqttPublisherTest, EmitsPingReqOnHeartbeatInterval) {
+TEST(MqttClientTest, EmitsPingReqOnHeartbeatInterval) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
 
     // Wait for at least 2 heartbeat intervals.
@@ -372,9 +454,9 @@ TEST(MqttPublisherTest, EmitsPingReqOnHeartbeatInterval) {
 
 // Clean disconnect
 
-TEST(MqttPublisherTest, StopSendsDisconnectFrame) {
+TEST(MqttClientTest, StopSendsDisconnectFrame) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     std::this_thread::sleep_for(kBrokerSettleDelay);
 
@@ -383,4 +465,104 @@ TEST(MqttPublisherTest, StopSendsDisconnectFrame) {
 
     EXPECT_TRUE(broker.sawDisconnect())
         << "stop() should send a clean DISCONNECT before closing";
+}
+
+// Subscribe side
+
+TEST(MqttClientTest, SubscribeSendsSubscribeFrameAfterStart) {
+    MockMqttBroker broker;
+    MqttClient client(makeConfig(broker.port()));
+
+    client.start();
+    std::this_thread::sleep_for(kBrokerSettleDelay);
+
+    client.subscribe("sensors/equipment/0/state",
+                     [](std::string_view, std::string_view) {});
+
+    std::this_thread::sleep_for(kBrokerSettleDelay);
+
+    EXPECT_TRUE(broker.sawSubscribe());
+    EXPECT_EQ(broker.lastSubscribedTopic(), "sensors/equipment/0/state");
+
+    client.stop();
+}
+
+TEST(MqttClientTest, SubscribeBeforeStartReplaysAfterConnect) {
+    // Pre-start subscribe should be queued and fired once CONNACK arrives.
+    MockMqttBroker broker;
+    MqttClient client(makeConfig(broker.port()));
+
+    client.subscribe("queued/topic",
+                     [](std::string_view, std::string_view) {});
+
+    client.start();
+    std::this_thread::sleep_for(kBrokerSettleDelay);
+
+    EXPECT_TRUE(broker.sawSubscribe());
+    EXPECT_EQ(broker.lastSubscribedTopic(), "queued/topic");
+
+    client.stop();
+}
+
+TEST(MqttClientTest, InboundPublishInvokesMatchingCallback) {
+    MockMqttBroker broker;
+    broker.echoOnNextSubscribe("sensors/T", "hello-from-broker");
+
+    MqttClient client(makeConfig(broker.port()));
+
+    std::atomic<int> hits{0};
+    std::string capturedTopic;
+    std::string capturedPayload;
+    std::mutex captureMutex;
+
+    client.subscribe(
+        "sensors/T",
+        [&](std::string_view topic, std::string_view payload) {
+            const std::scoped_lock lock(captureMutex);
+            capturedTopic.assign(topic);
+            capturedPayload.assign(payload);
+            hits.fetch_add(1, std::memory_order_release);
+        });
+
+    client.start();
+    // Wait for the broker to receive SUBSCRIBE, send SUBACK, then
+    // PUBLISH the echo. The client's read loop dispatches on the
+    // io_context worker thread.
+    std::this_thread::sleep_for(kPublishSettleDelay);
+
+    EXPECT_EQ(hits.load(std::memory_order_acquire), 1);
+    {
+        const std::scoped_lock lock(captureMutex);
+        EXPECT_EQ(capturedTopic, "sensors/T");
+        EXPECT_EQ(capturedPayload, "hello-from-broker");
+    }
+    EXPECT_EQ(client.receivedCount(), 1U);
+
+    client.stop();
+}
+
+TEST(MqttClientTest, InboundPublishOnUnknownTopicDoesNotCallback) {
+    // Broker pushes a PUBLISH on a topic we never subscribed to.
+    // The client should still count it as received (read loop drained
+    // the frame off the wire) but invoke no callback.
+    MockMqttBroker broker;
+    broker.echoOnNextSubscribe("unrelated/topic", "ignored");
+
+    MqttClient client(makeConfig(broker.port()));
+
+    std::atomic<int> hits{0};
+    client.subscribe(
+        "subscribed/topic",
+        [&](std::string_view, std::string_view) {
+            hits.fetch_add(1, std::memory_order_release);
+        });
+
+    client.start();
+    std::this_thread::sleep_for(kPublishSettleDelay);
+
+    EXPECT_EQ(hits.load(std::memory_order_acquire), 0);
+    EXPECT_EQ(client.receivedCount(), 1U)
+        << "frame was dispatched; only the callback lookup missed";
+
+    client.stop();
 }

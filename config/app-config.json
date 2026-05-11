@@ -260,7 +260,11 @@
       "broker_host": "127.0.0.1",
       "broker_port": 1883,
       "client_id": "industrial-hmi",
-      "topic_prefix": "industrial-hmi"
+      "topic_prefix": "industrial-hmi",
+      "subscriber": {
+        "enabled": true,
+        "topic_prefix": "industrial-hmi-sensors"
+      }
     },
     "opcua": {
       "enabled": true,

@@ -279,6 +279,19 @@ public:
                         defaults::kMqttTopicPrefix);
     }
 
+    // MQTT inbound (subscriber) side. Off by default -- most
+    // deployments only PUBLISH telemetry outbound; the demo flips
+    // this on so a `mosquitto_pub` on the configured topics drives
+    // dashboard state changes.
+    [[nodiscard]] bool isMqttSubscriberEnabled() const {
+        return getValue("network.mqtt.subscriber.enabled", "false") == "true";
+    }
+
+    [[nodiscard]] std::string getMqttSensorTopicPrefix() const {
+        return getValue("network.mqtt.subscriber.topic_prefix",
+                        defaults::kMqttSensorTopicPrefix);
+    }
+
     // OPC-UA backend (server role). Defaults to disabled like the
     // other backends; turning it on starts a UA_Server bound to the
     // configured port and exposes the Factory address space.

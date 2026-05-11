@@ -39,6 +39,13 @@ core.
 - **11 UI languages** via gettext, runtime switch (no restart) -- the
   page tree is rebuilt so every `_()` and every `translatable="yes"`
   re-resolves against the new catalog.
+- **Bidirectional industrial integration** -- one MQTT socket carries
+  both outbound telemetry (`ProductionTelemetryBridge` -> broker) and
+  inbound sensor traffic (broker -> `SensorIngestBridge` -> `ProductionModel`),
+  the way real-world MQTT libraries are shaped. Add TCP control surface
+  + OPC-UA server on top: four protocols total, all hand-rolled where
+  the spec is small, all surfaced via a uniform `IntegrationBackend`
+  in the dashboard's I/O panel.
 - **Cross-platform CI** on Ubuntu 24.04 (GCC 13 + pkg-config) and
   Windows MSYS2 CLANG64; clang-tidy + cppcheck gates every PR.
 
@@ -175,9 +182,11 @@ src/
     IntegrationManager  Composition root, per-backend exception tolerance
     TcpBackend          Line-protocol server over Boost.Asio
     TelemetryPublisher  Generic publish(topic, payload) interface
+    TelemetrySubscriber Generic subscribe(filter, callback) interface
     MqttPacket          Hand-rolled MQTT 3.1.1 wire format
-    MqttPublisher       MQTT publisher (no paho dep, work-guarded io_context)
-    ProductionTelemetryBridge   Manufacturing reference bridge
+    MqttClient          MQTT client (full duplex on one socket, no paho)
+    ProductionTelemetryBridge   Manufacturing -> MQTT outbound bridge
+    SensorIngestBridge          MQTT -> Manufacturing inbound bridge
 
   ml/                   Edge AI inference (BUILD_ML_CLASSIFIER=ON)
     Image / ImageDecoder        RGB POD + stb_image decoder facade
@@ -317,44 +326,56 @@ Wiring three together is two lines in `main.cpp`.
               +-------------+-------------+
               |                           |
    +---------------------+    +---------------------------+
-   |    TcpBackend       |    |       MqttPublisher       |
+   |    TcpBackend       |    |       MqttClient          |
    |  (line protocol     |    |  (MQTT 3.1.1 hand-rolled  |
-   |   over TCP)         |    |   wire format, no paho)   |
+   |   over TCP)         |    |   wire format, no paho;   |
+   |                     |    |   one socket, full duplex)|
    +---------------------+    +---------------------------+
-                                       ^
-                                       | also implements
-                                       v
+                                       ^   ^
+                            also implements |
+                                       |   |
+                +----------------------+   +----------------------+
+                |                                                  |
+        +---------------------+                       +-----------------------+
+        |  TelemetryPublisher |                       |  TelemetrySubscriber  |
+        |   (abstract publish)|                       |   (abstract subscribe)|
+        +---------------------+                       +-----------------------+
+                ^                                                  ^
+                | calls publish()                                  | calls subscribe()
+                |                                                  |
+   +-------------------------------+              +-----------------------------+
+   |  ProductionTelemetryBridge    |              |    SensorIngestBridge       |
+   |  (model events -> topics;     |              |  (topics -> Model setters;  |
+   |   outbound telemetry)         |              |   inbound field traffic)    |
+   +-------------------------------+              +-----------------------------+
+                ^                                                  |
+                | subscribes signals                               | mutates
+                |                                                  v
                               +---------------------+
-                              |  TelemetryPublisher |   (abstract publish)
-                              +---------------------+
-                                       ^
-                                       | calls publish()
-                                       |
-                       +-------------------------------+
-                       |  ProductionTelemetryBridge    |
-                       |  (manufacturing bridge --     |
-                       |   one of N possible bridges)  |
-                       +-------------------------------+
-                                       ^
-                                       | subscribes signals
-                                       v
-                              +---------------------+
-                              |   ProductionModel   |
+                              |   ProductionModel   |   (single source of truth)
                               +---------------------+
 ```
 
+One MQTT socket carries **both directions**, the way every real-world
+library does it (paho, AsyncMQTT5, mosquitto-c). SoC lives in the
+bridge layer instead: `ProductionTelemetryBridge` translates Model
+events into outbound publishes, `SensorIngestBridge` translates
+inbound publishes into Model mutations. Either side can be deleted or
+swapped without touching the other.
+
 ### Vertical reuse: same shell, different domain
 
-The MQTT publisher knows nothing about manufacturing. The bridge knows
+The MQTT client knows nothing about manufacturing. The bridges know
 nothing about MQTT. To deploy this framework in another vertical you
-write **one** new bridge class against the same `TelemetryPublisher`:
+write **one** new bridge class against the same `TelemetryPublisher`
+(or `TelemetrySubscriber` for inbound):
 
 | Vertical                | Domain model            | Bridge          | Publisher reuse |
 |-------------------------|-------------------------|-----------------|-----------------|
 | Manufacturing (default) | `ProductionModel`       | `ProductionTelemetryBridge` | Ships in repo |
-| Pharma / lab            | `LabInstrumentModel`    | `LabTelemetryBridge`        | MqttPublisher unchanged |
-| Smart-building          | `HvacModel`             | `HvacTelemetryBridge`       | MqttPublisher unchanged |
-| Energy / SCADA          | `BreakerModel`          | `BreakerTelemetryBridge`    | MqttPublisher unchanged |
+| Pharma / lab            | `LabInstrumentModel`    | `LabTelemetryBridge`        | MqttClient unchanged |
+| Smart-building          | `HvacModel`             | `HvacTelemetryBridge`       | MqttClient unchanged |
+| Energy / SCADA          | `BreakerModel`          | `BreakerTelemetryBridge`    | MqttClient unchanged |
 
 A bridge is typically 50-100 lines of pure callback plumbing. The MQTT
 wire-format code, connection lifecycle, work-guard / heartbeat machinery,
@@ -377,10 +398,20 @@ a port or dials out to a broker. Operators turn them on via
     "broker_host": "broker.example.com",
     "broker_port": 1883,
     "client_id": "factory-42",
-    "topic_prefix": "factory-42/line-A"
+    "topic_prefix": "factory-42/line-A",
+    "subscriber": {
+      "enabled": true,
+      "topic_prefix": "factory-42/sensors"
+    }
   }
 }
 ```
+
+The publish-side topic prefix and the subscribe-side prefix live in
+separate keys so a deployment can keep its outbound telemetry
+namespace distinct from the inbound sensor namespace -- e.g.
+`factory-42/line-A/*` for everything we publish, `factory-42/sensors/*`
+for everything we listen to.
 
 ### TCP backend protocol
 
@@ -400,10 +431,11 @@ BYE
 Supported commands: `status`, `products`, `eq <id> on|off`,
 `production start|stop|reset`, `help`, `quit`.
 
-### MQTT backend topics
+### MQTT backend topics (outbound)
 
-Hand-rolled MQTT 3.1.1 publisher (publish-only, QoS 0, no paho dep)
-over plain TCP. Topic schema configurable via `topic_prefix`:
+Hand-rolled MQTT 3.1.1 client over plain TCP. Outbound side publishes
+manufacturing telemetry on every Model event, schema configurable via
+`topic_prefix`:
 
 | Topic                                 | Payload example         |
 |---------------------------------------|-------------------------|
@@ -413,20 +445,51 @@ over plain TCP. Topic schema configurable via `topic_prefix`:
 
 Subscribe with `mosquitto_sub -h broker.example.com -t 'factory-42/#' -v`.
 
+### MQTT subscriber (inbound)
+
+The same `MqttClient` also listens for inbound traffic from field
+sensors or supervisory systems. `SensorIngestBridge` translates each
+incoming PUBLISH into a `ProductionModel` mutation, so the dashboard
+reflects external state without any front-end-specific wiring.
+
+Default topic schema (configurable via `subscriber.topic_prefix`):
+
+| Topic                                          | Accepted payloads                       | Model effect |
+|------------------------------------------------|-----------------------------------------|--------------|
+| `<sensor_prefix>/equipment/<id>/state`         | `on`, `off`, `1`, `0`, `true`, `false`  | `setEquipmentEnabled(id, ...)` |
+
+Payload parsing is case-insensitive, whitespace-trimmed. Unknown
+payloads are dropped silently -- a misbehaving sensor must not be
+able to crash the HMI.
+
+End-to-end demo (Linux / WSL / MSYS2):
+
+```bash
+mosquitto -p 1883 &                          # local broker
+./industrial-hmi                             # MQTT pill flips to green
+mosquitto_pub -t industrial-hmi-sensors/equipment/0/state -m off
+# A-LINE switch flips off on the dashboard; presenter -> view loop
+# carries the change without any code path specific to MQTT.
+```
+
 ### Why hand-rolled MQTT?
 
 | Decision                  | Rationale |
 |---------------------------|-----------|
 | No paho-mqtt-cpp dep      | Zero new system packages; CI install time unchanged |
 | MQTT 3.1.1 only           | Full 5.0 properties + shared subscriptions out of scope |
-| Publish-only              | This is a telemetry source; subscribers are a future PR |
+| Single full-duplex client | One socket, two roles -- matches paho / AsyncMQTT5; SoC kept at the bridge layer (publish bridge + subscribe bridge are separate classes) |
 | QoS 0                     | Industrial telemetry is transient; QoS 1/2 would need state machines for marginal benefit |
 | Plain TCP, no TLS         | Production deployments tunnel through stunnel; wire format unchanged |
 
-Coverage: `MqttPacketTest` (31 cases) verifies byte-exact wire format
-against the spec; `MqttPublisherTest` (10 cases) drives the publisher
-against an in-process mock broker; `ProductionTelemetryBridgeTest` (8
-cases) verifies the domain mapping in isolation.
+Coverage: `MqttPacketTest` (48 cases) verifies byte-exact wire format
+for CONNECT / CONNACK / PUBLISH / SUBSCRIBE / SUBACK / UNSUBSCRIBE /
+UNSUBACK / PINGREQ / DISCONNECT against the spec;
+`MqttClientTest` (14 cases) drives the client against an in-process
+mock broker, both publish and subscribe round-trips;
+`ProductionTelemetryBridgeTest` (8 cases) and
+`SensorIngestBridgeTest` (6 cases) verify the two domain bridges in
+isolation against a fake `TelemetryPublisher` / `TelemetrySubscriber`.
 
 ### OPC-UA backend (industrial protocol)
 
@@ -573,7 +636,7 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | UI | GTK4 / gtkmm-4.0, Cairo for custom widgets |
 | Database | SQLite3 (in-memory, prepared statements) |
 | Async I/O | Boost.Asio io_context with work guard, posted via std::jthread |
-| Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled publisher (no paho dep) |
+| Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled client (full duplex, no paho dep) + OPC-UA via open62541 |
 | Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros) |
 | Testing | GoogleTest + gmock (40+ ctest targets) |

@@ -25,6 +25,14 @@ using app::integration::mqtt::kMaxRemainingLength;
 using app::integration::mqtt::kMaxStringLength;
 using app::integration::mqtt::PacketType;
 using app::integration::mqtt::parseConnAck;
+using app::integration::mqtt::buildSubscribe;
+using app::integration::mqtt::buildUnsubscribe;
+using app::integration::mqtt::parseSubAck;
+using app::integration::mqtt::parseUnsubAck;
+using app::integration::mqtt::parsePublish;
+using app::integration::mqtt::SubAckCode;
+using app::integration::mqtt::ParsedSubAck;
+using app::integration::mqtt::ParsedPublish;
 
 namespace {
 
@@ -36,6 +44,10 @@ constexpr std::uint8_t kPublishByte    = 0x30U;
 constexpr std::uint8_t kPingReqByte    = 0xC0U;
 constexpr std::uint8_t kDisconnectByte = 0xE0U;
 constexpr std::uint8_t kConnAckByte    = 0x20U;
+constexpr std::uint8_t kSubscribeByte   = 0x82U;  // Subscribe + 0b0010
+constexpr std::uint8_t kSubAckByte      = 0x90U;
+constexpr std::uint8_t kUnsubscribeByte = 0xA2U;  // Unsubscribe + 0b0010
+constexpr std::uint8_t kUnsubAckByte    = 0xB0U;
 
 constexpr std::uint8_t kEmptyRemaining = 0x00U;
 constexpr std::uint8_t kProtocolLevel  = 0x04U;  // MQTT 3.1.1
@@ -273,4 +285,138 @@ TEST(MqttPacketTest, ParseConnAckThrowsOnBadRemainingLength) {
 TEST(MqttPacketTest, ConnAckPacketSizeMatchesSpec) {
     // Sanity check: spec says CONNACK is exactly 4 bytes.
     EXPECT_EQ(kConnAckPacketSize, 4U);
+}
+
+// SUBSCRIBE / SUBACK / UNSUBSCRIBE / UNSUBACK (spec sections 3.8 - 3.11)
+
+TEST(MqttPacketTest, BuildSubscribeStartsWithReservedFlagsHeader) {
+    // Section 3.8.1: SUBSCRIBE fixed-header low nibble must equal
+    // 0b0010 -- brokers reject anything else.
+    const auto bytes = buildSubscribe(1, "topic");
+    ASSERT_FALSE(bytes.empty());
+    EXPECT_EQ(bytes[0], kSubscribeByte);
+}
+
+TEST(MqttPacketTest, BuildSubscribeCarriesPacketIdBigEndian) {
+    constexpr std::uint16_t kPacketId = 0x1234U;
+    const auto bytes = buildSubscribe(kPacketId, "x");
+    // Skip fixed header (1) + remaining-length byte (1) -> variable
+    // header starts at offset 2 with packet identifier MSB then LSB.
+    ASSERT_GE(bytes.size(), 4U);
+    EXPECT_EQ(bytes[2], 0x12U);
+    EXPECT_EQ(bytes[3], 0x34U);
+}
+
+TEST(MqttPacketTest, BuildSubscribeAppendsTopicAndQos0) {
+    const auto bytes = buildSubscribe(1, "ab");
+    // After packet id (2B) we expect string length prefix (0x00 0x02),
+    // then "ab", then the requested-QoS byte (0x00).
+    ASSERT_EQ(bytes.size(), 9U);  // 1+1+2+2+2+1
+    EXPECT_EQ(bytes[4], 0x00U);
+    EXPECT_EQ(bytes[5], 0x02U);
+    EXPECT_EQ(bytes[6], 'a');
+    EXPECT_EQ(bytes[7], 'b');
+    EXPECT_EQ(bytes[8], 0x00U);  // QoS 0
+}
+
+TEST(MqttPacketTest, BuildUnsubscribeStartsWithReservedFlagsHeader) {
+    const auto bytes = buildUnsubscribe(1, "topic");
+    ASSERT_FALSE(bytes.empty());
+    EXPECT_EQ(bytes[0], kUnsubscribeByte);
+}
+
+TEST(MqttPacketTest, BuildUnsubscribeOmitsQosByte) {
+    // UNSUBSCRIBE payload is just the topic filter -- no QoS byte
+    // unlike SUBSCRIBE (spec section 3.10.3).
+    const auto bytes = buildUnsubscribe(1, "ab");
+    ASSERT_EQ(bytes.size(), 8U);  // 1 + 1 + 2 + 2 + 2 (no QoS trailing byte)
+}
+
+TEST(MqttPacketTest, ParseSubAckRoundTripsGrantedQos0) {
+    constexpr std::uint16_t kPacketId = 0x4242U;
+    const std::vector<std::uint8_t> wire{
+        kSubAckByte, 0x03,
+        0x42, 0x42,                                       // packet id
+        static_cast<std::uint8_t>(SubAckCode::GrantedQos0)
+    };
+    const auto parsed = parseSubAck(wire);
+    EXPECT_EQ(parsed.packetId, kPacketId);
+    EXPECT_EQ(parsed.returnCode, SubAckCode::GrantedQos0);
+}
+
+TEST(MqttPacketTest, ParseSubAckSurfacesBrokerFailure) {
+    const std::vector<std::uint8_t> wire{
+        kSubAckByte, 0x03, 0x00, 0x01,
+        static_cast<std::uint8_t>(SubAckCode::Failure)
+    };
+    EXPECT_EQ(parseSubAck(wire).returnCode, SubAckCode::Failure);
+}
+
+TEST(MqttPacketTest, ParseSubAckThrowsOnTruncatedBuffer) {
+    const std::vector<std::uint8_t> tooShort{kSubAckByte, 0x03, 0x00};
+    EXPECT_THROW((void)parseSubAck(tooShort), std::runtime_error);
+}
+
+TEST(MqttPacketTest, ParseSubAckThrowsOnWrongHeader) {
+    const std::vector<std::uint8_t> wrong{0x40, 0x03, 0x00, 0x01, 0x00};
+    EXPECT_THROW((void)parseSubAck(wrong), std::runtime_error);
+}
+
+TEST(MqttPacketTest, ParseUnsubAckRoundTripsPacketId) {
+    constexpr std::uint16_t kPacketId = 0x00ABU;
+    const std::vector<std::uint8_t> wire{kUnsubAckByte, 0x02, 0x00, 0xAB};
+    EXPECT_EQ(parseUnsubAck(wire), kPacketId);
+}
+
+TEST(MqttPacketTest, ParseUnsubAckThrowsOnTruncatedBuffer) {
+    const std::vector<std::uint8_t> tooShort{kUnsubAckByte, 0x02, 0x00};
+    EXPECT_THROW((void)parseUnsubAck(tooShort), std::runtime_error);
+}
+
+// Incoming PUBLISH (subscriber side)
+
+TEST(MqttPacketTest, ParsePublishRoundTripsTopicAndPayload) {
+    // Build a PUBLISH the way the broker would, then parse it back.
+    const auto wire = buildPublish("sensors/temp", "42.5");
+    const ParsedPublish parsed = parsePublish(wire);
+    EXPECT_EQ(parsed.topic, "sensors/temp");
+    EXPECT_EQ(parsed.payload, "42.5");
+}
+
+TEST(MqttPacketTest, ParsePublishAcceptsEmptyPayload) {
+    const auto wire = buildPublish("heartbeat", "");
+    const ParsedPublish parsed = parsePublish(wire);
+    EXPECT_EQ(parsed.topic, "heartbeat");
+    EXPECT_TRUE(parsed.payload.empty());
+}
+
+TEST(MqttPacketTest, ParsePublishThrowsOnNonPublishHeader) {
+    // 0x10 is CONNECT, not PUBLISH.
+    const std::vector<std::uint8_t> wrongType{
+        0x10, 0x02, 0x00, 0x00
+    };
+    EXPECT_THROW((void)parsePublish(wrongType), std::runtime_error);
+}
+
+TEST(MqttPacketTest, ParsePublishRejectsQos1AndAbove) {
+    // 0x32 = PUBLISH with QoS=1 in the flag nibble. Not supported.
+    const std::vector<std::uint8_t> qos1Frame{
+        0x32, 0x04,
+        0x00, 0x01, 't',  // tiny topic
+        0x00              // dangling byte stands in for a payload
+    };
+    EXPECT_THROW((void)parsePublish(qos1Frame), std::runtime_error);
+}
+
+TEST(MqttPacketTest, ParsePublishThrowsOnTruncatedBody) {
+    // Remaining length claims 10 bytes but only 4 follow.
+    const std::vector<std::uint8_t> truncated{
+        0x30, 0x0A,
+        0x00, 0x02, 'a', 'b'
+    };
+    EXPECT_THROW((void)parsePublish(truncated), std::runtime_error);
+}
+
+TEST(MqttPacketTest, ParsePublishThrowsOnEmptyBuffer) {
+    EXPECT_THROW((void)parsePublish({}), std::runtime_error);
 }
