@@ -2,13 +2,17 @@
 
 #include "src/integration/IntegrationBackend.h"
 #include "src/integration/TelemetryPublisher.h"
+#include "src/integration/TelemetrySubscriber.h"
 
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <vector>
 
 // Forward-declare Asio types so the header doesn't pull <boost/asio.hpp>
 // into every translation unit that includes us. Foreign API naming --
@@ -20,21 +24,31 @@ namespace boost::asio {
 
 namespace app::integration {
 
-/// MQTT 3.1.1 publisher backend (domain-agnostic).
+/// MQTT 3.1.1 client backend (domain-agnostic, full duplex).
 ///
-/// Connects to a remote broker over plain TCP and exposes a generic
-/// `publish(topic, payload)` surface via the TelemetryPublisher
-/// interface. It does NOT subscribe to any specific domain model --
-/// callers (e.g. ProductionTelemetryBridge) own the topic vocabulary
-/// and call publish() with their own data.
+/// Single TCP connection to a broker; carries BOTH outbound PUBLISH
+/// (via the TelemetryPublisher interface, used by bridges that ship
+/// model events out) AND inbound SUBSCRIBE/PUBLISH (via the
+/// TelemetrySubscriber interface, used by ingestion bridges that
+/// translate broker traffic back into Model mutations).
 ///
-/// This separation means the same MqttClient instance can serve
-/// multiple verticals: a manufacturing deployment wires it to a
-/// ProductionTelemetryBridge; a smart-building deployment wires it
-/// to a HvacTelemetryBridge; etc. The MQTT-side code stays identical.
+/// One connection rather than two separate clients matches what
+/// real-world libraries do (paho, AsyncMQTT5, mosquitto-c) -- MQTT was
+/// designed duplex; opening two sockets to the same broker would
+/// double the keep-alive overhead and confuse operators who'd see two
+/// "MQTT" pills in the I/O panel.
 ///
-/// Wire format implemented by hand in MqttPacket.h (~200 lines, no
-/// system library dependency). MQTT 3.1.1 + QoS 0 PUBLISH only.
+/// Separation of concerns lives at the bridge layer instead:
+///
+///   ProductionTelemetryBridge --> TelemetryPublisher  (outbound)
+///   SensorIngestBridge        --> TelemetrySubscriber (inbound)
+///                                        |
+///                                        v
+///                                    MqttClient (one socket)
+///
+/// Wire format implemented by hand in MqttPacket.h (~400 lines, no
+/// system library dependency). MQTT 3.1.1, QoS 0 only -- no PUBACK /
+/// PUBREC retry tracking.
 ///
 /// SOLID:
 ///   * S -- one job: speak MQTT to a broker. No business logic, no
@@ -73,7 +87,9 @@ inline constexpr std::chrono::seconds kDefaultMqttKeepAlive{60};
 /// choice for industrial telemetry on a stable LAN.
 inline constexpr std::chrono::milliseconds kDefaultMqttHeartbeatInterval{5000};
 
-class MqttClient : public IntegrationBackend, public TelemetryPublisher {
+class MqttClient : public IntegrationBackend,
+                   public TelemetryPublisher,
+                   public TelemetrySubscriber {
 public:
     /// All knobs in one place so caller wiring stays declarative.
     /// Defaults track typical broker setups (mosquitto on localhost).
@@ -105,12 +121,31 @@ public:
                  const std::string& payload) override;
     [[nodiscard]] bool canPublish() const override { return isRunning(); }
 
+    // TelemetrySubscriber
+    /// Register an exact-match topic filter + callback. The SUBSCRIBE
+    /// packet flies to the broker on the next io_context tick (or on
+    /// reconnect if start() hasn't completed yet -- queued
+    /// subscriptions replay automatically). Callback is invoked on the
+    /// io_context worker thread for every inbound PUBLISH whose topic
+    /// equals the filter; callers must lock or marshal if they touch
+    /// shared state.
+    void subscribe(const std::string& topicFilter,
+                   MessageCallback callback) override;
+
     /// How many PUBLISH frames have been written to the socket since
     /// start(). Useful for dashboards and integration tests that want
     /// to assert the publisher is actually flowing without parsing
     /// TCP traffic.
     [[nodiscard]] std::uint64_t publishedCount() const noexcept {
         return publishedCount_.load(std::memory_order_acquire);
+    }
+
+    /// How many inbound PUBLISH frames have been dispatched to
+    /// subscriber callbacks since start(). Mirror of publishedCount()
+    /// for the inbound direction; lets tests assert the read loop is
+    /// alive without scraping a callback log.
+    [[nodiscard]] std::uint64_t receivedCount() const noexcept {
+        return receivedCount_.load(std::memory_order_acquire);
     }
 
 private:
@@ -129,16 +164,59 @@ private:
     /// Schedule the next PINGREQ via the steady_timer; chains itself.
     void scheduleHeartbeat();
 
+    /// Replay every queued subscription onto the open socket. Called
+    /// once at the end of start() (after CONNACK) and would also fire
+    /// after a future reconnect path.
+    void replaySubscriptions();
+
+    /// Send a SUBSCRIBE packet for `topicFilter`. Must run on the io
+    /// thread; subscribe() posts to it. No-op if the socket is down.
+    void sendSubscribeFrame(const std::string& topicFilter);
+
+    /// Kick off the persistent async read loop. After CONNACK we
+    /// expect SUBACK / PUBLISH / PINGRESP frames at any time; this
+    /// chain serialises them through `dispatchFrame`. The chain is
+    /// split across three member functions so each step's completion
+    /// handler captures only `this` (no fragile reference-to-lambda).
+    void startReadLoop();
+    /// Step 2/3 of the chain: read one more byte of the variable-
+    /// length "remaining length" field, recurse if the continuation
+    /// bit is still set, else move to readFrameBody.
+    void readRemainingLengthByte();
+    /// Step 3/3: pull `bodyLen` bytes off the wire, dispatch the
+    /// complete frame, then loop back to step 1.
+    void readFrameBody(std::uint32_t bodyLen);
+
+    /// Dispatch a complete inbound frame to the appropriate handler.
+    /// `fixedHeader` includes both the type nibble and the flags; the
+    /// `body` excludes the fixed header + remaining-length prefix.
+    void dispatchFrame(std::uint8_t fixedHeader,
+                       const std::vector<std::uint8_t>& remainingLength,
+                       const std::vector<std::uint8_t>& body);
+
+    /// Deliver a parsed PUBLISH frame to any matching callbacks.
+    /// Exact-string topic match (no wildcard resolution).
+    void deliverInboundPublish(std::string_view topic,
+                               std::string_view payload);
+
     Config config_;
 
     std::unique_ptr<boost::asio::io_context> io_;
     std::jthread thread_;
     std::atomic<bool> running_{false};
     std::atomic<std::uint64_t> publishedCount_{0};
+    std::atomic<std::uint64_t> receivedCount_{0};
+    std::atomic<std::uint16_t> nextPacketId_{1};
 
-    /// Opaque pimpl-style holder for the per-session TCP socket and
-    /// heartbeat timer. Defined in the .cpp so the header doesn't
-    /// pull boost/asio.hpp into every TU that includes it.
+    /// Topic filter -> callback registry. Guarded so subscribe() can
+    /// be invoked safely from arbitrary threads.
+    mutable std::mutex subscriptionsMutex_;
+    std::unordered_map<std::string, MessageCallback> subscriptions_;
+
+    /// Opaque pimpl-style holder for the per-session TCP socket,
+    /// heartbeat timer, and the read-loop scratch buffers. Defined in
+    /// the .cpp so the header doesn't pull boost/asio.hpp into every
+    /// TU that includes us.
     struct Session;
     std::unique_ptr<Session> session_;
 };

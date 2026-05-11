@@ -23,6 +23,16 @@ namespace {
 // auth provider, etc.) and start() raises rather than hanging.
 constexpr std::chrono::seconds kConnAckTimeout{10};
 
+/// Bit mask extracting the packet type nibble from an MQTT fixed
+/// header byte (the low nibble carries DUP/QoS/RETAIN flags).
+constexpr std::uint8_t kFixedHeaderTypeMask = 0xF0U;
+
+/// MQTT remaining length is variable-length encoded over up to 4
+/// bytes (spec 2.2.3). The continuation bit is the high bit; once
+/// it's clear the length field is complete.
+constexpr std::uint8_t kRemainingLengthContinuationBit = 0x80U;
+constexpr std::size_t  kMaxRemainingLengthBytes        = 4U;
+
 }  // namespace
 
 // Pimpl holder so the header stays Asio-free.
@@ -43,6 +53,15 @@ struct MqttClient::Session {
     tcp::socket socket;
     asio::steady_timer heartbeatTimer;
     asio::executor_work_guard<asio::io_context::executor_type> workGuard;
+
+    /// Scratch buffers for the async read state machine. They live
+    /// per-session (not per-frame) so the async chain can refer to
+    /// stable memory addresses across handlers without heap-allocating
+    /// per packet.
+    std::uint8_t              readFixedHeader{0};
+    std::uint8_t              readLengthByte{0};
+    std::vector<std::uint8_t> readRemainingLengthBytes;
+    std::vector<std::uint8_t> readBody;
 };
 
 MqttClient::MqttClient(Config config)
@@ -71,6 +90,8 @@ void MqttClient::start() {
     }
 
     scheduleHeartbeat();
+    startReadLoop();
+    replaySubscriptions();
     thread_ = std::jthread([this]() { runIoLoop(); });
 }
 
@@ -256,6 +277,208 @@ void MqttClient::publish(const std::string& topic,
         }
         publishedCount_.fetch_add(1, std::memory_order_release);
     });
+}
+
+void MqttClient::subscribe(const std::string& topicFilter,
+                           MessageCallback callback) {
+    // Topic filter validation: empty filters are nonsensical and
+    // brokers reject them. Length cap mirrors what encodeString /
+    // buildSubscribe accept.
+    if (topicFilter.empty() || topicFilter.size() > mqtt::kMaxStringLength) {
+        return;
+    }
+
+    // Register the callback immediately so a SUBSCRIBE that fires
+    // before the corresponding SUBACK still routes inbound frames.
+    {
+        const std::lock_guard<std::mutex> lock(subscriptionsMutex_);
+        subscriptions_.insert_or_assign(topicFilter, std::move(callback));
+    }
+
+    // If we're not running yet, the call landed pre-start(); the
+    // SUBSCRIBE will be replayed by replaySubscriptions() once we're
+    // connected. Otherwise, fire it now on the io thread.
+    if (!running_.load(std::memory_order_acquire) || !session_) return;
+    asio::post(*io_, [this, topicFilter]() {
+        sendSubscribeFrame(topicFilter);
+    });
+}
+
+void MqttClient::replaySubscriptions() {
+    // Snapshot the keyset so we don't hold the lock while doing socket
+    // I/O. The map itself can't shrink concurrently with start() (no
+    // subscribe() is mid-flight from another thread while we're still
+    // inside start()), but holding a mutex over a blocking write is
+    // bad form regardless.
+    std::vector<std::string> topics;
+    {
+        const std::lock_guard<std::mutex> lock(subscriptionsMutex_);
+        topics.reserve(subscriptions_.size());
+        for (const auto& [filter, _] : subscriptions_) topics.push_back(filter);
+    }
+    for (const auto& topic : topics) sendSubscribeFrame(topic);
+}
+
+void MqttClient::sendSubscribeFrame(const std::string& topicFilter) {
+    if (!session_ || !running_.load(std::memory_order_acquire)) return;
+    const auto packetId =
+        nextPacketId_.fetch_add(1, std::memory_order_relaxed);
+    const auto bytes = mqtt::buildSubscribe(packetId, topicFilter);
+    boost::system::error_code ec;
+    (void)asio::write(session_->socket, asio::buffer(bytes), ec);
+    if (ec) {
+        // Socket dropped mid-subscribe -- mark down so subsequent
+        // publish() / heartbeat() short-circuits cleanly.
+        running_.store(false, std::memory_order_release);
+    }
+}
+
+void MqttClient::startReadLoop() {
+    if (!session_) return;
+    session_->readRemainingLengthBytes.clear();
+    session_->readBody.clear();
+
+    // Step 1: read the single fixed-header byte. The remaining-length
+    // field that follows is variable; readRemainingLengthByte() handles
+    // it byte by byte.
+    asio::async_read(
+        session_->socket, asio::buffer(&session_->readFixedHeader, 1),
+        [this](const boost::system::error_code& ec, std::size_t /*n*/) {
+            if (ec) {
+                // operation_aborted = stop() cancelled us, normal path.
+                // Anything else means the broker dropped us mid-stream.
+                if (ec != asio::error::operation_aborted) {
+                    running_.store(false, std::memory_order_release);
+                }
+                return;
+            }
+            if (!session_) return;
+            readRemainingLengthByte();
+        });
+}
+
+void MqttClient::readRemainingLengthByte() {
+    if (!session_) return;
+    asio::async_read(
+        session_->socket, asio::buffer(&session_->readLengthByte, 1),
+        [this](const boost::system::error_code& ec, std::size_t /*n*/) {
+            if (ec) {
+                if (ec != asio::error::operation_aborted) {
+                    running_.store(false, std::memory_order_release);
+                }
+                return;
+            }
+            if (!session_) return;
+
+            session_->readRemainingLengthBytes.push_back(
+                session_->readLengthByte);
+            const bool more =
+                (session_->readLengthByte &
+                 kRemainingLengthContinuationBit) != 0;
+
+            if (more) {
+                if (session_->readRemainingLengthBytes.size() >=
+                        kMaxRemainingLengthBytes) {
+                    // Continuation bit set after 4 bytes -- malformed
+                    // remaining-length field per spec 2.2.3.
+                    running_.store(false, std::memory_order_release);
+                    return;
+                }
+                readRemainingLengthByte();
+                return;
+            }
+
+            // Length field complete; decode and pull the body.
+            std::size_t cursor = 0;
+            std::uint32_t bodyLen = 0;
+            try {
+                bodyLen = mqtt::decodeRemainingLength(
+                    session_->readRemainingLengthBytes, cursor);
+            } catch (...) {
+                running_.store(false, std::memory_order_release);
+                return;
+            }
+            readFrameBody(bodyLen);
+        });
+}
+
+void MqttClient::readFrameBody(std::uint32_t bodyLen) {
+    if (!session_) return;
+    session_->readBody.resize(bodyLen);
+    asio::async_read(
+        session_->socket, asio::buffer(session_->readBody),
+        [this](const boost::system::error_code& ec, std::size_t /*n*/) {
+            if (ec) {
+                if (ec != asio::error::operation_aborted) {
+                    running_.store(false, std::memory_order_release);
+                }
+                return;
+            }
+            if (!session_) return;
+            dispatchFrame(session_->readFixedHeader,
+                          session_->readRemainingLengthBytes,
+                          session_->readBody);
+            // Loop: read the next frame.
+            startReadLoop();
+        });
+}
+
+void MqttClient::dispatchFrame(
+    std::uint8_t fixedHeader,
+    const std::vector<std::uint8_t>& remainingLength,
+    const std::vector<std::uint8_t>& body) {
+    using mqtt::PacketType;
+    const auto type =
+        static_cast<PacketType>(fixedHeader & kFixedHeaderTypeMask);
+
+    switch (type) {
+    case PacketType::Publish: {
+        // Reassemble the full packet for parsePublish (which expects
+        // the fixed header byte + remaining-length prefix + body).
+        std::vector<std::uint8_t> packet;
+        packet.reserve(1 + remainingLength.size() + body.size());
+        packet.push_back(fixedHeader);
+        packet.insert(packet.end(),
+                      remainingLength.begin(), remainingLength.end());
+        packet.insert(packet.end(), body.begin(), body.end());
+        try {
+            const auto parsed = mqtt::parsePublish(packet);
+            deliverInboundPublish(parsed.topic, parsed.payload);
+            receivedCount_.fetch_add(1, std::memory_order_release);
+        } catch (...) {
+            // Malformed PUBLISH (QoS > 0, truncated, etc.). Skip but
+            // keep the connection alive; the broker may be sending us
+            // frames we don't yet support.
+        }
+        break;
+    }
+    case PacketType::SubAck:
+    case PacketType::UnsubAck:
+    case PacketType::PingResp:
+        // No state to update beyond the connection being alive. We
+        // accept any SUBACK/UNSUBACK; failure codes would surface as
+        // a missing inbound delivery, which the test bridge can
+        // assert against.
+        break;
+    default:
+        // Unexpected packet types from a broker (CONNECT etc.) are
+        // protocol violations. Quietly ignore to keep the loop alive.
+        break;
+    }
+}
+
+void MqttClient::deliverInboundPublish(std::string_view topic,
+                                       std::string_view payload) {
+    MessageCallback cb;
+    {
+        const std::lock_guard<std::mutex> lock(subscriptionsMutex_);
+        const auto it = subscriptions_.find(std::string{topic});
+        if (it == subscriptions_.end()) return;
+        cb = it->second;
+    }
+    // Invoke outside the lock so a callback that re-enters subscribe()
+    // doesn't deadlock.
+    if (cb) cb(topic, payload);
 }
 
 }  // namespace app::integration
