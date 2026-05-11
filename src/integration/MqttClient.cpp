@@ -1,4 +1,4 @@
-#include "src/integration/MqttPublisher.h"
+#include "src/integration/MqttClient.h"
 
 #include "src/integration/MqttPacket.h"
 
@@ -34,7 +34,7 @@ constexpr std::chrono::seconds kConnAckTimeout{10};
 // CONNACK deadline timer) leave the run queue empty, which makes
 // the worker thread's later `io_context::run()` exit immediately
 // and silently drop every queued publish() and the heartbeat timer.
-struct MqttPublisher::Session {
+struct MqttClient::Session {
     explicit Session(asio::io_context& io)
         : socket(io),
           heartbeatTimer(io),
@@ -45,15 +45,15 @@ struct MqttPublisher::Session {
     asio::executor_work_guard<asio::io_context::executor_type> workGuard;
 };
 
-MqttPublisher::MqttPublisher(Config config)
+MqttClient::MqttClient(Config config)
     : config_(std::move(config)),
       io_(std::make_unique<asio::io_context>()) {}
 
-MqttPublisher::~MqttPublisher() {
+MqttClient::~MqttClient() {
     stopImpl();
 }
 
-void MqttPublisher::start() {
+void MqttClient::start() {
     if (running_.exchange(true, std::memory_order_acq_rel)) {
         return;  // already running, idempotent
     }
@@ -74,11 +74,11 @@ void MqttPublisher::start() {
     thread_ = std::jthread([this]() { runIoLoop(); });
 }
 
-void MqttPublisher::stop() {
+void MqttClient::stop() {
     stopImpl();
 }
 
-void MqttPublisher::stopImpl() noexcept {
+void MqttClient::stopImpl() noexcept {
     if (!running_.exchange(false, std::memory_order_acq_rel)) {
         return;
     }
@@ -119,7 +119,7 @@ void MqttPublisher::stopImpl() noexcept {
     } catch (...) { /* swallow */ }
 }
 
-void MqttPublisher::runIoLoop() {
+void MqttClient::runIoLoop() {
     try {
         io_->run();
     } catch (...) {
@@ -127,7 +127,7 @@ void MqttPublisher::runIoLoop() {
     }
 }
 
-BackendState MqttPublisher::connectionState() const noexcept {
+BackendState MqttClient::connectionState() const noexcept {
     // The publisher reaches `Connected` only after CONNECT/CONNACK
     // succeeded -- the worker thread is alive AND the session is
     // armed. start() either completes the handshake synchronously
@@ -151,14 +151,14 @@ BackendState MqttPublisher::connectionState() const noexcept {
     return BackendState::Disconnected;
 }
 
-std::string MqttPublisher::metricsSummary() const {
+std::string MqttClient::metricsSummary() const {
     return std::format("broker {}:{} | {} publishes",
                        config_.brokerHost,
                        config_.brokerPort,
                        publishedCount_.load(std::memory_order_acquire));
 }
 
-void MqttPublisher::connectToBroker() {
+void MqttClient::connectToBroker() {
     auto& socket = session_->socket;
 
     // Synchronous resolve + connect. Asio raises an exception (caught
@@ -216,7 +216,7 @@ void MqttPublisher::connectToBroker() {
     }
 }
 
-void MqttPublisher::scheduleHeartbeat() {
+void MqttClient::scheduleHeartbeat() {
     if (!session_ || !running_.load(std::memory_order_acquire)) return;
 
     session_->heartbeatTimer.expires_after(config_.heartbeatInterval);
@@ -237,7 +237,7 @@ void MqttPublisher::scheduleHeartbeat() {
         });
 }
 
-void MqttPublisher::publish(const std::string& topic,
+void MqttClient::publish(const std::string& topic,
                             const std::string& payload) {
     if (!canPublish() || !session_) return;
 

@@ -28,7 +28,7 @@ namespace app::integration {
 /// callers (e.g. ProductionTelemetryBridge) own the topic vocabulary
 /// and call publish() with their own data.
 ///
-/// This separation means the same MqttPublisher instance can serve
+/// This separation means the same MqttClient instance can serve
 /// multiple verticals: a manufacturing deployment wires it to a
 /// ProductionTelemetryBridge; a smart-building deployment wires it
 /// to a HvacTelemetryBridge; etc. The MQTT-side code stays identical.
@@ -73,7 +73,7 @@ inline constexpr std::chrono::seconds kDefaultMqttKeepAlive{60};
 /// choice for industrial telemetry on a stable LAN.
 inline constexpr std::chrono::milliseconds kDefaultMqttHeartbeatInterval{5000};
 
-class MqttPublisher : public IntegrationBackend, public TelemetryPublisher {
+class MqttClient : public IntegrationBackend, public TelemetryPublisher {
 public:
     /// All knobs in one place so caller wiring stays declarative.
     /// Defaults track typical broker setups (mosquitto on localhost).
@@ -86,9 +86,9 @@ public:
             kDefaultMqttHeartbeatInterval};
     };
 
-    explicit MqttPublisher(Config config);
+    explicit MqttClient(Config config);
 
-    ~MqttPublisher() override;
+    ~MqttClient() override;
 
     // IntegrationBackend
     void start() override;

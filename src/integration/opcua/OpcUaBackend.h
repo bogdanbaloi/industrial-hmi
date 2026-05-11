@@ -49,7 +49,7 @@ class OpcUaNodeMap;
 ///     a different `OpcUaNodeMap` at construction without touching
 ///     anything in this file.
 ///   * L -- substitutable for any `IntegrationBackend`; the manager
-///     drives it identically with TcpBackend / MqttPublisher.
+///     drives it identically with TcpBackend / MqttClient.
 ///   * I -- exposes only the base interface; OPC-UA specifics
 ///     (port number, address-space root) stay encapsulated.
 ///   * D -- depends on abstract collaborators injected via

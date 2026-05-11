@@ -26,7 +26,7 @@ OpcUaBackend::~OpcUaBackend() {
     // RAII teardown: stop() is idempotent and noexcept on the wrapped
     // pieces, so a destructor without an explicit stop() still leaves
     // the world consistent. We invoke stop() explicitly for the log
-    // line + symmetry with TcpBackend / MqttPublisher.
+    // line + symmetry with TcpBackend / MqttClient.
     OpcUaBackend::stop();
 }
 

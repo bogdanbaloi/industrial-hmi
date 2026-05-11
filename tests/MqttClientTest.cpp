@@ -1,4 +1,4 @@
-// Tests for app::integration::MqttPublisher.
+// Tests for app::integration::MqttClient.
 //
 // Brings up an in-process MockMqttBroker (a tiny Asio TCP server)
 // that:
@@ -10,7 +10,7 @@
 // All tests run on loopback. No external broker, no fixtures other
 // than gtest/gmock.
 
-#include "src/integration/MqttPublisher.h"
+#include "src/integration/MqttClient.h"
 
 #include "src/integration/MqttPacket.h"
 
@@ -27,7 +27,7 @@
 #include <thread>
 #include <vector>
 
-using app::integration::MqttPublisher;
+using app::integration::MqttClient;
 namespace mqtt = app::integration::mqtt;
 
 namespace asio = boost::asio;
@@ -57,7 +57,7 @@ std::uint16_t readUint16BigEndian(const std::vector<std::uint8_t>& buf,
 }
 
 /// Tiny in-process MQTT broker. Just enough behaviour to let
-/// MqttPublisher complete its CONNECT handshake and observe the
+/// MqttClient complete its CONNECT handshake and observe the
 /// PUBLISH frames it emits afterwards.
 class MockMqttBroker {
 public:
@@ -243,8 +243,8 @@ private:
     std::atomic<bool> stopped_{false};
 };
 
-MqttPublisher::Config makeConfig(std::uint16_t port) {
-    MqttPublisher::Config c;
+MqttClient::Config makeConfig(std::uint16_t port) {
+    MqttClient::Config c;
     c.brokerHost = "127.0.0.1";
     c.brokerPort = port;
     c.clientId = "test-client";
@@ -257,9 +257,9 @@ MqttPublisher::Config makeConfig(std::uint16_t port) {
 
 // Lifecycle
 
-TEST(MqttPublisherTest, ConnectsAndCompletesCONNECTHandshake) {
+TEST(MqttClientTest, ConnectsAndCompletesCONNECTHandshake) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
 
     pub.start();
     EXPECT_TRUE(pub.isRunning());
@@ -272,7 +272,7 @@ TEST(MqttPublisherTest, ConnectsAndCompletesCONNECTHandshake) {
     EXPECT_FALSE(pub.isRunning());
 }
 
-TEST(MqttPublisherTest, RaisesOnConnectionRefused) {
+TEST(MqttClientTest, RaisesOnConnectionRefused) {
     // Bind to a dead port (use a port that should not have a listener).
     // We grab an OS-assigned port via the broker helper, then stop it
     // immediately so the publisher's connect attempt sees ECONNREFUSED.
@@ -281,27 +281,27 @@ TEST(MqttPublisherTest, RaisesOnConnectionRefused) {
         MockMqttBroker broker;
         deadPort = broker.port();
     }
-    MqttPublisher pub(makeConfig(deadPort));
+    MqttClient pub(makeConfig(deadPort));
     EXPECT_THROW(pub.start(), std::exception);
     EXPECT_FALSE(pub.isRunning());
 }
 
-TEST(MqttPublisherTest, NameIsMqtt) {
-    MqttPublisher pub(makeConfig(0));
+TEST(MqttClientTest, NameIsMqtt) {
+    MqttClient pub(makeConfig(0));
     EXPECT_EQ(pub.name(), "MQTT");
 }
 
-TEST(MqttPublisherTest, StartIsIdempotent) {
+TEST(MqttClientTest, StartIsIdempotent) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     EXPECT_NO_THROW(pub.start());  // second call is a no-op
     pub.stop();
 }
 
-TEST(MqttPublisherTest, StopIsIdempotent) {
+TEST(MqttClientTest, StopIsIdempotent) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     pub.stop();
     EXPECT_NO_THROW(pub.stop());
@@ -309,9 +309,9 @@ TEST(MqttPublisherTest, StopIsIdempotent) {
 
 // Publish path
 
-TEST(MqttPublisherTest, PublishEmitsPublishFrame) {
+TEST(MqttClientTest, PublishEmitsPublishFrame) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     std::this_thread::sleep_for(kBrokerSettleDelay);
 
@@ -327,9 +327,9 @@ TEST(MqttPublisherTest, PublishEmitsPublishFrame) {
     pub.stop();
 }
 
-TEST(MqttPublisherTest, PublishMultipleFramesPreservesOrder) {
+TEST(MqttClientTest, PublishMultipleFramesPreservesOrder) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     std::this_thread::sleep_for(kBrokerSettleDelay);
 
@@ -347,8 +347,8 @@ TEST(MqttPublisherTest, PublishMultipleFramesPreservesOrder) {
     pub.stop();
 }
 
-TEST(MqttPublisherTest, PublishWhileNotRunningIsNoOp) {
-    MqttPublisher pub(makeConfig(0));
+TEST(MqttClientTest, PublishWhileNotRunningIsNoOp) {
+    MqttClient pub(makeConfig(0));
     EXPECT_NO_THROW(pub.publish("t", "p"));
     EXPECT_EQ(pub.publishedCount(), 0U);
     EXPECT_FALSE(pub.canPublish());
@@ -356,9 +356,9 @@ TEST(MqttPublisherTest, PublishWhileNotRunningIsNoOp) {
 
 // Heartbeat
 
-TEST(MqttPublisherTest, EmitsPingReqOnHeartbeatInterval) {
+TEST(MqttClientTest, EmitsPingReqOnHeartbeatInterval) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
 
     // Wait for at least 2 heartbeat intervals.
@@ -372,9 +372,9 @@ TEST(MqttPublisherTest, EmitsPingReqOnHeartbeatInterval) {
 
 // Clean disconnect
 
-TEST(MqttPublisherTest, StopSendsDisconnectFrame) {
+TEST(MqttClientTest, StopSendsDisconnectFrame) {
     MockMqttBroker broker;
-    MqttPublisher pub(makeConfig(broker.port()));
+    MqttClient pub(makeConfig(broker.port()));
     pub.start();
     std::this_thread::sleep_for(kBrokerSettleDelay);
 

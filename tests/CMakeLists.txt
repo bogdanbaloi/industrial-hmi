@@ -148,24 +148,24 @@ target_link_libraries(test_mqtt_packet PRIVATE
 )
 add_test(NAME MqttPacketTest COMMAND test_mqtt_packet)
 
-# Integration: MqttPublisher driven against an in-process mock broker.
+# Integration: MqttClient driven against an in-process mock broker.
 # Covers the live publish path: connect handshake, generic publish()
 # emits PUBLISH frames, clean disconnect. Generic only -- the
 # domain-to-MQTT mapping is exercised separately in
 # ProductionTelemetryBridgeTest.
-add_executable(test_mqtt_publisher MqttPublisherTest.cpp
-    ${CMAKE_SOURCE_DIR}/src/integration/MqttPublisher.cpp
+add_executable(test_mqtt_client MqttClientTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/MqttClient.cpp
     ${CMAKE_SOURCE_DIR}/src/integration/MqttPacket.cpp)
-target_link_libraries(test_mqtt_publisher PRIVATE
+target_link_libraries(test_mqtt_client PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes
     ${BOOST_TARGET}
     Threads::Threads
 )
 if(WIN32)
-    target_link_libraries(test_mqtt_publisher PRIVATE ws2_32 mswsock)
+    target_link_libraries(test_mqtt_client PRIVATE ws2_32 mswsock)
 endif()
-add_test(NAME MqttPublisherTest COMMAND test_mqtt_publisher)
+add_test(NAME MqttClientTest COMMAND test_mqtt_client)
 
 # Integration: ProductionTelemetryBridge -- domain-to-publisher mapping.
 # Uses a fake TelemetryPublisher (capturing) + MockProductionModel,

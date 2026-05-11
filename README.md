@@ -176,7 +176,7 @@ src/
     TcpBackend          Line-protocol server over Boost.Asio
     TelemetryPublisher  Generic publish(topic, payload) interface
     MqttPacket          Hand-rolled MQTT 3.1.1 wire format
-    MqttPublisher       MQTT publisher (no paho dep, work-guarded io_context)
+    MqttClient       MQTT publisher (no paho dep, work-guarded io_context)
     ProductionTelemetryBridge   Manufacturing reference bridge
 
   ml/                   Edge AI inference (BUILD_ML_CLASSIFIER=ON)
@@ -317,7 +317,7 @@ Wiring three together is two lines in `main.cpp`.
               +-------------+-------------+
               |                           |
    +---------------------+    +---------------------------+
-   |    TcpBackend       |    |       MqttPublisher       |
+   |    TcpBackend       |    |       MqttClient       |
    |  (line protocol     |    |  (MQTT 3.1.1 hand-rolled  |
    |   over TCP)         |    |   wire format, no paho)   |
    +---------------------+    +---------------------------+
@@ -352,9 +352,9 @@ write **one** new bridge class against the same `TelemetryPublisher`:
 | Vertical                | Domain model            | Bridge          | Publisher reuse |
 |-------------------------|-------------------------|-----------------|-----------------|
 | Manufacturing (default) | `ProductionModel`       | `ProductionTelemetryBridge` | Ships in repo |
-| Pharma / lab            | `LabInstrumentModel`    | `LabTelemetryBridge`        | MqttPublisher unchanged |
-| Smart-building          | `HvacModel`             | `HvacTelemetryBridge`       | MqttPublisher unchanged |
-| Energy / SCADA          | `BreakerModel`          | `BreakerTelemetryBridge`    | MqttPublisher unchanged |
+| Pharma / lab            | `LabInstrumentModel`    | `LabTelemetryBridge`        | MqttClient unchanged |
+| Smart-building          | `HvacModel`             | `HvacTelemetryBridge`       | MqttClient unchanged |
+| Energy / SCADA          | `BreakerModel`          | `BreakerTelemetryBridge`    | MqttClient unchanged |
 
 A bridge is typically 50-100 lines of pure callback plumbing. The MQTT
 wire-format code, connection lifecycle, work-guard / heartbeat machinery,
@@ -424,7 +424,7 @@ Subscribe with `mosquitto_sub -h broker.example.com -t 'factory-42/#' -v`.
 | Plain TCP, no TLS         | Production deployments tunnel through stunnel; wire format unchanged |
 
 Coverage: `MqttPacketTest` (31 cases) verifies byte-exact wire format
-against the spec; `MqttPublisherTest` (10 cases) drives the publisher
+against the spec; `MqttClientTest` (10 cases) drives the publisher
 against an in-process mock broker; `ProductionTelemetryBridgeTest` (8
 cases) verifies the domain mapping in isolation.
 

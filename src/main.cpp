@@ -3,7 +3,7 @@
 #include "src/core/StartupErrors.h"
 #include "src/config/ConfigManager.h"
 #include "src/integration/IntegrationManager.h"
-#include "src/integration/MqttPublisher.h"
+#include "src/integration/MqttClient.h"
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
@@ -148,13 +148,13 @@ int main(int argc, char* argv[]) {
         }
 
         if (config.isMqttBackendEnabled()) {
-            app::integration::MqttPublisher::Config mqttConfig;
+            app::integration::MqttClient::Config mqttConfig;
             mqttConfig.brokerHost = config.getMqttBrokerHost();
             mqttConfig.brokerPort =
                 static_cast<std::uint16_t>(config.getMqttBrokerPort());
             mqttConfig.clientId = config.getMqttClientId();
             auto publisher =
-                std::make_unique<app::integration::MqttPublisher>(
+                std::make_unique<app::integration::MqttClient>(
                     std::move(mqttConfig));
 
             // The bridge subscribes to the production model and pushes
