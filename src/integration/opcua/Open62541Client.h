@@ -65,6 +65,23 @@ public:
         double publishingIntervalMs{200.0};
     };
 
+    /// Tag for the typed callback the open62541 data-change handler
+    /// must dispatch to. Public so the C-linkage callback in
+    /// Open62541Client.cpp can see it; behaves as an implementation
+    /// detail otherwise.
+    enum class ValueType : std::uint8_t { Float, Int32, Bool };
+
+    /// Borrowed view of one subscription's typed callbacks. Owned by
+    /// `subscriptions_`; the C callback receives a pointer to one of
+    /// these as `monContext`. Public for the same reason as ValueType.
+    struct PendingSubscription {
+        std::string   nodeBrowsePath;
+        ValueType     type{ValueType::Float};
+        FloatCallback floatCb;
+        Int32Callback int32Cb;
+        BoolCallback  boolCb;
+    };
+
     Open62541Client(Config config, core::Logger& logger);
     ~Open62541Client() override;
 
@@ -120,14 +137,6 @@ private:
     /// Internal subscribe entry point shared by the three typed
     /// public overloads. Stores the request, fires the monitored-item
     /// create immediately if we're already running.
-    enum class ValueType : std::uint8_t { Float, Int32, Bool };
-    struct PendingSubscription {
-        std::string   nodeBrowsePath;
-        ValueType     type;
-        FloatCallback floatCb;
-        Int32Callback int32Cb;
-        BoolCallback  boolCb;
-    };
     bool registerSubscription(PendingSubscription pending);
 
     /// Send `MonitoredItems_createDataChange` for one pending entry
@@ -144,8 +153,13 @@ private:
     /// Pending + already-armed subscriptions. Guarded so subscribe()
     /// is safe from any thread; the worker thread snapshots the
     /// vector under the lock when arming.
-    mutable std::mutex                       subscriptionsMutex_;
-    std::vector<PendingSubscription>         subscriptions_;
+    ///
+    /// Stored as `unique_ptr` so the per-entry address is stable
+    /// across vector growth -- open62541's C callback receives a
+    /// `void* monContext` that we set to `pending.get()`, and a
+    /// later subscribe() must not invalidate already-armed pointers.
+    mutable std::mutex subscriptionsMutex_;
+    std::vector<std::unique_ptr<PendingSubscription>> subscriptions_;
 
     /// Pimpl holder for `UA_Client*` + the open62541 subscription id.
     /// Defined in the .cpp so the header doesn't pull `<open62541/...>`
