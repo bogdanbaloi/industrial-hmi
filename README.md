@@ -80,6 +80,24 @@ pacman -S mingw-w64-clang-x86_64-{toolchain,cmake,ninja,gtkmm-4.0,sqlite3,boost,
 printf 'start\nstatus\nquit\n' | ./build/release/industrial-hmi-console
 ```
 
+### Client scripts (Python)
+
+The [`examples/`](examples/) directory ships a Python script per
+backend role, so a customer / engineer / interview can exercise every
+protocol end-to-end without a custom client:
+
+```bash
+pip install -r examples/requirements.txt   # paho-mqtt + asyncua
+python examples/tcp_control.py             # walk SYSTEM + equipment switches via TCP
+python examples/mqtt_subscribe_telemetry.py  # tail outbound MQTT publishes
+python examples/mqtt_publish_sensor.py 0 off # drive A-LINE off via inbound MQTT
+python examples/opcua_read_state.py        # browse + read the OPC-UA address space
+python examples/opcua_subscribe_equipment.py # live notifications via OPC-UA subscribe
+```
+
+The I/O panel pills on the dashboard mirror the script's state in
+real time -- run an OPC-UA reader, the OPC-UA pill turns green.
+
 See [BUILD.md](BUILD.md) for full instructions, packaging, and i18n
 catalog regeneration.
 
