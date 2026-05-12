@@ -85,8 +85,15 @@ async def write_enabled(endpoint: str,
             f"{NAMESPACE_INDEX}:Line{equipment_id}",
             f"{NAMESPACE_INDEX}:Enabled",
         ])
+        # asyncua's DataValue defaults timestamps + status to None /
+        # Good on construction (verified empirically), and the server
+        # now grants STATUSWRITE + TIMESTAMPWRITE in addition to
+        # READ|WRITE on writable Bool variables. Plain construction
+        # is enough.
+        data_value = ua.DataValue(
+            ua.Variant(enabled, ua.VariantType.Boolean))
         try:
-            await node.write_value(ua.Variant(enabled, ua.VariantType.Boolean))
+            await node.write_attribute(ua.AttributeIds.Value, data_value)
         except ua.UaStatusCodeError as exc:
             print(f"FAIL  write rejected: {exc}", file=sys.stderr)
             return 1
