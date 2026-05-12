@@ -43,6 +43,7 @@ implements on the wire (MQTT 3.1.1, OPC-UA 1.04).
 | `tcp_control.py` | HMI = TCP server | Walks SYSTEM badge + equipment switches through a canned sequence of commands, prints replies, exits. |
 | `mqtt_publish_sensor.py` | HMI = MQTT subscriber | Publishes one `on`/`off` message on a sensor topic. The matching equipment switch flips on the dashboard. |
 | `opcua_read_state.py` | HMI = OPC-UA server | Browses `Objects/Factory/*` and reads every node the address space exposes. |
+| `opcua_invoke_method.py` | HMI = OPC-UA server (inbound control) | Invokes a `Factory/Commands/*` method or writes `Factory/EquipmentLines/Line<id>/Enabled`. The HMI's `ProductionModel` reacts the same way it would to a TCP `production start` or a GTK button click. |
 
 These are designed to be quick to run and quick to read. Each one is
 under 100 lines so it doubles as documentation of the protocol it
