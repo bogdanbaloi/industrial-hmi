@@ -516,13 +516,38 @@ bool Open62541Server::addBoolVariableWithWriteCallback(
         std::string_view browsePath, bool initial,
         OpcUaCommandSink& sink) {
     if (impl_->server == nullptr) return false;
-    // Reuse the standard variable-add path to register the node
-    // itself; we'll attach the context + write callback below.
-    if (!addBoolVariable(browsePath, initial)) return false;
 
-    // Resolve the node we just added so we can attach a context.
-    UA_NodeId nodeId = resolveNode(impl_->server, browsePath);
-    if (UA_NodeId_isNull(&nodeId)) return false;
+    // Add the variable inline with BOTH accessLevel and userAccessLevel
+    // set to READ|WRITE. `UA_VariableAttributes_default` leaves
+    // userAccessLevel at 0 and open62541 short-circuits external
+    // client writes with BadWriteNotSupported in that case; the
+    // standard `addBoolVariable` path that other Factory state nodes
+    // use is correct for read-only telemetry, but writable surfaces
+    // need both bits explicitly.
+    auto [parent, leaf] = splitParentLeaf(browsePath);
+    UA_NodeId parentId = resolveParent(impl_->server, parent);
+    if (UA_NodeId_isNull(&parentId)) return false;
+
+    UA_VariableAttributes attr = UA_VariableAttributes_default;
+    attr.displayName = UA_LOCALIZEDTEXT_ALLOC("en-US", leaf.c_str());
+    attr.dataType    = UA_TYPES[UA_TYPES_BOOLEAN].typeId;
+    // Open the variable to every write flavour open62541 understands.
+    // Just READ|WRITE bits aren't enough on this version: client
+    // libraries (asyncua, paho-opcua) that ship a DataValue with
+    // ServerTimestamp / StatusCode set get BadWriteNotSupported even
+    // when they pass empty values, because open62541 still inspects
+    // the wire bits. Granting STATUSWRITE + TIMESTAMPWRITE on top of
+    // READ|WRITE makes every flavour go through cleanly.
+    constexpr UA_Byte kFullWriteAccess =
+        UA_ACCESSLEVELMASK_READ |
+        UA_ACCESSLEVELMASK_WRITE |
+        UA_ACCESSLEVELMASK_STATUSWRITE |
+        UA_ACCESSLEVELMASK_TIMESTAMPWRITE;
+    attr.accessLevel     = kFullWriteAccess;
+    attr.userAccessLevel = kFullWriteAccess;
+    UA_Boolean v = initial;
+    UA_Variant_setScalarCopy(&attr.value, &v,
+                              &UA_TYPES[UA_TYPES_BOOLEAN]);
 
     auto ctx = std::make_unique<Open62541ServerCallbackContext>();
     ctx->sink     = &sink;
@@ -530,16 +555,30 @@ bool Open62541Server::addBoolVariableWithWriteCallback(
     auto* contextPtr = ctx.get();
     impl_->callbackContexts.push_back(std::move(ctx));
 
-    UA_StatusCode rc = UA_Server_setNodeContext(
-        impl_->server, nodeId, contextPtr);
+    UA_NodeId outNodeId = UA_NODEID_NULL;
+    UA_StatusCode rc = UA_Server_addVariableNode(
+        impl_->server,
+        UA_NODEID_NULL,
+        parentId,
+        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+        UA_QUALIFIEDNAME(1, leaf.data()),
+        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+        attr,
+        /*nodeContext=*/contextPtr,
+        &outNodeId);
+
+    UA_LocalizedText_clear(&attr.displayName);
+    UA_Variant_clear(&attr.value);
+    if (!parent.empty()) UA_NodeId_clear(&parentId);
+
     if (rc == UA_STATUSCODE_GOOD) {
         UA_ValueCallback cb;
         cb.onRead  = nullptr;
         cb.onWrite = boolWriteCallbackShim;
         rc = UA_Server_setVariableNode_valueCallback(
-            impl_->server, nodeId, cb);
+            impl_->server, outNodeId, cb);
     }
-    UA_NodeId_clear(&nodeId);
+    UA_NodeId_clear(&outNodeId);
     return rc == UA_STATUSCODE_GOOD;
 }
 
