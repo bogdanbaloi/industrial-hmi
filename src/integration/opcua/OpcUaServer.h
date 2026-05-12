@@ -6,6 +6,9 @@
 
 namespace app::integration::opcua {
 
+class OpcUaCommandSink;
+
+
 /// Abstract OPC-UA server lifecycle and node-write surface.
 ///
 /// SOLID:
@@ -117,6 +120,34 @@ public:
     [[nodiscard]] virtual bool
         addStringVariable(std::string_view browsePath,
                           std::string_view initial) = 0;
+
+    /// Register an OPC-UA Method node at `browsePath`. Invoking the
+    /// method from a client calls `sink.onCommand(commandName)` --
+    /// where `commandName` is the LAST segment of `browsePath`
+    /// (e.g. `Factory/Commands/StartProduction` -> "StartProduction").
+    /// Parameterless methods only; the wire surface doesn't yet
+    /// expose typed arguments because the model doesn't need them.
+    ///
+    /// Returns false if the parent path doesn't exist, the method
+    /// node already exists, or the server hasn't been started. The
+    /// `sink` reference must outlive the server.
+    [[nodiscard]] virtual bool
+        addMethod(std::string_view browsePath,
+                  OpcUaCommandSink& sink) = 0;
+
+    /// Register a writable Boolean variable at `browsePath` with an
+    /// initial value. When an external client writes to it, the
+    /// callback fires `sink.onBoolWrite(browsePath, newValue)`.
+    ///
+    /// Unlike `addBoolVariable`, this variant is intended for
+    /// inbound control surfaces (e.g. `Equipment/Line0/Enabled`)
+    /// rather than for our own outbound state publishing.
+    ///
+    /// Returns false on the same conditions as `addMethod`.
+    [[nodiscard]] virtual bool
+        addBoolVariableWithWriteCallback(std::string_view browsePath,
+                                          bool initial,
+                                          OpcUaCommandSink& sink) = 0;
 
 protected:
     OpcUaServer() = default;

@@ -8,6 +8,7 @@
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+#  include "src/integration/opcua/FactoryCommandSink.h"
 #  include "src/integration/opcua/FactoryNodeMap.h"
 #  include "src/integration/opcua/OpcUaBackend.h"
 #  include "src/integration/opcua/OpcUaConfig.h"
@@ -117,9 +118,12 @@ void registerMqttBackend(
 /// Extracted from main() to keep the latter under the
 /// readability-function-size threshold; the wiring is mechanical
 /// enough that pulling it into a helper hurts nothing.
-void registerOpcUaBackend(app::integration::IntegrationManager& integration,
-                          app::config::ConfigManager& config,
-                          app::core::Logger& logger) {
+void registerOpcUaBackend(
+        app::integration::IntegrationManager& integration,
+        app::config::ConfigManager& config,
+        app::core::Logger& logger,
+        std::unique_ptr<app::integration::opcua::FactoryCommandSink>&
+            commandSink) {
     app::integration::opcua::OpcUaConfig opcuaConfig;
     opcuaConfig.port =
         static_cast<std::uint16_t>(config.getOpcUaServerPort());
@@ -129,9 +133,25 @@ void registerOpcUaBackend(app::integration::IntegrationManager& integration,
     auto opcuaServer =
         std::make_unique<app::integration::opcua::Open62541Server>(
             std::move(opcuaConfig), logger);
-    auto opcuaNodeMap =
-        std::make_unique<app::integration::opcua::FactoryNodeMap>(
-            app::model::SimulatedModel::instance(), logger);
+
+    // Inbound control surface is opt-in via config. When enabled, the
+    // node map registers Factory/Commands + per-line Enabled writes;
+    // the sink (owned by main()) routes each invocation to the
+    // ProductionModel.
+    std::unique_ptr<app::integration::opcua::FactoryNodeMap> opcuaNodeMap;
+    if (config.isOpcUaServerCommandsEnabled()) {
+        commandSink =
+            std::make_unique<app::integration::opcua::FactoryCommandSink>(
+                app::model::SimulatedModel::instance(), logger);
+        opcuaNodeMap =
+            std::make_unique<app::integration::opcua::FactoryNodeMap>(
+                app::model::SimulatedModel::instance(), logger,
+                *commandSink);
+    } else {
+        opcuaNodeMap =
+            std::make_unique<app::integration::opcua::FactoryNodeMap>(
+                app::model::SimulatedModel::instance(), logger);
+    }
 
     integration.registerBackend(
         std::make_unique<app::integration::opcua::OpcUaBackend>(
@@ -238,6 +258,8 @@ int main(int argc, char* argv[]) {
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
         std::unique_ptr<app::integration::opcua::OpcUaIngestBridge>
             opcuaIngestBridge;
+        std::unique_ptr<app::integration::opcua::FactoryCommandSink>
+            opcuaCommandSink;
 #endif
 
         if (config.isTcpBackendEnabled()) {
@@ -260,7 +282,8 @@ int main(int argc, char* argv[]) {
         // deployments that don't speak OPC-UA. Wiring extracted to a
         // helper to keep main() under the function-size threshold.
         if (config.isOpcUaBackendEnabled()) {
-            registerOpcUaBackend(integration, config, bootstrap.logger());
+            registerOpcUaBackend(integration, config, bootstrap.logger(),
+                                 opcuaCommandSink);
         }
         if (config.isOpcUaClientEnabled()) {
             registerOpcUaClient(integration, config, bootstrap.logger(),

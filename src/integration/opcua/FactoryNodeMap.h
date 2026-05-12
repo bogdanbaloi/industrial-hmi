@@ -2,10 +2,15 @@
 
 #include "src/integration/opcua/OpcUaNodeMap.h"
 
+#include <cstdint>
+
 namespace app::core    { class Logger; }
 namespace app::model   { class ProductionModel; }
 
 namespace app::integration::opcua {
+
+class OpcUaCommandSink;
+
 
 /// Reference `OpcUaNodeMap` for the manufacturing-line domain.
 ///
@@ -55,7 +60,19 @@ namespace app::integration::opcua {
 /// (`OpcUaBackend`) and never relocated.
 class FactoryNodeMap final : public OpcUaNodeMap {
 public:
-    FactoryNodeMap(model::ProductionModel& production, core::Logger& logger);
+    /// Read-only deployment: the map publishes Model state but the
+    /// server exposes no inbound control surface.
+    FactoryNodeMap(model::ProductionModel& production,
+                   core::Logger& logger);
+
+    /// Bidirectional deployment: `registerNodes` additionally creates
+    /// `Factory/Commands/{Start,Stop,Reset,Calibrate}Production` as
+    /// OPC-UA Methods plus a writable `Factory/EquipmentLines/Line<id>/Enabled`
+    /// Boolean per equipment slot. Inbound events flow through `sink`,
+    /// which must outlive this map.
+    FactoryNodeMap(model::ProductionModel& production,
+                   core::Logger& logger,
+                   OpcUaCommandSink& sink);
 
     ~FactoryNodeMap() override;
 
@@ -69,8 +86,18 @@ public:
     void unwire() noexcept override;
 
 private:
+    /// Number of equipment slots the writable Enabled surface covers.
+    /// Matches `SimulatedModel`'s three lines; future model
+    /// extensions would bump this in lockstep with the model.
+    static constexpr std::uint32_t kEquipmentCount = 3U;
+
+    /// Register the inbound control surface on `server`. Called from
+    /// `registerNodes` only when a sink was provided at construction.
+    void registerCommandSurface(OpcUaServer& server);
+
     model::ProductionModel& production_;
     core::Logger& logger_;
+    OpcUaCommandSink* sink_ = nullptr;  // optional; null = read-only
     bool wired_ = false;
 };
 

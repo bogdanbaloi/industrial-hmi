@@ -1,6 +1,7 @@
 #include "src/integration/opcua/FactoryNodeMap.h"
 
 #include "src/core/LoggerBase.h"
+#include "src/integration/opcua/OpcUaCommandSink.h"
 #include "src/integration/opcua/OpcUaServer.h"
 #include "src/model/ProductionModel.h"
 
@@ -55,6 +56,11 @@ FactoryNodeMap::FactoryNodeMap(model::ProductionModel& production,
                                core::Logger& logger)
     : production_(production), logger_(logger) {}
 
+FactoryNodeMap::FactoryNodeMap(model::ProductionModel& production,
+                               core::Logger& logger,
+                               OpcUaCommandSink& sink)
+    : production_(production), logger_(logger), sink_(&sink) {}
+
 FactoryNodeMap::~FactoryNodeMap() {
     unwire();
 }
@@ -77,7 +83,43 @@ void FactoryNodeMap::registerNodes(OpcUaServer& server) {
     (void)server.addInt32Variable(workUnitPath("CompletedOperations"), 0);
     (void)server.addInt32Variable(workUnitPath("TotalOperations"), 0);
 
+    if (sink_ != nullptr) {
+        registerCommandSurface(server);
+    }
+
     logger_.info("OPC-UA: registered Factory address space");
+}
+
+void FactoryNodeMap::registerCommandSurface(OpcUaServer& server) {
+    // Method nodes under Factory/Commands/. Names match what
+    // FactoryCommandSink dispatches on; if these drift apart, the
+    // sink's unit test catches it (every routed name is asserted).
+    (void)server.addObject("Factory/Commands");
+    (void)server.addMethod("Factory/Commands/StartProduction",   *sink_);
+    (void)server.addMethod("Factory/Commands/StopProduction",    *sink_);
+    (void)server.addMethod("Factory/Commands/ResetSystem",       *sink_);
+    (void)server.addMethod("Factory/Commands/StartCalibration",  *sink_);
+
+    // Writable bool per equipment slot. Same path FactoryCommandSink
+    // parses, so a SCADA writing `false` flips setEquipmentEnabled
+    // through the sink, which forwards to ProductionModel.
+    for (std::uint32_t id = 0; id < kEquipmentCount; ++id) {
+        // The subtree is created lazily in wire() on first event, but
+        // the Enabled variable lives at the same level so we have to
+        // ensure the parent exists up front. `addObject` is idempotent
+        // on duplicates so wire()'s ensureEquipmentSubtree won't
+        // collide.
+        const auto base =
+            std::format("Factory/EquipmentLines/Line{}", id);
+        (void)server.addObject(base);
+        (void)server.addBoolVariableWithWriteCallback(
+            base + "/Enabled",
+            /*initial=*/true,
+            *sink_);
+    }
+
+    logger_.info("OPC-UA: registered Factory/Commands surface "
+                 "(start / stop / reset / calibrate + per-line Enabled)");
 }
 
 void FactoryNodeMap::wire(OpcUaServer& server) {

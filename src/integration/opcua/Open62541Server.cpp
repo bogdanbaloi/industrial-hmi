@@ -1,6 +1,7 @@
 #include "src/integration/opcua/Open62541Server.h"
 
 #include "src/core/LoggerBase.h"
+#include "src/integration/opcua/OpcUaCommandSink.h"
 
 // open62541 ships as a single amalgamated header. Suppress warnings
 // from the C source -- our project treats them as errors but the
@@ -17,9 +18,11 @@
 #endif
 
 #include <chrono>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace app::integration::opcua {
 
@@ -112,8 +115,26 @@ bool writeScalar(UA_Server* server,
 
 }  // namespace
 
+/// Per-node context the C-linkage open62541 callbacks receive in
+/// their `methodContext` / `nodeContext` slot. Owns the sink pointer
+/// + the command name / variable path so the callback can dispatch
+/// without consulting any global registry. Lifetime: pinned by the
+/// vector below so the address open62541 stores stays stable.
+struct Open62541ServerCallbackContext {
+    OpcUaCommandSink* sink     = nullptr;
+    std::string       commandName;   // for method callbacks
+    std::string       nodePath;      // for write callbacks
+};
+
 struct Open62541Server::Impl {
     UA_Server* server = nullptr;
+
+    /// Owning storage for the per-callback contexts. open62541
+    /// remembers a `void*` per node; if our vector reallocated
+    /// underneath, the pointer it stores would dangle. We use
+    /// `unique_ptr` so the entry address is stable across pushes.
+    std::vector<std::unique_ptr<Open62541ServerCallbackContext>>
+        callbackContexts;
 };
 
 Open62541Server::Open62541Server(OpcUaConfig config, core::Logger& logger)
@@ -399,6 +420,126 @@ bool Open62541Server::addStringVariable(std::string_view path,
     UA_String_clear(&s);
     if (!parent.empty()) UA_NodeId_clear(&parentId);
 
+    return rc == UA_STATUSCODE_GOOD;
+}
+
+namespace {
+
+/// open62541 method-callback shim. The `methodContext` we registered
+/// at addMethod-time is a `Open62541ServerCallbackContext*`; dispatch
+/// the parameterless command to its sink. open62541's signature is
+/// fixed by the spec, so naming + parameter count follow the C
+/// convention -- the readability lints don't apply.
+//
+// NOLINTNEXTLINE(readability-named-parameter,bugprone-easily-swappable-parameters,readability-function-size)
+UA_StatusCode methodCallbackShim(UA_Server* /*server*/,
+                                 const UA_NodeId* /*sessionId*/,
+                                 void* /*sessionContext*/,
+                                 const UA_NodeId* /*methodId*/,
+                                 void* methodContext,
+                                 const UA_NodeId* /*objectId*/,
+                                 void* /*objectContext*/,
+                                 size_t /*inputSize*/,
+                                 const UA_Variant* /*input*/,
+                                 size_t /*outputSize*/,
+                                 UA_Variant* /*output*/) {
+    if (methodContext == nullptr) return UA_STATUSCODE_BADINTERNALERROR;
+    auto* ctx = static_cast<Open62541ServerCallbackContext*>(methodContext);
+    if (ctx->sink == nullptr) return UA_STATUSCODE_BADINTERNALERROR;
+    ctx->sink->onCommand(ctx->commandName);
+    return UA_STATUSCODE_GOOD;
+}
+
+/// open62541 value-callback shim for writable Bool variables.
+/// Decodes the freshly-written value out of the data-value variant
+/// and hands it to `sink.onBoolWrite(path, value)`.
+//
+// NOLINTNEXTLINE(readability-named-parameter,bugprone-easily-swappable-parameters)
+void boolWriteCallbackShim(UA_Server* /*server*/,
+                           const UA_NodeId* /*sessionId*/,
+                           void* /*sessionContext*/,
+                           const UA_NodeId* /*nodeId*/,
+                           void* nodeContext,
+                           const UA_NumericRange* /*range*/,
+                           const UA_DataValue* data) {
+    if (nodeContext == nullptr || data == nullptr) return;
+    if (!data->hasValue) return;
+    if (!UA_Variant_hasScalarType(&data->value,
+                                  &UA_TYPES[UA_TYPES_BOOLEAN])) return;
+    auto* ctx = static_cast<Open62541ServerCallbackContext*>(nodeContext);
+    if (ctx->sink == nullptr) return;
+    const auto v = *static_cast<UA_Boolean*>(data->value.data);
+    ctx->sink->onBoolWrite(ctx->nodePath, v != 0);
+}
+
+}  // namespace
+
+bool Open62541Server::addMethod(std::string_view browsePath,
+                                 OpcUaCommandSink& sink) {
+    if (impl_->server == nullptr) return false;
+    auto [parent, leaf] = splitParentLeaf(browsePath);
+    UA_NodeId parentId = resolveParent(impl_->server, parent);
+    if (UA_NodeId_isNull(&parentId)) return false;
+
+    // Context owns the strings the callback will read. Stable
+    // address because the vector stores unique_ptrs.
+    auto ctx = std::make_unique<Open62541ServerCallbackContext>();
+    ctx->sink        = &sink;
+    ctx->commandName = leaf;
+    auto* contextPtr = ctx.get();
+    impl_->callbackContexts.push_back(std::move(ctx));
+
+    UA_MethodAttributes attr = UA_MethodAttributes_default;
+    attr.displayName = UA_LOCALIZEDTEXT_ALLOC("en-US", leaf.c_str());
+    attr.executable     = true;
+    attr.userExecutable = true;
+
+    const UA_StatusCode rc = UA_Server_addMethodNode(
+        impl_->server,
+        UA_NODEID_NULL,
+        parentId,
+        UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+        UA_QUALIFIEDNAME(1, leaf.data()),
+        attr,
+        methodCallbackShim,
+        /*inputArgumentsSize=*/0,  nullptr,
+        /*outputArgumentsSize=*/0, nullptr,
+        /*nodeContext=*/contextPtr,
+        /*outNewNodeId=*/nullptr);
+
+    UA_LocalizedText_clear(&attr.displayName);
+    if (!parent.empty()) UA_NodeId_clear(&parentId);
+    return rc == UA_STATUSCODE_GOOD;
+}
+
+bool Open62541Server::addBoolVariableWithWriteCallback(
+        std::string_view browsePath, bool initial,
+        OpcUaCommandSink& sink) {
+    if (impl_->server == nullptr) return false;
+    // Reuse the standard variable-add path to register the node
+    // itself; we'll attach the context + write callback below.
+    if (!addBoolVariable(browsePath, initial)) return false;
+
+    // Resolve the node we just added so we can attach a context.
+    UA_NodeId nodeId = resolveNode(impl_->server, browsePath);
+    if (UA_NodeId_isNull(&nodeId)) return false;
+
+    auto ctx = std::make_unique<Open62541ServerCallbackContext>();
+    ctx->sink     = &sink;
+    ctx->nodePath = std::string(browsePath);
+    auto* contextPtr = ctx.get();
+    impl_->callbackContexts.push_back(std::move(ctx));
+
+    UA_StatusCode rc = UA_Server_setNodeContext(
+        impl_->server, nodeId, contextPtr);
+    if (rc == UA_STATUSCODE_GOOD) {
+        UA_ValueCallback cb;
+        cb.onRead  = nullptr;
+        cb.onWrite = boolWriteCallbackShim;
+        rc = UA_Server_setVariableNode_valueCallback(
+            impl_->server, nodeId, cb);
+    }
+    UA_NodeId_clear(&nodeId);
     return rc == UA_STATUSCODE_GOOD;
 }
 
