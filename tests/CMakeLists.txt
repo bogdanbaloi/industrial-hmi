@@ -301,6 +301,20 @@ if(BUILD_OPCUA_BACKEND)
     )
     add_test(NAME OpcUaIngestBridgeTest
              COMMAND test_opcua_ingest_bridge)
+
+    # FactoryCommandSink -- routes inbound OPC-UA method/write events
+    # to the ProductionModel. Uses MockProductionModel + ConsoleLogger,
+    # no UA stack.
+    add_executable(test_factory_command_sink
+        FactoryCommandSinkTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/opcua/FactoryCommandSink.cpp)
+    target_link_libraries(test_factory_command_sink PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        objectsCore
+    )
+    add_test(NAME FactoryCommandSinkTest
+             COMMAND test_factory_command_sink)
 endif()
 
 # ML: ImageNetLabels -- file/vector loader, BOM + CRLF tolerance, bounds.

@@ -489,6 +489,7 @@ if(BUILD_OPCUA_BACKEND)
             src/integration/opcua/OpcUaBackend.cpp
             src/integration/opcua/Open62541Client.cpp
             src/integration/opcua/OpcUaIngestBridge.cpp
+            src/integration/opcua/FactoryCommandSink.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
@@ -502,6 +503,7 @@ if(BUILD_OPCUA_BACKEND)
                 src/integration/opcua/OpcUaClient.h
                 src/integration/opcua/Open62541Client.h
                 src/integration/opcua/OpcUaIngestBridge.h
+                src/integration/opcua/FactoryCommandSink.h
     )
     target_link_libraries(objectsOpcUa
         PUBLIC
