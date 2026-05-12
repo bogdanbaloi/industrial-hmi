@@ -336,6 +336,21 @@ public:
                         defaults::kOpcUaClientApplicationName);
     }
 
+    // OPC-UA ingest bridge (inbound mapping). Off by default because
+    // pointing the bridge at the HMI's own server creates a feedback
+    // cycle that would overwrite simulator state -- see the warning
+    // on OpcUaIngestBridge. Production deployments dialing a real
+    // PLC are safe to flip this on.
+    [[nodiscard]] bool isOpcUaIngestBridgeEnabled() const {
+        return getValue("network.opcua.client.ingest_bridge.enabled",
+                        "false") == "true";
+    }
+
+    [[nodiscard]] std::string getOpcUaIngestBridgeTopicPrefix() const {
+        return getValue("network.opcua.client.ingest_bridge.topic_prefix",
+                        defaults::kOpcUaClientIngestPrefix);
+    }
+
     // Template Support
     
     /**

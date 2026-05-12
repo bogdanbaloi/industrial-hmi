@@ -271,7 +271,11 @@
       "port": 4840,
       "client": {
         "enabled": false,
-        "endpoint": "opc.tcp://127.0.0.1:4840"
+        "endpoint": "opc.tcp://127.0.0.1:4840",
+        "ingest_bridge": {
+          "enabled": false,
+          "topic_prefix": "Factory"
+        }
       }
     }
   }
