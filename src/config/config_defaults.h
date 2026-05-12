@@ -71,6 +71,10 @@ constexpr const char* kOpcUaApplicationName = "Industrial HMI OPC-UA Server";
 constexpr const char* kOpcUaClientEndpoint        = "opc.tcp://127.0.0.1:4840";
 constexpr const char* kOpcUaClientApplicationUri  = "urn:industrial-hmi:client";
 constexpr const char* kOpcUaClientApplicationName = "Industrial HMI OPC-UA Client";
+/// Browse-path prefix the ingest bridge monitors. `Factory` matches
+/// what our own server publishes (loopback case, off by default);
+/// real PLCs typically advertise a vendor-specific root.
+constexpr const char* kOpcUaClientIngestPrefix    = "Factory";
 
 // Product status values (used in DB, UI, and presenter layers)
 constexpr const char* kStatusActive = "Active";

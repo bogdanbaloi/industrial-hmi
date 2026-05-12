@@ -11,6 +11,7 @@
 #  include "src/integration/opcua/FactoryNodeMap.h"
 #  include "src/integration/opcua/OpcUaBackend.h"
 #  include "src/integration/opcua/OpcUaConfig.h"
+#  include "src/integration/opcua/OpcUaIngestBridge.h"
 #  include "src/integration/opcua/Open62541Client.h"
 #  include "src/integration/opcua/Open62541Server.h"
 #endif
@@ -143,16 +144,39 @@ void registerOpcUaBackend(app::integration::IntegrationManager& integration,
 /// pattern as registerOpcUaBackend above; kept on its own so it stays
 /// opt-in independently and the main() body keeps a flat list of
 /// composition calls.
-void registerOpcUaClient(app::integration::IntegrationManager& integration,
-                         app::config::ConfigManager& config,
-                         app::core::Logger& logger) {
+///
+/// If `network.opcua.client.ingest_bridge.enabled` is set, an
+/// `OpcUaIngestBridge` is wired alongside so inbound notifications
+/// flow into the `ProductionModel`. The bridge is created BEFORE the
+/// backend ownership transfers into the manager so we still hold a
+/// live reference for the bridge constructor.
+void registerOpcUaClient(
+        app::integration::IntegrationManager& integration,
+        app::config::ConfigManager& config,
+        app::core::Logger& logger,
+        std::unique_ptr<app::integration::opcua::OpcUaIngestBridge>&
+            ingestBridge) {
     app::integration::opcua::Open62541Client::Config clientConfig;
     clientConfig.endpointUrl     = config.getOpcUaClientEndpoint();
     clientConfig.applicationUri  = config.getOpcUaClientApplicationUri();
     clientConfig.applicationName = config.getOpcUaClientApplicationName();
-    integration.registerBackend(
+    auto client =
         std::make_unique<app::integration::opcua::Open62541Client>(
-            std::move(clientConfig), logger));
+            std::move(clientConfig), logger);
+
+    if (config.isOpcUaIngestBridgeEnabled()) {
+        app::integration::opcua::OpcUaIngestBridge::Config bridgeConfig;
+        bridgeConfig.topicPrefix =
+            config.getOpcUaIngestBridgeTopicPrefix();
+        ingestBridge =
+            std::make_unique<app::integration::opcua::OpcUaIngestBridge>(
+                *client,
+                app::model::SimulatedModel::instance(),
+                std::move(bridgeConfig));
+        ingestBridge->wire();
+    }
+
+    integration.registerBackend(std::move(client));
 }
 #endif
 
@@ -211,6 +235,10 @@ int main(int argc, char* argv[]) {
             productionBridge;
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+        std::unique_ptr<app::integration::opcua::OpcUaIngestBridge>
+            opcuaIngestBridge;
+#endif
 
         if (config.isTcpBackendEnabled()) {
             integration.registerBackend(
@@ -235,7 +263,8 @@ int main(int argc, char* argv[]) {
             registerOpcUaBackend(integration, config, bootstrap.logger());
         }
         if (config.isOpcUaClientEnabled()) {
-            registerOpcUaClient(integration, config, bootstrap.logger());
+            registerOpcUaClient(integration, config, bootstrap.logger(),
+                                opcuaIngestBridge);
         }
 #endif
 

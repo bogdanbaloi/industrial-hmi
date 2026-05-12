@@ -287,6 +287,20 @@ if(BUILD_OPCUA_BACKEND)
     endif()
     add_test(NAME Open62541ClientIntegrationTest
              COMMAND test_open62541_client_integration)
+
+    # OpcUaIngestBridge -- inbound mapping from OpcUaClient
+    # notifications into ProductionModel mutations. Uses a fake
+    # OpcUaClient (captures topic -> callback) + MockProductionModel,
+    # no UA stack or socket.
+    add_executable(test_opcua_ingest_bridge
+        OpcUaIngestBridgeTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/opcua/OpcUaIngestBridge.cpp)
+    target_link_libraries(test_opcua_ingest_bridge PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+    )
+    add_test(NAME OpcUaIngestBridgeTest
+             COMMAND test_opcua_ingest_bridge)
 endif()
 
 # ML: ImageNetLabels -- file/vector loader, BOM + CRLF tolerance, bounds.
