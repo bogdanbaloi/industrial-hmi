@@ -428,9 +428,10 @@ namespace {
 /// open62541 method-callback shim. The `methodContext` we registered
 /// at addMethod-time is a `Open62541ServerCallbackContext*`; dispatch
 /// the parameterless command to its sink. open62541's signature is
-/// fixed by the spec, so naming follows the C convention.
+/// fixed by the spec, so naming + parameter count follow the C
+/// convention -- the readability lints don't apply.
 //
-// NOLINTNEXTLINE(readability-named-parameter,bugprone-easily-swappable-parameters)
+// NOLINTNEXTLINE(readability-named-parameter,bugprone-easily-swappable-parameters,readability-function-size)
 UA_StatusCode methodCallbackShim(UA_Server* /*server*/,
                                  const UA_NodeId* /*sessionId*/,
                                  void* /*sessionContext*/,
