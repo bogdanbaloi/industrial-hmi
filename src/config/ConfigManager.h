@@ -313,6 +313,15 @@ public:
                         defaults::kOpcUaApplicationName);
     }
 
+    // OPC-UA server -- inbound control surface. Defaults to ON so a
+    // newly-enabled server exposes Factory/Commands + per-line
+    // Enabled writes; deployments that need to lock down inbound
+    // control set this to false.
+    [[nodiscard]] bool isOpcUaServerCommandsEnabled() const {
+        return getValue("network.opcua.server.commands_enabled",
+                        "true") == "true";
+    }
+
     // OPC-UA client (inbound role). Off by default -- needs an
     // external endpoint to dial. When enabled, the IntegrationManager
     // owns an Open62541Client alongside the server; both surface their
