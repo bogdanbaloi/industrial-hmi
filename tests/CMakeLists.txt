@@ -315,6 +315,25 @@ if(BUILD_OPCUA_BACKEND)
     )
     add_test(NAME FactoryCommandSinkTest
              COMMAND test_factory_command_sink)
+
+    # Open62541Server inbound control -- real server + real client,
+    # validates method-call dispatch + writable-bool callback dispatch
+    # on the wire. Catches any wire-format regression the mock-based
+    # FactoryCommandSinkTest can't see.
+    add_executable(test_open62541_server_control_integration
+        Open62541ServerControlIntegrationTest.cpp)
+    target_link_libraries(test_open62541_server_control_integration PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        objectsOpcUa
+        objectsCore
+    )
+    if(WIN32)
+        target_link_libraries(test_open62541_server_control_integration
+                              PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME Open62541ServerControlIntegrationTest
+             COMMAND test_open62541_server_control_integration)
 endif()
 
 # ML: ImageNetLabels -- file/vector loader, BOM + CRLF tolerance, bounds.

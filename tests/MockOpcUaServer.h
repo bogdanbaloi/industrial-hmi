@@ -54,6 +54,12 @@ public:
                 (std::string_view path, bool initial), (override));
     MOCK_METHOD(bool, addStringVariable,
                 (std::string_view path, std::string_view initial), (override));
+    MOCK_METHOD(bool, addMethod,
+                (std::string_view path, OpcUaCommandSink& sink), (override));
+    MOCK_METHOD(bool, addBoolVariableWithWriteCallback,
+                (std::string_view path, bool initial,
+                 OpcUaCommandSink& sink),
+                (override));
 };
 
 }  // namespace app::integration::opcua::testing

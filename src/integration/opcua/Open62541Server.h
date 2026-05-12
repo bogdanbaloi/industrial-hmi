@@ -93,6 +93,13 @@ public:
     [[nodiscard]] bool
         addStringVariable(std::string_view browsePath,
                           std::string_view initial) override;
+    [[nodiscard]] bool
+        addMethod(std::string_view browsePath,
+                  OpcUaCommandSink& sink) override;
+    [[nodiscard]] bool
+        addBoolVariableWithWriteCallback(std::string_view browsePath,
+                                          bool initial,
+                                          OpcUaCommandSink& sink) override;
 
 private:
     /// Pimpl holder so the header stays open62541-free. Real definition
