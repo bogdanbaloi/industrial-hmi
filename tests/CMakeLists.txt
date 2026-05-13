@@ -195,6 +195,21 @@ target_link_libraries(test_sensor_ingest_bridge PRIVATE
 add_test(NAME SensorIngestBridgeTest
          COMMAND test_sensor_ingest_bridge)
 
+# Modbus: pure PDU codec -- encode/decode MBAP+PDU bytes. No socket,
+# no thread; the test compiles the .cpp directly rather than linking
+# objectsModbus so it stays runnable even when BUILD_MODBUS_BACKEND
+# happens to be off (defensive: useful when bisecting backend flakes).
+if(BUILD_MODBUS_BACKEND)
+    add_executable(test_modbus_pdu
+        ModbusPduTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPdu.cpp)
+    target_link_libraries(test_modbus_pdu PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+    )
+    add_test(NAME ModbusPduTest COMMAND test_modbus_pdu)
+endif()
+
 # Presenter: BackendHealthPresenter -- IntegrationManager backends ->
 # BackendHealthViewModel via the existing Observer hook. Uses a tiny
 # FakeBackend test double declared inline so no real network code is

@@ -232,6 +232,12 @@ FetchContent_MakeAvailable(stb_image)
 option(BUILD_OPCUA_BACKEND
     "Compile OPC-UA backend (downloads + builds open62541)" OFF)
 
+# Modbus master backend: hand-rolled MBAP framing over Boost.Asio TCP.
+# No third-party Modbus library required, so this is on by default --
+# any platform with Boost.Asio can build it.
+option(BUILD_MODBUS_BACKEND
+    "Compile Modbus master backend (hand-rolled MBAP over Boost.Asio)" ON)
+
 if(BUILD_OPCUA_BACKEND)
     message(STATUS "OPC-UA backend enabled -- fetching open62541 v1.5.4")
 
@@ -525,6 +531,43 @@ if(BUILD_OPCUA_BACKEND)
     target_compile_definitions(objectsOpcUa
         PUBLIC
             INDUSTRIAL_HMI_HAS_OPCUA_BACKEND=1
+    )
+endif()
+
+# Modbus Layer - Industrial polling protocol backend. Lives in its own
+# object library so the wire codec stays isolated from MQTT / OPC-UA
+# concerns and CI can compile/test it without the OPC-UA toolchain.
+# Pure hand-rolled MBAP framing -- no libmodbus dependency.
+#
+# Compiled only when BUILD_MODBUS_BACKEND=ON (default ON) so the host
+# binary builds without Modbus on platforms where Boost.Asio is
+# unavailable; the IntegrationManager simply doesn't register a
+# ModbusBackend in that case.
+if(BUILD_MODBUS_BACKEND)
+    add_library(objectsModbus OBJECT)
+    target_sources(objectsModbus
+        PRIVATE
+            src/integration/modbus/ModbusPdu.cpp
+        PUBLIC
+            FILE_SET HEADERS
+            FILES
+                src/integration/modbus/ModbusPdu.h
+    )
+    target_link_libraries(objectsModbus
+        PUBLIC
+            objectsCore         # Result<T,E>, Logger
+            objectsModel        # ProductionModel (used in later commits)
+            objectsIntegration  # IntegrationBackend, base for ModbusBackend
+            ${BOOST_TARGET}     # Boost.Asio (used by ModbusClient later)
+            Threads::Threads
+    )
+    target_include_directories(objectsModbus
+        PUBLIC
+            ${CMAKE_SOURCE_DIR}
+    )
+    target_compile_definitions(objectsModbus
+        PUBLIC
+            INDUSTRIAL_HMI_HAS_MODBUS_BACKEND=1
     )
 endif()
 
