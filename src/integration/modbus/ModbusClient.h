@@ -67,11 +67,26 @@ namespace app::integration::modbus {
 ///     if a second transport (RTU over serial) appears.
 class ModbusClient : public ModbusReader {
 public:
+    /// IANA-assigned Modbus/TCP port (privileged on POSIX). Demo
+    /// deployments override to 5020 in app-config.json; this is the
+    /// spec-canonical default callers fall back to.
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+    static constexpr std::uint16_t kDefaultPort = 502;
+    /// Default budget for the initial TCP connect. Generous -- real
+    /// PLCs on a cold start may take a second to accept.
+    static constexpr std::chrono::milliseconds kDefaultConnectTimeout =
+        std::chrono::seconds{2};
+    /// Default budget for one request/response round-trip after the
+    /// socket is up. Tight enough that a hung slave fails the poll
+    /// instead of stalling the whole loop.
+    static constexpr std::chrono::milliseconds kDefaultRequestTimeout =
+        std::chrono::seconds{1};
+
     struct Config {
         std::string host{"127.0.0.1"};
-        std::uint16_t port{502};
-        std::chrono::milliseconds connectTimeout{2000};
-        std::chrono::milliseconds requestTimeout{1000};
+        std::uint16_t port{kDefaultPort};
+        std::chrono::milliseconds connectTimeout{kDefaultConnectTimeout};
+        std::chrono::milliseconds requestTimeout{kDefaultRequestTimeout};
     };
 
     /// Re-export the interface's error enum at class scope so legacy

@@ -54,11 +54,13 @@ namespace app::integration::modbus {
 ///     ("123 ok / 4 fail | last poll Xs ago").
 class ModbusPollLoop {
 public:
+    /// Default cadence: one walk per second. Matches typical PLC
+    /// poll rates and the dashboard refresh interval.
+    static constexpr std::chrono::milliseconds kDefaultPollInterval =
+        std::chrono::seconds{1};
+
     struct Config {
-        /// How long between two consecutive walks of the register
-        /// map. 1s default matches typical PLC poll cadences and the
-        /// dashboard refresh rate.
-        std::chrono::milliseconds pollInterval{1000};
+        std::chrono::milliseconds pollInterval{kDefaultPollInterval};
     };
 
     // Two overloads instead of a default Config{} -- gcc rejects the

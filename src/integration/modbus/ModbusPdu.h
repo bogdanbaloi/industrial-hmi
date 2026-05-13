@@ -53,6 +53,18 @@ namespace app::integration::modbus {
 /// All multi-byte fields are big-endian (network order). This codec
 /// uses portable shift/mask, not platform byte-swap intrinsics.
 
+/// Bit width of one byte. Named so the BE16 helpers don't trip
+/// clang-tidy magic-numbers / signed-bitwise checks when shifting
+/// between bytes of a 16-bit word.
+inline constexpr unsigned kBitsPerByte = 8U;
+
+/// Low-byte mask for an 8-bit lane within a wider integer.
+inline constexpr unsigned kLowByteMask = 0xFFU;
+
+/// Function-code mask: low 7 bits hold the original FC; the top bit
+/// (kExceptionFlag) marks an exception response.
+inline constexpr std::uint8_t kFunctionCodeMask = 0x7FU;
+
 /// MBAP header size in bytes.
 inline constexpr std::size_t kMbapHeaderSize = 7;
 

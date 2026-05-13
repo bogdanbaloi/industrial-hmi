@@ -62,9 +62,14 @@ ModbusClient::readInputRegisters(std::uint8_t unitId,
 
 void ModbusClient::disconnect() noexcept {
     connected_.store(false, std::memory_order_release);
+    // cancel() + close() take the error_code by reference and never
+    // throw on the noexcept overload. The returned ec is intentionally
+    // dropped: we are tearing the socket down and have no recovery
+    // action for "cancel reported pending ops" or "close reported
+    // ENOTCONN" -- the next operation will reconnect from scratch.
     boost::system::error_code ec;
-    asio_->socket.cancel(ec);
-    asio_->socket.close(ec);
+    (void)asio_->socket.cancel(ec);
+    (void)asio_->socket.close(ec);
     // Drain any leftover handlers so the next run_for starts clean.
     asio_->io.restart();
 }
@@ -77,9 +82,11 @@ ModbusClient::ensureConnected() {
         return Res(core::Ok);
     }
 
-    // Stale socket -- close before reopening.
+    // Stale socket -- close before reopening. ec is intentionally
+    // dropped: failure to close a half-dead socket is what we're
+    // recovering from in the first place.
     boost::system::error_code closeEc;
-    asio_->socket.close(closeEc);
+    (void)asio_->socket.close(closeEc);
     asio_->io.restart();
 
     boost::asio::ip::tcp::resolver resolver(asio_->io);
@@ -104,7 +111,7 @@ ModbusClient::ensureConnected() {
 
     if (connectEc == kPendingError) {
         boost::system::error_code cancelEc;
-        asio_->socket.cancel(cancelEc);
+        (void)asio_->socket.cancel(cancelEc);
         asio_->io.run();  // drain the now-cancelled handler
         return Res(core::Err, IoError::Timeout);
     }
@@ -184,9 +191,13 @@ ModbusClient::readImpl(FunctionCode fc,
     }
 
     // ---- parse length field, read PDU body ---------------------
-    const std::uint16_t length =
-        (static_cast<std::uint16_t>(adu[4]) << 8) |
-         static_cast<std::uint16_t>(adu[5]);
+    // Build the BE16 through `unsigned` intermediates so the shift's
+    // operand is unsigned (clang-tidy hicpp-signed-bitwise rejects
+    // shifts of integer-promoted operands).
+    const auto hi = static_cast<unsigned>(adu[4]);
+    const auto lo = static_cast<unsigned>(adu[5]);
+    const auto length =
+        static_cast<std::uint16_t>((hi << kBitsPerByte) | lo);
 
     // Spec ceiling on length value: unit + PDU <= 1 + 253 = 254.
     // Anything beyond is a peer bug; bail before allocating huge.

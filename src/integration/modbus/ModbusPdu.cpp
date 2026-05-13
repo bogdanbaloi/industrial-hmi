@@ -70,21 +70,24 @@ namespace {
 
 /// Big-endian 16-bit write at the given offset. Portable -- no
 /// htons / byteswap intrinsics so the codec compiles cleanly on every
-/// platform the project supports.
+/// platform the project supports. Operands are widened to `unsigned`
+/// before the shift to keep clang-tidy's hicpp-signed-bitwise check
+/// happy (uint16_t gets integer-promoted to signed int otherwise).
 void writeBe16(std::vector<std::byte>& buf,
                std::size_t offset,
                std::uint16_t value) {
-    buf[offset    ] = static_cast<std::byte>((value >> 8) & 0xFFU);
-    buf[offset + 1] = static_cast<std::byte>(value & 0xFFU);
+    const auto wide = static_cast<unsigned>(value);
+    buf[offset    ] = static_cast<std::byte>((wide >> kBitsPerByte) & kLowByteMask);
+    buf[offset + 1] = static_cast<std::byte>(wide & kLowByteMask);
 }
 
 /// Big-endian 16-bit read at the given offset. Caller has already
 /// bounds-checked.
 [[nodiscard]] std::uint16_t readBe16(std::span<const std::byte> buf,
                                      std::size_t offset) {
-    return static_cast<std::uint16_t>(
-        (static_cast<std::uint16_t>(buf[offset    ]) << 8) |
-         static_cast<std::uint16_t>(buf[offset + 1]));
+    const auto hi = static_cast<unsigned>(buf[offset    ]);
+    const auto lo = static_cast<unsigned>(buf[offset + 1]);
+    return static_cast<std::uint16_t>((hi << kBitsPerByte) | lo);
 }
 
 /// Map a raw exception byte to the typed enum, falling through to
@@ -161,10 +164,10 @@ decodeReadResponse(std::span<const std::byte> adu,
     }
 
     // --- MBAP header validation ----------------------------------
-    const std::uint16_t transactionId = readBe16(adu, 0);
-    const std::uint16_t protocolId    = readBe16(adu, 2);
-    const std::uint16_t length        = readBe16(adu, 4);
-    const std::uint8_t  unitId        = static_cast<std::uint8_t>(adu[6]);
+    const auto transactionId = readBe16(adu, 0);
+    const auto protocolId    = readBe16(adu, 2);
+    const auto length        = readBe16(adu, 4);
+    const auto unitId        = static_cast<std::uint8_t>(adu[6]);
 
     if (protocolId != kModbusTcpProtocolId) {
         return Res(app::core::Err, BadProtocolId);
@@ -186,13 +189,13 @@ decodeReadResponse(std::span<const std::byte> adu,
     }
 
     // --- PDU dispatch --------------------------------------------
-    const std::uint8_t rawFc = static_cast<std::uint8_t>(adu[7]);
+    const auto rawFc = static_cast<std::uint8_t>(adu[7]);
     const auto expectedFcRaw =
         static_cast<std::uint8_t>(ctx.expectedFunctionCode);
 
     // Exception response: top bit set, original FC in the low 7 bits.
     if ((rawFc & kExceptionFlag) != 0) {
-        if ((rawFc & 0x7FU) != expectedFcRaw) {
+        if ((rawFc & kFunctionCodeMask) != expectedFcRaw) {
             return Res(app::core::Err, FunctionCodeMismatch);
         }
         DecodedReadResponse out;
@@ -227,8 +230,8 @@ decodeReadResponse(std::span<const std::byte> adu,
     }
 
     // Normal response PDU: [FC][byteCount][reg0_hi reg0_lo ...]
-    const std::uint8_t byteCount = static_cast<std::uint8_t>(adu[8]);
-    const std::uint16_t expectedBytes =
+    const auto byteCount = static_cast<std::uint8_t>(adu[8]);
+    const auto expectedBytes =
         static_cast<std::uint16_t>(ctx.expectedQuantity * 2U);
     if (byteCount != expectedBytes) {
         return Res(app::core::Err, ByteCountMismatch);

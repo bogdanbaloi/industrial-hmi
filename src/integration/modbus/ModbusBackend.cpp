@@ -87,14 +87,15 @@ BackendState ModbusBackend::connectionState() const noexcept {
     // (that would flicker the pill on every transient slave hiccup).
     // A long run of failures while successfulReads > 0 maps to
     // Degraded; a clean run keeps Connected.
-    const std::uint64_t ok   = pollLoop_->successfulReads();
-    const std::uint64_t fail = pollLoop_->failedReads();
+    const std::uint64_t ok = pollLoop_->successfulReads();
     if (ok == 0) {
-        // Loop is up but every poll so far has failed -- slave is
-        // unreachable. Connecting fits better than Degraded (we've
-        // never reached Connected to be degraded from).
-        return fail == 0 ? BackendState::Connecting
-                         : BackendState::Connecting;
+        // Loop is up but every poll so far has failed (or none have
+        // happened yet) -- slave unreachable. Connecting fits better
+        // than Degraded; we've never reached Connected to be
+        // degraded *from*. failedReads() distinguishes "no attempt
+        // yet" from "all attempts failed", but the I/O panel doesn't
+        // surface that distinction today, so both map to one pill.
+        return BackendState::Connecting;
     }
     // Have at least one success. If client is currently disconnected
     // (last attempt failed), surface Degraded; otherwise Connected.
