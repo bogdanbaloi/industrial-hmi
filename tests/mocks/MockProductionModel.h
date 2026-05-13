@@ -25,6 +25,10 @@ public:
     MOCK_METHOD(void, resetSystem, (), (override));
     MOCK_METHOD(void, startCalibration, (), (override));
     MOCK_METHOD(void, setEquipmentEnabled, (uint32_t equipmentId, bool enabled), (override));
+    MOCK_METHOD(void, setEquipmentSupplyLevel,
+                (uint32_t equipmentId, int level), (override));
+    MOCK_METHOD(void, setQualityPassRate,
+                (uint32_t checkpointId, float rate), (override));
 
     // Queries
     MOCK_METHOD(model::SystemState, getState, (), (const, override));

@@ -239,24 +239,72 @@ void registerModbusBackend(
     auto client = std::make_unique<modbus::ModbusClient>(
         std::move(clientConfig));
 
-    // Build the register map: one holding register per equipment
-    // slot, all on the same slave, contiguous addresses starting at
-    // baseAddress. Future PRs replace this with a JSON-driven list
-    // of explicit mappings.
+    // Build the register map. The default layout exposes three
+    // contiguous blocks on the same slave:
+    //
+    //   Block A (boolean):   addresses base+[0..N-1]   EquipmentEnabled
+    //   Block B (supply):    addresses supplyBase+[0..N-1]
+    //                                                  EquipmentSupplyLevel
+    //   Block C (quality):   addresses qualityBase+[0..M-1]
+    //                                                  QualityPassRate
+    //
+    // Block A is the original boolean per-equipment toggle. Blocks B
+    // and C ride the new analog setters added in the A3 model-surface
+    // refactor; bridge `scale` converts fixed-point PLC encodings
+    // (raw 850 -> 85.0%) into the model's percent domain.
+    //
+    // Operators retarget any block via app-config.json without code
+    // changes; future PRs let the JSON enumerate individual (address,
+    // field, entity, scale) tuples for non-contiguous PLC layouts.
     auto map = std::make_unique<modbus::ModbusRegisterMap>();
     const auto slaveId =
         static_cast<std::uint8_t>(config.getModbusSlaveId());
-    const auto baseAddress =
+    const auto enabledBase =
         static_cast<std::uint16_t>(config.getModbusEquipmentBaseAddress());
     const auto equipmentCount = config.getModbusEquipmentCount();
+
+    // Block A -- boolean equipment-enabled bits.
     for (int i = 0; i < equipmentCount; ++i) {
         modbus::RegisterMapping mapping;
         mapping.slaveId  = slaveId;
         mapping.type     = modbus::RegisterType::HoldingRegister;
         mapping.address  =
-            static_cast<std::uint16_t>(baseAddress + i);
+            static_cast<std::uint16_t>(enabledBase + i);
         mapping.field    = modbus::FieldKind::EquipmentEnabled;
         mapping.entityId = static_cast<std::uint32_t>(i);
+        map->add(mapping);
+    }
+
+    // Block B -- analog supply levels (one register per equipment).
+    const auto supplyBase =
+        static_cast<std::uint16_t>(config.getModbusSupplyBaseAddress());
+    const auto supplyScale = config.getModbusSupplyScale();
+    for (int i = 0; i < equipmentCount; ++i) {
+        modbus::RegisterMapping mapping;
+        mapping.slaveId  = slaveId;
+        mapping.type     = modbus::RegisterType::HoldingRegister;
+        mapping.address  =
+            static_cast<std::uint16_t>(supplyBase + i);
+        mapping.field    = modbus::FieldKind::EquipmentSupplyLevel;
+        mapping.entityId = static_cast<std::uint32_t>(i);
+        mapping.scale    = supplyScale;
+        map->add(mapping);
+    }
+
+    // Block C -- analog quality pass rates (one register per checkpoint).
+    const auto qualityBase =
+        static_cast<std::uint16_t>(config.getModbusQualityBaseAddress());
+    const auto qualityScale = config.getModbusQualityScale();
+    const auto qualityCount = config.getModbusQualityCount();
+    for (int i = 0; i < qualityCount; ++i) {
+        modbus::RegisterMapping mapping;
+        mapping.slaveId  = slaveId;
+        mapping.type     = modbus::RegisterType::HoldingRegister;
+        mapping.address  =
+            static_cast<std::uint16_t>(qualityBase + i);
+        mapping.field    = modbus::FieldKind::QualityPassRate;
+        mapping.entityId = static_cast<std::uint32_t>(i);
+        mapping.scale    = qualityScale;
         map->add(mapping);
     }
 

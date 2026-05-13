@@ -42,6 +42,23 @@ public:
     virtual void startCalibration() = 0;
     virtual void setEquipmentEnabled(uint32_t equipmentId, bool enabled) = 0;
 
+    /// Inbound analog setters. Used by ingest bridges (Modbus, MQTT,
+    /// OPC-UA) that ship sensor data from external transports into
+    /// the model. Once an analog field is set externally for a given
+    /// entity id, the in-process simulator yields ownership of it --
+    /// subsequent simulation ticks no longer overwrite the value.
+    /// This matches what an HMI talking to a real PLC actually wants:
+    /// the simulator is a development convenience, real data is
+    /// authoritative.
+    ///
+    /// Out-of-range ids are silently dropped (a misbehaving sensor
+    /// must not crash the HMI). Values are clamped to the field's
+    /// natural domain (supply level 0..100; pass rate 0..100).
+    virtual void setEquipmentSupplyLevel(uint32_t equipmentId,
+                                         int level) = 0;
+    virtual void setQualityPassRate(uint32_t checkpointId,
+                                    float rate) = 0;
+
     // Queries
     [[nodiscard]] virtual SystemState getState() const = 0;
     [[nodiscard]] virtual QualityCheckpoint getQualityCheckpoint(uint32_t id) const = 0;

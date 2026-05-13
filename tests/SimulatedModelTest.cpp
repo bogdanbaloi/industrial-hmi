@@ -155,3 +155,84 @@ TEST_F(SimulatedModelTest, TickIncreasesUnitsInspected) {
     auto after = model().getQualityCheckpoint(0).unitsInspected;
     EXPECT_GT(after, before);
 }
+
+// ===== Analog inbound setters (A3) ===============================
+//
+// Callback captures use shared_ptr to outlive the test scope. The
+// model singleton keeps every registered callback for the rest of
+// the suite -- a stack-captured value would dangle as soon as the
+// test returns and corrupt the next test. Same pattern as the
+// pre-A3 SetEquipmentEnabled* tests above.
+
+TEST_F(SimulatedModelTest, SetEquipmentSupplyLevelUpdatesField) {
+    auto captured = std::make_shared<EquipmentStatus>();
+    model().onEquipmentStatusChanged(
+        [captured](const EquipmentStatus& es) {
+            if (es.equipmentId == 0U) *captured = es;
+        });
+    model().setEquipmentSupplyLevel(0, 73);
+    EXPECT_EQ(captured->equipmentId, 0U);
+    EXPECT_EQ(captured->supplyLevel, 73);
+}
+
+TEST_F(SimulatedModelTest, SetEquipmentSupplyLevelClampsAbove100) {
+    auto captured = std::make_shared<EquipmentStatus>();
+    model().onEquipmentStatusChanged(
+        [captured](const EquipmentStatus& es) {
+            if (es.equipmentId == 1U) *captured = es;
+        });
+    model().setEquipmentSupplyLevel(1, 500);
+    EXPECT_EQ(captured->supplyLevel, 100);
+}
+
+TEST_F(SimulatedModelTest, SetEquipmentSupplyLevelClampsBelowZero) {
+    auto captured = std::make_shared<EquipmentStatus>();
+    model().onEquipmentStatusChanged(
+        [captured](const EquipmentStatus& es) {
+            if (es.equipmentId == 1U) *captured = es;
+        });
+    model().setEquipmentSupplyLevel(1, -42);
+    EXPECT_EQ(captured->supplyLevel, 0);
+}
+
+TEST_F(SimulatedModelTest, SetEquipmentSupplyLevelDropsOutOfRangeId) {
+    // Out-of-range ids are silent no-ops; just confirm no crash.
+    model().setEquipmentSupplyLevel(99, 50);
+    SUCCEED();
+}
+
+TEST_F(SimulatedModelTest, SetQualityPassRateUpdatesAndIsSticky) {
+    // After the setter, repeated tickSimulation() must NOT drift the
+    // value -- the bridge has taken ownership.
+    model().setQualityPassRate(0, 91.5f);
+    EXPECT_FLOAT_EQ(model().getQualityCheckpoint(0).passRate, 91.5f);
+
+    for (int i = 0; i < 20; ++i) model().tickSimulation();
+    EXPECT_FLOAT_EQ(model().getQualityCheckpoint(0).passRate, 91.5f)
+        << "tickSimulation drifted an externally-set passRate";
+}
+
+TEST_F(SimulatedModelTest, SetQualityPassRateClampsAbove100) {
+    model().setQualityPassRate(1, 150.0f);
+    EXPECT_FLOAT_EQ(model().getQualityCheckpoint(1).passRate, 100.0f);
+}
+
+TEST_F(SimulatedModelTest, SetQualityPassRateClampsBelowMin) {
+    model().setQualityPassRate(2, 10.0f);  // below kQualityRateMin = 85
+    EXPECT_FLOAT_EQ(model().getQualityCheckpoint(2).passRate, 85.0f);
+}
+
+TEST_F(SimulatedModelTest, SetQualityPassRateDropsUnknownId) {
+    // Unknown ids must not crash and must not poison the override
+    // set; subsequent legitimate tick must still drift other ids.
+    model().setQualityPassRate(999, 50.0f);
+    SUCCEED();
+}
+
+// Note: a "non-overridden checkpoint still drifts" assertion isn't
+// included here because SimulatedModel is a singleton -- preceding
+// tests in this suite set passRate on every checkpoint id, marking
+// all of them as externally driven. The sticky-after-setter test
+// above proves the dual contract (overridden ids stay frozen);
+// SensorIngestBridgeTest / ModbusIngestBridgeTest cover the drift
+// path on fresh per-test instances.

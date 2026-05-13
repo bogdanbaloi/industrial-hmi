@@ -10,6 +10,7 @@
 #include <mutex>
 #include <random>
 #include <algorithm>
+#include <unordered_set>
 
 namespace app::model {
 
@@ -30,6 +31,10 @@ public:
     static constexpr int kMaxUnitsPerTick = 3;
     static constexpr float kQualityRateMin = 85.0f;
     static constexpr float kQualityRateMax = 100.0f;
+    // Domain of the supplyLevel field per ProductionTypes.h (percent).
+    // Mirrors the natural clamp range used by the existing UI bars.
+    static constexpr int kSupplyLevelMin = 0;
+    static constexpr int kSupplyLevelMax = 100;
     static constexpr int kEquipmentStatusProcessing = 2;
     static constexpr int kEquipmentStatusOnline = 1;
     static constexpr int kEquipmentStatusOffline = 0;
@@ -137,6 +142,62 @@ public:
         notifyEquipmentChange(equipmentId);
     }
 
+    /// External (ingest-bridge) supply-level update. Out-of-range ids
+    /// are dropped silently. Value is clamped to the field's natural
+    /// 0..100 percent domain. The simulator never overwrites
+    /// supplyLevel autonomously (it's only set in initializeDemoData
+    /// today), so there's no override flag to maintain here -- the
+    /// last writer wins, and that's the bridge.
+    void setEquipmentSupplyLevel(uint32_t equipmentId,
+                                 int level) override {
+        if (equipmentId >= kEquipmentCount) {
+            if (logger_) {
+                logger_->warn("Model: setEquipmentSupplyLevel out of range "
+                              "(id={}, max={})", equipmentId, kEquipmentCount);
+            }
+            return;
+        }
+        const int clamped = std::clamp(level,
+                                       kSupplyLevelMin, kSupplyLevelMax);
+        {
+            const std::scoped_lock lock(mutex_);
+            equipmentStatuses_[equipmentId].supplyLevel = clamped;
+        }
+        if (logger_) {
+            logger_->trace("Model: equipment {} supply -> {}",
+                           equipmentId, clamped);
+        }
+        notifyEquipmentChange(equipmentId);
+    }
+
+    /// External (ingest-bridge) quality pass-rate update. Out-of-
+    /// range ids dropped silently; value clamped to 0..100. Marks
+    /// the checkpoint as externally driven so tickSimulation's
+    /// random walk stops touching this field -- otherwise the next
+    /// tick would clobber the fresh reading. The bridge becomes the
+    /// authoritative source until process restart.
+    void setQualityPassRate(uint32_t checkpointId, float rate) override {
+        if (!qualityCheckpoints_.count(checkpointId)) {
+            if (logger_) {
+                logger_->warn("Model: setQualityPassRate unknown id {}",
+                              checkpointId);
+            }
+            return;
+        }
+        const float clamped = std::clamp(rate,
+                                         kQualityRateMin, kQualityRateMax);
+        {
+            const std::scoped_lock lock(mutex_);
+            qualityCheckpoints_[checkpointId].passRate = clamped;
+            externalPassRateOverrides_.insert(checkpointId);
+        }
+        if (logger_) {
+            logger_->trace("Model: quality {} passRate -> {:.1f}",
+                           checkpointId, clamped);
+        }
+        notifyQualityChange(checkpointId);
+    }
+
     [[nodiscard]] SystemState getState() const override { return currentState_; }
 
     [[nodiscard]] QualityCheckpoint getQualityCheckpoint(uint32_t id) const override {
@@ -154,8 +215,15 @@ public:
             std::uniform_int_distribution<int> unitDist(kMinUnitsPerTick, kMaxUnitsPerTick);
 
             for (auto& [id, cp] : qualityCheckpoints_) {
-                cp.passRate = std::clamp(cp.passRate + rateDist(rng_),
-                                         kQualityRateMin, kQualityRateMax);
+                // Skip the random-walk on passRate when an external
+                // ingest bridge has taken ownership of this field.
+                // unitsInspected stays simulator-driven either way --
+                // no inbound channel ships that field today.
+                if (!externalPassRateOverrides_.count(id)) {
+                    cp.passRate = std::clamp(
+                        cp.passRate + rateDist(rng_),
+                        kQualityRateMin, kQualityRateMax);
+                }
                 cp.unitsInspected += unitDist(rng_);
             }
 
@@ -302,6 +370,10 @@ private:
     std::map<uint32_t, EquipmentStatus> equipmentStatuses_;
     std::map<uint32_t, ActuatorStatus> actuatorStatuses_;
     std::map<uint32_t, QualityCheckpoint> qualityCheckpoints_;
+    /// Quality checkpoint ids whose passRate is currently owned by an
+    /// external ingest bridge. tickSimulation() skips the random-walk
+    /// update for these so the bridge's last writer stays sticky.
+    std::unordered_set<uint32_t> externalPassRateOverrides_;
     WorkUnit currentWorkUnit_;
     SystemState currentState_{SystemState::IDLE};
     

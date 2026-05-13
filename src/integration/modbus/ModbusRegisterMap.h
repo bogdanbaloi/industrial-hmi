@@ -16,19 +16,27 @@ enum class RegisterType : std::uint8_t {
     InputRegister,    ///< FC04 -- R-only
 };
 
-/// Domain field a single Modbus register maps to. Open-set: new
-/// values land here when ProductionModel grows additional inbound
-/// setters (a follow-up PR adds SupplyLevel / PassRate / SystemState
-/// once the model surface is extended -- right now the only inbound
-/// setter on the model is setEquipmentEnabled, which mirrors how the
-/// existing MQTT and OPC-UA ingest bridges already constrain
-/// themselves).
+/// Domain field a single Modbus register maps to.
 enum class FieldKind : std::uint8_t {
-    /// Register value 0 -> equipment OFF; any non-zero -> ON. Matches
-    /// the convention every Modbus coil-style master uses (the
-    /// "enabled" bit comes through as a 16-bit register with value
-    /// 0x0000 / 0x0001 on most PLCs).
+    /// Register value 0 -> equipment OFF; any non-zero -> ON.
+    /// Matches the convention every Modbus coil-style master uses
+    /// (the "enabled" bit comes through as a 16-bit register with
+    /// value 0x0000 / 0x0001 on most PLCs).
     EquipmentEnabled,
+
+    /// Equipment supply level, 0..100 percent. The raw register
+    /// value is multiplied by `RegisterMapping::scale` then clamped
+    /// to the domain by the model. Common PLC conventions:
+    ///   scale 1.0    raw value is direct percent (raw 85 -> 85%)
+    ///   scale 0.1    16-bit fixed-point (raw 850 -> 85.0%)
+    ///   scale 0.001  raw counts -> divided to percent
+    EquipmentSupplyLevel,
+
+    /// Quality checkpoint pass rate, 0..100 percent. Same scale
+    /// semantics as EquipmentSupplyLevel. The model stores passRate
+    /// as float, so the bridge applies the scale in float space
+    /// before forwarding.
+    QualityPassRate,
 };
 
 /// One row of the register map: "slave X register Y means field F of
@@ -41,9 +49,15 @@ struct RegisterMapping {
     FieldKind     field{FieldKind::EquipmentEnabled};
 
     /// Domain identifier this register pertains to. For
-    /// EquipmentEnabled, this is the equipment slot id (0..N-1).
-    /// For future FieldKinds it'll be a checkpoint id etc.
+    /// EquipmentEnabled / EquipmentSupplyLevel this is the equipment
+    /// slot id (0..N-1); for QualityPassRate it's the checkpoint id.
     std::uint32_t entityId{0};
+
+    /// Linear scale applied to the raw register value before the
+    /// bridge forwards it to the model. Defaults to 1.0 (pass-through);
+    /// PLCs that ship fixed-point readings (raw 850 means 85.0%) use
+    /// 0.1, and so on. Ignored for EquipmentEnabled (boolean fields).
+    float scale{1.0f};
 };
 
 /// Container for register mappings. Just a thin wrapper over a vector
