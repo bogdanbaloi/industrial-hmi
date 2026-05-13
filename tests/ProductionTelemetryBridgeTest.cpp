@@ -77,6 +77,8 @@ public:
     void resetSystem() override {}
     void startCalibration() override {}
     void setEquipmentEnabled(uint32_t, bool) override {}
+    void setEquipmentSupplyLevel(uint32_t, int) override {}
+    void setQualityPassRate(uint32_t, float) override {}
 
     // Queries -- not exercised by the bridge.
     [[nodiscard]] SystemState getState() const override {

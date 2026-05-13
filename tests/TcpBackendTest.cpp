@@ -52,6 +52,10 @@ public:
     MOCK_METHOD(void, resetSystem, (), (override));
     MOCK_METHOD(void, startCalibration, (), (override));
     MOCK_METHOD(void, setEquipmentEnabled, (uint32_t, bool), (override));
+    MOCK_METHOD(void, setEquipmentSupplyLevel,
+                (uint32_t, int), (override));
+    MOCK_METHOD(void, setQualityPassRate,
+                (uint32_t, float), (override));
 
     MOCK_METHOD(SystemState, getState, (), (const, override));
     MOCK_METHOD(app::model::QualityCheckpoint, getQualityCheckpoint,
