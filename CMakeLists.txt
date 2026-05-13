@@ -622,10 +622,10 @@ if(BUILD_MODBUS_BACKEND)
     )
     target_link_libraries(objectsModbus
         PUBLIC
-            objectsCore         # Result<T,E>, Logger
-            objectsModel        # ProductionModel (used in later commits)
-            objectsIntegration  # IntegrationBackend, base for ModbusBackend
-            ${BOOST_TARGET}     # Boost.Asio (used by ModbusClient later)
+            objectsCore             # Result<T,E>, Logger
+            objectsModel            # ProductionModel
+            objectsIntegrationCore  # IntegrationBackend, base for ModbusBackend
+            ${BOOST_TARGET}         # Boost.Asio (ModbusClient transport)
             Threads::Threads
     )
     target_include_directories(objectsModbus
