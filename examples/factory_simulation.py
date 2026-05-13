@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Orchestrator: run every live scenario in parallel.
 
-Spawns three live scenarios as subprocesses against the HMI in
+Spawns four live scenarios as subprocesses against the HMI in
 parallel:
 
-  * `tcp_operator_session.py`   -- TCP, keeps the operator pill green
-  * `mqtt_sensor_loop.py`       -- MQTT subscriber side, drives switches
-  * `opcua_dashboard.py`        -- OPC-UA polling SCADA mirror
+  * `tcp_operator_session.py`     -- TCP, keeps the operator pill green
+  * `mqtt_sensor_loop.py`         -- MQTT subscriber side, drives switches
+  * `opcua_dashboard.py`          -- OPC-UA polling SCADA mirror
+  * `modbus_slave_simulator.py`   -- Modbus slave, flips register-driven switches
 
-One command, three protocols hitting the HMI at once. The dashboard's
-I/O panel shows three green pills (TCP, MQTT, OPC-UA) within seconds.
+One command, four protocols hitting the HMI at once. The dashboard's
+I/O panel shows four green pills (TCP, MQTT, OPC-UA, Modbus) within seconds.
 Ideal for customer demos and end-to-end smoke tests.
 
 Honours the shared `--duration` and `--seed` flags; both propagate to
@@ -41,6 +42,7 @@ SCENARIOS = {
     "TCP ": HERE / "tcp_operator_session.py",
     "MQTT": HERE / "mqtt_sensor_loop.py",
     "OPCU": HERE / "opcua_dashboard.py",
+    "MOD ": HERE / "modbus_slave_simulator.py",
 }
 
 
@@ -68,6 +70,13 @@ def build_command(script: Path, args: argparse.Namespace) -> list[str]:
                 "--port",   str(args.mqtt_port)]
     if name in {"opcua_dashboard.py"}:
         cmd += ["--endpoint", args.opcua_endpoint]
+    if name in {"modbus_slave_simulator.py"}:
+        # The simulator HOSTS a slave (binds + listens) rather than
+        # connecting to the HMI. We pass an explicit bind address +
+        # port so an operator running the orchestrator on a different
+        # interface can still pin the surface the HMI dials into.
+        cmd += ["--host", args.modbus_host,
+                "--port", str(args.modbus_port)]
     return cmd
 
 
@@ -163,6 +172,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mqtt-port", type=int, default=1883)
     parser.add_argument("--opcua-endpoint",
                         default="opc.tcp://127.0.0.1:4840")
+    parser.add_argument("--modbus-host", default="127.0.0.1",
+                        help="Address the Modbus simulator binds to "
+                             "(default: 127.0.0.1)")
+    parser.add_argument("--modbus-port", type=int, default=5020,
+                        help="Port the Modbus simulator listens on "
+                             "(default: 5020, matches HMI config)")
     parser.add_argument("--duration", type=float, default=None,
                         help="Auto-exit every child after N seconds.")
     parser.add_argument("--seed", type=int, default=None,
@@ -170,8 +185,8 @@ def parse_args() -> argparse.Namespace:
                              "reproducible runs.")
     parser.add_argument("--readonly", action="store_true",
                         help="Propagate --readonly to children that "
-                             "support it (TCP, MQTT). OPC-UA is "
-                             "already read-only.")
+                             "support it (TCP, MQTT, Modbus). OPC-UA "
+                             "is already read-only.")
     return parser.parse_args()
 
 

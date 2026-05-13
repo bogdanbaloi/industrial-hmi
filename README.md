@@ -44,10 +44,12 @@ core.
   traffic on one socket (publish + subscribe bridges). OPC-UA runs
   the HMI as both server (SCADA reads our state) and client (we read
   PLC telemetry), the canonical "data hub" topology. TCP exposes a
-  command surface for external supervisors. Every channel surfaces a
-  uniform `IntegrationBackend` pill in the dashboard's I/O panel,
-  with state semantics tuned per protocol (Connecting vs. Connected
-  reflects "service up" vs. "an actual peer talking").
+  command surface for external supervisors. **Modbus master** polls
+  remote slaves / PLCs on a configurable register map and drives the
+  same Model setters as every other inbound channel. Every channel
+  surfaces a uniform `IntegrationBackend` pill in the dashboard's I/O
+  panel, with state semantics tuned per protocol (Connecting vs.
+  Connected reflects "service up" vs. "an actual peer talking").
 - **Cross-platform CI** on Ubuntu 24.04 (GCC 13 + pkg-config) and
   Windows MSYS2 CLANG64; clang-tidy + cppcheck gates every PR.
 
@@ -87,16 +89,20 @@ backend role, so a customer / engineer / interview can exercise every
 protocol end-to-end without a custom client:
 
 ```bash
-pip install -r examples/requirements.txt   # paho-mqtt + asyncua
-python examples/tcp_control.py             # walk SYSTEM + equipment switches via TCP
-python examples/mqtt_subscribe_telemetry.py  # tail outbound MQTT publishes
-python examples/mqtt_publish_sensor.py 0 off # drive A-LINE off via inbound MQTT
-python examples/opcua_read_state.py        # browse + read the OPC-UA address space
-python examples/opcua_subscribe_equipment.py # live notifications via OPC-UA subscribe
+pip install -r examples/requirements.txt    # paho-mqtt + asyncua + pymodbus
+python examples/tcp_control.py              # walk SYSTEM + equipment switches via TCP
+python examples/mqtt_subscribe_telemetry.py # tail outbound MQTT publishes
+python examples/mqtt_publish_sensor.py 0 off# drive A-LINE off via inbound MQTT
+python examples/opcua_read_state.py         # browse + read the OPC-UA address space
+python examples/opcua_subscribe_equipment.py# live notifications via OPC-UA subscribe
+python examples/modbus_slave_simulator.py   # host a Modbus TCP slave, toggle registers
+python examples/factory_simulation.py       # orchestrate all four protocols in parallel
 ```
 
 The I/O panel pills on the dashboard mirror the script's state in
-real time -- run an OPC-UA reader, the OPC-UA pill turns green.
+real time -- run an OPC-UA reader, the OPC-UA pill turns green; spin
+up `modbus_slave_simulator.py` and the Modbus pill flips Connecting
+-> Connected within one poll interval (1s default).
 
 See [BUILD.md](BUILD.md) for full instructions, packaging, and i18n
 catalog regeneration.
@@ -208,6 +214,13 @@ src/
     ProductionTelemetryBridge   Manufacturing -> MQTT outbound bridge
     SensorIngestBridge          MQTT -> Manufacturing inbound bridge
     opcua/              OPC-UA (BUILD_OPCUA_BACKEND=ON), open62541-backed
+    modbus/             Modbus master (BUILD_MODBUS_BACKEND=ON, default),
+                        hand-rolled MBAP framing over Boost.Asio. Reader
+                        interface + concrete TCP client + register map +
+                        ingest bridge + jthread poll loop + IntegrationBackend
+                        aggregate. Strategy pattern via ModbusReader; the
+                        poll loop tests run against a FakeModbusReader (in-
+                        memory) without opening a socket.
       OpcUaServer / Open62541Server   Server role (browseable address space)
       FactoryNodeMap                  Domain mapping for the server role
       OpcUaBackend                    IntegrationBackend facade (server)

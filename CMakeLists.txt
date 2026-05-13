@@ -232,6 +232,12 @@ FetchContent_MakeAvailable(stb_image)
 option(BUILD_OPCUA_BACKEND
     "Compile OPC-UA backend (downloads + builds open62541)" OFF)
 
+# Modbus master backend: hand-rolled MBAP framing over Boost.Asio TCP.
+# No third-party Modbus library required, so this is on by default --
+# any platform with Boost.Asio can build it.
+option(BUILD_MODBUS_BACKEND
+    "Compile Modbus master backend (hand-rolled MBAP over Boost.Asio)" ON)
+
 if(BUILD_OPCUA_BACKEND)
     message(STATUS "OPC-UA backend enabled -- fetching open62541 v1.5.4")
 
@@ -585,6 +591,53 @@ if(BUILD_OPCUA_BACKEND)
     )
 endif()
 
+# Modbus Layer - Industrial polling protocol backend. Lives in its own
+# object library so the wire codec stays isolated from MQTT / OPC-UA
+# concerns and CI can compile/test it without the OPC-UA toolchain.
+# Pure hand-rolled MBAP framing -- no libmodbus dependency.
+#
+# Compiled only when BUILD_MODBUS_BACKEND=ON (default ON) so the host
+# binary builds without Modbus on platforms where Boost.Asio is
+# unavailable; the IntegrationManager simply doesn't register a
+# ModbusBackend in that case.
+if(BUILD_MODBUS_BACKEND)
+    add_library(objectsModbus OBJECT)
+    target_sources(objectsModbus
+        PRIVATE
+            src/integration/modbus/ModbusPdu.cpp
+            src/integration/modbus/ModbusClient.cpp
+            src/integration/modbus/ModbusIngestBridge.cpp
+            src/integration/modbus/ModbusPollLoop.cpp
+            src/integration/modbus/ModbusBackend.cpp
+        PUBLIC
+            FILE_SET HEADERS
+            FILES
+                src/integration/modbus/ModbusPdu.h
+                src/integration/modbus/ModbusReader.h
+                src/integration/modbus/ModbusClient.h
+                src/integration/modbus/ModbusRegisterMap.h
+                src/integration/modbus/ModbusIngestBridge.h
+                src/integration/modbus/ModbusPollLoop.h
+                src/integration/modbus/ModbusBackend.h
+    )
+    target_link_libraries(objectsModbus
+        PUBLIC
+            objectsCore             # Result<T,E>, Logger
+            objectsModel            # ProductionModel
+            objectsIntegrationCore  # IntegrationBackend, base for ModbusBackend
+            ${BOOST_TARGET}         # Boost.Asio (ModbusClient transport)
+            Threads::Threads
+    )
+    target_include_directories(objectsModbus
+        PUBLIC
+            ${CMAKE_SOURCE_DIR}
+    )
+    target_compile_definitions(objectsModbus
+        PUBLIC
+            INDUSTRIAL_HMI_HAS_MODBUS_BACKEND=1
+    )
+endif()
+
 # ML Layer - Edge inference foundation. Image decoding (stb_image),
 # preprocessing (resize / centre-crop / ImageNet normalise), label
 # table, ImageClassifier interface + FakeImageClassifier test double.
@@ -804,6 +857,9 @@ target_link_libraries(industrial-hmi
 if(BUILD_OPCUA_BACKEND)
     target_link_libraries(industrial-hmi PRIVATE objectsOpcUa)
 endif()
+if(BUILD_MODBUS_BACKEND)
+    target_link_libraries(industrial-hmi PRIVATE objectsModbus)
+endif()
 
 # Windows: Boost.Asio requires Winsock + mswsock (AcceptEx,
 # GetAcceptExSockaddrs are in mswsock.lib, not ws2_32). StartupDialog
@@ -841,6 +897,9 @@ target_link_libraries(industrial-hmi-console
 )
 if(BUILD_OPCUA_BACKEND)
     target_link_libraries(industrial-hmi-console PRIVATE objectsOpcUa)
+endif()
+if(BUILD_MODBUS_BACKEND)
+    target_link_libraries(industrial-hmi-console PRIVATE objectsModbus)
 endif()
 if(WIN32)
     # Boost.Asio's TCP server uses IOCP AcceptEx / GetAcceptExSockaddrs

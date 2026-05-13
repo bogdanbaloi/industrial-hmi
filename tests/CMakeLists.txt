@@ -195,6 +195,91 @@ target_link_libraries(test_sensor_ingest_bridge PRIVATE
 add_test(NAME SensorIngestBridgeTest
          COMMAND test_sensor_ingest_bridge)
 
+# Modbus: pure PDU codec -- encode/decode MBAP+PDU bytes. No socket,
+# no thread; the test compiles the .cpp directly rather than linking
+# objectsModbus so it stays runnable even when BUILD_MODBUS_BACKEND
+# happens to be off (defensive: useful when bisecting backend flakes).
+if(BUILD_MODBUS_BACKEND)
+    add_executable(test_modbus_pdu
+        ModbusPduTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPdu.cpp)
+    target_link_libraries(test_modbus_pdu PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+    )
+    add_test(NAME ModbusPduTest COMMAND test_modbus_pdu)
+
+    # Modbus: TCP client -- exercises the codec over a real loopback
+    # socket against a FakeModbusSlave (ephemeral port, std::jthread
+    # acceptor). Same shape as MqttClientTest: no external dep, no
+    # background broker.
+    add_executable(test_modbus_client
+        ModbusClientTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPdu.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusClient.cpp)
+    target_link_libraries(test_modbus_client PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        ${BOOST_TARGET}
+        Threads::Threads
+    )
+    if(WIN32)
+        target_link_libraries(test_modbus_client PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME ModbusClientTest COMMAND test_modbus_client)
+
+    # Modbus: wire-to-domain bridge -- pure dispatch logic, no socket.
+    # MockProductionModel via gmock asserts the right setter is called
+    # for each (mapping, raw value) pair.
+    add_executable(test_modbus_ingest_bridge
+        ModbusIngestBridgeTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusIngestBridge.cpp)
+    target_link_libraries(test_modbus_ingest_bridge PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+    )
+    add_test(NAME ModbusIngestBridgeTest COMMAND test_modbus_ingest_bridge)
+
+    # Modbus: poll loop -- jthread + cadence + dispatch. Uses a
+    # FakeModbusReader (in-memory ModbusReader impl) so no socket,
+    # no FakeModbusSlave required. start/stop sanity tests use a
+    # short pollInterval; the bulk of the coverage is on the
+    # synchronous pollOnce() entry point.
+    add_executable(test_modbus_poll_loop
+        ModbusPollLoopTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPdu.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusIngestBridge.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPollLoop.cpp)
+    target_link_libraries(test_modbus_poll_loop PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        Threads::Threads
+    )
+    add_test(NAME ModbusPollLoopTest COMMAND test_modbus_poll_loop)
+
+    # Modbus: backend aggregate -- IntegrationBackend lifecycle wired
+    # over the four collaborators. Uses a real ModbusClient pointed at
+    # a closed port (port 1) so connect attempts fail fast; the test
+    # cares about start/stop/dtor mechanics, not transport success.
+    add_executable(test_modbus_backend
+        ModbusBackendTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPdu.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusClient.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusIngestBridge.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPollLoop.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusBackend.cpp)
+    target_link_libraries(test_modbus_backend PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        ${BOOST_TARGET}
+        Threads::Threads
+    )
+    if(WIN32)
+        target_link_libraries(test_modbus_backend PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME ModbusBackendTest COMMAND test_modbus_backend)
+endif()
+
 # Presenter: BackendHealthPresenter -- IntegrationManager backends ->
 # BackendHealthViewModel via the existing Observer hook. Uses a tiny
 # FakeBackend test double declared inline so no real network code is
