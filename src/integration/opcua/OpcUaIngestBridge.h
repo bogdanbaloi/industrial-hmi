@@ -61,6 +61,10 @@ public:
         /// SimulatedModel's three lines; raise this if the
         /// underlying model grows.
         std::uint32_t equipmentCount{3};
+        /// How many quality checkpoints to subscribe to (drives the
+        /// `<prefix>/QualityCheckpoints/Checkpoint<id>/PassRate`
+        /// monitored items). Matches the simulator's three by default.
+        std::uint32_t qualityCount{3};
     };
 
     OpcUaIngestBridge(OpcUaClient& client,
@@ -81,24 +85,36 @@ public:
     void wire();
 
 private:
-    /// Dispatch one Status notification for equipment `id`. Skips the
-    /// model call if the incoming status doesn't actually flip the
-    /// enabled bit since the last notification we processed -- avoids
-    /// pointless re-emissions when the underlying status enum
-    /// oscillates within "online" values (Online <-> Processing).
+    /// Dispatch one Status notification for equipment `id`. Skips
+    /// the model call if the incoming status doesn't actually flip
+    /// the enabled bit since the last notification we processed --
+    /// avoids pointless re-emissions when the underlying status
+    /// enum oscillates within "online" values (Online <-> Processing).
     void onStatusNotification(std::uint32_t id, std::int32_t status);
+
+    /// Dispatch one SupplyLevel notification. Bypasses the dedup
+    /// cache for out-of-range ids but still forwards (model clamps
+    /// + log-and-drop on unknown ids -- single source of truth).
+    void onSupplyNotification(std::uint32_t id, std::int32_t supply);
+
+    /// Dispatch one PassRate notification. Same dedup pattern as
+    /// supply, but on float bit-equality (deterministic for a sensor
+    /// repeating the same value; naturally drifts on real readings).
+    void onPassRateNotification(std::uint32_t id, float rate);
 
     OpcUaClient&            client_;
     model::ProductionModel& model_;
     Config                  config_;
 
-    /// Per-equipment "last enabled bit we propagated to the model".
-    /// `nullopt` means we haven't seen any notification yet -- the
-    /// first one always passes through. Capped at the equipment-count
-    /// upper bound below to avoid a heap allocation for the common
-    /// case (three lines).
+    /// Per-entity dedup caches. `nullopt` = no observation yet, so
+    /// the first reading always fires through. Arrays stay on the
+    /// stack; size cap matches the Modbus bridge so a runaway
+    /// operator config can't blow this up.
     static constexpr std::size_t kMaxTrackedEquipment = 16;
+    static constexpr std::size_t kMaxTrackedQuality   = 16;
     std::array<std::optional<bool>, kMaxTrackedEquipment> lastEnabled_{};
+    std::array<std::optional<int>, kMaxTrackedEquipment> lastSupplyLevel_{};
+    std::array<std::optional<float>, kMaxTrackedQuality> lastPassRate_{};
 };
 
 }  // namespace app::integration::opcua

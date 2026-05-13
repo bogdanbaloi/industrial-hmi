@@ -51,6 +51,10 @@ public:
         /// SimulatedModel's three lines (A/B/C); deployments with
         /// more lines bump this and add expected payloads.
         std::uint32_t equipmentCount{3};
+        /// How many quality checkpoints to subscribe to (drives the
+        /// per-checkpoint pass-rate topic count). Matches the
+        /// simulator's three checkpoints.
+        std::uint32_t qualityCount{3};
     };
 
     // Two overloads avoid a default `Config{}` argument inside the
@@ -76,10 +80,21 @@ public:
 
 private:
     /// Convert an MQTT payload (e.g. "on", "OFF", "1") into a boolean.
-    /// Returns std::nullopt for anything unrecognised so the caller
-    /// can ignore the frame without raising.
+    /// Returns false (parser miss) for anything unrecognised so the
+    /// caller can ignore the frame without raising.
     [[nodiscard]] static bool parseOnOffPayload(std::string_view raw,
                                                 bool& out);
+
+    /// Parse a decimal integer payload. Accepts surrounding ASCII
+    /// whitespace + an optional sign; rejects non-digit junk so a
+    /// misbehaving sensor cannot flip the model's setter into
+    /// garbage values.
+    [[nodiscard]] static bool parseIntPayload(std::string_view raw,
+                                              int& out);
+
+    /// Parse a decimal float payload. Same surface as parseIntPayload.
+    [[nodiscard]] static bool parseFloatPayload(std::string_view raw,
+                                                float& out);
 
     TelemetrySubscriber& subscriber_;
     model::ProductionModel& model_;
