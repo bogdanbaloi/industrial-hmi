@@ -549,11 +549,14 @@ if(BUILD_MODBUS_BACKEND)
         PRIVATE
             src/integration/modbus/ModbusPdu.cpp
             src/integration/modbus/ModbusClient.cpp
+            src/integration/modbus/ModbusIngestBridge.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
                 src/integration/modbus/ModbusPdu.h
                 src/integration/modbus/ModbusClient.h
+                src/integration/modbus/ModbusRegisterMap.h
+                src/integration/modbus/ModbusIngestBridge.h
     )
     target_link_libraries(objectsModbus
         PUBLIC

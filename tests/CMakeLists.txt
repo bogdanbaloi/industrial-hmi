@@ -227,6 +227,18 @@ if(BUILD_MODBUS_BACKEND)
         target_link_libraries(test_modbus_client PRIVATE ws2_32 mswsock)
     endif()
     add_test(NAME ModbusClientTest COMMAND test_modbus_client)
+
+    # Modbus: wire-to-domain bridge -- pure dispatch logic, no socket.
+    # MockProductionModel via gmock asserts the right setter is called
+    # for each (mapping, raw value) pair.
+    add_executable(test_modbus_ingest_bridge
+        ModbusIngestBridgeTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusIngestBridge.cpp)
+    target_link_libraries(test_modbus_ingest_bridge PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+    )
+    add_test(NAME ModbusIngestBridgeTest COMMAND test_modbus_ingest_bridge)
 endif()
 
 # Presenter: BackendHealthPresenter -- IntegrationManager backends ->
