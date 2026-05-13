@@ -90,7 +90,7 @@ add_test(NAME DatabaseManagerTest COMMAND test_database_manager)
 
 # Integration: CsvSerializer (pure C++, no GTK). Compiles the source
 # directly so the test binary stays on a minimal link line independent
-# of objectsIntegration.
+# of objectsIntegrationCore.
 add_executable(test_csv_serializer CsvSerializerTest.cpp
     ${CMAKE_SOURCE_DIR}/src/integration/CsvSerializer.cpp)
 target_link_libraries(test_csv_serializer PRIVATE
@@ -621,7 +621,8 @@ set(VIEW_COMMON_LIBS
     objectsModel
     objectsCore
     objectsConfig
-    objectsIntegration
+    objectsIntegrationCore  # interfaces + manager only -- view-layer
+                            # tests don't touch concrete backends
     Threads::Threads
 )
 
