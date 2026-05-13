@@ -419,30 +419,48 @@ target_sources(objectsPresenter
             src/presenter/modelview/PlaceholderViewModels.h
 )
 # QualityInspectionPresenter depends on the ML interfaces; the Backend
-# Health presenter depends on objectsIntegration (IntegrationManager +
-# IntegrationBackend). Both are GTK-free.
+# Health presenter depends on objectsIntegrationCore (IntegrationManager
+# + IntegrationBackend). Both are GTK-free.
 target_link_libraries(objectsPresenter
     PUBLIC
         objectsModel
         objectsMl
-        objectsIntegration
+        objectsIntegrationCore
         ${BOOST_TARGET}
         Threads::Threads
 )
 
-# Integration Layer - Format-agnostic Serializer interface + CSV / JSON
-# concretes. Pure C++, no GTK, no presenter dep. View / Console layers
-# depend on this through the Serializer abstraction so adding a new
-# format is a single subclass with no upstream churn.
-add_library(objectsIntegration OBJECT)
-target_sources(objectsIntegration
+# ----------------------------------------------------------------
+# Integration Layer -- split per protocol.
+#
+# Pattern: every wire protocol lives in its own object library so a
+# build can include only the protocols it actually ships, and so
+# operators can map "the Modbus pill in the I/O panel" to a
+# distinct compile unit on the link line.
+#
+#   objectsIntegrationCore   Interfaces + manager + serializers +
+#                            telemetry bridges. Protocol-agnostic.
+#                            Bridges depend on TelemetryPublisher /
+#                            TelemetrySubscriber abstractions, so
+#                            they live here -- adding a new protocol
+#                            does not bring new bridge code.
+#   objectsTcp               TcpBackend.{h,cpp}.
+#   objectsMqtt              MqttPacket + MqttClient.
+#   objectsOpcUa             (declared further down, gated on
+#                            BUILD_OPCUA_BACKEND).
+#
+# A library / executable that only needs the manager + interfaces
+# links objectsIntegrationCore alone. Only main.cpp's executable
+# targets link the protocol-specific libs.
+# ----------------------------------------------------------------
+
+# ----- objectsIntegrationCore -----
+add_library(objectsIntegrationCore OBJECT)
+target_sources(objectsIntegrationCore
     PRIVATE
         src/integration/CsvSerializer.cpp
         src/integration/JsonSerializer.cpp
         src/integration/IntegrationManager.cpp
-        src/integration/TcpBackend.cpp
-        src/integration/MqttPacket.cpp
-        src/integration/MqttClient.cpp
         src/integration/ProductionTelemetryBridge.cpp
         src/integration/PlainTextTelemetryFormatter.cpp
         src/integration/JsonTelemetryFormatter.cpp
@@ -455,9 +473,6 @@ target_sources(objectsIntegration
             src/integration/JsonSerializer.h
             src/integration/IntegrationBackend.h
             src/integration/IntegrationManager.h
-            src/integration/TcpBackend.h
-            src/integration/MqttPacket.h
-            src/integration/MqttClient.h
             src/integration/TelemetryPublisher.h
             src/integration/TelemetrySubscriber.h
             src/integration/TelemetryPayloadFormatter.h
@@ -466,20 +481,62 @@ target_sources(objectsIntegration
             src/integration/ProductionTelemetryBridge.h
             src/integration/SensorIngestBridge.h
 )
-target_link_libraries(objectsIntegration
+target_link_libraries(objectsIntegrationCore
     PUBLIC
+        objectsModel
+        Threads::Threads
+)
+# NOTE: core has NO Boost dep -- only the protocol libs that
+# actually open sockets do.
+
+# ----- objectsTcp -----
+# TCP line-protocol backend. Boost.Asio acceptor + std::jthread per
+# session. Implements IntegrationBackend from the core lib.
+add_library(objectsTcp OBJECT)
+target_sources(objectsTcp
+    PRIVATE
+        src/integration/TcpBackend.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/integration/TcpBackend.h
+)
+target_link_libraries(objectsTcp
+    PUBLIC
+        objectsIntegrationCore
         objectsModel
         ${BOOST_TARGET}
         Threads::Threads
 )
-
-# Windows: TcpBackend's Boost.Asio acceptor uses IOCP AcceptEx /
-# GetAcceptExSockaddrs (in mswsock.lib) plus the usual ws2_32 Winsock.
-# Promote both to PUBLIC so every consumer (industrial-hmi,
-# industrial-hmi-console, view-layer test binaries) inherits them
-# transitively.
 if(WIN32)
-    target_link_libraries(objectsIntegration PUBLIC ws2_32 mswsock)
+    # Boost.Asio acceptor uses IOCP AcceptEx / GetAcceptExSockaddrs
+    # (in mswsock.lib) on top of ws2_32 Winsock.
+    target_link_libraries(objectsTcp PUBLIC ws2_32 mswsock)
+endif()
+
+# ----- objectsMqtt -----
+# MQTT 3.1.1 hand-rolled client (no paho dep). Implements both
+# TelemetryPublisher and TelemetrySubscriber so the same socket
+# carries outbound publishes and inbound subscriptions.
+add_library(objectsMqtt OBJECT)
+target_sources(objectsMqtt
+    PRIVATE
+        src/integration/MqttPacket.cpp
+        src/integration/MqttClient.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/integration/MqttPacket.h
+            src/integration/MqttClient.h
+)
+target_link_libraries(objectsMqtt
+    PUBLIC
+        objectsIntegrationCore
+        ${BOOST_TARGET}
+        Threads::Threads
+)
+if(WIN32)
+    target_link_libraries(objectsMqtt PUBLIC ws2_32 mswsock)
 endif()
 
 # OPC-UA Layer - Industrial protocol backend. Lives in its own object
@@ -520,7 +577,7 @@ if(BUILD_OPCUA_BACKEND)
         PUBLIC
             objectsCore         # Logger, used by Open62541Server
             objectsModel        # ProductionModel, used by FactoryNodeMap
-            objectsIntegration  # IntegrationBackend, base of OpcUaBackend
+            objectsIntegrationCore  # IntegrationBackend, base of OpcUaBackend
             open62541::open62541
             Threads::Threads
     )
@@ -749,7 +806,7 @@ target_link_libraries(objectsView
     PUBLIC
         objectsPresenter
         objectsAppGtk
-        objectsIntegration
+        objectsIntegrationCore
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
 )
@@ -777,7 +834,12 @@ target_sources(industrial-hmi
         src/main.cpp
 )
 
-# Link all object libraries
+# Link all object libraries.
+# The executable is the one place that pulls in every concrete
+# protocol library -- the upstream object libs only depend on the
+# core integration lib (interfaces + manager). This keeps "what
+# wire protocols does this binary speak" answerable from the
+# link line.
 target_link_libraries(industrial-hmi
     PRIVATE
         objectsModel
@@ -786,7 +848,9 @@ target_link_libraries(industrial-hmi
         objectsAppGtk
         objectsPresenter
         objectsView
-        objectsIntegration
+        objectsIntegrationCore
+        objectsTcp
+        objectsMqtt
         objectsMl
         Threads::Threads
 )
@@ -825,7 +889,9 @@ target_link_libraries(industrial-hmi-console
         objectsCore
         objectsPresenter
         objectsConsole
-        objectsIntegration
+        objectsIntegrationCore
+        objectsTcp
+        objectsMqtt
         objectsMl
         Threads::Threads
 )
