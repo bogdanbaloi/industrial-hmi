@@ -87,7 +87,9 @@ void registerMqttBackend(
     // through the client's TelemetryPublisher interface -- it doesn't
     // know or care that the underlying transport is MQTT.
     app::integration::ProductionTelemetryBridge::Config bridgeConfig;
-    bridgeConfig.topicPrefix = config.getMqttTopicPrefix();
+    bridgeConfig.topicPrefix   = config.getMqttTopicPrefix();
+    bridgeConfig.emitPlainText = config.isMqttEmitPlainText();
+    bridgeConfig.emitJson      = config.isMqttEmitJson();
     productionBridgeOut =
         std::make_unique<app::integration::ProductionTelemetryBridge>(
             *client,

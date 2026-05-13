@@ -438,6 +438,8 @@ target_sources(objectsIntegration
         src/integration/MqttPacket.cpp
         src/integration/MqttClient.cpp
         src/integration/ProductionTelemetryBridge.cpp
+        src/integration/PlainTextTelemetryFormatter.cpp
+        src/integration/JsonTelemetryFormatter.cpp
         src/integration/SensorIngestBridge.cpp
     PUBLIC
         FILE_SET HEADERS
@@ -452,6 +454,9 @@ target_sources(objectsIntegration
             src/integration/MqttClient.h
             src/integration/TelemetryPublisher.h
             src/integration/TelemetrySubscriber.h
+            src/integration/TelemetryPayloadFormatter.h
+            src/integration/PlainTextTelemetryFormatter.h
+            src/integration/JsonTelemetryFormatter.h
             src/integration/ProductionTelemetryBridge.h
             src/integration/SensorIngestBridge.h
 )

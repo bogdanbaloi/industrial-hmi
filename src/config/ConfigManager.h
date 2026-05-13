@@ -279,6 +279,18 @@ public:
                         defaults::kMqttTopicPrefix);
     }
 
+    // Wire-format flags for the outbound telemetry bridge. Both
+    // default to the historical wire shape (plain text on per-field
+    // topics) -- enabling JSON is opt-in for deployments that have a
+    // SCADA / DCS subscriber wanting consolidated documents.
+    [[nodiscard]] bool isMqttEmitPlainText() const {
+        return getValue("network.mqtt.emit_plain_text", "true") == "true";
+    }
+
+    [[nodiscard]] bool isMqttEmitJson() const {
+        return getValue("network.mqtt.emit_json", "false") == "true";
+    }
+
     // MQTT inbound (subscriber) side. Off by default -- most
     // deployments only PUBLISH telemetry outbound; the demo flips
     // this on so a `mosquitto_pub` on the configured topics drives

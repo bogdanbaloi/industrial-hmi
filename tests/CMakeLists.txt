@@ -172,7 +172,9 @@ add_test(NAME MqttClientTest COMMAND test_mqtt_client)
 # so this test never opens a socket.
 add_executable(test_production_telemetry_bridge
     ProductionTelemetryBridgeTest.cpp
-    ${CMAKE_SOURCE_DIR}/src/integration/ProductionTelemetryBridge.cpp)
+    ${CMAKE_SOURCE_DIR}/src/integration/ProductionTelemetryBridge.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/PlainTextTelemetryFormatter.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/JsonTelemetryFormatter.cpp)
 target_link_libraries(test_production_telemetry_bridge PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes

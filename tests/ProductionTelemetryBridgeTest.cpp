@@ -298,3 +298,110 @@ TEST(ProductionTelemetryBridgeTest, NoPublishIfWireNotCalled) {
     model.fireSystemState(SystemState::RUNNING);
     EXPECT_TRUE(pub.entries.empty());
 }
+
+// Config flags: JSON-only, dual emit
+
+TEST(ProductionTelemetryBridgeTest, JsonOnlyEmitsOnlyJsonTopics) {
+    CapturingPublisher pub;
+    CapturingProductionModel model;
+    ProductionTelemetryBridge::Config cfg;
+    cfg.topicPrefix = "test-prefix";
+    cfg.emitPlainText = false;
+    cfg.emitJson = true;
+    ProductionTelemetryBridge bridge(pub, model, cfg);
+    bridge.wire();
+
+    model.fireSystemState(SystemState::RUNNING);
+    EquipmentStatus es;
+    es.equipmentId = 7;
+    es.status = 2;
+    es.supplyLevel = 42;
+    model.fireEquipment(es);
+    QualityCheckpoint qc;
+    qc.checkpointId = 5;
+    qc.passRate = 98.7f;
+    qc.status = 0;
+    model.fireQuality(qc);
+
+    // Each event is one publish on the JSON topology (consolidated
+    // per entity), so 3 events -> 3 publishes.
+    ASSERT_EQ(pub.entries.size(), 3U);
+    EXPECT_EQ(pub.entries[0].topic,   "test-prefix/state/json");
+    EXPECT_EQ(pub.entries[0].payload, R"({"state":"running"})");
+    EXPECT_EQ(pub.entries[1].topic,   "test-prefix/equipment/7/json");
+    EXPECT_EQ(pub.entries[1].payload,
+              R"({"id":7,"state":"processing","supply":42})");
+    EXPECT_EQ(pub.entries[2].topic,   "test-prefix/quality/5/json");
+    EXPECT_EQ(pub.entries[2].payload,
+              R"({"id":5,"rate":98.7,"status":"passing"})");
+}
+
+TEST(ProductionTelemetryBridgeTest, DualEmitProducesBothShapes) {
+    CapturingPublisher pub;
+    CapturingProductionModel model;
+    ProductionTelemetryBridge::Config cfg;
+    cfg.topicPrefix = "test-prefix";
+    cfg.emitPlainText = true;
+    cfg.emitJson = true;
+    ProductionTelemetryBridge bridge(pub, model, cfg);
+    bridge.wire();
+
+    EquipmentStatus es;
+    es.equipmentId = 1;
+    es.status = 1;
+    es.supplyLevel = 85;
+    model.fireEquipment(es);
+
+    // Plain emits /state + /supply (2); JSON emits /json (1). Order
+    // matches Config flag order: plain first, then JSON.
+    ASSERT_EQ(pub.entries.size(), 3U);
+    EXPECT_EQ(pub.entries[0].topic,   "test-prefix/equipment/1/state");
+    EXPECT_EQ(pub.entries[0].payload, "online");
+    EXPECT_EQ(pub.entries[1].topic,   "test-prefix/equipment/1/supply");
+    EXPECT_EQ(pub.entries[1].payload, "85");
+    EXPECT_EQ(pub.entries[2].topic,   "test-prefix/equipment/1/json");
+    EXPECT_EQ(pub.entries[2].payload,
+              R"({"id":1,"state":"online","supply":85})");
+}
+
+TEST(ProductionTelemetryBridgeTest, JsonQualityFormatsRateWithOneDecimal) {
+    CapturingPublisher pub;
+    CapturingProductionModel model;
+    ProductionTelemetryBridge::Config cfg;
+    cfg.topicPrefix = "test-prefix";
+    cfg.emitPlainText = false;
+    cfg.emitJson = true;
+    ProductionTelemetryBridge bridge(pub, model, cfg);
+    bridge.wire();
+
+    QualityCheckpoint qc;
+    qc.checkpointId = 1;
+    qc.passRate = 100.0f;
+    qc.status = 1;
+    model.fireQuality(qc);
+
+    ASSERT_EQ(pub.entries.size(), 1U);
+    EXPECT_EQ(pub.entries[0].payload,
+              R"({"id":1,"rate":100.0,"status":"warning"})");
+}
+
+TEST(ProductionTelemetryBridgeTest, NoFormattersMeansNoPublishes) {
+    CapturingPublisher pub;
+    CapturingProductionModel model;
+    ProductionTelemetryBridge::Config cfg;
+    cfg.topicPrefix = "test-prefix";
+    cfg.emitPlainText = false;
+    cfg.emitJson = false;
+    ProductionTelemetryBridge bridge(pub, model, cfg);
+    bridge.wire();
+
+    model.fireSystemState(SystemState::RUNNING);
+    EquipmentStatus es;
+    es.equipmentId = 0;
+    model.fireEquipment(es);
+
+    // Bridge still subscribes (the callbacks fire), but with no
+    // formatters in the list the fan-out has nothing to do. This
+    // matches the documented contract: empty list -> silent bridge.
+    EXPECT_TRUE(pub.entries.empty());
+}
