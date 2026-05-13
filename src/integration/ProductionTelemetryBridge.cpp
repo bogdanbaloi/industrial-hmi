@@ -1,39 +1,27 @@
 #include "src/integration/ProductionTelemetryBridge.h"
 
-#include "src/model/ProductionTypes.h"
+#include "src/integration/JsonTelemetryFormatter.h"
+#include "src/integration/PlainTextTelemetryFormatter.h"
 
-// Some platforms (Windows wingdi via Boost.Asio in other TUs) define
-// ERROR as 0 macro -- keep this TU clean even if it's reordered with
-// a transitive include in the future.
-#ifdef ERROR
-#  undef ERROR
-#endif
-
-#include <format>
 #include <utility>
 
 namespace app::integration {
 
 namespace {
 
-/// Stable wire-protocol string for SystemState. Mirrors the TCP
-/// backend's mapping so subscribers consuming both transports see the
-/// same vocabulary.
-const char* systemStateName(model::SystemState s) {
-    switch (s) {
-        case model::SystemState::IDLE:        return "idle";
-        case model::SystemState::RUNNING:     return "running";
-        case model::SystemState::ERROR:       return "error";
-        case model::SystemState::CALIBRATION: return "calibration";
+/// Build the default formatter list from Config flags. Caller-supplied
+/// formatters bypass this entirely and pass through the second ctor.
+std::vector<std::unique_ptr<TelemetryPayloadFormatter>>
+makeDefaultFormatters(const ProductionTelemetryBridge::Config& config) {
+    std::vector<std::unique_ptr<TelemetryPayloadFormatter>> formatters;
+    if (config.emitPlainText) {
+        formatters.push_back(std::make_unique<PlainTextTelemetryFormatter>());
     }
-    return "unknown";
+    if (config.emitJson) {
+        formatters.push_back(std::make_unique<JsonTelemetryFormatter>());
+    }
+    return formatters;
 }
-
-/// EquipmentStatus.status convention from ProductionTypes.h:
-///   0 idle, 1 processing, 3 error.
-/// Topics publish a boolean "ok"/"fault" view to keep subscribers
-/// from having to learn the integer codes.
-constexpr int kEquipmentStatusError = 3;
 
 }  // namespace
 
@@ -43,35 +31,44 @@ ProductionTelemetryBridge::ProductionTelemetryBridge(
         Config config)
     : publisher_(publisher),
       production_(production),
-      config_(std::move(config)) {}
+      config_(std::move(config)),
+      formatters_(makeDefaultFormatters(config_)) {}
+
+ProductionTelemetryBridge::ProductionTelemetryBridge(
+        TelemetryPublisher& publisher,
+        model::ProductionModel& production,
+        Config config,
+        std::vector<std::unique_ptr<TelemetryPayloadFormatter>> formatters)
+    : publisher_(publisher),
+      production_(production),
+      config_(std::move(config)),
+      formatters_(std::move(formatters)) {}
 
 void ProductionTelemetryBridge::wire() {
-    // SystemState changes -- one publish per transition.
+    // SystemState changes: fan out to every registered formatter.
     production_.onSystemStateChanged(
         [this](model::SystemState s) {
-            publisher_.publish(config_.topicPrefix + "/state",
-                               systemStateName(s));
+            for (auto& f : formatters_) {
+                f->publishSystemState(publisher_, config_.topicPrefix, s);
+            }
         });
 
-    // Equipment status -- per equipment id, current state.
+    // Equipment status: same fan-out. Each formatter decides whether
+    // to split per field (plain text) or consolidate into one JSON
+    // document.
     production_.onEquipmentStatusChanged(
         [this](const model::EquipmentStatus& es) {
-            const auto topic = std::format(
-                "{}/equipment/{}/state",
-                config_.topicPrefix, es.equipmentId);
-            const char* state =
-                (es.status == kEquipmentStatusError) ? "fault" : "ok";
-            publisher_.publish(topic, state);
+            for (auto& f : formatters_) {
+                f->publishEquipment(publisher_, config_.topicPrefix, es);
+            }
         });
 
-    // Quality checkpoints -- per checkpoint id, current pass rate.
+    // Quality checkpoints: same fan-out pattern.
     production_.onQualityCheckpointChanged(
         [this](const model::QualityCheckpoint& qc) {
-            const auto topic = std::format(
-                "{}/quality/{}/rate",
-                config_.topicPrefix, qc.checkpointId);
-            publisher_.publish(topic,
-                               std::format("{:.1f}", qc.passRate));
+            for (auto& f : formatters_) {
+                f->publishQuality(publisher_, config_.topicPrefix, qc);
+            }
         });
 }
 

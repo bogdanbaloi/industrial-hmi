@@ -46,3 +46,4 @@ scripts/ml/__pycache__/
 scripts/ml/benchmark-results.json
 **/__pycache__/
 *.pyc
+.venv/
