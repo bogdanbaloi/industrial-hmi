@@ -45,7 +45,11 @@ SCENARIOS = {
 
 
 def build_command(script: Path, args: argparse.Namespace) -> list[str]:
-    cmd: list[str] = [sys.executable, str(script)]
+    # `-u` forces line-buffered stdout/stderr on the child so each
+    # `print()` lands in our tail pump immediately. Without it,
+    # Python's default block buffering swallows everything until the
+    # child exits, which makes the orchestrator look frozen.
+    cmd: list[str] = [sys.executable, "-u", str(script)]
     if args.duration is not None:
         cmd += ["--duration", str(args.duration)]
     if args.seed is not None:

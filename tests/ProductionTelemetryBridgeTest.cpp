@@ -148,36 +148,55 @@ TEST(ProductionTelemetryBridgeTest, MapsEverySystemStateToStableString) {
 
 // Equipment
 
-TEST(ProductionTelemetryBridgeTest, EquipmentNonErrorStatusMapsToOk) {
+TEST(ProductionTelemetryBridgeTest, EquipmentStatusPublishesNamedState) {
     CapturingPublisher pub;
     CapturingProductionModel model;
     ProductionTelemetryBridge bridge(pub, model, makeConfig());
     bridge.wire();
 
-    EquipmentStatus es;
-    es.equipmentId = 7;
-    es.status = 1;  // processing
-    model.fireEquipment(es);
+    // Every status integer maps to its own named string -- so a SCADA
+    // can distinguish "idle but ready" from "actively processing"
+    // without learning the integer codes.
+    const struct {
+        int statusInt;
+        const char* expectedName;
+    } cases[] = {
+        {0, "offline"},
+        {1, "online"},
+        {2, "processing"},
+        {3, "error"},
+    };
 
-    ASSERT_EQ(pub.entries.size(), 1U);
-    EXPECT_EQ(pub.entries[0].topic,   "test-prefix/equipment/7/state");
-    EXPECT_EQ(pub.entries[0].payload, "ok");
+    for (const auto& c : cases) {
+        pub.entries.clear();
+        EquipmentStatus es;
+        es.equipmentId = 7;
+        es.status = c.statusInt;
+        es.supplyLevel = 42;
+        model.fireEquipment(es);
+        ASSERT_EQ(pub.entries.size(), 2U)  // state + supply
+            << "status=" << c.statusInt;
+        EXPECT_EQ(pub.entries[0].topic,   "test-prefix/equipment/7/state");
+        EXPECT_EQ(pub.entries[0].payload, c.expectedName)
+            << "status=" << c.statusInt;
+    }
 }
 
-TEST(ProductionTelemetryBridgeTest, EquipmentErrorStatusMapsToFault) {
+TEST(ProductionTelemetryBridgeTest, EquipmentStatusAlsoPublishesSupplyLevel) {
     CapturingPublisher pub;
     CapturingProductionModel model;
     ProductionTelemetryBridge bridge(pub, model, makeConfig());
     bridge.wire();
 
     EquipmentStatus es;
-    es.equipmentId = 42;
-    es.status = 3;  // error
+    es.equipmentId = 1;
+    es.status = 1;
+    es.supplyLevel = 85;
     model.fireEquipment(es);
 
-    ASSERT_EQ(pub.entries.size(), 1U);
-    EXPECT_EQ(pub.entries[0].topic,   "test-prefix/equipment/42/state");
-    EXPECT_EQ(pub.entries[0].payload, "fault");
+    ASSERT_EQ(pub.entries.size(), 2U);
+    EXPECT_EQ(pub.entries[1].topic,   "test-prefix/equipment/1/supply");
+    EXPECT_EQ(pub.entries[1].payload, "85");
 }
 
 // Quality
@@ -191,9 +210,11 @@ TEST(ProductionTelemetryBridgeTest, QualityCheckpointPublishesPassRate) {
     QualityCheckpoint qc;
     qc.checkpointId = 5;
     qc.passRate = 98.7f;
+    qc.status = 0;
     model.fireQuality(qc);
 
-    ASSERT_EQ(pub.entries.size(), 1U);
+    // Rate + status = two publishes per checkpoint event.
+    ASSERT_EQ(pub.entries.size(), 2U);
     EXPECT_EQ(pub.entries[0].topic,   "test-prefix/quality/5/rate");
     EXPECT_EQ(pub.entries[0].payload, "98.7");
 }
@@ -209,8 +230,38 @@ TEST(ProductionTelemetryBridgeTest, QualityFormatsRateWithOneDecimal) {
     qc.passRate = 100.0f;
     model.fireQuality(qc);
 
-    ASSERT_EQ(pub.entries.size(), 1U);
+    ASSERT_EQ(pub.entries.size(), 2U);
     EXPECT_EQ(pub.entries[0].payload, "100.0");
+}
+
+TEST(ProductionTelemetryBridgeTest, QualityCheckpointPublishesNamedStatus) {
+    CapturingPublisher pub;
+    CapturingProductionModel model;
+    ProductionTelemetryBridge bridge(pub, model, makeConfig());
+    bridge.wire();
+
+    const struct {
+        int statusInt;
+        const char* expectedName;
+    } cases[] = {
+        {0, "passing"},
+        {1, "warning"},
+        {2, "critical"},
+    };
+
+    for (const auto& c : cases) {
+        pub.entries.clear();
+        QualityCheckpoint qc;
+        qc.checkpointId = 2;
+        qc.passRate = 95.0f;
+        qc.status = c.statusInt;
+        model.fireQuality(qc);
+        ASSERT_EQ(pub.entries.size(), 2U)  // rate + status
+            << "status=" << c.statusInt;
+        EXPECT_EQ(pub.entries[1].topic,   "test-prefix/quality/2/status");
+        EXPECT_EQ(pub.entries[1].payload, c.expectedName)
+            << "status=" << c.statusInt;
+    }
 }
 
 // Topic prefix
@@ -227,9 +278,13 @@ TEST(ProductionTelemetryBridgeTest, RespectsCustomTopicPrefix) {
     es.status = 0;
     model.fireEquipment(es);
 
-    ASSERT_EQ(pub.entries.size(), 2U);
+    // Equipment event now publishes both /state and /supply -- so
+    // a single fire produces 2 entries, plus the 1 system-state
+    // entry = 3 total.
+    ASSERT_EQ(pub.entries.size(), 3U);
     EXPECT_EQ(pub.entries[0].topic, "factory42/lineA/state");
     EXPECT_EQ(pub.entries[1].topic, "factory42/lineA/equipment/1/state");
+    EXPECT_EQ(pub.entries[2].topic, "factory42/lineA/equipment/1/supply");
 }
 
 // Lifecycle: bridge before wire() doesn't publish
