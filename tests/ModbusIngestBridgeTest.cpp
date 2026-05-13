@@ -191,3 +191,145 @@ TEST(ModbusIngestBridgeTest, InputRegisterTypeRoutesIdentically) {
     m.type = RegisterType::InputRegister;
     bridge.onRegisterChanged(m, 1);
 }
+
+// ===== ModbusIngestBridge: EquipmentSupplyLevel ==================
+
+namespace {
+
+RegisterMapping supplyLevelMapping(std::uint32_t entityId,
+                                   float scale = 1.0f) {
+    RegisterMapping m;
+    m.slaveId  = 1;
+    m.type     = RegisterType::HoldingRegister;
+    m.address  = 0x0010;
+    m.field    = FieldKind::EquipmentSupplyLevel;
+    m.entityId = entityId;
+    m.scale    = scale;
+    return m;
+}
+
+RegisterMapping passRateMapping(std::uint32_t entityId,
+                                float scale = 1.0f) {
+    RegisterMapping m;
+    m.slaveId  = 1;
+    m.type     = RegisterType::HoldingRegister;
+    m.address  = 0x0020;
+    m.field    = FieldKind::QualityPassRate;
+    m.entityId = entityId;
+    m.scale    = scale;
+    return m;
+}
+
+}  // namespace
+
+TEST(ModbusIngestBridgeTest, SupplyLevelPassesScaleOneThrough) {
+    // Direct-percent PLC: raw register IS the percent already.
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model, setEquipmentSupplyLevel(0U, 73)).Times(1);
+    bridge.onRegisterChanged(supplyLevelMapping(0, 1.0f), 73);
+}
+
+TEST(ModbusIngestBridgeTest, SupplyLevelAppliesScaleZeroPointOne) {
+    // Fixed-point PLC: raw 850 means 85.0%, so scale 0.1 -> int 85.
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model, setEquipmentSupplyLevel(1U, 85)).Times(1);
+    bridge.onRegisterChanged(supplyLevelMapping(1, 0.1f), 850);
+}
+
+TEST(ModbusIngestBridgeTest, SupplyLevelDedupsRepeatedSameValue) {
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    // First call only -- subsequent identical reads collapse.
+    EXPECT_CALL(model, setEquipmentSupplyLevel(0U, 42)).Times(1);
+    for (int i = 0; i < 5; ++i) {
+        bridge.onRegisterChanged(supplyLevelMapping(0), 42);
+    }
+}
+
+TEST(ModbusIngestBridgeTest, SupplyLevelFiresAgainAfterChange) {
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    {
+        testing::InSequence seq;
+        EXPECT_CALL(model, setEquipmentSupplyLevel(0U, 50)).Times(1);
+        EXPECT_CALL(model, setEquipmentSupplyLevel(0U, 60)).Times(1);
+        EXPECT_CALL(model, setEquipmentSupplyLevel(0U, 50)).Times(1);
+    }
+    bridge.onRegisterChanged(supplyLevelMapping(0), 50);
+    bridge.onRegisterChanged(supplyLevelMapping(0), 50);  // dedup
+    bridge.onRegisterChanged(supplyLevelMapping(0), 60);
+    bridge.onRegisterChanged(supplyLevelMapping(0), 50);
+}
+
+TEST(ModbusIngestBridgeTest, SupplyLevelTracksEntitiesIndependently) {
+    // Cross-entity dedup must NOT pollute -- entity 0's reading
+    // doesn't suppress entity 1's identical reading.
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model, setEquipmentSupplyLevel(0U, 75)).Times(1);
+    EXPECT_CALL(model, setEquipmentSupplyLevel(1U, 75)).Times(1);
+    bridge.onRegisterChanged(supplyLevelMapping(0), 75);
+    bridge.onRegisterChanged(supplyLevelMapping(1), 75);
+}
+
+TEST(ModbusIngestBridgeTest, SupplyLevelOutOfRangeStillForwards) {
+    // Out-of-range ids skip the dedup cache (no array slot) but
+    // still forward to the model so it can enforce its own bounds.
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model, setEquipmentSupplyLevel(99U, 50)).Times(1);
+    bridge.onRegisterChanged(supplyLevelMapping(99), 50);
+}
+
+// ===== ModbusIngestBridge: QualityPassRate ========================
+
+TEST(ModbusIngestBridgeTest, PassRatePassesScaleOneThrough) {
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model, setQualityPassRate(0U, 95.0f)).Times(1);
+    bridge.onRegisterChanged(passRateMapping(0, 1.0f), 95);
+}
+
+TEST(ModbusIngestBridgeTest, PassRateAppliesScaleZeroPointOne) {
+    // Raw 987 with scale 0.1 -> ~98.7%. Float matcher with epsilon
+    // because 987.0f * 0.1f doesn't land bit-exact on 98.7f
+    // (the literal 98.7f rounds toward a different mantissa than
+    // the multiplication result). FloatEq tolerates 4 ULPs.
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model,
+                setQualityPassRate(1U, testing::FloatEq(98.7f))).Times(1);
+    bridge.onRegisterChanged(passRateMapping(1, 0.1f), 987);
+}
+
+TEST(ModbusIngestBridgeTest, PassRateDedupsRepeatedSameValue) {
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model, setQualityPassRate(0U, 95.5f)).Times(1);
+    for (int i = 0; i < 5; ++i) {
+        bridge.onRegisterChanged(passRateMapping(0, 0.1f), 955);
+    }
+}
+
+TEST(ModbusIngestBridgeTest, PassRateAcrossDifferentScalesEmitsAgain) {
+    // Same raw value, different scale -> different output -> two
+    // separate setter calls. Edge case for operators who reconfigure
+    // the scale at runtime (rare but worth pinning).
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model, setQualityPassRate(0U, 100.0f)).Times(1);
+    EXPECT_CALL(model, setQualityPassRate(0U, 10.0f)).Times(1);
+    bridge.onRegisterChanged(passRateMapping(0, 1.0f), 100);
+    bridge.onRegisterChanged(passRateMapping(0, 0.1f), 100);
+}
+
+TEST(ModbusIngestBridgeTest, PassRateTracksEntitiesIndependently) {
+    MockProductionModel model;
+    ModbusIngestBridge bridge(model);
+    EXPECT_CALL(model, setQualityPassRate(0U, 95.0f)).Times(1);
+    EXPECT_CALL(model, setQualityPassRate(1U, 95.0f)).Times(1);
+    bridge.onRegisterChanged(passRateMapping(0), 95);
+    bridge.onRegisterChanged(passRateMapping(1), 95);
+}

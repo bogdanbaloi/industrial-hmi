@@ -61,12 +61,15 @@ public:
 private:
     model::ProductionModel& model_;
 
-    /// Per-equipment "last enabled bit we propagated". `nullopt` =
-    /// no previous observation, so the first reading always fires.
-    /// Capped to keep the array on the stack; matches the existing
-    /// OpcUaIngestBridge cap.
+    /// Per-entity dedup caches. `nullopt` = no observation yet, so
+    /// the first reading always fires through. Arrays stay on the
+    /// stack; the size cap matches OpcUaIngestBridge so a runaway
+    /// operator config can't blow this up.
     static constexpr std::size_t kMaxTrackedEquipment = 16;
+    static constexpr std::size_t kMaxTrackedQuality   = 16;
     std::array<std::optional<bool>, kMaxTrackedEquipment> lastEnabled_{};
+    std::array<std::optional<int>, kMaxTrackedEquipment> lastSupplyLevel_{};
+    std::array<std::optional<float>, kMaxTrackedQuality> lastPassRate_{};
 };
 
 }  // namespace app::integration::modbus
