@@ -208,6 +208,25 @@ if(BUILD_MODBUS_BACKEND)
         tests_includes
     )
     add_test(NAME ModbusPduTest COMMAND test_modbus_pdu)
+
+    # Modbus: TCP client -- exercises the codec over a real loopback
+    # socket against a FakeModbusSlave (ephemeral port, std::jthread
+    # acceptor). Same shape as MqttClientTest: no external dep, no
+    # background broker.
+    add_executable(test_modbus_client
+        ModbusClientTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPdu.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusClient.cpp)
+    target_link_libraries(test_modbus_client PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        ${BOOST_TARGET}
+        Threads::Threads
+    )
+    if(WIN32)
+        target_link_libraries(test_modbus_client PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME ModbusClientTest COMMAND test_modbus_client)
 endif()
 
 # Presenter: BackendHealthPresenter -- IntegrationManager backends ->

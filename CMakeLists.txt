@@ -548,10 +548,12 @@ if(BUILD_MODBUS_BACKEND)
     target_sources(objectsModbus
         PRIVATE
             src/integration/modbus/ModbusPdu.cpp
+            src/integration/modbus/ModbusClient.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
                 src/integration/modbus/ModbusPdu.h
+                src/integration/modbus/ModbusClient.h
     )
     target_link_libraries(objectsModbus
         PUBLIC
