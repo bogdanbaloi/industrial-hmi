@@ -239,6 +239,23 @@ if(BUILD_MODBUS_BACKEND)
         tests_includes
     )
     add_test(NAME ModbusIngestBridgeTest COMMAND test_modbus_ingest_bridge)
+
+    # Modbus: poll loop -- jthread + cadence + dispatch. Uses a
+    # FakeModbusReader (in-memory ModbusReader impl) so no socket,
+    # no FakeModbusSlave required. start/stop sanity tests use a
+    # short pollInterval; the bulk of the coverage is on the
+    # synchronous pollOnce() entry point.
+    add_executable(test_modbus_poll_loop
+        ModbusPollLoopTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPdu.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusIngestBridge.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPollLoop.cpp)
+    target_link_libraries(test_modbus_poll_loop PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        Threads::Threads
+    )
+    add_test(NAME ModbusPollLoopTest COMMAND test_modbus_poll_loop)
 endif()
 
 # Presenter: BackendHealthPresenter -- IntegrationManager backends ->

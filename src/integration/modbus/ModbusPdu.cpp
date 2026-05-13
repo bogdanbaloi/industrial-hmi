@@ -1,5 +1,34 @@
 #include "src/integration/modbus/ModbusPdu.h"
 
+#include "src/integration/modbus/ModbusReader.h"
+
+namespace app::core {
+
+/// Diagnostic strings for Modbus I/O failures. Specialised on
+/// ModbusReader::IoError so every concrete reader (ModbusClient TCP
+/// today, hypothetical RTU client tomorrow) routes through one table.
+/// Lives in this TU because it's the lowest common ancestor across
+/// the modbus stack -- linker resolves the symbol whether a binary
+/// pulls in just the codec, the client, or the poll loop.
+template<>
+std::string Result<int, app::integration::modbus::ModbusReader::IoError>::
+errorToString(app::integration::modbus::ModbusReader::IoError error) {
+    using enum app::integration::modbus::ModbusReader::IoError;
+    switch (error) {
+        case ConnectionFailed: return "Modbus: TCP connect failed";
+        case Timeout:          return "Modbus: operation timed out";
+        case WriteFailed:      return "Modbus: socket write failed";
+        case ReadFailed:       return "Modbus: socket read failed";
+        case Disconnected:     return "Modbus: peer closed connection";
+        case DecodeFailed:     return "Modbus: response failed PDU decode";
+        case ServerException:  return "Modbus: slave returned exception";
+        case InvalidQuantity:  return "Modbus: register quantity outside [1,125]";
+    }
+    return "Modbus: unknown I/O error";
+}
+
+}  // namespace app::core
+
 namespace app::core {
 
 /// Diagnostic strings for ModbusPdu decoder failures. Routed through

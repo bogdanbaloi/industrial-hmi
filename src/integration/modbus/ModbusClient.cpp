@@ -255,24 +255,8 @@ ModbusClient::readImpl(FunctionCode fc,
 
 }  // namespace app::integration::modbus
 
-namespace app::core {
-
-/// Diagnostic strings for ModbusClient I/O failures.
-template<>
-std::string Result<int, app::integration::modbus::ModbusClient::IoError>::
-errorToString(app::integration::modbus::ModbusClient::IoError error) {
-    using enum app::integration::modbus::ModbusClient::IoError;
-    switch (error) {
-        case ConnectionFailed: return "Modbus: TCP connect failed";
-        case Timeout:          return "Modbus: operation timed out";
-        case WriteFailed:      return "Modbus: socket write failed";
-        case ReadFailed:       return "Modbus: socket read failed";
-        case Disconnected:     return "Modbus: peer closed connection";
-        case DecodeFailed:     return "Modbus: response failed PDU decode";
-        case ServerException:  return "Modbus: slave returned exception";
-        case InvalidQuantity:  return "Modbus: register quantity outside [1,125]";
-    }
-    return "Modbus: unknown I/O error";
-}
-
-}  // namespace app::core
+// NOTE: errorToString specialisation for ModbusReader::IoError lives
+// in ModbusPdu.cpp alongside the DecodeError table. That TU is the
+// lowest common ancestor of every consumer (Client, PollLoop, future
+// RTU client), so the linker resolves the symbol regardless of which
+// modbus components a binary pulls in.

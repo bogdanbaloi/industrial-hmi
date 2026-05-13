@@ -2,6 +2,7 @@
 
 #include "src/core/Result.h"
 #include "src/integration/modbus/ModbusPdu.h"
+#include "src/integration/modbus/ModbusReader.h"
 
 #include <atomic>
 #include <chrono>
@@ -64,7 +65,7 @@ namespace app::integration::modbus {
 ///   * D -- depends on ModbusPdu (pure functions); the bridge above
 ///     depends on this concrete class through a thin adapter when /
 ///     if a second transport (RTU over serial) appears.
-class ModbusClient {
+class ModbusClient : public ModbusReader {
 public:
     struct Config {
         std::string host{"127.0.0.1"};
@@ -73,32 +74,14 @@ public:
         std::chrono::milliseconds requestTimeout{1000};
     };
 
-    /// IoError lumps transport-level and decoder-level failures into
-    /// one enum so callers have a single switch / log site. The
-    /// decoder's DecodeError stays internal to the codec; this
-    /// surface is the one the poll loop and metrics use.
-    enum class IoError : std::uint8_t {
-        ConnectionFailed,   ///< TCP connect refused / DNS failed
-        Timeout,            ///< Operation exceeded the configured deadline
-        WriteFailed,        ///< Socket write returned an error
-        ReadFailed,         ///< Socket read returned an error
-        Disconnected,       ///< Peer closed the socket mid-stream
-        DecodeFailed,       ///< MBAP / PDU framing rejected by decoder
-        ServerException,    ///< Slave returned exception PDU; see
-                            ///< lastExceptionCode()
-        InvalidQuantity,    ///< Quantity outside [1, 125]
-    };
+    /// Re-export the interface's error enum at class scope so legacy
+    /// call sites that wrote `ModbusClient::IoError::Foo` stay valid
+    /// after the DIP refactor. New code should prefer
+    /// `ModbusReader::IoError` directly.
+    using IoError = ModbusReader::IoError;
 
     explicit ModbusClient(Config config);
-    ~ModbusClient();
-
-    // Owns a socket + io_context. No copies, no moves -- the io_context
-    // is non-movable in older Boost and keeping the API symmetric
-    // makes the lifetime story unambiguous.
-    ModbusClient(const ModbusClient&) = delete;
-    ModbusClient& operator=(const ModbusClient&) = delete;
-    ModbusClient(ModbusClient&&) = delete;
-    ModbusClient& operator=(ModbusClient&&) = delete;
+    ~ModbusClient() override;
 
     /// FC03 -- read holding registers from `unitId` starting at
     /// `address` for `quantity` registers (1..125). Reconnects on
@@ -106,25 +89,22 @@ public:
     [[nodiscard]] app::core::Result<std::vector<std::uint16_t>, IoError>
     readHoldingRegisters(std::uint8_t unitId,
                          std::uint16_t address,
-                         std::uint16_t quantity);
+                         std::uint16_t quantity) override;
 
     /// FC04 -- read input registers (R-only). Same shape as FC03.
     [[nodiscard]] app::core::Result<std::vector<std::uint16_t>, IoError>
     readInputRegisters(std::uint8_t unitId,
                        std::uint16_t address,
-                       std::uint16_t quantity);
+                       std::uint16_t quantity) override;
 
     /// True iff the socket is currently open and the last operation
-    /// did not observe a transport-level failure. Drives the I/O
-    /// panel pill colour for the Modbus backend.
-    [[nodiscard]] bool isConnected() const noexcept;
+    /// did not observe a transport-level failure.
+    [[nodiscard]] bool isConnected() const noexcept override;
 
     /// Last exception code returned by the slave, if any. Cleared on
-    /// the next successful read. Surfaced in the I/O panel tooltip
-    /// so an operator can tell "remote rejected" apart from "wire
-    /// broken".
+    /// the next successful read.
     [[nodiscard]] std::optional<ExceptionCode>
-    lastExceptionCode() const noexcept;
+    lastExceptionCode() const noexcept override;
 
 private:
     /// Shared body of FC03 / FC04 -- the only difference is the
