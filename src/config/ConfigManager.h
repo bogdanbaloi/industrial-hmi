@@ -333,6 +333,43 @@ public:
         return getInt("network.modbus.equipment_count", 3);
     }
 
+    /// Analog supply-level block (FieldKind::EquipmentSupplyLevel).
+    /// Equipment N reads from supply_base + N. Default 0x10 keeps
+    /// the block clear of the boolean block (0..N-1) so a small PLC
+    /// firmware doesn't have to re-page on a single contiguous read.
+    [[nodiscard]] int getModbusSupplyBaseAddress() const {
+        return getInt("network.modbus.supply_base_address",
+                      defaults::kModbusSupplyBaseAddress);
+    }
+    /// Linear scale on raw supply-register values before hand-off
+    /// to setEquipmentSupplyLevel. Default 1.0 (raw IS percent);
+    /// flip to 0.1 for fixed-point PLCs that ship raw 850 for 85%.
+    [[nodiscard]] float getModbusSupplyScale() const {
+        return getFloat("network.modbus.supply_scale",
+                        defaults::kModbusSupplyScale);
+    }
+
+    /// Analog pass-rate block (FieldKind::QualityPassRate). One
+    /// register per quality checkpoint, address = quality_base + N.
+    /// Default 0x20 keeps the three blocks non-overlapping under
+    /// the default counts.
+    [[nodiscard]] int getModbusQualityBaseAddress() const {
+        return getInt("network.modbus.quality_base_address",
+                      defaults::kModbusQualityBaseAddress);
+    }
+    /// Linear scale on raw pass-rate registers. Default 0.1 (raw
+    /// 987 -> 98.7 %) -- the most common SCADA fixed-point
+    /// convention for percentage readings.
+    [[nodiscard]] float getModbusQualityScale() const {
+        return getFloat("network.modbus.quality_scale",
+                        defaults::kModbusQualityScale);
+    }
+    /// How many quality checkpoints the bridge ingests over Modbus.
+    /// Matches SimulatedModel's three checkpoints by default.
+    [[nodiscard]] int getModbusQualityCount() const {
+        return getInt("network.modbus.quality_count", 3);
+    }
+
     // MQTT inbound (subscriber) side. Off by default -- most
     // deployments only PUBLISH telemetry outbound; the demo flips
     // this on so a `mosquitto_pub` on the configured topics drives
@@ -455,6 +492,20 @@ private:
         if (it == config_.end()) return defaultValue;
         try {
             return std::stoi(it->second);
+        } catch (...) {
+            return defaultValue;
+        }
+    }
+
+    /// Same shape as getInt -- used by the Modbus scale factors
+    /// (`network.modbus.supply_scale`, `quality_scale`) so a PLC's
+    /// fixed-point convention can be tuned per deployment without
+    /// rebuilding.
+    float getFloat(const std::string& key, float defaultValue) const {
+        auto it = config_.find(key);
+        if (it == config_.end()) return defaultValue;
+        try {
+            return std::stof(it->second);
         } catch (...) {
             return defaultValue;
         }

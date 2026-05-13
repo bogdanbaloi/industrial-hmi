@@ -85,6 +85,15 @@ constexpr int kModbusPort                  = 5020;
 constexpr int kModbusPollIntervalMs        = 1000;
 constexpr int kModbusConnectTimeoutMs      = 2000;
 constexpr int kModbusRequestTimeoutMs      = 1000;
+/// Analog register block defaults. The three blocks
+/// (EquipmentEnabled / EquipmentSupplyLevel / QualityPassRate)
+/// live at 0x00 / 0x10 / 0x20 so a default-config simulator +
+/// dashboard render the analog bars alongside the boolean switches
+/// without any operator tuning.
+constexpr int kModbusSupplyBaseAddress     = 0x10;
+constexpr float kModbusSupplyScale         = 1.0F;
+constexpr int kModbusQualityBaseAddress    = 0x20;
+constexpr float kModbusQualityScale        = 0.1F;
 
 // Product status values (used in DB, UI, and presenter layers)
 constexpr const char* kStatusActive = "Active";

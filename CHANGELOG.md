@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Model: analog inbound surface (A3)
+
+- **`ProductionModel` gains two analog setters** alongside the
+  existing `setEquipmentEnabled` boolean:
+  `setEquipmentSupplyLevel(id, level)` (int 0..100 %) and
+  `setQualityPassRate(id, rate)` (float 0..100 %). Ingest bridges
+  (Modbus today, MQTT / OPC-UA in a follow-up) translate inbound
+  sensor data through these setters.
+- **`SimulatedModel` yields to external data.** The new
+  `externalPassRateOverrides_` set tracks checkpoints that an
+  ingest bridge has taken ownership of; `tickSimulation()` stops
+  drifting `passRate` for those ids so the next tick does not
+  clobber a fresh reading. `supplyLevel` was never touched by the
+  simulator autonomously, so its setter is a simple clamp + emit.
+  Matches what an HMI talking to a real PLC actually wants: the
+  simulator is a development convenience, real data is
+  authoritative.
+- **Modbus ingest dispatches to both new setters.** Two new
+  `FieldKind` values join `EquipmentEnabled` in
+  `ModbusRegisterMap`: `EquipmentSupplyLevel` and `QualityPassRate`.
+  A `scale` field on `RegisterMapping` handles the common PLC
+  fixed-point conventions (raw 850 with scale 0.1 -> 85.0%).
+  Bridge dedup gains parallel int / float caches so a noisy
+  sensor reporting the same percent across consecutive polls
+  does not generate redundant setter calls.
+- **Default register map exposes three blocks.** `main.cpp`'s
+  `registerModbusBackend` now registers boolean enabled bits at
+  the configured base, analog supply registers at `0x10`, and
+  analog quality registers at `0x20`. All three blocks are
+  per-deployment retargetable via `network.modbus.*` config keys
+  (`supply_base_address` / `supply_scale` / `quality_base_address`
+  / `quality_scale` / `quality_count`).
+- **`examples/modbus_slave_simulator.py` drives the analog
+  blocks too.** A new `analog_driver` task sweeps supply 30..100%
+  (triangular) and pass rate 92..99% (small cosine drift) at half
+  the boolean toggler's cadence. End-to-end demo now shows moving
+  level bars on the dashboard, not just ON/OFF switches.
+- **Tests: 21 new.** 9 `SimulatedModelTest` cases (set + clamp
+  upper / clamp lower / out-of-range / pass-rate sticky-after-set
+  / unknown-id). 12 `ModbusIngestBridgeTest` cases (scale 1.0 +
+  scale 0.1, dedup, per-entity independence, scale-change re-fires,
+  float matcher for 987 * 0.1f). `Mock` + `Capturing` ProductionModel
+  subclasses in three other test files pick up matching overrides.
+
 ### Modbus master backend (A1)
 
 - **End-to-end Modbus/TCP master.** New `objectsModbus` object library
