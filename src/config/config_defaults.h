@@ -76,6 +76,16 @@ constexpr const char* kOpcUaClientApplicationName = "Industrial HMI OPC-UA Clien
 /// real PLCs typically advertise a vendor-specific root.
 constexpr const char* kOpcUaClientIngestPrefix    = "Factory";
 
+// Modbus master backend. IANA-registered Modbus/TCP port is 502 but
+// that's privileged on Linux; the demo simulator listens on 5020 so
+// the HMI can run unprivileged against pymodbus. Real deployments
+// point host/port at a PLC.
+constexpr const char* kModbusHost          = "127.0.0.1";
+constexpr int kModbusPort                  = 5020;
+constexpr int kModbusPollIntervalMs        = 1000;
+constexpr int kModbusConnectTimeoutMs      = 2000;
+constexpr int kModbusRequestTimeoutMs      = 1000;
+
 // Product status values (used in DB, UI, and presenter layers)
 constexpr const char* kStatusActive = "Active";
 constexpr const char* kStatusInactive = "Inactive";

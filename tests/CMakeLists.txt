@@ -256,6 +256,28 @@ if(BUILD_MODBUS_BACKEND)
         Threads::Threads
     )
     add_test(NAME ModbusPollLoopTest COMMAND test_modbus_poll_loop)
+
+    # Modbus: backend aggregate -- IntegrationBackend lifecycle wired
+    # over the four collaborators. Uses a real ModbusClient pointed at
+    # a closed port (port 1) so connect attempts fail fast; the test
+    # cares about start/stop/dtor mechanics, not transport success.
+    add_executable(test_modbus_backend
+        ModbusBackendTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPdu.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusClient.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusIngestBridge.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusPollLoop.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusBackend.cpp)
+    target_link_libraries(test_modbus_backend PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        ${BOOST_TARGET}
+        Threads::Threads
+    )
+    if(WIN32)
+        target_link_libraries(test_modbus_backend PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME ModbusBackendTest COMMAND test_modbus_backend)
 endif()
 
 # Presenter: BackendHealthPresenter -- IntegrationManager backends ->

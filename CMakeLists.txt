@@ -551,6 +551,7 @@ if(BUILD_MODBUS_BACKEND)
             src/integration/modbus/ModbusClient.cpp
             src/integration/modbus/ModbusIngestBridge.cpp
             src/integration/modbus/ModbusPollLoop.cpp
+            src/integration/modbus/ModbusBackend.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
@@ -560,6 +561,7 @@ if(BUILD_MODBUS_BACKEND)
                 src/integration/modbus/ModbusRegisterMap.h
                 src/integration/modbus/ModbusIngestBridge.h
                 src/integration/modbus/ModbusPollLoop.h
+                src/integration/modbus/ModbusBackend.h
     )
     target_link_libraries(objectsModbus
         PUBLIC
@@ -791,6 +793,9 @@ target_link_libraries(industrial-hmi
 if(BUILD_OPCUA_BACKEND)
     target_link_libraries(industrial-hmi PRIVATE objectsOpcUa)
 endif()
+if(BUILD_MODBUS_BACKEND)
+    target_link_libraries(industrial-hmi PRIVATE objectsModbus)
+endif()
 
 # Windows: Boost.Asio requires Winsock + mswsock (AcceptEx,
 # GetAcceptExSockaddrs are in mswsock.lib, not ws2_32). StartupDialog
@@ -826,6 +831,9 @@ target_link_libraries(industrial-hmi-console
 )
 if(BUILD_OPCUA_BACKEND)
     target_link_libraries(industrial-hmi-console PRIVATE objectsOpcUa)
+endif()
+if(BUILD_MODBUS_BACKEND)
+    target_link_libraries(industrial-hmi-console PRIVATE objectsModbus)
 endif()
 if(WIN32)
     # Boost.Asio's TCP server uses IOCP AcceptEx / GetAcceptExSockaddrs

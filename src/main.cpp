@@ -16,6 +16,13 @@
 #  include "src/integration/opcua/Open62541Client.h"
 #  include "src/integration/opcua/Open62541Server.h"
 #endif
+#ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
+#  include "src/integration/modbus/ModbusBackend.h"
+#  include "src/integration/modbus/ModbusClient.h"
+#  include "src/integration/modbus/ModbusIngestBridge.h"
+#  include "src/integration/modbus/ModbusPollLoop.h"
+#  include "src/integration/modbus/ModbusRegisterMap.h"
+#endif
 #include "src/model/DatabaseManager.h"
 #include "src/model/SimulatedModel.h"
 #include <cstdint>
@@ -202,6 +209,79 @@ void registerOpcUaClient(
 }
 #endif
 
+#ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
+/// Build + register the Modbus master backend. Composes the four
+/// pieces (client + register map + ingest bridge + poll loop) and
+/// hands ownership to the IntegrationManager. Same shape as
+/// registerOpcUaBackend / registerMqttBackend; lives in a helper so
+/// main() stays under the readability-function-size threshold.
+///
+/// The register map is built from a single block of contiguous
+/// holding-register addresses: equipment[i] maps to register
+/// `baseAddress + i` on `slaveId`. This is the simplest mapping that
+/// demonstrates the abstraction; a future schema would let the JSON
+/// list individual (address, field, entity) triples. Keeps the MVP
+/// JSON tiny.
+void registerModbusBackend(
+        app::integration::IntegrationManager& integration,
+        app::config::ConfigManager& config,
+        app::core::Logger& logger) {
+    namespace modbus = app::integration::modbus;
+
+    modbus::ModbusClient::Config clientConfig;
+    clientConfig.host = config.getModbusHost();
+    clientConfig.port =
+        static_cast<std::uint16_t>(config.getModbusPort());
+    clientConfig.connectTimeout =
+        std::chrono::milliseconds{config.getModbusConnectTimeoutMs()};
+    clientConfig.requestTimeout =
+        std::chrono::milliseconds{config.getModbusRequestTimeoutMs()};
+    auto client = std::make_unique<modbus::ModbusClient>(
+        std::move(clientConfig));
+
+    // Build the register map: one holding register per equipment
+    // slot, all on the same slave, contiguous addresses starting at
+    // baseAddress. Future PRs replace this with a JSON-driven list
+    // of explicit mappings.
+    auto map = std::make_unique<modbus::ModbusRegisterMap>();
+    const auto slaveId =
+        static_cast<std::uint8_t>(config.getModbusSlaveId());
+    const auto baseAddress =
+        static_cast<std::uint16_t>(config.getModbusEquipmentBaseAddress());
+    const auto equipmentCount = config.getModbusEquipmentCount();
+    for (int i = 0; i < equipmentCount; ++i) {
+        modbus::RegisterMapping mapping;
+        mapping.slaveId  = slaveId;
+        mapping.type     = modbus::RegisterType::HoldingRegister;
+        mapping.address  =
+            static_cast<std::uint16_t>(baseAddress + i);
+        mapping.field    = modbus::FieldKind::EquipmentEnabled;
+        mapping.entityId = static_cast<std::uint32_t>(i);
+        map->add(mapping);
+    }
+
+    auto bridge = std::make_unique<modbus::ModbusIngestBridge>(
+        app::model::SimulatedModel::instance());
+
+    modbus::ModbusPollLoop::Config pollConfig;
+    pollConfig.pollInterval =
+        std::chrono::milliseconds{config.getModbusPollIntervalMs()};
+    // The poll loop holds references; create it AFTER its
+    // collaborators and pass them in. ModbusBackend then takes
+    // ownership of all four via unique_ptr.
+    auto pollLoop = std::make_unique<modbus::ModbusPollLoop>(
+        *client, *map, *bridge, pollConfig);
+
+    integration.registerBackend(
+        std::make_unique<modbus::ModbusBackend>(
+            std::move(client),
+            std::move(map),
+            std::move(bridge),
+            std::move(pollLoop),
+            logger));
+}
+#endif
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -290,6 +370,15 @@ int main(int argc, char* argv[]) {
         if (config.isOpcUaClientEnabled()) {
             registerOpcUaClient(integration, config, bootstrap.logger(),
                                 opcuaIngestBridge);
+        }
+#endif
+
+#ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
+        // Modbus master backend. Disabled by default; opt-in per
+        // deployment via app-config.json. Compiled out entirely when
+        // BUILD_MODBUS_BACKEND=OFF.
+        if (config.isModbusBackendEnabled()) {
+            registerModbusBackend(integration, config, bootstrap.logger());
         }
 #endif
 

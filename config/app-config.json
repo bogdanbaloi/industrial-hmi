@@ -277,6 +277,17 @@
           "topic_prefix": "Factory"
         }
       }
+    },
+    "modbus": {
+      "enabled": false,
+      "host": "127.0.0.1",
+      "port": 5020,
+      "slave_id": 1,
+      "equipment_base_address": 0,
+      "equipment_count": 3,
+      "poll_interval_ms": 1000,
+      "connect_timeout_ms": 2000,
+      "request_timeout_ms": 1000
     }
   }
 }

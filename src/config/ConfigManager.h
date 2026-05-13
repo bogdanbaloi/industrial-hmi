@@ -291,6 +291,48 @@ public:
         return getValue("network.mqtt.emit_json", "false") == "true";
     }
 
+    // Modbus master backend (polls a remote slave / PLC). Off by
+    // default like every other backend; opt in per deployment.
+    [[nodiscard]] bool isModbusBackendEnabled() const {
+        return getValue("network.modbus.enabled", "false") == "true";
+    }
+    [[nodiscard]] std::string getModbusHost() const {
+        return getValue("network.modbus.host", defaults::kModbusHost);
+    }
+    [[nodiscard]] int getModbusPort() const {
+        return getInt("network.modbus.port", defaults::kModbusPort);
+    }
+    [[nodiscard]] int getModbusPollIntervalMs() const {
+        return getInt("network.modbus.poll_interval_ms",
+                      defaults::kModbusPollIntervalMs);
+    }
+    [[nodiscard]] int getModbusConnectTimeoutMs() const {
+        return getInt("network.modbus.connect_timeout_ms",
+                      defaults::kModbusConnectTimeoutMs);
+    }
+    [[nodiscard]] int getModbusRequestTimeoutMs() const {
+        return getInt("network.modbus.request_timeout_ms",
+                      defaults::kModbusRequestTimeoutMs);
+    }
+    /// Slave unit ID the demo polls. PLCs typically use 1; multi-
+    /// slave deployments override per register in the future. For
+    /// the MVP a single unit covers the simulator end-to-end.
+    [[nodiscard]] int getModbusSlaveId() const {
+        return getInt("network.modbus.slave_id", 1);
+    }
+    /// First holding-register address that maps to equipment 0's
+    /// enabled bit. Equipment N reads from `kBase + N`. Keeps the
+    /// JSON tiny while still giving operators one knob to relocate
+    /// the block.
+    [[nodiscard]] int getModbusEquipmentBaseAddress() const {
+        return getInt("network.modbus.equipment_base_address", 0);
+    }
+    /// How many equipment slots the bridge ingests over Modbus.
+    /// Matches SimulatedModel's three lines (A/B/C) by default.
+    [[nodiscard]] int getModbusEquipmentCount() const {
+        return getInt("network.modbus.equipment_count", 3);
+    }
+
     // MQTT inbound (subscriber) side. Off by default -- most
     // deployments only PUBLISH telemetry outbound; the demo flips
     // this on so a `mosquitto_pub` on the configured topics drives
