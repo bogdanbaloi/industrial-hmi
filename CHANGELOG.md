@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modbus master backend (A1)
+
+- **End-to-end Modbus/TCP master.** New `objectsModbus` object library
+  parallel to `objectsOpcUa`: hand-rolled MBAP framing + PDU codec
+  (FC03 + FC04 read), Boost.Asio synchronous client with
+  `io_context::run_for()` timeouts and lazy reconnect, register map +
+  ingest bridge wiring values into `ProductionModel.setEquipmentEnabled`,
+  `std::jthread` poll loop with interruptible cooperative cancellation,
+  `ModbusBackend` IntegrationBackend aggregate. Zero new third-party
+  dependencies -- the wire codec is hand-rolled the same way MQTT is.
+- **Strategy + DIP via `ModbusReader` interface.** The poll loop
+  depends on the abstract reader, not the concrete `ModbusClient`.
+  Tests run against a `FakeModbusReader` (in-memory map of register
+  values) so the cadence + dispatch + change-detection logic is
+  covered without opening a socket.
+- **I/O panel pill comes for free.** `ModbusBackend::name() = "Modbus"`
+  flows through `BackendHealthPresenter` -> `BackendHealthViewModel`
+  -> view layer without any UI code change. State semantics:
+  Disconnected (loop stopped) / Connecting (loop up, no successful
+  read yet) / Connected (last read OK) / Degraded (had successes but
+  client currently down). metricsSummary formats
+  `"N regs | ok / fail"` for the tooltip.
+- **Config:** `network.modbus.{enabled,host,port,slave_id,
+  equipment_base_address,equipment_count,poll_interval_ms,
+  connect_timeout_ms,request_timeout_ms}` block in `app-config.json`,
+  off by default. `BUILD_MODBUS_BACKEND=ON` default in CMake; an
+  off build links cleanly without modbus symbols.
+- **Tests: 54 across 5 suites.** ModbusPdu (19 -- happy paths,
+  framing failure classes, exception responses, 125-register
+  boundary), ModbusClient (8 -- loopback via FakeModbusSlave +
+  reconnect + exception caching), ModbusIngestBridge (12 -- dedup,
+  per-entity tracking, out-of-range guard), ModbusPollLoop (9 --
+  pollOnce dispatch + start/stop cycle + cancellation budget +
+  destructor join), ModbusBackend (6 -- lifecycle aggregate). All
+  green; FakeModbusSlave mirrors the MqttClientTest acceptor pattern.
+- **Demo:** `examples/modbus_slave_simulator.py` (pymodbus 3.7
+  async slave) toggles holding registers round-robin so the HMI's
+  equipment switches flip in lockstep. Integrated into
+  `examples/factory_simulation.py` so a single command runs four
+  protocols (TCP + MQTT + OPC-UA + Modbus) against the HMI.
+
 ### Edge AI inference -- runtime plugin
 
 - **`industrial_ml_ort` shared module + facade pattern.** All ORT-

@@ -4,3 +4,11 @@
 # routine upstream patches.
 paho-mqtt>=2.0,<3.0
 asyncua>=1.1,<2.0
+# Pin pymodbus to the 3.7 line: the legacy `ModbusSlaveContext`
+# datastore API is still available, the simulator uses 0-based
+# register addressing without the "address >= 1" rejection added
+# later, and `StartAsyncTcpServer` blocks until cancellation as the
+# example expects. Newer 3.x lines may work via the compat shim in
+# `modbus_slave_simulator.py` but ship deprecation warnings; older
+# pre-3.7 lines lack the async API entirely.
+pymodbus>=3.7,<3.8
