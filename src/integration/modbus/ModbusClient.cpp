@@ -68,8 +68,10 @@ void ModbusClient::disconnect() noexcept {
     // action for "cancel reported pending ops" or "close reported
     // ENOTCONN" -- the next operation will reconnect from scratch.
     boost::system::error_code ec;
-    (void)asio_->socket.cancel(ec);
-    (void)asio_->socket.close(ec);
+    // NOLINTNEXTLINE(bugprone-unused-return-value)
+    asio_->socket.cancel(ec);
+    // NOLINTNEXTLINE(bugprone-unused-return-value)
+    asio_->socket.close(ec);
     // Drain any leftover handlers so the next run_for starts clean.
     asio_->io.restart();
 }
@@ -86,7 +88,8 @@ ModbusClient::ensureConnected() {
     // dropped: failure to close a half-dead socket is what we're
     // recovering from in the first place.
     boost::system::error_code closeEc;
-    (void)asio_->socket.close(closeEc);
+    // NOLINTNEXTLINE(bugprone-unused-return-value)
+    asio_->socket.close(closeEc);
     asio_->io.restart();
 
     boost::asio::ip::tcp::resolver resolver(asio_->io);
@@ -111,7 +114,8 @@ ModbusClient::ensureConnected() {
 
     if (connectEc == kPendingError) {
         boost::system::error_code cancelEc;
-        (void)asio_->socket.cancel(cancelEc);
+        // NOLINTNEXTLINE(bugprone-unused-return-value)
+        asio_->socket.cancel(cancelEc);
         asio_->io.run();  // drain the now-cancelled handler
         return Res(core::Err, IoError::Timeout);
     }
