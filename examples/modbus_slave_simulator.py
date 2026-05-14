@@ -223,8 +223,15 @@ async def analog_driver(context: ModbusServerContext,
 
 async def duration_watchdog(stop_event: asyncio.Event,
                             duration_s: float | None) -> None:
-    """Auto-stop after `--duration` seconds. None == run forever."""
+    """Auto-stop after `--duration` seconds. None == run forever.
+
+    When duration is None the task must NOT return immediately --
+    `main_async` waits on this task as part of FIRST_COMPLETED, so an
+    immediate return would tear the simulator down right after start.
+    Park on stop_event instead, which only fires on ctrl-C / SIGTERM.
+    """
     if duration_s is None:
+        await stop_event.wait()
         return
     try:
         await asyncio.wait_for(stop_event.wait(), duration_s)
