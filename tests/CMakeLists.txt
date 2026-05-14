@@ -832,6 +832,12 @@ if(WIN32)
     target_link_libraries(test_products_page             PRIVATE ws2_32)
     target_link_libraries(test_settings_page             PRIVATE ws2_32)
     target_link_libraries(test_dialog_manager            PRIVATE ws2_32)
+    # Historian bridge test pulls objectsModel transitively for the
+    # SimulatedModel singleton, which drags in DatabaseManager.cpp
+    # and its Boost.Asio winsock_init. The HistoryPage GUI test does
+    # too via VIEW_COMMON_LIBS (objectsModel).
+    target_link_libraries(test_historian_bridge          PRIVATE ws2_32)
+    target_link_libraries(test_history_page              PRIVATE ws2_32)
 endif()
 
 # Console scenario tests -- end-to-end MVP regression suite
