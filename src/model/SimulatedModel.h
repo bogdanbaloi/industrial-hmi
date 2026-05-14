@@ -178,7 +178,16 @@ public:
     /// authoritative source until process restart.
     void setQualityPassRate(uint32_t checkpointId, float rate) override {
         if (!qualityCheckpoints_.count(checkpointId)) {
-            if (logger_) {
+            // Distinguish "model not yet initialised" (expected
+            // startup race -- backends begin polling before
+            // initializeDemoData() runs; the first few inbound
+            // values legitimately land on an empty model) from
+            // "real misconfig" (a deployment whose register map
+            // points at a checkpoint id beyond what the operator
+            // configured). Empty map = startup race, drop silently.
+            // Non-empty map + unknown id = warn so the operator
+            // catches the mistake.
+            if (logger_ && !qualityCheckpoints_.empty()) {
                 logger_->warn("Model: setQualityPassRate unknown id {}",
                               checkpointId);
             }

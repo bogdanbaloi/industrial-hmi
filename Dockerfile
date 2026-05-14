@@ -216,7 +216,15 @@ export DISPLAY=:0
 # buffer -- no title bars, no concept of maximise. fluxbox provides
 # the WM surface the GTK app's "default_mode: fullscreen" hint
 # needs to actually fill the viewport.
-fluxbox -display :0 &
+#
+# stderr -> /dev/null: fluxbox probes ~40 session.* settings on
+# every cold start and logs "Failed to read: session.X / Setting
+# default value" for each one whose value isn't already on disk.
+# All defaults are fine for the container -- the noise is purely
+# cosmetic and clutters `docker compose up` output. The startup
+# script forwards everything else (Xvfb / x11vnc / websockify /
+# HMI logs) so we don't lose anything actionable.
+fluxbox -display :0 2>/dev/null &
 sleep 1
 
 # Bridge X11 -> VNC.
@@ -242,6 +250,17 @@ exec industrial-hmi
 EOF
 
 RUN chmod +x /home/hmi/start-gtk.sh
+
+# Pre-seed a minimal fluxbox config so the WM does not spam stderr
+# with `Failed to read: session.*` lines on every cold start. Without
+# this, fluxbox probes ~40 settings, fails each lookup, logs a warning
+# per failed key, and falls back to the same defaults we want anyway.
+# An empty init file short-circuits the probes -- fluxbox sees a
+# config exists, treats every absent key as "use default", silently.
+RUN mkdir -p /home/hmi/.fluxbox && \
+    touch /home/hmi/.fluxbox/init && \
+    touch /home/hmi/.fluxbox/keys && \
+    touch /home/hmi/.fluxbox/menu
 
 # Default landing page: redirect root + /vnc.html to a pre-parametrised
 # URL that (1) scales the remote desktop to fit the browser viewport
