@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Time-series Historian (B1)
+
+- **New `objectsHistorian` OBJECT library** with two narrow
+  interfaces -- `HistoryWriter` (`write(span<HistoryRecord>)`) and
+  `HistoryReader` (`query(field, entity, range)` + `totalSamples()`).
+  ISP applied: bridges depend on the writer; the UI depends on the
+  reader; `SqliteHistoryStore` happens to implement both.
+- **`SqliteHistoryStore`** opens a WAL-mode SQLite file at the
+  configured path. Schema is a single
+  `samples(ts, field, entity, value)` table with a compound index
+  on `(field, entity, ts)` for typical "this series, last hour"
+  lookups. Batched INSERT inside one transaction; failed open is
+  surfaced as a startup warning and the historian is skipped (no
+  crash). 10 hermetic tests against `:memory:`.
+- **`HistorianBridge`** subscribes to the existing
+  `ProductionModel` signals (quality pass rate, equipment supply
+  level, system state) and batches rows to the writer. Buffer
+  flushes inline on size cap (32 rows default) or age cap (5 s);
+  destructor flushes the tail. No new model surface required.
+- **GTK `HistoryPage`** mounted only when the historian opened
+  successfully. Queries the reader on construction and after
+  every range change (1h / 24h / 7d) / Refresh. Six `TrendChart`
+  widgets: 3 quality pass rates + 3 equipment supply levels,
+  sharing the 0..100 axis the dashboard gauges already use.
+- **`historian.enabled = false` by default** in `app-config.json`;
+  the docker-compose demo config flips it on so the page is
+  visible from the first `docker compose up`.
+- **19 new tests total** (10 store + 5 bridge + 4 page); 54/54
+  passing on Linux.
+
 ### Model: analog inbound surface (A3)
 
 - **`ProductionModel` gains two analog setters** alongside the

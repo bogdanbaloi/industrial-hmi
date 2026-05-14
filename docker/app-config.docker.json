@@ -285,5 +285,11 @@
       "connect_timeout_ms": 2000,
       "request_timeout_ms": 1000
     }
+  },
+  "historian": {
+    "enabled": true,
+    "db_path": "data/historian.sqlite",
+    "batch_size": 32,
+    "batch_age_ms": 5000
   }
 }
