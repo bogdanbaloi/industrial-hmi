@@ -373,32 +373,35 @@ void registerHistorian(
     bridgeOut->wire();
 }
 
-}  // namespace
-
-int main(int argc, char* argv[]) {
 #ifdef _WIN32
-    // Use Cairo renderer on Windows to avoid GL flicker in GTK4.
+/// Windows-only platform init: Cairo renderer override + UTF-8 setup.
+///
+/// Three independent layers must agree on UTF-8 for the console
+/// front-end to render translated strings correctly:
+///   1. Win32 console codepage (cmd.exe stdout).
+///   2. CRT locale (.UTF-8 supported from Windows 10 v1803; older
+///      systems silently fall back).
+///   3. Binary mode on stdout -- stops the CRT from LF->CRLF +
+///      codepage conversion when stdout is a pipe (Git Bash /
+///      mintty). Without this, UTF-8 bytes become Latin-1 mojibake.
+///
+/// Extracted from main() so the readability-function-size lint stays
+/// under the 150-line threshold.
+void initWindowsConsole() {
     _putenv_s("GSK_RENDERER", "cairo");
-
-    // Windows UTF-8 setup (three layers all need cooperating):
-    //
-    //   1. Win32 console codepage -- applies when stdout is attached to
-    //      a real cmd.exe console.
-    //   2. CRT locale -- controls how the C runtime interprets bytes
-    //      in fprintf / wide-conversion paths. ".UTF-8" is supported
-    //      from Windows 10 v1803; older systems silently fall back.
-    //   3. Binary mode on stdout -- stops the CRT from doing LF->CRLF
-    //      and codepage conversion when stdout is a pipe (Git Bash /
-    //      mintty). Without this, UTF-8 sequences get mangled into
-    //      Latin-1 mojibake even though bytes were written verbatim.
-    //
-    // All three together cover console + pipe + mintty use cases.
-    // Harmless for the GTK build; critical for the console frontend.
     ::SetConsoleOutputCP(CP_UTF8);
     ::SetConsoleCP(CP_UTF8);
     std::setlocale(LC_ALL, ".UTF-8");
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stderr), _O_BINARY);
+}
+#endif
+
+}  // namespace
+
+int main(int argc, char* argv[]) {
+#ifdef _WIN32
+    initWindowsConsole();
 #endif
 
     // Top-level exception guard. Every fatal condition at or below
@@ -429,14 +432,10 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
 
-        // Historian. Optional, opt-in via `historian.enabled` in
-        // app-config.json. Store + bridge live on this stack frame so
-        // their destructors flush the last batch on graceful shutdown
-        // (the bridge's dtor calls flush(); the store's dtor closes
-        // the SQLite handle once the bridge has released its mutex).
-        // Order matters: store outlives bridge (bridge holds a
-        // HistoryWriter& into the store), so the bridge is declared
-        // after the store -- C++ destroys in reverse declaration.
+        // Historian store + bridge -- store outlives bridge (bridge
+        // holds a HistoryWriter& into the store), declared in
+        // construction order so destruction reverses. See
+        // registerHistorian() above for the wiring + degraded path.
         std::unique_ptr<app::historian::SqliteHistoryStore> historyStore;
         std::unique_ptr<app::historian::HistorianBridge>    historianBridge;
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
