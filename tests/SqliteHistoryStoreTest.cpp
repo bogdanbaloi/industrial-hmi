@@ -165,6 +165,143 @@ TEST(SqliteHistoryStoreTest, EmptyBatchIsAcceptableNoop) {
     EXPECT_EQ(store->totalSamples(), 0U);
 }
 
+// --- Tiered retention -----------------------------------------------
+//
+// Demotion folds raw rows into bucket-aligned aggregates and deletes
+// the originals. Tests assert: row counts before/after, bucket-aligned
+// timestamps, averaging within a bucket, query routing by range.
+
+TEST(SqliteHistoryStoreTest, DemoteRawToMinuteAveragesPerBucket) {
+    auto store = makeStore();
+
+    // Three samples inside the same 1-minute bucket (60_000 ms) for
+    // checkpoint 0, with values 80, 90, 100 -> average 90.
+    constexpr std::int64_t kMinuteMs = 60'000;
+    const std::array<HistoryRecord, 3> batch{
+        HistoryRecord{1000,  FieldKind::QualityPassRate, 0,  80.0F},
+        HistoryRecord{30000, FieldKind::QualityPassRate, 0,  90.0F},
+        HistoryRecord{59000, FieldKind::QualityPassRate, 0, 100.0F},
+    };
+    EXPECT_EQ(store->write(batch), 3U);
+
+    // Demote everything older than 60s -> all three rows fold into
+    // one minute-bucket row with average 90.
+    const std::size_t demoted =
+        store->demoteOlderThan(app::historian::Tier::Raw,
+                               app::historian::Tier::Minute,
+                               /*olderThanMs=*/60'000,
+                               /*bucketMs=*/kMinuteMs);
+    EXPECT_EQ(demoted, 3U);
+    EXPECT_EQ(store->rowCount(app::historian::Tier::Raw),    0U);
+    EXPECT_EQ(store->rowCount(app::historian::Tier::Minute), 1U);
+}
+
+TEST(SqliteHistoryStoreTest, DemoteIsAtomicOnEmptyRange) {
+    auto store = makeStore();
+    const std::array<HistoryRecord, 1> batch{
+        HistoryRecord{50, FieldKind::QualityPassRate, 0, 50.0F}};
+    store->write(batch);
+
+    // olderThanMs lower than any row -> nothing to demote, both tables
+    // remain consistent (raw count unchanged, minute count zero).
+    const std::size_t demoted =
+        store->demoteOlderThan(app::historian::Tier::Raw,
+                               app::historian::Tier::Minute,
+                               /*olderThanMs=*/0,
+                               /*bucketMs=*/60'000);
+    EXPECT_EQ(demoted, 0U);
+    EXPECT_EQ(store->rowCount(app::historian::Tier::Raw),    1U);
+    EXPECT_EQ(store->rowCount(app::historian::Tier::Minute), 0U);
+}
+
+TEST(SqliteHistoryStoreTest, QueryRoutesShortRangeToRaw) {
+    auto store = makeStore();
+    // Raw row at t=500; minute row at t=120000 (well separated).
+    store->write(std::array<HistoryRecord, 1>{
+        HistoryRecord{500, FieldKind::QualityPassRate, 0, 11.0F}});
+
+    // Range 1 hour -> Raw tier. Should see the raw row only.
+    constexpr std::int64_t kOneHourMs = 3'600'000;
+    const auto rows = store->query(
+        FieldKind::QualityPassRate, 0,
+        QueryRange{.fromMs = 0, .toMs = kOneHourMs});
+    ASSERT_EQ(rows.size(), 1U);
+    EXPECT_FLOAT_EQ(rows[0].value, 11.0F);
+}
+
+TEST(SqliteHistoryStoreTest, QueryRoutesMediumRangeToMinute) {
+    auto store = makeStore();
+
+    // Stage one raw row + demote -> creates a minute-tier row.
+    constexpr std::int64_t kMinuteMs = 60'000;
+    store->write(std::array<HistoryRecord, 1>{
+        HistoryRecord{1000, FieldKind::QualityPassRate, 0, 42.0F}});
+    store->demoteOlderThan(app::historian::Tier::Raw,
+                           app::historian::Tier::Minute,
+                           /*olderThanMs=*/kMinuteMs,
+                           /*bucketMs=*/kMinuteMs);
+
+    // 12-hour range -> Minute tier. Should see the demoted row.
+    constexpr std::int64_t kTwelveHoursMs = 12 * 3'600'000;
+    const auto rows = store->query(
+        FieldKind::QualityPassRate, 0,
+        QueryRange{.fromMs = 0, .toMs = kTwelveHoursMs});
+    ASSERT_EQ(rows.size(), 1U);
+    EXPECT_FLOAT_EQ(rows[0].value, 42.0F);
+}
+
+TEST(SqliteHistoryStoreTest, QueryRoutesLongRangeToHour) {
+    auto store = makeStore();
+
+    // Push a raw row, demote raw->minute, then minute->hour. End
+    // state: one row only in the hour tier.
+    constexpr std::int64_t kMinuteMs = 60'000;
+    constexpr std::int64_t kHourMs   = 3'600'000;
+    store->write(std::array<HistoryRecord, 1>{
+        HistoryRecord{1000, FieldKind::QualityPassRate, 0, 99.0F}});
+    store->demoteOlderThan(app::historian::Tier::Raw,
+                           app::historian::Tier::Minute,
+                           kMinuteMs, kMinuteMs);
+    store->demoteOlderThan(app::historian::Tier::Minute,
+                           app::historian::Tier::Hour,
+                           kHourMs,   kHourMs);
+
+    EXPECT_EQ(store->rowCount(app::historian::Tier::Hour), 1U);
+
+    // 48-hour range -> Hour tier.
+    constexpr std::int64_t kTwoDaysMs = 48 * 3'600'000;
+    const auto rows = store->query(
+        FieldKind::QualityPassRate, 0,
+        QueryRange{.fromMs = 0, .toMs = kTwoDaysMs});
+    ASSERT_EQ(rows.size(), 1U);
+    EXPECT_FLOAT_EQ(rows[0].value, 99.0F);
+}
+
+TEST(SqliteHistoryStoreTest, DemoteBucketsAreAlignedToBucketStart) {
+    auto store = makeStore();
+
+    constexpr std::int64_t kMinuteMs = 60'000;
+    // Two samples in the same 1-min bucket starting at t=120_000.
+    store->write(std::array<HistoryRecord, 2>{
+        HistoryRecord{125'000, FieldKind::QualityPassRate, 0, 70.0F},
+        HistoryRecord{150'000, FieldKind::QualityPassRate, 0, 80.0F}});
+
+    store->demoteOlderThan(app::historian::Tier::Raw,
+                           app::historian::Tier::Minute,
+                           /*olderThanMs=*/200'000,
+                           /*bucketMs=*/kMinuteMs);
+
+    // 12-hour range to force routing to Minute tier.
+    const auto rows = store->query(
+        FieldKind::QualityPassRate, 0,
+        QueryRange{.fromMs = 0,
+                   .toMs   = 12 * 3'600'000});
+    ASSERT_EQ(rows.size(), 1U);
+    // Bucket start = floor(125_000 / 60_000) * 60_000 = 120_000.
+    EXPECT_EQ(rows[0].timestampMs, 120'000);
+    EXPECT_FLOAT_EQ(rows[0].value, 75.0F);  // avg(70, 80)
+}
+
 TEST(SqliteHistoryStoreTest, SystemStateRoundTrip) {
     // SystemState is stored as REAL in the schema even though it's a
     // small int set, so the float<->int round trip needs to come back

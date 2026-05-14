@@ -275,6 +275,21 @@ public:
                       defaults::kHistorianBatchAgeMs);
     }
 
+    [[nodiscard]] int getHistorianSweepIntervalMs() const {
+        return getInt("historian.sweep_interval_ms",
+                      defaults::kHistorianSweepIntervalMs);
+    }
+
+    [[nodiscard]] int getHistorianRawRetentionMs() const {
+        return getInt("historian.raw_retention_ms",
+                      defaults::kHistorianRawRetentionMs);
+    }
+
+    [[nodiscard]] int getHistorianMinuteRetentionMs() const {
+        return getInt("historian.minute_retention_ms",
+                      defaults::kHistorianMinuteRetentionMs);
+    }
+
     [[nodiscard]] int getTcpBackendPort() const {
         return getInt("network.tcp.port", defaults::kTcpBackendPort);
     }
