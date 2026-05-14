@@ -491,6 +491,10 @@ int main(int argc, char* argv[]) {
         // app.run() because `integration` lives on the same stack
         // frame just above us.
         app.setIntegrationManager(&integration);
+        // Historian read side is optional -- mounted only when the
+        // store opened successfully above. Pointer (or null) flows
+        // to MainWindow which decides whether to register the page.
+        app.setHistoryReader(historyStore.get());
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 
         // Inject the app-wide logger into the SimulatedModel singleton so

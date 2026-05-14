@@ -806,6 +806,7 @@ target_sources(objectsView
         src/gtk/view/DialogManager.cpp
         src/gtk/view/AboutDialog.cpp
         src/gtk/view/pages/DashboardPage.cpp
+        src/gtk/view/pages/HistoryPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
         src/gtk/view/pages/SettingsPage.cpp
         src/gtk/view/pages/QualityInspectionPage.cpp
@@ -819,6 +820,7 @@ target_sources(objectsView
             src/gtk/view/AboutDialog.h
             src/gtk/view/pages/Page.h
             src/gtk/view/pages/DashboardPage.h
+            src/gtk/view/pages/HistoryPage.h
             src/gtk/view/pages/ProductsPage.h
             src/gtk/view/pages/SettingsPage.h
             src/gtk/view/pages/QualityInspectionPage.h
@@ -839,6 +841,7 @@ target_link_libraries(objectsView
         objectsPresenter
         objectsAppGtk
         objectsIntegrationCore
+        objectsHistorian
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
 )

@@ -1,0 +1,190 @@
+#include "src/gtk/view/pages/HistoryPage.h"
+
+#include "src/core/i18n.h"
+
+#include <chrono>
+#include <format>
+
+namespace app::view {
+
+namespace {
+
+// Trend charts cap at this many points -- the UI does not need to
+// render every sample for a "last 24h" lookback. SQLite's LIMIT
+// downsamples the head of the window; the operator sees the shape.
+// Matches the TrendChart widget's default capacity so the chart's
+// internal ring buffer is filled exactly once per refresh.
+constexpr std::size_t kChartLimit = 300;
+
+// Wall-clock ms since epoch. Uniform with HistorianBridge so the
+// queries line up with what the bridge wrote.
+std::int64_t nowMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+}  // namespace
+
+HistoryPage::HistoryPage(DialogManager& dialogManager,
+                         historian::HistoryReader& reader)
+    : Page(dialogManager),
+      reader_(reader) {
+    buildUi();
+    // Don't auto-refresh on construction -- the first switch to the
+    // tab triggers refreshAllCharts() and the operator sees fresh data.
+    // (For a portfolio demo we DO refresh once so the page is non-blank
+    // at first sight even if the operator hasn't clicked anything.)
+    refreshAllCharts();
+}
+
+HistoryPage::~HistoryPage() = default;
+
+Glib::ustring HistoryPage::pageTitle() const {
+    return _("History");
+}
+
+void HistoryPage::onLanguageChanged() {
+    // The notebook tab label is rebuilt by MainWindow's
+    // languageChanged path; the in-page widgets that show translated
+    // strings (button labels, range options) are rebuilt by
+    // re-running buildUi -- but doing that here would re-allocate
+    // the chart array on every locale flip and lose accumulated
+    // history. For the MVP we leave the in-page strings English-only
+    // and let the tab label flip; production-grade i18n on this page
+    // is a follow-up.
+}
+
+void HistoryPage::buildUi() {
+    set_orientation(Gtk::Orientation::VERTICAL);
+    set_spacing(12);
+    set_margin(16);
+
+    // Top toolbar: range picker + refresh button.
+    auto* toolbar = Gtk::make_managed<Gtk::Box>(
+        Gtk::Orientation::HORIZONTAL, 12);
+
+    auto* rangeLabel = Gtk::make_managed<Gtk::Label>(_("Range:"));
+    rangePicker_ = Gtk::make_managed<Gtk::ComboBoxText>();
+    rangePicker_->append(_("Last hour"));
+    rangePicker_->append(_("Last 24 hours"));
+    rangePicker_->append(_("Last 7 days"));
+    rangePicker_->set_active(0);
+    rangePicker_->signal_changed().connect(
+        sigc::mem_fun(*this, &HistoryPage::onRangeChanged));
+
+    refreshButton_ = Gtk::make_managed<Gtk::Button>(_("Refresh"));
+    refreshButton_->signal_clicked().connect(
+        sigc::mem_fun(*this, &HistoryPage::onRefreshClicked));
+
+    toolbar->append(*rangeLabel);
+    toolbar->append(*rangePicker_);
+    toolbar->append(*refreshButton_);
+    append(*toolbar);
+
+    // Chart grid: two columns -- quality on the left, supply on the right.
+    // Inside each column, one chart per entity stacked vertically.
+    auto* grid = Gtk::make_managed<Gtk::Grid>();
+    grid->set_row_spacing(8);
+    grid->set_column_spacing(16);
+    grid->set_column_homogeneous(true);
+    grid->set_vexpand(true);
+
+    auto* qualityHeader = Gtk::make_managed<Gtk::Label>(_("Quality Pass Rate"));
+    qualityHeader->set_xalign(0.0F);
+    auto* supplyHeader  = Gtk::make_managed<Gtk::Label>(_("Equipment Supply Level"));
+    supplyHeader->set_xalign(0.0F);
+    grid->attach(*qualityHeader, 0, 0, 1, 1);
+    grid->attach(*supplyHeader,  1, 0, 1, 1);
+
+    for (std::size_t i = 0; i < kQualityCount; ++i) {
+        const auto label = std::format("Checkpoint {}", i);
+        // Charts use the same 0..100 range as the gauges so an
+        // operator switching back and forth between Dashboard and
+        // History reads the same axes everywhere.
+        qualityCharts_[i] = Gtk::make_managed<TrendChart>(
+            label, 0.0F, 100.0F);
+        qualityCharts_[i]->set_vexpand(true);
+        grid->attach(*qualityCharts_[i], 0,
+                     static_cast<int>(i + 1), 1, 1);
+    }
+    for (std::size_t i = 0; i < kEquipmentCount; ++i) {
+        const auto label = std::format("Line {}", i);
+        supplyCharts_[i] = Gtk::make_managed<TrendChart>(
+            label, 0.0F, 100.0F);
+        supplyCharts_[i]->set_vexpand(true);
+        grid->attach(*supplyCharts_[i], 1,
+                     static_cast<int>(i + 1), 1, 1);
+    }
+    append(*grid);
+
+    // Footer with total row count -- gives the operator a quick read
+    // on whether the historian has been collecting (and how long).
+    footerLabel_ = Gtk::make_managed<Gtk::Label>("");
+    footerLabel_->set_xalign(0.0F);
+    append(*footerLabel_);
+}
+
+void HistoryPage::onRefreshClicked() {
+    refreshAllCharts();
+}
+
+void HistoryPage::onRangeChanged() {
+    refreshAllCharts();
+}
+
+void HistoryPage::refreshAllCharts() {
+    for (std::size_t i = 0; i < kQualityCount; ++i) {
+        populateChart(qualityCharts_[i],
+                      historian::FieldKind::QualityPassRate,
+                      static_cast<std::uint32_t>(i));
+    }
+    for (std::size_t i = 0; i < kEquipmentCount; ++i) {
+        populateChart(supplyCharts_[i],
+                      historian::FieldKind::EquipmentSupplyLevel,
+                      static_cast<std::uint32_t>(i));
+    }
+
+    if (footerLabel_ != nullptr) {
+        const auto total = reader_.totalSamples();
+        footerLabel_->set_text(
+            std::format("Total samples: {}", total));
+    }
+}
+
+void HistoryPage::populateChart(TrendChart* chart,
+                                historian::FieldKind field,
+                                std::uint32_t entityId) {
+    if (chart == nullptr) return;
+
+    const auto lookback = rangeLookback();
+    const std::int64_t to   = nowMs();
+    const std::int64_t from = to - lookback.count();
+
+    historian::QueryRange q;
+    q.fromMs = from;
+    q.toMs   = to;
+    q.limit  = kChartLimit;
+
+    const auto rows = reader_.query(field, entityId, q);
+
+    // TrendChart::addPoint() advances its internal ring buffer; pushing
+    // a fresh chart's full window guarantees the latest row sits at
+    // the right edge.
+    for (const auto& r : rows) {
+        chart->addPoint(r.value);
+    }
+}
+
+std::chrono::milliseconds HistoryPage::rangeLookback() const noexcept {
+    const int idx = rangePicker_ != nullptr
+                        ? rangePicker_->get_active_row_number()
+                        : 0;
+    switch (static_cast<Range>(idx)) {
+        case Range::LastHour: return std::chrono::hours{1};
+        case Range::Last24h:  return std::chrono::hours{24};
+        case Range::Last7d:   return std::chrono::hours{24 * 7};
+    }
+    return std::chrono::hours{1};
+}
+
+}  // namespace app::view

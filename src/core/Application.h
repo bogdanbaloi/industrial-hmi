@@ -10,6 +10,10 @@ namespace app::integration {
 class IntegrationManager;  // forward decl -- non-owning pointer
 }
 
+namespace app::historian {
+class HistoryReader;       // forward decl -- non-owning pointer
+}
+
 namespace app::core {
 
 class Bootstrap;  // forward decl -- defined in Bootstrap.h
@@ -75,6 +79,18 @@ public:
         return integrationManager_;
     }
 
+    /// Inject the historian's read interface so MainWindow can mount
+    /// the History page. Optional -- when null, the page is skipped
+    /// (historian is opt-in via app-config.json). Non-owning; the
+    /// store lives in main()'s stack frame next to the bridge.
+    void setHistoryReader(historian::HistoryReader* reader) noexcept {
+        historyReader_ = reader;
+    }
+
+    [[nodiscard]] historian::HistoryReader* historyReader() const noexcept {
+        return historyReader_;
+    }
+
 private:
     Application() = default;
     ~Application();
@@ -83,6 +99,7 @@ private:
 
     Logger*                 logger_ = nullptr;   // non-owning -- Bootstrap owns
     integration::IntegrationManager* integrationManager_ = nullptr;  // non-owning
+    historian::HistoryReader* historyReader_ = nullptr;              // non-owning
     std::vector<std::string> startupWarnings_;
     bool                    initialized_{false};
 };

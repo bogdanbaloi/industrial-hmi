@@ -734,8 +734,26 @@ set(VIEW_COMMON_LIBS
     objectsConfig
     objectsIntegrationCore  # interfaces + manager only -- view-layer
                             # tests don't touch concrete backends
+    objectsHistorian        # HistoryReader interface for HistoryPage tests
     Threads::Threads
 )
+
+# View: HistoryPage
+# Smoke + interaction tests for the History tab. Constructs the page
+# with a FakeHistoryReader, asserts the page makes the expected
+# queries on init and after Refresh / range changes.
+add_executable(test_history_page
+    HistoryPageTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_history_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_history_page PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_history_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME HistoryPageTest COMMAND test_history_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(HistoryPageTest PROPERTIES LABELS "gui")
 
 # View: DashboardPage
 add_executable(test_dashboard_page
