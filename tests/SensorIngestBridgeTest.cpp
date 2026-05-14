@@ -70,27 +70,36 @@ private:
 
 }  // namespace
 
-TEST(SensorIngestBridgeTest, WireSubscribesToOneTopicPerEquipmentSlot) {
+TEST(SensorIngestBridgeTest, WireSubscribesEveryTopicFamilyPerSlot) {
     FakeSubscriber subscriber;
     MockProductionModel model;
 
     SensorIngestBridge::Config cfg;
     cfg.topicPrefix    = "sensors";
     cfg.equipmentCount = 3;
+    cfg.qualityCount   = 3;
     SensorIngestBridge bridge(subscriber, model, cfg);
     bridge.wire();
 
-    EXPECT_EQ(subscriber.size(), 3U);
+    // Three topic families × three slots/checkpoints = nine
+    // subscriptions:
+    //   state   x equipmentCount (boolean enabled)
+    //   supply  x equipmentCount (int supply level)
+    //   rate    x qualityCount   (float pass rate)
+    EXPECT_EQ(subscriber.size(), 9U);
     const auto topics = subscriber.topics();
-    EXPECT_NE(std::find(topics.begin(), topics.end(),
-                        "sensors/equipment/0/state"),
-              topics.end());
-    EXPECT_NE(std::find(topics.begin(), topics.end(),
-                        "sensors/equipment/1/state"),
-              topics.end());
-    EXPECT_NE(std::find(topics.begin(), topics.end(),
-                        "sensors/equipment/2/state"),
-              topics.end());
+    auto has = [&](const std::string& t) {
+        return std::find(topics.begin(), topics.end(), t) != topics.end();
+    };
+    EXPECT_TRUE(has("sensors/equipment/0/state"));
+    EXPECT_TRUE(has("sensors/equipment/1/state"));
+    EXPECT_TRUE(has("sensors/equipment/2/state"));
+    EXPECT_TRUE(has("sensors/equipment/0/supply"));
+    EXPECT_TRUE(has("sensors/equipment/1/supply"));
+    EXPECT_TRUE(has("sensors/equipment/2/supply"));
+    EXPECT_TRUE(has("sensors/quality/0/rate"));
+    EXPECT_TRUE(has("sensors/quality/1/rate"));
+    EXPECT_TRUE(has("sensors/quality/2/rate"));
 }
 
 TEST(SensorIngestBridgeTest, OnPayloadFlipsCorrespondingEquipmentEnabled) {
@@ -166,9 +175,94 @@ TEST(SensorIngestBridgeTest, RespectsCustomTopicPrefix) {
     SensorIngestBridge::Config cfg;
     cfg.topicPrefix    = "factory-42/plant-1";
     cfg.equipmentCount = 1;
+    cfg.qualityCount   = 1;
     SensorIngestBridge bridge(subscriber, model, cfg);
     bridge.wire();
 
     EXPECT_CALL(model, setEquipmentEnabled(0U, true)).Times(1);
     subscriber.inject("factory-42/plant-1/equipment/0/state", "1");
+}
+
+// ===== Analog payloads (A3b) =====================================
+
+TEST(SensorIngestBridgeTest, SupplyPayloadParsesIntegerPercent) {
+    FakeSubscriber subscriber;
+    MockProductionModel model;
+    SensorIngestBridge bridge(subscriber, model);
+    bridge.wire();
+
+    EXPECT_CALL(model, setEquipmentSupplyLevel(0U, 73)).Times(1);
+    subscriber.inject("industrial-hmi-sensors/equipment/0/supply", "73");
+}
+
+TEST(SensorIngestBridgeTest, SupplyPayloadTolerantesWhitespace) {
+    FakeSubscriber subscriber;
+    MockProductionModel model;
+    SensorIngestBridge bridge(subscriber, model);
+    bridge.wire();
+
+    EXPECT_CALL(model, setEquipmentSupplyLevel(1U, 42)).Times(1);
+    subscriber.inject("industrial-hmi-sensors/equipment/1/supply",
+                      "  42\n");
+}
+
+TEST(SensorIngestBridgeTest, SupplyPayloadAcceptsNegative) {
+    // Parser accepts the value; the model clamps. Verifies the
+    // parser doesn't pre-filter values the model considers
+    // out-of-domain (clamp is the model's job, not the bridge's).
+    FakeSubscriber subscriber;
+    MockProductionModel model;
+    SensorIngestBridge bridge(subscriber, model);
+    bridge.wire();
+
+    EXPECT_CALL(model, setEquipmentSupplyLevel(0U, -5)).Times(1);
+    subscriber.inject("industrial-hmi-sensors/equipment/0/supply", "-5");
+}
+
+TEST(SensorIngestBridgeTest, SupplyPayloadRejectsGarbage) {
+    FakeSubscriber subscriber;
+    MockProductionModel model;
+    SensorIngestBridge bridge(subscriber, model);
+    bridge.wire();
+
+    EXPECT_CALL(model, setEquipmentSupplyLevel(_, _)).Times(0);
+    subscriber.inject("industrial-hmi-sensors/equipment/0/supply", "abc");
+    subscriber.inject("industrial-hmi-sensors/equipment/0/supply", "42abc");
+    subscriber.inject("industrial-hmi-sensors/equipment/0/supply", "");
+    subscriber.inject("industrial-hmi-sensors/equipment/0/supply", "  ");
+}
+
+TEST(SensorIngestBridgeTest, RatePayloadParsesFloatPercent) {
+    FakeSubscriber subscriber;
+    MockProductionModel model;
+    SensorIngestBridge bridge(subscriber, model);
+    bridge.wire();
+
+    EXPECT_CALL(model, setQualityPassRate(0U, testing::FloatEq(98.7F)))
+        .Times(1);
+    subscriber.inject("industrial-hmi-sensors/quality/0/rate", "98.7");
+}
+
+TEST(SensorIngestBridgeTest, RatePayloadAcceptsInteger) {
+    // "95" without a decimal point should still parse as 95.0f.
+    FakeSubscriber subscriber;
+    MockProductionModel model;
+    SensorIngestBridge bridge(subscriber, model);
+    bridge.wire();
+
+    EXPECT_CALL(model, setQualityPassRate(2U, testing::FloatEq(95.0F)))
+        .Times(1);
+    subscriber.inject("industrial-hmi-sensors/quality/2/rate", "95");
+}
+
+TEST(SensorIngestBridgeTest, RatePayloadRejectsGarbage) {
+    FakeSubscriber subscriber;
+    MockProductionModel model;
+    SensorIngestBridge bridge(subscriber, model);
+    bridge.wire();
+
+    EXPECT_CALL(model, setQualityPassRate(_, _)).Times(0);
+    subscriber.inject("industrial-hmi-sensors/quality/0/rate", "nope");
+    subscriber.inject("industrial-hmi-sensors/quality/0/rate", "98.7abc");
+    subscriber.inject("industrial-hmi-sensors/quality/0/rate", "");
 }

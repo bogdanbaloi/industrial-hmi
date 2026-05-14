@@ -31,19 +31,50 @@ OpcUaIngestBridge::OpcUaIngestBridge(OpcUaClient& client,
       config_(std::move(config)) {}
 
 void OpcUaIngestBridge::wire() {
-    const auto upperBound =
+    const auto equipmentBound =
         config_.equipmentCount > kMaxTrackedEquipment
             ? static_cast<std::uint32_t>(kMaxTrackedEquipment)
             : config_.equipmentCount;
+    const auto qualityBound =
+        config_.qualityCount > kMaxTrackedQuality
+            ? static_cast<std::uint32_t>(kMaxTrackedQuality)
+            : config_.qualityCount;
 
-    for (std::uint32_t id = 0; id < upperBound; ++id) {
-        const auto path = std::format(
+    // Per-equipment: subscribe to Status (enabled bit) + Supply
+    // (analog supply level). Browse paths mirror what the project's
+    // own OPC-UA server publishes via FactoryNodeMap so the in-
+    // process loopback case "just works" against itself.
+    for (std::uint32_t id = 0; id < equipmentBound; ++id) {
+        const auto statusPath = std::format(
             "{}/EquipmentLines/Line{}/Status",
             config_.topicPrefix, id);
         (void)client_.subscribeInt32(
-            path,
-            [this, id](std::string_view /*nodePath*/, std::int32_t value) {
+            statusPath,
+            [this, id](std::string_view /*nodePath*/,
+                       std::int32_t value) {
                 onStatusNotification(id, value);
+            });
+
+        const auto supplyPath = std::format(
+            "{}/EquipmentLines/Line{}/Supply",
+            config_.topicPrefix, id);
+        (void)client_.subscribeInt32(
+            supplyPath,
+            [this, id](std::string_view /*nodePath*/,
+                       std::int32_t value) {
+                onSupplyNotification(id, value);
+            });
+    }
+
+    // Per-quality-checkpoint: subscribe to PassRate (float percent).
+    for (std::uint32_t id = 0; id < qualityBound; ++id) {
+        const auto ratePath = std::format(
+            "{}/QualityCheckpoints/Checkpoint{}/PassRate",
+            config_.topicPrefix, id);
+        (void)client_.subscribeFloat(
+            ratePath,
+            [this, id](std::string_view /*nodePath*/, float value) {
+                onPassRateNotification(id, value);
             });
     }
 }
@@ -63,6 +94,33 @@ void OpcUaIngestBridge::onStatusNotification(std::uint32_t id,
     }
     cached = enabled;
     model_.setEquipmentEnabled(id, enabled);
+}
+
+void OpcUaIngestBridge::onSupplyNotification(std::uint32_t id,
+                                             std::int32_t supply) {
+    const int value = static_cast<int>(supply);
+    if (id < kMaxTrackedEquipment) {
+        auto& cached = lastSupplyLevel_.at(id);
+        if (cached.has_value() && *cached == value) {
+            return;  // dedup: same percent, no model churn
+        }
+        cached = value;
+    }
+    // Out-of-range ids skip the cache but still forward; the model
+    // owns the clamp + log-and-drop on unknown ids.
+    model_.setEquipmentSupplyLevel(id, value);
+}
+
+void OpcUaIngestBridge::onPassRateNotification(std::uint32_t id,
+                                               float rate) {
+    if (id < kMaxTrackedQuality) {
+        auto& cached = lastPassRate_.at(id);
+        if (cached.has_value() && *cached == rate) {
+            return;
+        }
+        cached = rate;
+    }
+    model_.setQualityPassRate(id, rate);
 }
 
 }  // namespace app::integration::opcua
