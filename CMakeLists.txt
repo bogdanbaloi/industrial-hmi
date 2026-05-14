@@ -742,6 +742,35 @@ if(BUILD_ML_CLASSIFIER)
     endif()
 endif()
 
+# Historian Layer - Time-series persistence for sensor data.
+# GTK-free OBJECT lib so it can be linked into either front-end. The
+# concrete SqliteHistoryStore implements both HistoryWriter and
+# HistoryReader; the bridge (added in a follow-up commit) subscribes
+# to ProductionModel signals and batches writes through the writer
+# interface. Read side is consumed by the GTK HistoryPage and
+# (eventually) a console `history` command.
+add_library(objectsHistorian OBJECT)
+target_sources(objectsHistorian
+    PRIVATE
+        src/historian/SqliteHistoryStore.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/historian/HistoryRecord.h
+            src/historian/HistoryWriter.h
+            src/historian/HistoryReader.h
+            src/historian/SqliteHistoryStore.h
+)
+target_link_libraries(objectsHistorian
+    PUBLIC
+        objectsCore
+        ${SQLITE_LIBRARIES}
+)
+target_include_directories(objectsHistorian
+    PUBLIC
+        ${SQLITE_INCLUDE_DIRS}
+)
+
 # Console Layer - Headless front-end. Shares the Model + Presenter
 # layer with the GTK View, proving MVP's View-swap promise. Links zero
 # gtkmm (see architecture receipt in README).

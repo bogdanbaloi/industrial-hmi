@@ -88,6 +88,18 @@ target_link_libraries(test_database_manager PRIVATE
 )
 add_test(NAME DatabaseManagerTest COMMAND test_database_manager)
 
+# Historian: SqliteHistoryStore
+# Pure data-layer test -- in-memory SQLite, no model, no GTK. Links the
+# OBJECT lib so the production binary and the test share one compile
+# of SqliteHistoryStore.cpp.
+add_executable(test_sqlite_history_store SqliteHistoryStoreTest.cpp)
+target_link_libraries(test_sqlite_history_store PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+)
+add_test(NAME SqliteHistoryStoreTest COMMAND test_sqlite_history_store)
+
 # Integration: CsvSerializer (pure C++, no GTK). Compiles the source
 # directly so the test binary stays on a minimal link line independent
 # of objectsIntegrationCore.
