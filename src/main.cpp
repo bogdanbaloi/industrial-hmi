@@ -333,6 +333,46 @@ void registerModbusBackend(
 }
 #endif
 
+/// Build the Historian (SQLite store + bridge) when enabled in config.
+/// Extracted from main() for the same reason as registerMqttBackend
+/// etc -- keeps main() under the readability-function-size threshold,
+/// and a degraded-config audit reads as a flat list of helpers.
+///
+/// If `initialize()` fails (bad path, read-only fs, permission), the
+/// store is dropped and the bridge stays unconstructed -- the rest of
+/// the binary keeps running with a missing History tab, matching the
+/// project-wide "degraded > crash" policy.
+void registerHistorian(
+        app::config::ConfigManager& config,
+        app::core::Logger& logger,
+        std::unique_ptr<app::historian::SqliteHistoryStore>& storeOut,
+        std::unique_ptr<app::historian::HistorianBridge>& bridgeOut) {
+    app::historian::SqliteHistoryStore::Config storeCfg;
+    storeCfg.dbPath = config.getHistorianDbPath();
+    storeOut = std::make_unique<app::historian::SqliteHistoryStore>(
+        std::move(storeCfg));
+    storeOut->setLogger(logger);
+
+    if (!storeOut->initialize()) {
+        logger.warn("Historian disabled: SqliteHistoryStore failed to "
+                    "open '{}'", config.getHistorianDbPath());
+        storeOut.reset();
+        return;
+    }
+
+    app::historian::HistorianBridge::Config bridgeCfg;
+    bridgeCfg.maxBatchSize = static_cast<std::size_t>(
+        config.getHistorianBatchSize());
+    bridgeCfg.maxBatchAge  = std::chrono::milliseconds{
+        config.getHistorianBatchAgeMs()};
+    bridgeOut = std::make_unique<app::historian::HistorianBridge>(
+        *storeOut,
+        app::model::SimulatedModel::instance(),
+        bridgeCfg);
+    bridgeOut->setLogger(logger);
+    bridgeOut->wire();
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -415,35 +455,8 @@ int main(int argc, char* argv[]) {
         }
 
         if (config.isHistorianEnabled()) {
-            // Build the SQLite store first; if initialise() fails (bad
-            // path, read-only filesystem) we record a warning and skip
-            // bridge wiring entirely -- the rest of the binary keeps
-            // running, matching the project-wide "degraded > crash"
-            // policy. Operator sees a missing trend chart but no error.
-            app::historian::SqliteHistoryStore::Config storeCfg;
-            storeCfg.dbPath = config.getHistorianDbPath();
-            historyStore = std::make_unique<
-                app::historian::SqliteHistoryStore>(std::move(storeCfg));
-            historyStore->setLogger(bootstrap.logger());
-            if (historyStore->initialize()) {
-                app::historian::HistorianBridge::Config bridgeCfg;
-                bridgeCfg.maxBatchSize = static_cast<std::size_t>(
-                    config.getHistorianBatchSize());
-                bridgeCfg.maxBatchAge = std::chrono::milliseconds{
-                    config.getHistorianBatchAgeMs()};
-                historianBridge = std::make_unique<
-                    app::historian::HistorianBridge>(
-                        *historyStore,
-                        app::model::SimulatedModel::instance(),
-                        bridgeCfg);
-                historianBridge->setLogger(bootstrap.logger());
-                historianBridge->wire();
-            } else {
-                bootstrap.logger().warn(
-                    "Historian disabled: SqliteHistoryStore failed to "
-                    "open '{}'", config.getHistorianDbPath());
-                historyStore.reset();
-            }
+            registerHistorian(config, bootstrap.logger(),
+                              historyStore, historianBridge);
         }
 
         if (config.isMqttBackendEnabled()) {

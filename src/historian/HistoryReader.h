@@ -20,7 +20,8 @@ struct QueryRange {
     /// archive could pull millions of rows and starve the UI thread.
     /// 0 means "no explicit cap" -- callers that genuinely want every
     /// row (e.g. CSV export) pass 0 and accept the cost.
-    std::size_t  limit{10000};
+    static constexpr std::size_t kDefaultLimit = 10'000;
+    std::size_t  limit{kDefaultLimit};
 };
 
 /// Read-only side of the historian. Separated from HistoryWriter so:

@@ -16,6 +16,21 @@ namespace {
 // internal ring buffer is filled exactly once per refresh.
 constexpr std::size_t kChartLimit = 300;
 
+// Layout constants for the page's outer Box and the inline toolbar.
+// Named so the magic-number lint stays clean and so a future design
+// tweak lands in one place.
+constexpr int kPageSpacingPx     = 12;
+constexpr int kToolbarSpacingPx  = 12;
+constexpr int kPageMarginPx      = 16;
+constexpr int kChartGridRowGap   = 8;
+constexpr int kChartGridColGap   = 16;
+
+// Range -> lookback helpers. Express the day/week durations once
+// (rather than as `24` / `24*7` ints) so the readability-magic-
+// numbers lint stays happy and the intent is obvious.
+constexpr int kHoursPerDay  = 24;
+constexpr int kHoursPerWeek = kHoursPerDay * 7;
+
 // Wall-clock ms since epoch. Uniform with HistorianBridge so the
 // queries line up with what the bridge wrote.
 std::int64_t nowMs() {
@@ -56,12 +71,12 @@ void HistoryPage::onLanguageChanged() {
 
 void HistoryPage::buildUi() {
     set_orientation(Gtk::Orientation::VERTICAL);
-    set_spacing(12);
-    set_margin(16);
+    set_spacing(kPageSpacingPx);
+    set_margin(kPageMarginPx);
 
     // Top toolbar: range picker + refresh button.
     auto* toolbar = Gtk::make_managed<Gtk::Box>(
-        Gtk::Orientation::HORIZONTAL, 12);
+        Gtk::Orientation::HORIZONTAL, kToolbarSpacingPx);
 
     auto* rangeLabel = Gtk::make_managed<Gtk::Label>(_("Range:"));
     rangePicker_ = Gtk::make_managed<Gtk::ComboBoxText>();
@@ -84,8 +99,8 @@ void HistoryPage::buildUi() {
     // Chart grid: two columns -- quality on the left, supply on the right.
     // Inside each column, one chart per entity stacked vertically.
     auto* grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_row_spacing(8);
-    grid->set_column_spacing(16);
+    grid->set_row_spacing(kChartGridRowGap);
+    grid->set_column_spacing(kChartGridColGap);
     grid->set_column_homogeneous(true);
     grid->set_vexpand(true);
 
@@ -181,8 +196,8 @@ std::chrono::milliseconds HistoryPage::rangeLookback() const noexcept {
                         : 0;
     switch (static_cast<Range>(idx)) {
         case Range::LastHour: return std::chrono::hours{1};
-        case Range::Last24h:  return std::chrono::hours{24};
-        case Range::Last7d:   return std::chrono::hours{24 * 7};
+        case Range::Last24h:  return std::chrono::hours{kHoursPerDay};
+        case Range::Last7d:   return std::chrono::hours{kHoursPerWeek};
     }
     return std::chrono::hours{1};
 }
