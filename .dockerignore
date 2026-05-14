@@ -1,0 +1,73 @@
+# Exclude everything the docker daemon doesn't need to see.
+#
+# Docker uploads the WHOLE build context to the daemon before executing
+# any Dockerfile instructions. Without this list a single `docker build`
+# would ship 1-2 GB of build artefacts, vendored third-party sources,
+# the .git history, and the Python venv -- slow over network, and they
+# would silently invalidate the layer cache every time a build directory
+# changed.
+#
+# Rule of thumb: if a path is not committed to git AND not in /src for a
+# normal source tree, it does not belong in the image build.
+
+# Build outputs -- the in-container build runs from scratch on a clean
+# tree, never re-uses host artefacts.
+build/
+build-*/
+out/
+cmake-build-*/
+
+# Vendor caches (open62541 / stb_image / etc. fetched by CMake FetchContent
+# at host build time). The container's build stage fetches them fresh.
+_deps/
+.cache/
+
+# Git -- the binary doesn't need history at runtime, and `git` is not
+# installed in the runtime image anyway.
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Python venv used for the example scripts -- not part of the C++ build.
+# `**/` so a nested venv (e.g. `scripts/ml/.venv/`) is excluded too;
+# without the prefix the pattern would only match the top-level dir.
+# The lib64 symlinks Linux venvs ship break Windows context uploads.
+.venv/
+**/.venv/
+venv/
+**/venv/
+*.pyc
+__pycache__/
+**/__pycache__/
+
+# Docs / images / generated artefacts that don't influence the build.
+docs/screenshots/
+*.log
+
+# Python ML pipeline scripts (export / quantize / benchmark a torchvision
+# model into ONNX). Used at host development time, not by the C++ build
+# and not at runtime. Excluding the whole tree avoids the nested venv +
+# any future stray symlinks under it.
+scripts/
+
+# Example client scripts: they exercise the HMI over the wire, but the
+# C++ build doesn't consume them. docker-compose mounts them separately
+# when needed.
+examples/
+
+# IDE / editor scratch.
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Worktrees -- nested checkouts the harness leaves around. Definitely
+# do not ship sibling branches into the image.
+.claude/
+
+# CHANGELOG and large markdown docs -- not used at runtime. Saves a few
+# hundred KB on context upload; keep the binary lean.
+CHANGELOG.md
+*.md
+!README.md

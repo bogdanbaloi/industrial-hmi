@@ -1,0 +1,148 @@
+# =============================================================================
+# Industrial HMI -- end-to-end demo orchestration.
+#
+# One command, four services on one bridge network:
+#
+#   docker compose up
+#
+# What spins up:
+#   - mosquitto        MQTT broker (port 1883)
+#   - modbus-slave     pymodbus slave (port 5020, internal)
+#   - mqtt-sensor      Python publisher driving the inbound MQTT bridge
+#   - hmi              the HMI GTK image with noVNC web access (port 6080)
+#
+# After ~10 seconds:
+#   - Open http://localhost:6080 in any browser
+#   - The dashboard shows green pills for TCP, MQTT, and Modbus in the
+#     I/O panel (right sidebar, depending on palette)
+#   - Quality bars + equipment switches react in real time as the
+#     simulators push values
+#
+# Tear down:
+#   docker compose down
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # MQTT broker. Eclipse Mosquitto is the canonical small-footprint broker;
+  # the official image is ~20 MB and starts in under a second.
+  # ---------------------------------------------------------------------------
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: hmi-mosquitto
+    volumes:
+      # Bind-mount our minimal config; replaces the image default.
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      # Named volume for persistence (retained messages survive restart).
+      - mosquitto-data:/mosquitto/data
+    ports:
+      # Expose on the host so an operator's local Python script (the
+      # examples/ directory's `mqtt_publish_sensor.py`) can also publish
+      # against this broker from outside compose. Strictly optional --
+      # the HMI inside compose reaches mosquitto via the internal
+      # bridge network regardless.
+      - "1883:1883"
+    networks:
+      - hminet
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Modbus TCP slave. Hosts holding registers the HMI's poll loop reads;
+  # toggles boolean + analog values on a schedule so the dashboard sees
+  # change events.
+  # ---------------------------------------------------------------------------
+  modbus-slave:
+    image: python:3.12-slim
+    container_name: hmi-modbus-slave
+    working_dir: /scripts
+    volumes:
+      # Read-only mount of the examples folder so the simulator script
+      # is visible inside the container. No image rebuild needed when
+      # the script changes -- restart the service instead.
+      - ./examples:/scripts:ro
+    # Pip-install pymodbus on container start, then run the simulator.
+    # The install costs ~10 s once per container lifetime; for a demo
+    # this is acceptable and avoids baking a custom image just for
+    # one Python dependency.
+    #
+    # JSON-array form (not the YAML `>` folded scalar) so the bash -c
+    # string stays on a single line. With `>`, embedded newlines were
+    # preserved as real newlines into the bash -c argument, which then
+    # interpreted each line break as a new statement -- the `--host
+    # 0.0.0.0` flag landed on its own line and bash tried to run
+    # `--host` as a command (exit 127, "command not found").
+    command: ["bash", "-c", "pip install --quiet --no-cache-dir 'pymodbus>=3.7,<3.8' && python -u modbus_slave_simulator.py --host 0.0.0.0 --port 5020 --interval 1.5"]
+    networks:
+      - hminet
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # MQTT publisher -- drives the HMI's SensorIngestBridge via the
+  # inbound topics. Cycles enabled bits + analog values across the three
+  # equipment slots.
+  # ---------------------------------------------------------------------------
+  mqtt-sensor:
+    image: python:3.12-slim
+    container_name: hmi-mqtt-sensor
+    working_dir: /scripts
+    volumes:
+      - ./examples:/scripts:ro
+    # `depends_on` ensures mosquitto's container is started first;
+    # paho-mqtt's reconnect loop handles the case where the broker
+    # isn't accepting yet (race that fires the first 100 ms after
+    # mosquitto starts).
+    depends_on:
+      - mosquitto
+    # Same JSON-array form as the modbus service to keep the bash -c
+    # invocation on a single line. `--broker mosquitto` resolves via
+    # Docker's embedded DNS to the mosquitto container; without this
+    # the script falls back to its default 127.0.0.1 (own container's
+    # loopback) and gets a connection refused.
+    command: ["bash", "-c", "pip install --quiet --no-cache-dir 'paho-mqtt>=2.0,<3.0' && python -u mqtt_sensor_loop.py --broker mosquitto --interval 2.0"]
+    networks:
+      - hminet
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # The HMI itself -- noVNC variant so a browser can render the dashboard.
+  # `build` lets `docker compose up --build` rebuild the image from the
+  # repo Dockerfile if it's missing; the existing
+  # `industrial-hmi:gtk` tag is reused otherwise.
+  # ---------------------------------------------------------------------------
+  hmi:
+    image: industrial-hmi:gtk
+    build:
+      context: .
+      target: gtk
+    container_name: hmi-app
+    depends_on:
+      - mosquitto
+      - modbus-slave
+    volumes:
+      # Bind-mount the docker-tuned config over the image's bundled
+      # default. Hostnames inside this file resolve to other compose
+      # services via Docker's embedded DNS:
+      #   network.mqtt.broker_host  = "mosquitto"
+      #   network.modbus.host       = "modbus-slave"
+      - ./docker/app-config.docker.json:/home/hmi/config/app-config.json:ro
+    ports:
+      # noVNC web access. Operator browses to localhost:6080.
+      - "6080:6080"
+      # Also expose the HMI's TCP backend (port 5555 by default) so
+      # the host can talk to it via netcat / examples/tcp_control.py.
+      - "5555:5555"
+    networks:
+      - hminet
+    restart: unless-stopped
+
+# Single bridge network. Compose creates this automatically on `up`
+# and tears it down on `down`. Service hostnames (`mosquitto`,
+# `modbus-slave`, etc.) resolve via Docker's embedded DNS resolver.
+networks:
+  hminet:
+    driver: bridge
+
+# Named volume for the broker's persisted state.
+volumes:
+  mosquitto-data:
