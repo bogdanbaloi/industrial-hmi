@@ -753,6 +753,7 @@ add_library(objectsHistorian OBJECT)
 target_sources(objectsHistorian
     PRIVATE
         src/historian/SqliteHistoryStore.cpp
+        src/historian/HistorianBridge.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -760,10 +761,12 @@ target_sources(objectsHistorian
             src/historian/HistoryWriter.h
             src/historian/HistoryReader.h
             src/historian/SqliteHistoryStore.h
+            src/historian/HistorianBridge.h
 )
 target_link_libraries(objectsHistorian
     PUBLIC
         objectsCore
+        objectsModel
         ${SQLITE_LIBRARIES}
 )
 target_include_directories(objectsHistorian
@@ -881,6 +884,7 @@ target_link_libraries(industrial-hmi
         objectsTcp
         objectsMqtt
         objectsMl
+        objectsHistorian
         Threads::Threads
 )
 if(BUILD_OPCUA_BACKEND)
@@ -922,6 +926,7 @@ target_link_libraries(industrial-hmi-console
         objectsTcp
         objectsMqtt
         objectsMl
+        objectsHistorian
         Threads::Threads
 )
 if(BUILD_OPCUA_BACKEND)

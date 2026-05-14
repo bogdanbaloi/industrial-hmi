@@ -254,6 +254,27 @@ public:
         return getValue("network.tcp.enabled", "false") == "true";
     }
 
+    // Historian time-series persistence. Off by default -- enabling it
+    // creates a SQLite file at `historian.db_path` and starts batching
+    // scalar telemetry. See HistorianBridge for the batching contract.
+    [[nodiscard]] bool isHistorianEnabled() const {
+        return getValue("historian.enabled", "false") == "true";
+    }
+
+    [[nodiscard]] std::string getHistorianDbPath() const {
+        return getValue("historian.db_path", defaults::kHistorianDbPath);
+    }
+
+    [[nodiscard]] int getHistorianBatchSize() const {
+        return getInt("historian.batch_size",
+                      defaults::kHistorianBatchSize);
+    }
+
+    [[nodiscard]] int getHistorianBatchAgeMs() const {
+        return getInt("historian.batch_age_ms",
+                      defaults::kHistorianBatchAgeMs);
+    }
+
     [[nodiscard]] int getTcpBackendPort() const {
         return getInt("network.tcp.port", defaults::kTcpBackendPort);
     }

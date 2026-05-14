@@ -23,8 +23,11 @@
 #  include "src/integration/modbus/ModbusPollLoop.h"
 #  include "src/integration/modbus/ModbusRegisterMap.h"
 #endif
+#include "src/historian/HistorianBridge.h"
+#include "src/historian/SqliteHistoryStore.h"
 #include "src/model/DatabaseManager.h"
 #include "src/model/SimulatedModel.h"
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -385,6 +388,17 @@ int main(int argc, char* argv[]) {
             productionBridge;
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
+
+        // Historian. Optional, opt-in via `historian.enabled` in
+        // app-config.json. Store + bridge live on this stack frame so
+        // their destructors flush the last batch on graceful shutdown
+        // (the bridge's dtor calls flush(); the store's dtor closes
+        // the SQLite handle once the bridge has released its mutex).
+        // Order matters: store outlives bridge (bridge holds a
+        // HistoryWriter& into the store), so the bridge is declared
+        // after the store -- C++ destroys in reverse declaration.
+        std::unique_ptr<app::historian::SqliteHistoryStore> historyStore;
+        std::unique_ptr<app::historian::HistorianBridge>    historianBridge;
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
         std::unique_ptr<app::integration::opcua::OpcUaIngestBridge>
             opcuaIngestBridge;
@@ -398,6 +412,38 @@ int main(int argc, char* argv[]) {
                     static_cast<std::uint16_t>(config.getTcpBackendPort()),
                     app::model::SimulatedModel::instance(),
                     app::model::DatabaseManager::instance()));
+        }
+
+        if (config.isHistorianEnabled()) {
+            // Build the SQLite store first; if initialise() fails (bad
+            // path, read-only filesystem) we record a warning and skip
+            // bridge wiring entirely -- the rest of the binary keeps
+            // running, matching the project-wide "degraded > crash"
+            // policy. Operator sees a missing trend chart but no error.
+            app::historian::SqliteHistoryStore::Config storeCfg;
+            storeCfg.dbPath = config.getHistorianDbPath();
+            historyStore = std::make_unique<
+                app::historian::SqliteHistoryStore>(std::move(storeCfg));
+            historyStore->setLogger(bootstrap.logger());
+            if (historyStore->initialize()) {
+                app::historian::HistorianBridge::Config bridgeCfg;
+                bridgeCfg.maxBatchSize = static_cast<std::size_t>(
+                    config.getHistorianBatchSize());
+                bridgeCfg.maxBatchAge = std::chrono::milliseconds{
+                    config.getHistorianBatchAgeMs()};
+                historianBridge = std::make_unique<
+                    app::historian::HistorianBridge>(
+                        *historyStore,
+                        app::model::SimulatedModel::instance(),
+                        bridgeCfg);
+                historianBridge->setLogger(bootstrap.logger());
+                historianBridge->wire();
+            } else {
+                bootstrap.logger().warn(
+                    "Historian disabled: SqliteHistoryStore failed to "
+                    "open '{}'", config.getHistorianDbPath());
+                historyStore.reset();
+            }
         }
 
         if (config.isMqttBackendEnabled()) {

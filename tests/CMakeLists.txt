@@ -100,6 +100,20 @@ target_link_libraries(test_sqlite_history_store PRIVATE
 )
 add_test(NAME SqliteHistoryStoreTest COMMAND test_sqlite_history_store)
 
+# Historian: HistorianBridge
+# Drives the real SimulatedModel singleton (no model mocking) because
+# the bridge's whole point is to translate model signals correctly --
+# a mocked model would skip the wiring we want to verify. FakeHistoryWriter
+# (defined in the test TU) keeps the writer side hermetic.
+add_executable(test_historian_bridge HistorianBridgeTest.cpp)
+target_link_libraries(test_historian_bridge PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+    objectsModel
+)
+add_test(NAME HistorianBridgeTest COMMAND test_historian_bridge)
+
 # Integration: CsvSerializer (pure C++, no GTK). Compiles the source
 # directly so the test binary stays on a minimal link line independent
 # of objectsIntegrationCore.
