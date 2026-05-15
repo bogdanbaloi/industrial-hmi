@@ -28,15 +28,26 @@ constexpr int kColCategory  = 11;
 constexpr int kColAction    = 10;
 constexpr int kColResult    = 8;
 
-/// Fixed-width cell. The list is text-only so we lean on
-/// `set_width_chars` to align columns without bringing in
-/// `Gtk::ColumnView`'s factory machinery.
+/// Cell label.
+///   widthChars > 0  -> fixed-width column with ellipsised overflow.
+///   widthChars == 0 -> natural-width "flex" cell that absorbs the
+///                      remaining horizontal space; used by the
+///                      Details column on the right edge. Calling
+///                      set_width_chars(0) + ellipsize(END) on a
+///                      label collapses it to literal "..." (the
+///                      cell tries to fit in 0 chars and shows the
+///                      ellipsis), so we branch here.
 Gtk::Label* makeCell(const std::string& text, int widthChars) {
     auto* l = Gtk::make_managed<Gtk::Label>(text);
     l->set_xalign(0.0F);
-    l->set_width_chars(widthChars);
-    l->set_max_width_chars(widthChars);
-    l->set_ellipsize(Pango::EllipsizeMode::END);
+    if (widthChars > 0) {
+        l->set_width_chars(widthChars);
+        l->set_max_width_chars(widthChars);
+        l->set_ellipsize(Pango::EllipsizeMode::END);
+    } else {
+        l->set_hexpand(true);
+        l->set_ellipsize(Pango::EllipsizeMode::END);
+    }
     return l;
 }
 
