@@ -158,12 +158,19 @@ if(PLATFORM_LINUX OR PLATFORM_MACOS)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTKMM REQUIRED gtkmm-4.0)
     pkg_check_modules(SQLITE REQUIRED sqlite3)
+    # libsodium for Argon2id password hashing in the auth layer.
+    # OWASP-recommended KDF as of 2024; resists GPU brute-force +
+    # side-channel attacks. Ubuntu/MSYS2 ship .pc files; Windows native
+    # picks up the vcpkg target below.
+    pkg_check_modules(SODIUM REQUIRED libsodium)
 else()
     # Windows: Use vcpkg packages
     find_package(gtkmm REQUIRED)
     find_package(unofficial-sqlite3 CONFIG REQUIRED)
+    find_package(unofficial-sodium CONFIG REQUIRED)
     set(GTKMM_LIBRARIES gtkmm::gtkmm)
     set(SQLITE_LIBRARIES unofficial::sqlite3::sqlite3)
+    set(SODIUM_LIBRARIES unofficial-sodium::sodium)
 endif()
 
 # Boost (header-only signals2)
@@ -373,15 +380,18 @@ add_library(objectsAppGtk OBJECT)
 target_sources(objectsAppGtk
     PRIVATE
         src/core/Application.cpp
+        src/gtk/view/LoginDialog.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
             src/core/Application.h
+            src/gtk/view/LoginDialog.h
 )
 target_link_libraries(objectsAppGtk
     PUBLIC
         objectsCore
         objectsModel
+        objectsAuth
         ${GTKMM_LIBRARIES}
 )
 target_include_directories(objectsAppGtk
@@ -426,6 +436,7 @@ target_link_libraries(objectsPresenter
         objectsModel
         objectsMl
         objectsIntegrationCore
+        objectsAuth
         ${BOOST_TARGET}
         Threads::Threads
 )
@@ -776,6 +787,44 @@ target_include_directories(objectsHistorian
         ${SQLITE_INCLUDE_DIRS}
 )
 
+# Auth Layer - Username/password authentication, RBAC, audit log.
+# GTK-free OBJECT lib (the UI dialog lives in objectsView) so both
+# front-ends and the test suite can link the auth core without
+# pulling GTK. libsodium provides the Argon2id KDF.
+add_library(objectsAuth OBJECT)
+target_sources(objectsAuth
+    PRIVATE
+        src/auth/Argon2PasswordHasher.cpp
+        src/auth/SqliteUserRepository.cpp
+        src/auth/SqliteAuditLogger.cpp
+        src/auth/AuthService.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/auth/Role.h
+            src/auth/User.h
+            src/auth/PasswordHasher.h
+            src/auth/Argon2PasswordHasher.h
+            src/auth/UserRepository.h
+            src/auth/SqliteUserRepository.h
+            src/auth/AuditEvent.h
+            src/auth/AuditLogger.h
+            src/auth/SqliteAuditLogger.h
+            src/auth/Session.h
+            src/auth/AuthService.h
+)
+target_link_libraries(objectsAuth
+    PUBLIC
+        objectsCore
+        ${SQLITE_LIBRARIES}
+        ${SODIUM_LIBRARIES}
+)
+target_include_directories(objectsAuth
+    PUBLIC
+        ${SQLITE_INCLUDE_DIRS}
+        ${SODIUM_INCLUDE_DIRS}
+)
+
 # Console Layer - Headless front-end. Shares the Model + Presenter
 # layer with the GTK View, proving MVP's View-swap promise. Links zero
 # gtkmm (see architecture receipt in README).
@@ -807,11 +856,13 @@ target_sources(objectsView
         src/gtk/view/MainWindowKeyDispatch.cpp
         src/gtk/view/DialogManager.cpp
         src/gtk/view/AboutDialog.cpp
+        src/gtk/view/pages/AuditLogPage.cpp
         src/gtk/view/pages/DashboardPage.cpp
         src/gtk/view/pages/HistoryPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
         src/gtk/view/pages/SettingsPage.cpp
         src/gtk/view/pages/QualityInspectionPage.cpp
+        src/gtk/view/widgets/UserBadge.cpp
     PRIVATE
         FILE_SET internalHeaders
         TYPE HEADERS
@@ -821,6 +872,7 @@ target_sources(objectsView
             src/gtk/view/DialogManager.h
             src/gtk/view/AboutDialog.h
             src/gtk/view/pages/Page.h
+            src/gtk/view/pages/AuditLogPage.h
             src/gtk/view/pages/DashboardPage.h
             src/gtk/view/pages/HistoryPage.h
             src/gtk/view/pages/ProductsPage.h
@@ -832,6 +884,7 @@ target_sources(objectsView
             src/gtk/view/widgets/AlertsPanel.h
             src/gtk/view/widgets/SystemStatusBadge.h
             src/gtk/view/widgets/LiveClock.h
+            src/gtk/view/widgets/UserBadge.h
             src/presenter/AlertCenter.h
             src/presenter/modelview/AlertViewModel.h
             src/gtk/view/css_classes.h
@@ -844,6 +897,7 @@ target_link_libraries(objectsView
         objectsAppGtk
         objectsIntegrationCore
         objectsHistorian
+        objectsAuth
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
 )
@@ -890,6 +944,7 @@ target_link_libraries(industrial-hmi
         objectsMqtt
         objectsMl
         objectsHistorian
+        objectsAuth
         Threads::Threads
 )
 if(BUILD_OPCUA_BACKEND)
@@ -932,6 +987,7 @@ target_link_libraries(industrial-hmi-console
         objectsMqtt
         objectsMl
         objectsHistorian
+        objectsAuth
         Threads::Threads
 )
 if(BUILD_OPCUA_BACKEND)

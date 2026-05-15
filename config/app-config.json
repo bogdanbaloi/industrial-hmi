@@ -295,5 +295,9 @@
     "db_path": "data/historian.sqlite",
     "batch_size": 32,
     "batch_age_ms": 5000
+  },
+  "auth": {
+    "enabled": false,
+    "db_path": "data/auth.sqlite"
   }
 }

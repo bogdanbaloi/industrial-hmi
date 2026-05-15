@@ -14,6 +14,12 @@ namespace app::historian {
 class HistoryReader;       // forward decl -- non-owning pointer
 }
 
+namespace app::auth {
+class AuthService;         // forward decl -- non-owning pointer
+class Session;             // forward decl -- non-owning pointer
+class AuditLogger;         // forward decl -- non-owning pointer
+}
+
 namespace app::core {
 
 class Bootstrap;  // forward decl -- defined in Bootstrap.h
@@ -91,6 +97,36 @@ public:
         return historyReader_;
     }
 
+    /// Inject the auth service + session. When both pointers are non-
+    /// null AND `auth.enabled` is true in config, `run()` shows a
+    /// modal LoginDialog before the main window appears. Cancel from
+    /// the dialog short-circuits the rest of run() and the binary
+    /// exits with code 0 (user declined to sign in -- not an error).
+    ///
+    /// Non-owning; both objects live in main()'s stack frame next to
+    /// the user repository + hasher.
+    void setAuth(auth::AuthService* service, auth::Session* session) noexcept {
+        authService_ = service;
+        authSession_ = session;
+    }
+
+    /// Inject the audit logger. When set together with the session,
+    /// MainWindow propagates both into the presenter constructors so
+    /// every operator-initiated action records a row.
+    void setAuditLogger(auth::AuditLogger* audit) noexcept {
+        auditLogger_ = audit;
+    }
+
+    [[nodiscard]] auth::AuthService* authService() const noexcept {
+        return authService_;
+    }
+    [[nodiscard]] auth::Session* authSession() const noexcept {
+        return authSession_;
+    }
+    [[nodiscard]] auth::AuditLogger* auditLogger() const noexcept {
+        return auditLogger_;
+    }
+
 private:
     Application() = default;
     ~Application();
@@ -100,6 +136,9 @@ private:
     Logger*                 logger_ = nullptr;   // non-owning -- Bootstrap owns
     integration::IntegrationManager* integrationManager_ = nullptr;  // non-owning
     historian::HistoryReader* historyReader_ = nullptr;              // non-owning
+    auth::AuthService*      authService_ = nullptr;                  // non-owning
+    auth::Session*          authSession_ = nullptr;                  // non-owning
+    auth::AuditLogger*      auditLogger_ = nullptr;                  // non-owning
     std::vector<std::string> startupWarnings_;
     bool                    initialized_{false};
 };

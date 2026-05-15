@@ -143,6 +143,12 @@ constexpr int kLogPanelRefreshMs = 500;
 constexpr float kQualityPassThreshold = 95.0f;
 constexpr float kQualityWarningThreshold = 90.0f;
 
+// Auth: SQLite-backed user store + Argon2id password hashing.
+// Off by default so existing deployments keep their "no login screen"
+// UX until they opt in. kAuthDbPath resolves relative to the binary's
+// cwd, same convention as the historian.
+constexpr const char* kAuthDbPath = "data/auth.sqlite";
+
 // Historian time-series persistence
 // kHistorianDbPath: relative paths resolved against the executable's
 //   own directory (same convention as the locale dir). "data/" is a

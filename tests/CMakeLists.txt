@@ -126,6 +126,44 @@ target_link_libraries(test_historian_maintenance PRIVATE
 )
 add_test(NAME HistorianMaintenanceTest COMMAND test_historian_maintenance)
 
+# Auth: Argon2 password hasher (libsodium). Slow per-case (~50 ms hash
+# at the INTERACTIVE profile) but the suite stays short because each
+# test does at most one hash + one verify.
+add_executable(test_argon2_password_hasher Argon2PasswordHasherTest.cpp)
+target_link_libraries(test_argon2_password_hasher PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME Argon2PasswordHasherTest COMMAND test_argon2_password_hasher)
+
+# Auth: SqliteUserRepository (in-memory SQLite).
+add_executable(test_sqlite_user_repository SqliteUserRepositoryTest.cpp)
+target_link_libraries(test_sqlite_user_repository PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME SqliteUserRepositoryTest COMMAND test_sqlite_user_repository)
+
+# Auth: AuthService end-to-end (real repo + real hasher).
+add_executable(test_auth_service AuthServiceTest.cpp)
+target_link_libraries(test_auth_service PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME AuthServiceTest COMMAND test_auth_service)
+
+# Auth: SqliteAuditLogger.
+add_executable(test_sqlite_audit_logger SqliteAuditLoggerTest.cpp)
+target_link_libraries(test_sqlite_audit_logger PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME SqliteAuditLoggerTest COMMAND test_sqlite_audit_logger)
+
 # Integration: CsvSerializer (pure C++, no GTK). Compiles the source
 # directly so the test binary stays on a minimal link line independent
 # of objectsIntegrationCore.
@@ -747,6 +785,7 @@ set(VIEW_COMMON_LIBS
     objectsIntegrationCore  # interfaces + manager only -- view-layer
                             # tests don't touch concrete backends
     objectsHistorian        # HistoryReader interface for HistoryPage tests
+    objectsAuth             # AuthService called by LoginDialog (in objectsAppGtk)
     Threads::Threads
 )
 

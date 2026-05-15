@@ -7,6 +7,11 @@
 #include <string>
 #include <functional>
 
+namespace app::auth {
+class AuditLogger;
+class Session;
+}
+
 namespace app {
 
 /// Presenter for Products page - demonstrates database integration
@@ -67,6 +72,16 @@ public:
     /// Callback runs on GTK main thread with the product list.
     void exportProducts(std::function<void(std::vector<model::Product>)> callback);
 
+    /// Audit hookup. When set, every add / update / delete records a
+    /// PRODUCT category event with the operator's identity at the
+    /// time of the action. Mirrors DashboardPresenter::setAudit so
+    /// composition wiring stays uniform.
+    void setAudit(app::auth::AuditLogger& audit,
+                  app::auth::Session& session) {
+        audit_   = &audit;
+        session_ = &session;
+    }
+
 private:
     /// Build ProductsViewModel from database results
     presenter::ProductsViewModel buildProductsViewModel();
@@ -86,6 +101,11 @@ private:
 
     /// Cached search query
     std::string currentSearchQuery_;
+
+    /// Audit hookup -- both null when audit is disabled or this
+    /// presenter is exercised in a unit test.
+    app::auth::AuditLogger* audit_{nullptr};
+    app::auth::Session*     session_{nullptr};
 };
 
 }  // namespace app

@@ -6,12 +6,17 @@
 #include "src/gtk/view/DialogManager.h"
 #include "src/gtk/view/MainWindowKeyDispatch.h"
 #include "src/gtk/view/ThemeManager.h"
+#include "src/auth/AuthService.h"
+#include "src/auth/Role.h"
+#include "src/auth/Session.h"
 #include "src/gtk/view/pages/Page.h"
+#include "src/gtk/view/pages/AuditLogPage.h"
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/pages/HistoryPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/gtk/view/pages/SettingsPage.h"
 #include "src/gtk/view/widgets/AlertsPanel.h"
+#include "src/gtk/view/widgets/UserBadge.h"
 #include "src/gtk/view/widgets/BackendHealthBar.h"
 #include "src/gtk/view/widgets/SystemStatusBadge.h"
 #include "src/gtk/view/widgets/LiveClock.h"
@@ -206,7 +211,27 @@ void MainWindow::buildSidebarWidgets() {
     }
 
     // System status LED badge -- driven by DashboardPresenter's signal.
+    // Pre-pended by the UserBadge below when auth is enabled so the
+    // "who" and the "what" land next to each other in the sidebar.
     if (systemStatusContainer_) {
+        // UserBadge first so it appears at the top of the block.
+        if (auto* svc = app::core::Application::instance().authService();
+            svc != nullptr) {
+            auto* session =
+                app::core::Application::instance().authSession();
+            if (session != nullptr) {
+                userBadge_ = Gtk::make_managed<app::view::UserBadge>(
+                    *svc, *session);
+                // Sign-out closes the main window. The Gtk::Application's
+                // run() loop returns once no windows remain, exiting the
+                // binary -- the next launch goes through LoginDialog
+                // again, which matches operator intent (the gesture is
+                // "I'm done; the next person needs to sign in").
+                userBadge_->onSignOut([this]() { this->close(); });
+                systemStatusContainer_->append(*userBadge_);
+            }
+        }
+
         statusBadge_ = Gtk::make_managed<app::view::SystemStatusBadge>();
         systemStatusContainer_->append(*statusBadge_);
         if (dashboardPresenter_) {
@@ -320,13 +345,25 @@ void MainWindow::registerPage(app::view::Page* page) {
 }
 
 void MainWindow::createAllPages() {
-    auto& logger = app::core::Application::instance().logger();
+    auto& app    = app::core::Application::instance();
+    auto& logger = app.logger();
+
+    // Audit hookup is conditional: when the composition root wired
+    // both the audit sink AND the session, every presenter gets a
+    // call to setAudit() so its action handlers record rows. With
+    // either pointer null the presenters stay free of audit calls
+    // (auth-disabled builds, unit tests, etc.).
+    auto* audit   = app.auditLogger();
+    auto* session = app.authSession();
 
     // Dashboard
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
     dashboardPresenter_->setLogger(logger);
     if (alertCenter_) {
         dashboardPresenter_->setAlertCenter(*alertCenter_);
+    }
+    if (audit != nullptr && session != nullptr) {
+        dashboardPresenter_->setAudit(*audit, *session);
     }
     dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
     dashboardPage_->initialize(dashboardPresenter_);
@@ -335,9 +372,25 @@ void MainWindow::createAllPages() {
     // Products
     productsPresenter_ = std::make_shared<app::ProductsPresenter>();
     productsPresenter_->setLogger(logger);
+    if (audit != nullptr && session != nullptr) {
+        productsPresenter_->setAudit(*audit, *session);
+    }
     productsPage_ = Gtk::make_managed<app::view::ProductsPage>(*dialogManager_);
     productsPage_->initialize(productsPresenter_);
     registerPage(productsPage_);
+
+    // Role-based UI gating. When a session is wired (auth.enabled),
+    // each page's applyRole() trims its control surface to what the
+    // active role is allowed to do. Skipped when no session is set
+    // so the no-auth dev path keeps the full Admin-equivalent surface.
+    if (session != nullptr) {
+        const auto userOpt = session->currentUser();
+        if (userOpt.has_value()) {
+            const auto role = userOpt->role;
+            dashboardPage_->applyRole(role);
+            productsPage_->applyRole(role);
+        }
+    }
 
     // Settings (no presenter -- pure view over ConfigManager/ThemeManager/Logger)
     settingsPage_ = Gtk::make_managed<app::view::SettingsPage>(*dialogManager_);
@@ -353,6 +406,22 @@ void MainWindow::createAllPages() {
         historyPage_ = Gtk::make_managed<app::view::HistoryPage>(
             *dialogManager_, *reader);
         registerPage(historyPage_);
+    }
+
+    // Audit log page: admin-only. The page exists in the binary
+    // regardless of role, but only mounted in the notebook when the
+    // current session holds Admin. Operator / Maintenance never
+    // see the tab at all -- defence in depth beyond the role check
+    // a future user-management surface will need too.
+    if (auto* audit = app.auditLogger();
+        audit != nullptr && session != nullptr) {
+        const auto userOpt = session->currentUser();
+        if (userOpt.has_value()
+                && app::auth::canViewAuditLog(userOpt->role)) {
+            auditLogPage_ = Gtk::make_managed<app::view::AuditLogPage>(
+                *dialogManager_, *audit);
+            registerPage(auditLogPage_);
+        }
     }
 
 #ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN

@@ -23,6 +23,11 @@
 #  include "src/integration/modbus/ModbusPollLoop.h"
 #  include "src/integration/modbus/ModbusRegisterMap.h"
 #endif
+#include "src/auth/Argon2PasswordHasher.h"
+#include "src/auth/AuthService.h"
+#include "src/auth/Session.h"
+#include "src/auth/SqliteAuditLogger.h"
+#include "src/auth/SqliteUserRepository.h"
 #include "src/historian/HistorianBridge.h"
 #include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
@@ -391,6 +396,65 @@ void registerHistorian(
     maintenanceOut->start();
 }
 
+/// Build the auth stack (repository + hasher + service) when enabled
+/// in config. Same shape as the other register helpers: stack-owned
+/// pieces handed back to main() so the destructors fire in reverse
+/// declaration order at exit.
+///
+/// If the SQLite user store fails to initialise (read-only fs, bad
+/// path) the stack stays unconstructed and the caller continues
+/// without auth -- matches the project-wide degraded-over-crash
+/// policy. Seeded default users (operator / maintenance / admin) are
+/// only inserted on first run; a populated table is left alone.
+void registerAuth(
+        app::config::ConfigManager& config,
+        app::core::Logger& logger,
+        std::unique_ptr<app::auth::SqliteUserRepository>& repoOut,
+        std::unique_ptr<app::auth::Argon2PasswordHasher>& hasherOut,
+        std::unique_ptr<app::auth::SqliteAuditLogger>& auditOut,
+        std::unique_ptr<app::auth::AuthService>& serviceOut,
+        app::auth::Session& sessionRef) {
+    app::auth::SqliteUserRepository::Config repoCfg;
+    repoCfg.dbPath = config.getAuthDbPath();
+    repoOut = std::make_unique<app::auth::SqliteUserRepository>(
+        std::move(repoCfg));
+    repoOut->setLogger(logger);
+
+    if (!repoOut->initialize()) {
+        logger.warn("Auth disabled: user store failed to open '{}'",
+                    config.getAuthDbPath());
+        repoOut.reset();
+        return;
+    }
+
+    // Audit log shares the same SQLite file. Two tables (users +
+    // audit_log) in one DB keeps backup + permissioning simple on
+    // the operator terminal. A failed open downgrades to "auth
+    // without audit" rather than crashing the whole feature.
+    app::auth::SqliteAuditLogger::Config auditCfg;
+    auditCfg.dbPath = config.getAuthDbPath();
+    auditOut = std::make_unique<app::auth::SqliteAuditLogger>(
+        std::move(auditCfg));
+    auditOut->setLogger(logger);
+    if (!auditOut->initialize()) {
+        logger.warn("Audit log disabled: failed to open '{}'",
+                    config.getAuthDbPath());
+        auditOut.reset();
+    }
+
+    hasherOut  = std::make_unique<app::auth::Argon2PasswordHasher>();
+    serviceOut = std::make_unique<app::auth::AuthService>(
+        *repoOut, *hasherOut, sessionRef);
+    serviceOut->setLogger(logger);
+    if (auditOut) {
+        serviceOut->setAuditLogger(*auditOut);
+    }
+
+    // Seed the three demo accounts on first run. The seeder is
+    // idempotent so a populated DB is left alone.
+    serviceOut->seedDefaultUsersIfEmpty();
+}
+
 #ifdef _WIN32
 /// Windows-only platform init: Cairo renderer override + UTF-8 setup.
 ///
@@ -422,27 +486,16 @@ int main(int argc, char* argv[]) {
     initWindowsConsole();
 #endif
 
-    // Top-level exception guard. Every fatal condition at or below
-    // Bootstrap / Application / InitConsole surfaces here and is
-    // reported via the appropriate native channel.
-    //
-    //   kExitStartupFatal (2)  -> deployment problem (config / DB)
-    //   kExitUnexpectedFatal (1) -> std::exception escaping the app
-    //   kExitUnknownFatal (3)  -> non-std exception (shouldn't happen)
+    // Top-level exception guard. Exit codes:
+    //   2 = startup fatal (config/DB), 1 = std::exception escaped,
+    //   3 = non-std exception. See kExit* constants above.
     try {
         // Staged startup: logger -> config -> configured logger -> i18n.
-        // Throws CriticalStartupError on fatal config issues.
         app::core::Bootstrap bootstrap;
         bootstrap.run();
 
-        // Integration backends. Opt-in per deployment via app-config.json.
-        // Both front-ends (GTK + console) get the same network surface so
-        // the binary is identical in either build (zero gtkmm leak path
-        // even with TCP/MQTT enabled).
-        //
-        // Lifetime contract: manager + bridge live until the end of main,
-        // so backends keep running until the front-end exits and the
-        // catch-block / RAII shuts them down via stopAll().
+        // Integration backends -- opt-in per deployment via JSON.
+        // Stack-owned through main() so RAII shuts them down on exit.
         auto& config = app::config::ConfigManager::instance();
         app::integration::IntegrationManager integration;
         std::unique_ptr<app::integration::ProductionTelemetryBridge>
@@ -450,10 +503,14 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
 
-        // Historian store + bridge + maintenance worker. Store
-        // outlives bridge and maintenance (both hold references into
-        // it); declared in construction order so destruction reverses.
-        // See registerHistorian() above for the wiring + degraded path.
+        // Auth + Historian stacks. Declared in construction order so
+        // destruction reverses naturally. See registerAuth() /
+        // registerHistorian() for the wiring + degraded-open paths.
+        app::auth::Session                                authSession;
+        std::unique_ptr<app::auth::SqliteUserRepository>  authRepo;
+        std::unique_ptr<app::auth::Argon2PasswordHasher>  authHasher;
+        std::unique_ptr<app::auth::SqliteAuditLogger>     auditLogger;
+        std::unique_ptr<app::auth::AuthService>           authService;
         std::unique_ptr<app::historian::SqliteHistoryStore>   historyStore;
         std::unique_ptr<app::historian::HistorianBridge>      historianBridge;
         std::unique_ptr<app::historian::HistorianMaintenance> historianMaintenance;
@@ -472,6 +529,12 @@ int main(int argc, char* argv[]) {
                     app::model::DatabaseManager::instance()));
         }
 
+        if (config.isAuthEnabled()) {
+            registerAuth(config, bootstrap.logger(),
+                         authRepo, authHasher, auditLogger,
+                         authService, authSession);
+        }
+
         if (config.isHistorianEnabled()) {
             registerHistorian(config, bootstrap.logger(),
                               historyStore, historianBridge,
@@ -484,11 +547,8 @@ int main(int argc, char* argv[]) {
         }
 
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
-        // OPC-UA server backend. Disabled by default; opt-in per
-        // deployment via app-config.json. Compiled out entirely when
-        // BUILD_OPCUA_BACKEND=OFF, so the host binary stays small for
-        // deployments that don't speak OPC-UA. Wiring extracted to a
-        // helper to keep main() under the function-size threshold.
+        // OPC-UA server + client backends -- both opt-in via config,
+        // compiled out via BUILD_OPCUA_BACKEND=OFF. See register*().
         if (config.isOpcUaBackendEnabled()) {
             registerOpcUaBackend(integration, config, bootstrap.logger(),
                                  opcuaCommandSink);
@@ -500,9 +560,8 @@ int main(int argc, char* argv[]) {
 #endif
 
 #ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-        // Modbus master backend. Disabled by default; opt-in per
-        // deployment via app-config.json. Compiled out entirely when
-        // BUILD_MODBUS_BACKEND=OFF.
+        // Modbus master -- opt-in via config; compiled out via
+        // BUILD_MODBUS_BACKEND=OFF. See registerModbusBackend().
         if (config.isModbusBackendEnabled()) {
             registerModbusBackend(integration, config, bootstrap.logger());
         }
@@ -527,6 +586,12 @@ int main(int argc, char* argv[]) {
         // store opened successfully above. Pointer (or null) flows
         // to MainWindow which decides whether to register the page.
         app.setHistoryReader(historyStore.get());
+        // Auth: when registerAuth() succeeded both pointers are non-
+        // null and Application::run() will show the LoginDialog first.
+        // When auth is disabled (or registration failed) the pointers
+        // stay null and run() goes straight to MainWindow as before.
+        app.setAuth(authService.get(), &authSession);
+        app.setAuditLogger(auditLogger.get());
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 
         // Inject the app-wide logger into the SimulatedModel singleton so

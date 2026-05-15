@@ -254,6 +254,17 @@ public:
         return getValue("network.tcp.enabled", "false") == "true";
     }
 
+    // Auth: SQLite-backed user store + Argon2id passwords. Off by
+    // default so existing deployments keep their no-login UX until
+    // they opt in.
+    [[nodiscard]] bool isAuthEnabled() const {
+        return getValue("auth.enabled", "false") == "true";
+    }
+
+    [[nodiscard]] std::string getAuthDbPath() const {
+        return getValue("auth.db_path", defaults::kAuthDbPath);
+    }
+
     // Historian time-series persistence. Off by default -- enabling it
     // creates a SQLite file at `historian.db_path` and starts batching
     // scalar telemetry. See HistorianBridge for the batching contract.

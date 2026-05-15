@@ -1,5 +1,6 @@
 #pragma once
 
+#include "src/auth/Role.h"
 #include "src/gtk/view/pages/Page.h"
 #include "src/presenter/ViewObserver.h"
 #include "src/presenter/ProductsPresenter.h"
@@ -26,6 +27,12 @@ public:
     ~ProductsPage() override;
 
     void initialize(std::shared_ptr<ProductsPresenter> presenter);
+
+    /// Gate CRUD controls by role. Operator gets view-only -- the Add
+    /// button + per-row Edit / Delete actions become insensitive
+    /// with a tooltip pointing at the missing role. Maintenance and
+    /// Admin get the full surface.
+    void applyRole(app::auth::Role role);
 
     // Page overrides
     [[nodiscard]] Glib::ustring pageTitle() const override;
@@ -73,6 +80,12 @@ private:
     Glib::RefPtr<Gtk::SingleSelection> selectionModel_;
 
     std::shared_ptr<ProductsPresenter> presenter_;
+
+    /// Cached active role, applied via applyRole(). Default Admin so
+    /// the no-auth dev path stays unchanged (every action allowed
+    /// when the page is built outside a session). MainWindow calls
+    /// applyRole() with the actual role after constructing the page.
+    app::auth::Role role_{app::auth::Role::Admin};
 
     // CSS
     Glib::RefPtr<Gtk::CssProvider> cssProvider_;
