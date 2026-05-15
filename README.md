@@ -50,12 +50,16 @@ core.
   surfaces a uniform `IntegrationBackend` pill in the dashboard's I/O
   panel, with state semantics tuned per protocol (Connecting vs.
   Connected reflects "service up" vs. "an actual peer talking").
-- **Time-series Historian** -- optional SQLite-backed persistence for
-  quality pass rates, equipment supply levels, and system state
-  transitions. `HistorianBridge` subscribes to the same
-  `ProductionModel` signals every other consumer uses (one source of
-  truth); batched INSERTs in WAL mode amortise the commit cost.
-  A dedicated **History page** queries the read interface and renders
+- **Time-series Historian with tiered downsampling** -- optional
+  SQLite-backed persistence for quality pass rates, equipment
+  supply levels, and system state transitions. `HistorianBridge`
+  subscribes to the same `ProductionModel` signals every other
+  consumer uses (one source of truth); batched INSERTs in WAL mode
+  amortise the commit cost. **Three-tier schema** (raw / 1-min
+  averages / 1-hour averages) with a `std::jthread` maintenance
+  worker that demotes aged rows in one atomic transaction --
+  industrial-historian pattern, query routes to the right tier
+  based on the requested range. Dedicated **History page** renders
   six trend charts side by side (range picker: 1h / 24h / 7d).
   Off by default; opt-in via `historian.enabled` in `app-config.json`.
 - **Cross-platform CI** on Ubuntu 24.04 (GCC 13 + pkg-config) and
@@ -677,22 +681,34 @@ Design points worth calling out:
   or age cap (default 5 s) -- whichever comes first. Concurrent
   readers don't block the writer; the History page can query while
   the bridge is mid-flush.
-- **Schema is one table, three short codes**.
-  `samples(ts INTEGER, field TEXT, entity INTEGER, value REAL)` with
-  index `(field, entity, ts)`. Single character per series (`Q` /
-  `S` / `T`) keeps the archive compact at millions of rows. Tiered
-  decimation (1s -> 1m -> 1h) is the next track and slots in as
-  additional tables with no schema break.
+- **Three-tier schema with automatic downsampling**.
+  `samples` (raw, ~1s cadence, last 1h), `samples_1m` (1-minute
+  averages, last 24h), `samples_1h` (1-hour averages, archive). All
+  three share the same `(field, entity, ts)` compound index and
+  `(ts, field TEXT, entity, value REAL)` column shape; the only
+  difference is row density. `HistorianMaintenance` is a
+  `std::jthread` worker that sweeps every minute -- raw rows older
+  than 1h fold into minute buckets via
+  `INSERT INTO samples_1m SELECT (ts/60000)*60000, field, entity,
+  AVG(value) ... GROUP BY ...`, all inside one transaction with the
+  matching DELETE so a reader never sees a row in both tiers (or
+  in neither). The query path picks the coarsest tier with enough
+  resolution for the range -- 300 pixels per chart, no point
+  pulling 86 400 raw rows for a 24h zoom-out.
 - **Graceful degradation**. If SQLite can't open the configured
   path (permission denied, read-only fs), main() logs a warning and
   drops the bridge + page -- the rest of the binary keeps running.
   Same opt-in degradation pattern as the ML and OPC-UA paths.
 
-Coverage: `SqliteHistoryStoreTest` (10 in-memory roundtrip / batch /
-index / limit / order tests), `HistorianBridgeTest` (5 fixture-based
-signal-to-row tests with a `FakeHistoryWriter`), `HistoryPageTest`
-(4 GUI tests asserting the page queries all six series with the
-correct lookback window on construction).
+Coverage: `SqliteHistoryStoreTest` (16 tests -- roundtrip, batch,
+index, limit, order, plus tiered-retention demotion atomicity,
+bucket alignment, query routing per tier), `HistorianBridgeTest`
+(5 fixture-based signal-to-row tests with a `FakeHistoryWriter`),
+`HistorianMaintenanceTest` (5 worker tests -- raw -> minute, fresh
+rows untouched, chained raw -> minute -> hour, jthread shutdown
+deadlock smoke), `HistoryPageTest` (4 GUI tests asserting the page
+queries all six series with the correct lookback window on
+construction).
 
 ## Edge AI Inference
 

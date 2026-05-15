@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Historian: tiered retention with downsampling (B1 phase 2)
+
+- **Three-tier schema**: `samples` (raw, 1s cadence, last hour),
+  `samples_1m` (1-minute averages, last 24h), `samples_1h` (1-hour
+  averages, archive). Each table carries the same `(field, entity,
+  ts)` compound index. Schema bootstrap is idempotent; existing
+  Phase-1 databases gain the two new tables on next open with zero
+  migration.
+- **`SqliteHistoryStore::demoteOlderThan(src, dst, age, bucket)`** --
+  one atomic transaction that aggregates source rows older than the
+  age cutoff into `bucket`-aligned averages (`(ts/bucket)*bucket`
+  group key, `AVG(value)` aggregator), inserts them into the
+  destination tier, and deletes the originals. No double-counting,
+  no gap window where rows sit in neither tier.
+- **Query routing**: `query()` picks the coarsest tier whose
+  resolution still suits the requested range (range <= 1h: Raw;
+  <= 24h: Minute; > 24h: Hour). Trade-off documented in the header
+  -- a fancier router could split a 24h range across raw + minute,
+  but the chart only has 300 pixels and the shape is the same.
+- **`HistorianMaintenance`** worker: one `std::jthread` sleeping on
+  a `condition_variable_any` keyed to its `stop_token`. Each sweep
+  runs two `demoteOlderThan` passes (raw -> minute, minute -> hour).
+  Default cadence 1 min; raw retention 1 h, minute retention 24 h.
+  `stop()` wakes the cv and joins inside ms regardless of the sweep
+  interval -- the destructor and the composition root's shutdown
+  path both rely on this.
+- **6 new SQLite-store tests** (demotion atomicity, bucket
+  alignment, tier query routing) and **5 new worker tests** (single
+  sweep behaviour, chained raw -> minute -> hour, jthread shutdown
+  deadlock smoke). 55/55 passing on Linux.
+
 ### Time-series Historian (B1)
 
 - **New `objectsHistorian` OBJECT library** with two narrow

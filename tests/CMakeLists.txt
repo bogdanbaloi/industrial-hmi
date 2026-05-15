@@ -114,6 +114,18 @@ target_link_libraries(test_historian_bridge PRIVATE
 )
 add_test(NAME HistorianBridgeTest COMMAND test_historian_bridge)
 
+# Historian: HistorianMaintenance
+# Exercises the demotion policy via runOnce() so tests stay
+# deterministic without sleeping for the periodic loop. One smoke
+# test still spawns the jthread to catch deadlocks in stop().
+add_executable(test_historian_maintenance HistorianMaintenanceTest.cpp)
+target_link_libraries(test_historian_maintenance PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+)
+add_test(NAME HistorianMaintenanceTest COMMAND test_historian_maintenance)
+
 # Integration: CsvSerializer (pure C++, no GTK). Compiles the source
 # directly so the test binary stays on a minimal link line independent
 # of objectsIntegrationCore.

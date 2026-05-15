@@ -13,35 +13,61 @@ struct sqlite3;  // forward declare; keeps <sqlite3.h> out of this header
 
 namespace app::historian {
 
-/// SQLite-backed implementation of both HistoryWriter and HistoryReader.
+/// Storage tier identifier. Maps 1:1 to a physical table; the writer
+/// only ever inserts into `Raw`, the maintenance worker demotes older
+/// rows into the coarser tiers, the reader picks one tier per query
+/// based on the requested range duration.
+enum class Tier : std::uint8_t {
+    Raw    = 0,  ///< per-sample, ~1s cadence, last hour
+    Minute = 1,  ///< 1-minute aggregates (avg/min/max/count), last 24h
+    Hour   = 2,  ///< 1-hour aggregates, archive
+};
+
+/// SQLite-backed implementation of both HistoryWriter and HistoryReader,
+/// plus the demotion primitives the maintenance worker drives.
+///
 /// Single SQLite connection guarded by an internal mutex -- SQLite's
 /// default threading model (serialized) handles cross-thread access at
-/// the library level, but we also serialise at C++ level to keep
-/// prepared statement reuse safe.
+/// the library level, but we also serialise at C++ level so prepared
+/// statements + multi-statement transactions stay atomic.
 ///
-/// Schema (single table, MVP):
+/// Schema (three tables, tiered retention):
 /// @code
-///   CREATE TABLE IF NOT EXISTS samples (
-///       ts       INTEGER NOT NULL,   -- ms since Unix epoch
-///       field    TEXT    NOT NULL,   -- 'Q' / 'S' / 'T' (see fieldCode)
-///       entity   INTEGER NOT NULL,   -- 0..N-1
-///       value    REAL    NOT NULL
+///   CREATE TABLE samples (                  -- Tier::Raw
+///       ts     INTEGER NOT NULL,            -- ms since Unix epoch
+///       field  TEXT    NOT NULL,            -- 'Q' / 'S' / 'T'
+///       entity INTEGER NOT NULL,            -- 0..N-1
+///       value  REAL    NOT NULL
 ///   );
-///   CREATE INDEX IF NOT EXISTS idx_samples_lookup
-///       ON samples(field, entity, ts);
+///   CREATE TABLE samples_1m (               -- Tier::Minute
+///       ts     INTEGER NOT NULL,            -- ms, aligned to minute
+///       field  TEXT    NOT NULL,
+///       entity INTEGER NOT NULL,
+///       value  REAL    NOT NULL             -- average of the bucket
+///   );
+///   CREATE TABLE samples_1h (               -- Tier::Hour
+///       ts     INTEGER NOT NULL,            -- ms, aligned to hour
+///       field  TEXT    NOT NULL,
+///       entity INTEGER NOT NULL,
+///       value  REAL    NOT NULL
+///   );
 /// @endcode
 ///
-/// The compound index covers the dominant query shape -- "give me all
-/// samples for field F entity E in [t0, t1] ordered by ts". A plain
-/// `(ts)` index would also work but a 3-column index lets SQLite skip
-/// the table scan entirely for typical UI ranges.
+/// Each table carries the same compound index on
+/// `(field, entity, ts)` -- the universal "give me one series in a
+/// time window" lookup. Demotion is **insert + delete** in one
+/// transaction so a crash between steps doesn't double-count or lose
+/// rows.
 ///
-/// Tiered retention / decimation is intentionally out of scope for the
-/// MVP; that lives in a follow-up (`HistorianMaintenance`) that
-/// demotes older `samples_raw` rows into coarser `samples_1m` and
-/// `samples_1h` tables. The current single-table layout maps cleanly
-/// to that future split (the new code just adds tables; existing
-/// queries remain compatible).
+/// Query routing (mvp):
+///   range duration  <= 1h    -> Tier::Raw
+///   range duration  <= 24h   -> Tier::Minute
+///   range duration  >  24h   -> Tier::Hour
+/// Trade-off: an operator zooming into the last 24h sees minute-
+/// resolution data for the most recent hour even though raw data is
+/// available -- a slightly fancier router could split the range
+/// across tiers, but it doubles the SQL surface and produces the same
+/// shape for the 300-pixel chart.
 class SqliteHistoryStore : public HistoryWriter, public HistoryReader {
 public:
     struct Config {
@@ -71,15 +97,35 @@ public:
     /// records a startup warning.
     [[nodiscard]] bool initialize();
 
-    // HistoryWriter
+    // HistoryWriter -- always inserts into Tier::Raw.
     std::size_t write(std::span<const HistoryRecord> records) override;
 
-    // HistoryReader
+    // HistoryReader -- routes the query to the tier that best matches
+    // the requested range (see header docs).
     [[nodiscard]] std::vector<HistoryRecord>
     query(FieldKind field,
           std::uint32_t entityId,
           QueryRange range) override;
     [[nodiscard]] std::size_t totalSamples() const override;
+
+    /// Aggregate every row in `src` older than `olderThanMs` into
+    /// `bucketMs`-wide averages, write them to `dst`, then delete the
+    /// originals. Insert+delete run in one transaction.
+    ///
+    /// Caller (HistorianMaintenance) is responsible for invoking this
+    /// on a cadence -- the store itself stays free of timers and
+    /// background threads so it remains trivially testable on the
+    /// calling thread.
+    ///
+    /// @return number of source rows folded into the destination.
+    std::size_t demoteOlderThan(Tier src,
+                                Tier dst,
+                                std::int64_t olderThanMs,
+                                std::int64_t bucketMs);
+
+    /// Diagnostic helpers -- the maintenance loop logs progress and
+    /// the History page footer surfaces the raw total to the operator.
+    [[nodiscard]] std::size_t rowCount(Tier tier) const;
 
 private:
     Config                    config_;

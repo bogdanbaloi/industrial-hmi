@@ -152,5 +152,11 @@ constexpr float kQualityWarningThreshold = 90.0f;
 constexpr const char* kHistorianDbPath       = "data/historian.sqlite";
 constexpr int         kHistorianBatchSize    = 32;
 constexpr int         kHistorianBatchAgeMs   = 5000;
+// Tiered retention sweep cadence + per-tier age cutoffs. Defaults
+// match the typical industrial historian (1 h fine-grained, 24 h
+// minute-aggregates, hour-aggregates kept forever).
+constexpr int         kHistorianSweepIntervalMs    = 60'000;       // 1 min
+constexpr int         kHistorianRawRetentionMs     = 3'600'000;    // 1 h
+constexpr int         kHistorianMinuteRetentionMs  = 86'400'000;   // 24 h
 
 }  // namespace app::config::defaults

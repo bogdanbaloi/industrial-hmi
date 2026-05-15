@@ -24,6 +24,7 @@
 #  include "src/integration/modbus/ModbusRegisterMap.h"
 #endif
 #include "src/historian/HistorianBridge.h"
+#include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
 #include "src/model/DatabaseManager.h"
 #include "src/model/SimulatedModel.h"
@@ -346,7 +347,9 @@ void registerHistorian(
         app::config::ConfigManager& config,
         app::core::Logger& logger,
         std::unique_ptr<app::historian::SqliteHistoryStore>& storeOut,
-        std::unique_ptr<app::historian::HistorianBridge>& bridgeOut) {
+        std::unique_ptr<app::historian::HistorianBridge>& bridgeOut,
+        std::unique_ptr<app::historian::HistorianMaintenance>&
+            maintenanceOut) {
     app::historian::SqliteHistoryStore::Config storeCfg;
     storeCfg.dbPath = config.getHistorianDbPath();
     storeOut = std::make_unique<app::historian::SqliteHistoryStore>(
@@ -371,6 +374,21 @@ void registerHistorian(
         bridgeCfg);
     bridgeOut->setLogger(logger);
     bridgeOut->wire();
+
+    // Tiered-retention worker -- one jthread that demotes
+    // raw -> 1m -> 1h on a cadence. RAII via unique_ptr; the
+    // destructor cancels the stop_token, wakes the cv, joins.
+    app::historian::HistorianMaintenance::Config mainCfg;
+    mainCfg.sweepInterval   = std::chrono::milliseconds{
+        config.getHistorianSweepIntervalMs()};
+    mainCfg.rawRetention    = std::chrono::milliseconds{
+        config.getHistorianRawRetentionMs()};
+    mainCfg.minuteRetention = std::chrono::milliseconds{
+        config.getHistorianMinuteRetentionMs()};
+    maintenanceOut = std::make_unique<
+        app::historian::HistorianMaintenance>(*storeOut, mainCfg);
+    maintenanceOut->setLogger(logger);
+    maintenanceOut->start();
 }
 
 #ifdef _WIN32
@@ -432,12 +450,13 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
 
-        // Historian store + bridge -- store outlives bridge (bridge
-        // holds a HistoryWriter& into the store), declared in
-        // construction order so destruction reverses. See
-        // registerHistorian() above for the wiring + degraded path.
-        std::unique_ptr<app::historian::SqliteHistoryStore> historyStore;
-        std::unique_ptr<app::historian::HistorianBridge>    historianBridge;
+        // Historian store + bridge + maintenance worker. Store
+        // outlives bridge and maintenance (both hold references into
+        // it); declared in construction order so destruction reverses.
+        // See registerHistorian() above for the wiring + degraded path.
+        std::unique_ptr<app::historian::SqliteHistoryStore>   historyStore;
+        std::unique_ptr<app::historian::HistorianBridge>      historianBridge;
+        std::unique_ptr<app::historian::HistorianMaintenance> historianMaintenance;
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
         std::unique_ptr<app::integration::opcua::OpcUaIngestBridge>
             opcuaIngestBridge;
@@ -455,7 +474,8 @@ int main(int argc, char* argv[]) {
 
         if (config.isHistorianEnabled()) {
             registerHistorian(config, bootstrap.logger(),
-                              historyStore, historianBridge);
+                              historyStore, historianBridge,
+                              historianMaintenance);
         }
 
         if (config.isMqttBackendEnabled()) {

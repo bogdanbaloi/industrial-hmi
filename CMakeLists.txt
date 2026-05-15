@@ -754,6 +754,7 @@ target_sources(objectsHistorian
     PRIVATE
         src/historian/SqliteHistoryStore.cpp
         src/historian/HistorianBridge.cpp
+        src/historian/HistorianMaintenance.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -762,6 +763,7 @@ target_sources(objectsHistorian
             src/historian/HistoryReader.h
             src/historian/SqliteHistoryStore.h
             src/historian/HistorianBridge.h
+            src/historian/HistorianMaintenance.h
 )
 target_link_libraries(objectsHistorian
     PUBLIC
