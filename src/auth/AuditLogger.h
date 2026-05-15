@@ -28,7 +28,8 @@ struct AuditQuery {
     /// Cap on returned rows. The audit page renders into a fixed-row
     /// table; without a cap an admin could pull months of events and
     /// stall the UI thread. 0 == no explicit cap (CSV export path).
-    std::size_t limit{500};
+    static constexpr std::size_t kDefaultLimit = 500;
+    std::size_t limit{kDefaultLimit};
 };
 
 /// Sink for operator-attributed actions.

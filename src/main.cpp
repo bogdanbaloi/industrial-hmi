@@ -486,27 +486,16 @@ int main(int argc, char* argv[]) {
     initWindowsConsole();
 #endif
 
-    // Top-level exception guard. Every fatal condition at or below
-    // Bootstrap / Application / InitConsole surfaces here and is
-    // reported via the appropriate native channel.
-    //
-    //   kExitStartupFatal (2)  -> deployment problem (config / DB)
-    //   kExitUnexpectedFatal (1) -> std::exception escaping the app
-    //   kExitUnknownFatal (3)  -> non-std exception (shouldn't happen)
+    // Top-level exception guard. Exit codes:
+    //   2 = startup fatal (config/DB), 1 = std::exception escaped,
+    //   3 = non-std exception. See kExit* constants above.
     try {
         // Staged startup: logger -> config -> configured logger -> i18n.
-        // Throws CriticalStartupError on fatal config issues.
         app::core::Bootstrap bootstrap;
         bootstrap.run();
 
-        // Integration backends. Opt-in per deployment via app-config.json.
-        // Both front-ends (GTK + console) get the same network surface so
-        // the binary is identical in either build (zero gtkmm leak path
-        // even with TCP/MQTT enabled).
-        //
-        // Lifetime contract: manager + bridge live until the end of main,
-        // so backends keep running until the front-end exits and the
-        // catch-block / RAII shuts them down via stopAll().
+        // Integration backends -- opt-in per deployment via JSON.
+        // Stack-owned through main() so RAII shuts them down on exit.
         auto& config = app::config::ConfigManager::instance();
         app::integration::IntegrationManager integration;
         std::unique_ptr<app::integration::ProductionTelemetryBridge>
@@ -514,22 +503,14 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
 
-        // Auth stack. Declared so the destructor order is:
-        //   service -> hasher -> repo -> session
-        // i.e. the service goes first (it borrows the others), the
-        // session and repo go last. Session lives on the stack so the
-        // mutex inside it has a stable address through Application's
-        // entire run.
+        // Auth + Historian stacks. Declared in construction order so
+        // destruction reverses naturally. See registerAuth() /
+        // registerHistorian() for the wiring + degraded-open paths.
         app::auth::Session                                authSession;
         std::unique_ptr<app::auth::SqliteUserRepository>  authRepo;
         std::unique_ptr<app::auth::Argon2PasswordHasher>  authHasher;
         std::unique_ptr<app::auth::SqliteAuditLogger>     auditLogger;
         std::unique_ptr<app::auth::AuthService>           authService;
-
-        // Historian store + bridge + maintenance worker. Store
-        // outlives bridge and maintenance (both hold references into
-        // it); declared in construction order so destruction reverses.
-        // See registerHistorian() above for the wiring + degraded path.
         std::unique_ptr<app::historian::SqliteHistoryStore>   historyStore;
         std::unique_ptr<app::historian::HistorianBridge>      historianBridge;
         std::unique_ptr<app::historian::HistorianMaintenance> historianMaintenance;
@@ -566,11 +547,8 @@ int main(int argc, char* argv[]) {
         }
 
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
-        // OPC-UA server backend. Disabled by default; opt-in per
-        // deployment via app-config.json. Compiled out entirely when
-        // BUILD_OPCUA_BACKEND=OFF, so the host binary stays small for
-        // deployments that don't speak OPC-UA. Wiring extracted to a
-        // helper to keep main() under the function-size threshold.
+        // OPC-UA server + client backends -- both opt-in via config,
+        // compiled out via BUILD_OPCUA_BACKEND=OFF. See register*().
         if (config.isOpcUaBackendEnabled()) {
             registerOpcUaBackend(integration, config, bootstrap.logger(),
                                  opcuaCommandSink);
@@ -582,9 +560,8 @@ int main(int argc, char* argv[]) {
 #endif
 
 #ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-        // Modbus master backend. Disabled by default; opt-in per
-        // deployment via app-config.json. Compiled out entirely when
-        // BUILD_MODBUS_BACKEND=OFF.
+        // Modbus master -- opt-in via config; compiled out via
+        // BUILD_MODBUS_BACKEND=OFF. See registerModbusBackend().
         if (config.isModbusBackendEnabled()) {
             registerModbusBackend(integration, config, bootstrap.logger());
         }

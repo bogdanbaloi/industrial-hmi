@@ -14,17 +14,17 @@ namespace {
 /// constructing local hashers). libsodium documents sodium_init() as
 /// idempotent and thread-safe, but the flag also saves the call.
 bool ensureSodiumInitialised() {
-    static const bool ok = []() {
-        // sodium_init returns:
-        //    0 on first successful init
-        //    1 if already initialised
-        //   -1 on failure
-        // Anything < 0 means we cannot guarantee CSPRNG / SIMD-safe
-        // primitives; refuse to operate.
+    // sodium_init returns:
+    //    0 on first successful init
+    //    1 if already initialised
+    //   -1 on failure
+    // Anything < 0 means we cannot guarantee CSPRNG / SIMD-safe
+    // primitives; refuse to operate.
+    static const bool kOk = []() {
         const int rc = ::sodium_init();
         return rc >= 0;
     }();
-    return ok;
+    return kOk;
 }
 
 }  // namespace
