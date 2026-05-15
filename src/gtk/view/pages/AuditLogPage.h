@@ -39,10 +39,13 @@ private:
     void onFilterChanged();
     void refresh();
 
-    /// Append one row's worth of cells to the ListView model. Builds
-    /// a `Gtk::Box` per row so we get cheap horizontal layout without
-    /// pulling in `Gtk::ColumnView` (which would require a property
-    /// factory per column -- overkill for an MVP page).
+    /// Append one row's worth of cells to the grid at the next row
+    /// index. A Gtk::Grid is used (rather than a stack of Boxes)
+    /// because it guarantees column alignment across rows even when
+    /// the header row has a bolder / larger font than the data
+    /// rows -- a Box+set_width_chars would let bold characters
+    /// blow the column wider than the regular-weight data, and the
+    /// misalignment would accumulate left-to-right.
     void appendRow(const app::auth::AuditEvent& e);
 
     app::auth::AuditLogger& reader_;
@@ -51,8 +54,12 @@ private:
     Gtk::Entry*                  usernameFilter_{nullptr};
     Gtk::Button*                 refreshButton_{nullptr};
     Gtk::ScrolledWindow*         scroller_{nullptr};
-    Gtk::Box*                    listBox_{nullptr};
+    Gtk::Grid*                   grid_{nullptr};
     Gtk::Label*                  footerLabel_{nullptr};
+
+    /// Next free grid row. Header at row 0, data starts at 1; bumped
+    /// after every appendRow().
+    int                          nextRow_{1};
 
     sigc::connection             autoRefreshConn_;
 };
