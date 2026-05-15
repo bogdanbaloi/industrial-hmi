@@ -86,16 +86,18 @@ void DashboardPresenter::initialize() {
     });
 }
 
+namespace {
+
 // Emit one audit row for a user-initiated action. No-op when audit /
 // session are not wired (tests, auth-disabled builds). Captured by
 // reference so the helper stays free of allocation overhead on the
 // fast path.
-namespace {
 void emitAudit(app::auth::AuditLogger* audit,
                app::auth::Session* session,
                std::string_view category,
                std::string_view action,
-               std::string_view details) {
+               std::string_view details,
+               std::string_view outcome = app::auth::result::kSuccess) {
     if (audit == nullptr || session == nullptr) return;
     const auto userOpt = session->currentUser();
     const auto user    = userOpt.value_or(app::auth::User{});
@@ -105,13 +107,57 @@ void emitAudit(app::auth::AuditLogger* audit,
     e.category = category;
     e.action   = action;
     e.details  = details;
-    e.result   = app::auth::result::kSuccess;
+    e.result   = outcome;
     audit->record(e);
 }
+
+// Defense-in-depth role gate. UI buttons are already disabled per
+// role in DashboardPage::applyRole, but a future caller (keyboard
+// shortcut, programmatic test path, etc.) shouldn't be able to
+// bypass the policy by going through the presenter directly.
+//
+// Returns true to proceed with the action, false to refuse. A refusal
+// records an audit FAILURE row + logs a warning so an admin sees
+// every unauthorised attempt.
+//
+// Pass-through when no session is wired (auth disabled): the legacy
+// dev path keeps full surface so existing tests / no-auth deployments
+// behave unchanged.
+template <typename Predicate>
+bool checkRole(app::auth::AuditLogger* audit,
+               app::auth::Session* session,
+               app::core::Logger* logger,
+               Predicate allowed,
+               std::string_view category,
+               std::string_view action,
+               std::string_view details = "") {
+    if (session == nullptr) return true;
+    const auto userOpt = session->currentUser();
+    if (!userOpt.has_value()) {
+        // Mid-logout / un-authenticated: refuse without audit (no
+        // attribution available).
+        return false;
+    }
+    if (allowed(userOpt->role)) {
+        return true;
+    }
+    if (logger != nullptr) {
+        logger->warn("Presenter: action {} refused -- role {} lacks "
+                     "permission",
+                     action, app::auth::roleName(userOpt->role));
+    }
+    emitAudit(audit, session, category, action, details,
+              app::auth::result::kFailure);
+    return false;
+}
+
 }  // namespace
 
 // User action handlers
 void DashboardPresenter::onStartClicked() {
+    if (!checkRole(audit_, session_, logger_,
+                   app::auth::canStartStop,
+                   app::auth::category::kProduction, "START")) return;
     LOG_IF(info,"User action: Start production");
     emitAudit(audit_, session_, app::auth::category::kProduction,
               "START", "");
@@ -119,6 +165,9 @@ void DashboardPresenter::onStartClicked() {
 }
 
 void DashboardPresenter::onStopClicked() {
+    if (!checkRole(audit_, session_, logger_,
+                   app::auth::canStartStop,
+                   app::auth::category::kProduction, "STOP")) return;
     LOG_IF(info,"User action: Stop production");
     emitAudit(audit_, session_, app::auth::category::kProduction,
               "STOP", "");
@@ -126,6 +175,9 @@ void DashboardPresenter::onStopClicked() {
 }
 
 void DashboardPresenter::onResetRestartClicked() {
+    if (!checkRole(audit_, session_, logger_,
+                   app::auth::canResetSystem,
+                   app::auth::category::kProduction, "RESET")) return;
     LOG_IF(info,"User action: Reset system");
     emitAudit(audit_, session_, app::auth::category::kProduction,
               "RESET", "");
@@ -133,6 +185,9 @@ void DashboardPresenter::onResetRestartClicked() {
 }
 
 void DashboardPresenter::onCalibrationClicked() {
+    if (!checkRole(audit_, session_, logger_,
+                   app::auth::canCalibrate,
+                   app::auth::category::kProduction, "CALIBRATE")) return;
     LOG_IF(info,"User action: Start calibration");
     emitAudit(audit_, session_, app::auth::category::kProduction,
               "CALIBRATE", "");
@@ -140,11 +195,18 @@ void DashboardPresenter::onCalibrationClicked() {
 }
 
 void DashboardPresenter::onEquipmentToggled(uint32_t equipmentId, bool enabled) {
+    const auto details = std::format("equipment id {}", equipmentId);
+    if (!checkRole(audit_, session_, logger_,
+                   // Operator+ can toggle; Maintenance / Admin too.
+                   [](app::auth::Role r) {
+                       return app::auth::canStartStop(r);
+                   },
+                   app::auth::category::kEquipment,
+                   enabled ? "ENABLE" : "DISABLE", details)) return;
     LOG_IF(info,"User action: Equipment {} toggled -> {}",
                equipmentId, enabled ? "enabled" : "disabled");
     emitAudit(audit_, session_, app::auth::category::kEquipment,
-              enabled ? "ENABLE" : "DISABLE",
-              std::format("equipment id {}", equipmentId));
+              enabled ? "ENABLE" : "DISABLE", details);
     model_.setEquipmentEnabled(equipmentId, enabled);
 }
 

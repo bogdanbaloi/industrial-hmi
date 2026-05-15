@@ -36,6 +36,29 @@ void emitAudit(app::auth::AuditLogger* audit,
     audit->record(e);
 }
 
+// Defense-in-depth role gate for product CRUD. Mirror of the
+// DashboardPresenter helper -- a refusal records an audit FAILURE
+// row + returns false. Pass-through when session is null
+// (auth-disabled / test path).
+bool checkEditPermission(app::auth::AuditLogger* audit,
+                         app::auth::Session* session,
+                         app::core::Logger* logger,
+                         std::string_view action,
+                         std::string_view details) {
+    if (session == nullptr) return true;
+    const auto userOpt = session->currentUser();
+    if (!userOpt.has_value()) return false;
+    if (app::auth::canEditProducts(userOpt->role)) return true;
+    if (logger != nullptr) {
+        logger->warn("ProductsPresenter: action {} refused -- role {} "
+                     "lacks permission",
+                     action, app::auth::roleName(userOpt->role));
+    }
+    emitAudit(audit, session, action, details,
+              app::auth::result::kFailure);
+    return false;
+}
+
 }  // namespace
 
 ProductsPresenter::ProductsPresenter()
@@ -130,6 +153,11 @@ presenter::ViewProductDialogViewModel ProductsPresenter::buildProductDetailViewM
 void ProductsPresenter::addProduct(const std::string& productCode, const std::string& name,
                                    const std::string& status, int stock, float qualityRate,
                                    std::function<void(bool)> callback) {
+    if (!checkEditPermission(audit_, session_, logger_, "ADD",
+                             std::format("code={}", productCode))) {
+        callback(false);
+        return;
+    }
     LOG_IF(info,"Add product requested: code={}, name={}, stock={}, quality={:.1f}%",
                productCode, name, stock, qualityRate);
     auto& db = model::DatabaseManager::instance();
@@ -154,6 +182,11 @@ void ProductsPresenter::addProduct(const std::string& productCode, const std::st
 }
 
 void ProductsPresenter::deleteProduct(int productId, std::function<void(bool)> callback) {
+    if (!checkEditPermission(audit_, session_, logger_, "DELETE",
+                             std::format("id={}", productId))) {
+        callback(false);
+        return;
+    }
     LOG_IF(info,"Delete product requested: id={}", productId);
     auto& db = model::DatabaseManager::instance();
 
@@ -178,6 +211,11 @@ void ProductsPresenter::deleteProduct(int productId, std::function<void(bool)> c
 void ProductsPresenter::updateProduct(int productId, const std::string& name,
                                      const std::string& status, int stock, float qualityRate,
                                      std::function<void(bool)> callback) {
+    if (!checkEditPermission(audit_, session_, logger_, "UPDATE",
+                             std::format("id={}", productId))) {
+        callback(false);
+        return;
+    }
     LOG_IF(info,"Update product requested: id={}, name={}, stock={}, quality={:.1f}%",
                productId, name, stock, qualityRate);
     auto& db = model::DatabaseManager::instance();

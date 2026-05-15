@@ -222,12 +222,24 @@ void MainWindow::buildSidebarWidgets() {
             if (session != nullptr) {
                 userBadge_ = Gtk::make_managed<app::view::UserBadge>(
                     *svc, *session);
-                // Sign-out closes the main window. The Gtk::Application's
-                // run() loop returns once no windows remain, exiting the
-                // binary -- the next launch goes through LoginDialog
-                // again, which matches operator intent (the gesture is
-                // "I'm done; the next person needs to sign in").
-                userBadge_->onSignOut([this]() { this->close(); });
+                // Sign out quits the GTK application explicitly so
+                // the main() loop returns and the container's
+                // `restart: unless-stopped` policy spins us back to
+                // the LoginDialog on a fresh process.
+                //
+                // Earlier this called `this->close()` which closes the
+                // window but doesn't always trigger Gtk::Application
+                // to return from run() -- some held references kept
+                // the process alive with no window, leaving noVNC
+                // attached to an empty Xvfb and the operator stuck
+                // (browser refresh re-connected to the same empty
+                // X session). Calling Application::quit() directly
+                // is the unambiguous gesture.
+                userBadge_->onSignOut([]() {
+                    if (auto app = Gtk::Application::get_default()) {
+                        app->quit();
+                    }
+                });
                 systemStatusContainer_->append(*userBadge_);
             }
         }
