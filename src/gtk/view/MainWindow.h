@@ -25,7 +25,9 @@ namespace app {
         class ProductsPage;
         class SettingsPage;
         class HistoryPage;
+        class AuditLogPage;
         class QualityInspectionPage;
+        class UserBadge;
         class DialogManager;
         class AlertsPanel;
         class SystemStatusBadge;
@@ -176,6 +178,16 @@ private:
     // time). Otherwise the tab is skipped silently, matching the same
     // opt-in degradation the ML and OPC-UA paths use.
     app::view::HistoryPage*                  historyPage_   = nullptr;
+
+    // Audit log page -- admin-only. Mounted only when (1) auth is
+    // enabled, (2) audit logger initialised, AND (3) the currently
+    // logged-in user holds Admin role. Operator + Maintenance never
+    // see the tab.
+    app::view::AuditLogPage*                 auditLogPage_  = nullptr;
+
+    // Sidebar user badge -- current user + role + sign out. Lives
+    // in the sidebar layout; null when auth is disabled.
+    app::view::UserBadge*                    userBadge_     = nullptr;
 
     // Edge AI inspection -- only instantiated when BUILD_ML_CLASSIFIER
     // is on AND the model + labels artefacts are present on disk. The

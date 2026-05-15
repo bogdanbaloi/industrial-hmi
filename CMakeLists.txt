@@ -856,11 +856,13 @@ target_sources(objectsView
         src/gtk/view/MainWindowKeyDispatch.cpp
         src/gtk/view/DialogManager.cpp
         src/gtk/view/AboutDialog.cpp
+        src/gtk/view/pages/AuditLogPage.cpp
         src/gtk/view/pages/DashboardPage.cpp
         src/gtk/view/pages/HistoryPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
         src/gtk/view/pages/SettingsPage.cpp
         src/gtk/view/pages/QualityInspectionPage.cpp
+        src/gtk/view/widgets/UserBadge.cpp
     PRIVATE
         FILE_SET internalHeaders
         TYPE HEADERS
@@ -870,6 +872,7 @@ target_sources(objectsView
             src/gtk/view/DialogManager.h
             src/gtk/view/AboutDialog.h
             src/gtk/view/pages/Page.h
+            src/gtk/view/pages/AuditLogPage.h
             src/gtk/view/pages/DashboardPage.h
             src/gtk/view/pages/HistoryPage.h
             src/gtk/view/pages/ProductsPage.h
@@ -881,6 +884,7 @@ target_sources(objectsView
             src/gtk/view/widgets/AlertsPanel.h
             src/gtk/view/widgets/SystemStatusBadge.h
             src/gtk/view/widgets/LiveClock.h
+            src/gtk/view/widgets/UserBadge.h
             src/presenter/AlertCenter.h
             src/presenter/modelview/AlertViewModel.h
             src/gtk/view/css_classes.h
