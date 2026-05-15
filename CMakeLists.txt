@@ -158,12 +158,19 @@ if(PLATFORM_LINUX OR PLATFORM_MACOS)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTKMM REQUIRED gtkmm-4.0)
     pkg_check_modules(SQLITE REQUIRED sqlite3)
+    # libsodium for Argon2id password hashing in the auth layer.
+    # OWASP-recommended KDF as of 2024; resists GPU brute-force +
+    # side-channel attacks. Ubuntu/MSYS2 ship .pc files; Windows native
+    # picks up the vcpkg target below.
+    pkg_check_modules(SODIUM REQUIRED libsodium)
 else()
     # Windows: Use vcpkg packages
     find_package(gtkmm REQUIRED)
     find_package(unofficial-sqlite3 CONFIG REQUIRED)
+    find_package(unofficial-sodium CONFIG REQUIRED)
     set(GTKMM_LIBRARIES gtkmm::gtkmm)
     set(SQLITE_LIBRARIES unofficial::sqlite3::sqlite3)
+    set(SODIUM_LIBRARIES unofficial-sodium::sodium)
 endif()
 
 # Boost (header-only signals2)
@@ -774,6 +781,40 @@ target_link_libraries(objectsHistorian
 target_include_directories(objectsHistorian
     PUBLIC
         ${SQLITE_INCLUDE_DIRS}
+)
+
+# Auth Layer - Username/password authentication, RBAC, audit log.
+# GTK-free OBJECT lib (the UI dialog lives in objectsView) so both
+# front-ends and the test suite can link the auth core without
+# pulling GTK. libsodium provides the Argon2id KDF.
+add_library(objectsAuth OBJECT)
+target_sources(objectsAuth
+    PRIVATE
+        src/auth/Argon2PasswordHasher.cpp
+        src/auth/SqliteUserRepository.cpp
+        src/auth/AuthService.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/auth/Role.h
+            src/auth/User.h
+            src/auth/PasswordHasher.h
+            src/auth/Argon2PasswordHasher.h
+            src/auth/UserRepository.h
+            src/auth/SqliteUserRepository.h
+            src/auth/Session.h
+            src/auth/AuthService.h
+)
+target_link_libraries(objectsAuth
+    PUBLIC
+        objectsCore
+        ${SQLITE_LIBRARIES}
+        ${SODIUM_LIBRARIES}
+)
+target_include_directories(objectsAuth
+    PUBLIC
+        ${SQLITE_INCLUDE_DIRS}
+        ${SODIUM_INCLUDE_DIRS}
 )
 
 # Console Layer - Headless front-end. Shares the Model + Presenter
