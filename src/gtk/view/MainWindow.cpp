@@ -320,13 +320,25 @@ void MainWindow::registerPage(app::view::Page* page) {
 }
 
 void MainWindow::createAllPages() {
-    auto& logger = app::core::Application::instance().logger();
+    auto& app    = app::core::Application::instance();
+    auto& logger = app.logger();
+
+    // Audit hookup is conditional: when the composition root wired
+    // both the audit sink AND the session, every presenter gets a
+    // call to setAudit() so its action handlers record rows. With
+    // either pointer null the presenters stay free of audit calls
+    // (auth-disabled builds, unit tests, etc.).
+    auto* audit   = app.auditLogger();
+    auto* session = app.authSession();
 
     // Dashboard
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
     dashboardPresenter_->setLogger(logger);
     if (alertCenter_) {
         dashboardPresenter_->setAlertCenter(*alertCenter_);
+    }
+    if (audit != nullptr && session != nullptr) {
+        dashboardPresenter_->setAudit(*audit, *session);
     }
     dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
     dashboardPage_->initialize(dashboardPresenter_);
@@ -335,6 +347,9 @@ void MainWindow::createAllPages() {
     // Products
     productsPresenter_ = std::make_shared<app::ProductsPresenter>();
     productsPresenter_->setLogger(logger);
+    if (audit != nullptr && session != nullptr) {
+        productsPresenter_->setAudit(*audit, *session);
+    }
     productsPage_ = Gtk::make_managed<app::view::ProductsPage>(*dialogManager_);
     productsPage_->initialize(productsPresenter_);
     registerPage(productsPage_);

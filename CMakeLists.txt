@@ -436,6 +436,7 @@ target_link_libraries(objectsPresenter
         objectsModel
         objectsMl
         objectsIntegrationCore
+        objectsAuth
         ${BOOST_TARGET}
         Threads::Threads
 )
@@ -795,6 +796,7 @@ target_sources(objectsAuth
     PRIVATE
         src/auth/Argon2PasswordHasher.cpp
         src/auth/SqliteUserRepository.cpp
+        src/auth/SqliteAuditLogger.cpp
         src/auth/AuthService.cpp
     PUBLIC
         FILE_SET HEADERS
@@ -805,6 +807,9 @@ target_sources(objectsAuth
             src/auth/Argon2PasswordHasher.h
             src/auth/UserRepository.h
             src/auth/SqliteUserRepository.h
+            src/auth/AuditEvent.h
+            src/auth/AuditLogger.h
+            src/auth/SqliteAuditLogger.h
             src/auth/Session.h
             src/auth/AuthService.h
 )

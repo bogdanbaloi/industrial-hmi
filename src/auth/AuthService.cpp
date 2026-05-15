@@ -1,5 +1,8 @@
 #include "src/auth/AuthService.h"
 
+#include "src/auth/AuditEvent.h"
+#include "src/auth/AuditLogger.h"
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -24,6 +27,24 @@ std::string canonicalUsername(std::string_view raw) {
     return out;
 }
 
+/// Convenience: build an AUTH audit row. The username always lands in
+/// the event even on failed attempts so a forensic walk can correlate
+/// a failed login burst to a single account.
+AuditEvent makeAuthEvent(std::string_view username,
+                         Role             role,
+                         std::string_view action,
+                         std::string_view details,
+                         std::string_view outcome) {
+    AuditEvent e;
+    e.username = username;
+    e.role     = roleName(role);
+    e.category = category::kAuth;
+    e.action   = action;
+    e.details  = details;
+    e.result   = outcome;
+    return e;
+}
+
 }  // namespace
 
 AuthService::AuthService(UserRepository& users,
@@ -40,6 +61,10 @@ LoginResult AuthService::login(std::string_view username,
         if (logger_ != nullptr) {
             logger_->info("Auth: login miss (unknown user '{}')", canon);
         }
+        if (audit_ != nullptr) {
+            audit_->record(makeAuthEvent(canon, Role::Operator, "LOGIN",
+                                         "unknown user", result::kFailure));
+        }
         // Important: same failure mode as bad password so timing /
         // error-message attackers cannot enumerate usernames.
         return LoginResult::InvalidCredentials;
@@ -50,6 +75,11 @@ LoginResult AuthService::login(std::string_view username,
     if (!user.enabled) {
         if (logger_ != nullptr) {
             logger_->warn("Auth: rejected disabled account '{}'", canon);
+        }
+        if (audit_ != nullptr) {
+            audit_->record(makeAuthEvent(canon, user.role, "LOGIN",
+                                         "account disabled",
+                                         result::kFailure));
         }
         return LoginResult::AccountDisabled;
     }
@@ -62,12 +92,22 @@ LoginResult AuthService::login(std::string_view username,
             logger_->error("Auth: hasher exception for '{}': {}",
                            canon, ex.what());
         }
+        if (audit_ != nullptr) {
+            audit_->record(makeAuthEvent(canon, user.role, "LOGIN",
+                                         "hasher exception",
+                                         result::kFailure));
+        }
         return LoginResult::HasherFailure;
     }
 
     if (!verified) {
         if (logger_ != nullptr) {
             logger_->info("Auth: bad password for '{}'", canon);
+        }
+        if (audit_ != nullptr) {
+            audit_->record(makeAuthEvent(canon, user.role, "LOGIN",
+                                         "bad password",
+                                         result::kFailure));
         }
         return LoginResult::InvalidCredentials;
     }
@@ -77,12 +117,25 @@ LoginResult AuthService::login(std::string_view username,
         logger_->info("Auth: login OK '{}' as {}",
                       canon, roleName(user.role));
     }
+    if (audit_ != nullptr) {
+        audit_->record(makeAuthEvent(canon, user.role, "LOGIN",
+                                     "", result::kSuccess));
+    }
     return LoginResult::Success;
 }
 
 void AuthService::logout() {
     if (logger_ != nullptr) {
         logger_->info("Auth: logout '{}'", session_.currentUsername());
+    }
+    if (audit_ != nullptr) {
+        // Capture role + username BEFORE clearing the session;
+        // otherwise the audit row says "unknown" and we lose the
+        // attribution.
+        const auto userOpt = session_.currentUser();
+        const auto user    = userOpt.value_or(User{});
+        audit_->record(makeAuthEvent(user.username, user.role, "LOGOUT",
+                                     "", result::kSuccess));
     }
     session_.clear();
 }

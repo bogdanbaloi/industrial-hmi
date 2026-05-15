@@ -26,6 +26,7 @@
 #include "src/auth/Argon2PasswordHasher.h"
 #include "src/auth/AuthService.h"
 #include "src/auth/Session.h"
+#include "src/auth/SqliteAuditLogger.h"
 #include "src/auth/SqliteUserRepository.h"
 #include "src/historian/HistorianBridge.h"
 #include "src/historian/HistorianMaintenance.h"
@@ -410,6 +411,7 @@ void registerAuth(
         app::core::Logger& logger,
         std::unique_ptr<app::auth::SqliteUserRepository>& repoOut,
         std::unique_ptr<app::auth::Argon2PasswordHasher>& hasherOut,
+        std::unique_ptr<app::auth::SqliteAuditLogger>& auditOut,
         std::unique_ptr<app::auth::AuthService>& serviceOut,
         app::auth::Session& sessionRef) {
     app::auth::SqliteUserRepository::Config repoCfg;
@@ -425,10 +427,28 @@ void registerAuth(
         return;
     }
 
+    // Audit log shares the same SQLite file. Two tables (users +
+    // audit_log) in one DB keeps backup + permissioning simple on
+    // the operator terminal. A failed open downgrades to "auth
+    // without audit" rather than crashing the whole feature.
+    app::auth::SqliteAuditLogger::Config auditCfg;
+    auditCfg.dbPath = config.getAuthDbPath();
+    auditOut = std::make_unique<app::auth::SqliteAuditLogger>(
+        std::move(auditCfg));
+    auditOut->setLogger(logger);
+    if (!auditOut->initialize()) {
+        logger.warn("Audit log disabled: failed to open '{}'",
+                    config.getAuthDbPath());
+        auditOut.reset();
+    }
+
     hasherOut  = std::make_unique<app::auth::Argon2PasswordHasher>();
     serviceOut = std::make_unique<app::auth::AuthService>(
         *repoOut, *hasherOut, sessionRef);
     serviceOut->setLogger(logger);
+    if (auditOut) {
+        serviceOut->setAuditLogger(*auditOut);
+    }
 
     // Seed the three demo accounts on first run. The seeder is
     // idempotent so a populated DB is left alone.
@@ -503,6 +523,7 @@ int main(int argc, char* argv[]) {
         app::auth::Session                                authSession;
         std::unique_ptr<app::auth::SqliteUserRepository>  authRepo;
         std::unique_ptr<app::auth::Argon2PasswordHasher>  authHasher;
+        std::unique_ptr<app::auth::SqliteAuditLogger>     auditLogger;
         std::unique_ptr<app::auth::AuthService>           authService;
 
         // Historian store + bridge + maintenance worker. Store
@@ -529,7 +550,8 @@ int main(int argc, char* argv[]) {
 
         if (config.isAuthEnabled()) {
             registerAuth(config, bootstrap.logger(),
-                         authRepo, authHasher, authService, authSession);
+                         authRepo, authHasher, auditLogger,
+                         authService, authSession);
         }
 
         if (config.isHistorianEnabled()) {
@@ -592,6 +614,7 @@ int main(int argc, char* argv[]) {
         // When auth is disabled (or registration failed) the pointers
         // stay null and run() goes straight to MainWindow as before.
         app.setAuth(authService.get(), &authSession);
+        app.setAuditLogger(auditLogger.get());
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 
         // Inject the app-wide logger into the SimulatedModel singleton so

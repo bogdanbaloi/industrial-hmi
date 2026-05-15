@@ -155,6 +155,15 @@ target_link_libraries(test_auth_service PRIVATE
 )
 add_test(NAME AuthServiceTest COMMAND test_auth_service)
 
+# Auth: SqliteAuditLogger.
+add_executable(test_sqlite_audit_logger SqliteAuditLoggerTest.cpp)
+target_link_libraries(test_sqlite_audit_logger PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME SqliteAuditLoggerTest COMMAND test_sqlite_audit_logger)
+
 # Integration: CsvSerializer (pure C++, no GTK). Compiles the source
 # directly so the test binary stays on a minimal link line independent
 # of objectsIntegrationCore.

@@ -17,6 +17,7 @@ class HistoryReader;       // forward decl -- non-owning pointer
 namespace app::auth {
 class AuthService;         // forward decl -- non-owning pointer
 class Session;             // forward decl -- non-owning pointer
+class AuditLogger;         // forward decl -- non-owning pointer
 }
 
 namespace app::core {
@@ -109,11 +110,21 @@ public:
         authSession_ = session;
     }
 
+    /// Inject the audit logger. When set together with the session,
+    /// MainWindow propagates both into the presenter constructors so
+    /// every operator-initiated action records a row.
+    void setAuditLogger(auth::AuditLogger* audit) noexcept {
+        auditLogger_ = audit;
+    }
+
     [[nodiscard]] auth::AuthService* authService() const noexcept {
         return authService_;
     }
     [[nodiscard]] auth::Session* authSession() const noexcept {
         return authSession_;
+    }
+    [[nodiscard]] auth::AuditLogger* auditLogger() const noexcept {
+        return auditLogger_;
     }
 
 private:
@@ -127,6 +138,7 @@ private:
     historian::HistoryReader* historyReader_ = nullptr;              // non-owning
     auth::AuthService*      authService_ = nullptr;                  // non-owning
     auth::Session*          authSession_ = nullptr;                  // non-owning
+    auth::AuditLogger*      auditLogger_ = nullptr;                  // non-owning
     std::vector<std::string> startupWarnings_;
     bool                    initialized_{false};
 };

@@ -14,6 +14,11 @@
 #include <mutex>
 #include <atomic>
 
+namespace app::auth {
+class AuditLogger;   // forward decl
+class Session;       // forward decl
+}
+
 namespace app {
 
 /// Presenter for Dashboard page - orchestrates data flow between Model and View
@@ -56,6 +61,18 @@ public:
     /// quality-checkpoint state transitions. Tests leave it null.
     void setAlertCenter(presenter::AlertCenter& alertCenter) {
         alertCenter_ = &alertCenter;
+    }
+
+    /// Optional audit hookup. When both pointers are set, the presenter
+    /// records a PRODUCTION / EQUIPMENT category event for every
+    /// operator-initiated state change (start, stop, reset, calibrate,
+    /// equipment toggle). The session pointer supplies the username +
+    /// role at write time; passing both lets the same presenter run
+    /// hermetically in tests where the audit pipeline isn't wired.
+    void setAudit(app::auth::AuditLogger& audit,
+                  app::auth::Session& session) {
+        audit_   = &audit;
+        session_ = &session;
     }
 
     /// Signal carrying the raw system-state int (0=IDLE, 1=RUNNING,
@@ -178,6 +195,12 @@ private:
     /// Optional AlertCenter (null when tests instantiate the presenter
     /// without the full application wiring).
     presenter::AlertCenter* alertCenter_{nullptr};
+
+    /// Audit hookup -- both pointers set together via setAudit().
+    /// Null when the presenter runs in a test or when the binary
+    /// was built without auth/audit support.
+    app::auth::AuditLogger* audit_{nullptr};
+    app::auth::Session*     session_{nullptr};
 
     /// System-state change signal; emitted from handleSystemStateChanged.
     sigc::signal<void(int)> signalSystemStateChanged_;

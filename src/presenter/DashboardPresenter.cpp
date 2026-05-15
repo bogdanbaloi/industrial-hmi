@@ -1,4 +1,8 @@
 #include "DashboardPresenter.h"
+#include "src/auth/AuditEvent.h"
+#include "src/auth/AuditLogger.h"
+#include "src/auth/Session.h"
+#include "src/auth/User.h"
 #include "src/model/SimulatedModel.h"
 #include "src/config/config_defaults.h"
 #include "src/core/i18n.h"
@@ -82,30 +86,65 @@ void DashboardPresenter::initialize() {
     });
 }
 
+// Emit one audit row for a user-initiated action. No-op when audit /
+// session are not wired (tests, auth-disabled builds). Captured by
+// reference so the helper stays free of allocation overhead on the
+// fast path.
+namespace {
+void emitAudit(app::auth::AuditLogger* audit,
+               app::auth::Session* session,
+               std::string_view category,
+               std::string_view action,
+               std::string_view details) {
+    if (audit == nullptr || session == nullptr) return;
+    const auto userOpt = session->currentUser();
+    const auto user    = userOpt.value_or(app::auth::User{});
+    app::auth::AuditEvent e;
+    e.username = user.username;
+    e.role     = app::auth::roleName(user.role);
+    e.category = category;
+    e.action   = action;
+    e.details  = details;
+    e.result   = app::auth::result::kSuccess;
+    audit->record(e);
+}
+}  // namespace
+
 // User action handlers
 void DashboardPresenter::onStartClicked() {
     LOG_IF(info,"User action: Start production");
+    emitAudit(audit_, session_, app::auth::category::kProduction,
+              "START", "");
     model_.startProduction();
 }
 
 void DashboardPresenter::onStopClicked() {
     LOG_IF(info,"User action: Stop production");
+    emitAudit(audit_, session_, app::auth::category::kProduction,
+              "STOP", "");
     model_.stopProduction();
 }
 
 void DashboardPresenter::onResetRestartClicked() {
     LOG_IF(info,"User action: Reset system");
+    emitAudit(audit_, session_, app::auth::category::kProduction,
+              "RESET", "");
     model_.resetSystem();
 }
 
 void DashboardPresenter::onCalibrationClicked() {
     LOG_IF(info,"User action: Start calibration");
+    emitAudit(audit_, session_, app::auth::category::kProduction,
+              "CALIBRATE", "");
     model_.startCalibration();
 }
 
 void DashboardPresenter::onEquipmentToggled(uint32_t equipmentId, bool enabled) {
     LOG_IF(info,"User action: Equipment {} toggled -> {}",
                equipmentId, enabled ? "enabled" : "disabled");
+    emitAudit(audit_, session_, app::auth::category::kEquipment,
+              enabled ? "ENABLE" : "DISABLE",
+              std::format("equipment id {}", equipmentId));
     model_.setEquipmentEnabled(equipmentId, enabled);
 }
 

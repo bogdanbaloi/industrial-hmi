@@ -12,6 +12,8 @@
 
 namespace app::auth {
 
+class AuditLogger;   // forward decl
+
 /// Outcome of a login attempt. Single enum so the UI can switch on it
 /// for distinct error messages, and the audit log can record the
 /// reason without a free-form string.
@@ -63,6 +65,12 @@ public:
 
     void setLogger(app::core::Logger& logger) { logger_ = &logger; }
 
+    /// Inject an audit sink. When set, every login attempt (success
+    /// or failure) and every logout records an AUTH event. Null
+    /// keeps the service silent on the audit path, matching the
+    /// project-wide "auth core works standalone" contract.
+    void setAuditLogger(AuditLogger& audit) { audit_ = &audit; }
+
     /// Attempt a login. On `Success` the Session has the user set; on
     /// any failure the Session is left as-was (logout doesn't happen
     /// implicitly, the caller decides).
@@ -86,6 +94,7 @@ private:
     PasswordHasher&      hasher_;
     Session&             session_;
     app::core::Logger*   logger_{nullptr};
+    AuditLogger*         audit_{nullptr};
 };
 
 }  // namespace app::auth

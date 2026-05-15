@@ -1,11 +1,42 @@
 #include "ProductsPresenter.h"
+#include "src/auth/AuditEvent.h"
+#include "src/auth/AuditLogger.h"
+#include "src/auth/Session.h"
+#include "src/auth/User.h"
 #include "src/model/DatabaseManager.h"
 #include "src/config/config_defaults.h"
+
+#include <format>
 
 // See DashboardPresenter.cpp -- nullable logger_ inherited from BasePresenter.
 #define LOG_IF(LEVEL, ...) do { if (logger_) logger_->LEVEL(__VA_ARGS__); } while (0)
 
 namespace app {
+
+namespace {
+
+// Same shape as the DashboardPresenter emitAudit helper. Kept local
+// rather than shared so each presenter remains free of cross-includes
+// it would otherwise need just for one tiny utility.
+void emitAudit(app::auth::AuditLogger* audit,
+               app::auth::Session* session,
+               std::string_view action,
+               std::string_view details,
+               std::string_view outcome) {
+    if (audit == nullptr || session == nullptr) return;
+    const auto userOpt = session->currentUser();
+    const auto user    = userOpt.value_or(app::auth::User{});
+    app::auth::AuditEvent e;
+    e.username = user.username;
+    e.role     = app::auth::roleName(user.role);
+    e.category = app::auth::category::kProduct;
+    e.action   = action;
+    e.details  = details;
+    e.result   = outcome;
+    audit->record(e);
+}
+
+}  // namespace
 
 ProductsPresenter::ProductsPresenter()
     : ProductsPresenter(model::DatabaseManager::instance()) {}
@@ -108,9 +139,15 @@ void ProductsPresenter::addProduct(const std::string& productCode, const std::st
                        [this, productCode, callback](bool success) {
         if (success) {
             LOG_IF(info,"Add product succeeded: code={}", productCode);
+            emitAudit(audit_, session_, "ADD",
+                      std::format("code={}", productCode),
+                      app::auth::result::kSuccess);
             loadProducts();
         } else {
             LOG_IF(warn,"Add product failed (likely duplicate code): {}", productCode);
+            emitAudit(audit_, session_, "ADD",
+                      std::format("code={}", productCode),
+                      app::auth::result::kFailure);
         }
         callback(success);
     });
@@ -124,9 +161,15 @@ void ProductsPresenter::deleteProduct(int productId, std::function<void(bool)> c
     db.deleteProductAsync(productId, [this, productId, callback](bool success) {
         if (success) {
             LOG_IF(info,"Delete product succeeded: id={}", productId);
+            emitAudit(audit_, session_, "DELETE",
+                      std::format("id={}", productId),
+                      app::auth::result::kSuccess);
             loadProducts();
         } else {
             LOG_IF(warn,"Delete product failed: id={}", productId);
+            emitAudit(audit_, session_, "DELETE",
+                      std::format("id={}", productId),
+                      app::auth::result::kFailure);
         }
         callback(success);
     });
@@ -144,9 +187,15 @@ void ProductsPresenter::updateProduct(int productId, const std::string& name,
                           [this, productId, callback](bool success) {
         if (success) {
             LOG_IF(info,"Update product succeeded: id={}", productId);
+            emitAudit(audit_, session_, "UPDATE",
+                      std::format("id={}", productId),
+                      app::auth::result::kSuccess);
             loadProducts();
         } else {
             LOG_IF(warn,"Update product failed: id={}", productId);
+            emitAudit(audit_, session_, "UPDATE",
+                      std::format("id={}", productId),
+                      app::auth::result::kFailure);
         }
         callback(success);
     });
