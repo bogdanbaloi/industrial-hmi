@@ -380,15 +380,18 @@ add_library(objectsAppGtk OBJECT)
 target_sources(objectsAppGtk
     PRIVATE
         src/core/Application.cpp
+        src/gtk/view/LoginDialog.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
             src/core/Application.h
+            src/gtk/view/LoginDialog.h
 )
 target_link_libraries(objectsAppGtk
     PUBLIC
         objectsCore
         objectsModel
+        objectsAuth
         ${GTKMM_LIBRARIES}
 )
 target_include_directories(objectsAppGtk
@@ -885,6 +888,7 @@ target_link_libraries(objectsView
         objectsAppGtk
         objectsIntegrationCore
         objectsHistorian
+        objectsAuth
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
 )
@@ -931,6 +935,7 @@ target_link_libraries(industrial-hmi
         objectsMqtt
         objectsMl
         objectsHistorian
+        objectsAuth
         Threads::Threads
 )
 if(BUILD_OPCUA_BACKEND)
@@ -973,6 +978,7 @@ target_link_libraries(industrial-hmi-console
         objectsMqtt
         objectsMl
         objectsHistorian
+        objectsAuth
         Threads::Threads
 )
 if(BUILD_OPCUA_BACKEND)

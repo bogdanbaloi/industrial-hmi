@@ -776,6 +776,7 @@ set(VIEW_COMMON_LIBS
     objectsIntegrationCore  # interfaces + manager only -- view-layer
                             # tests don't touch concrete backends
     objectsHistorian        # HistoryReader interface for HistoryPage tests
+    objectsAuth             # AuthService called by LoginDialog (in objectsAppGtk)
     Threads::Threads
 )
 

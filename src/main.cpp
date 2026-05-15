@@ -23,6 +23,10 @@
 #  include "src/integration/modbus/ModbusPollLoop.h"
 #  include "src/integration/modbus/ModbusRegisterMap.h"
 #endif
+#include "src/auth/Argon2PasswordHasher.h"
+#include "src/auth/AuthService.h"
+#include "src/auth/Session.h"
+#include "src/auth/SqliteUserRepository.h"
 #include "src/historian/HistorianBridge.h"
 #include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
@@ -391,6 +395,46 @@ void registerHistorian(
     maintenanceOut->start();
 }
 
+/// Build the auth stack (repository + hasher + service) when enabled
+/// in config. Same shape as the other register helpers: stack-owned
+/// pieces handed back to main() so the destructors fire in reverse
+/// declaration order at exit.
+///
+/// If the SQLite user store fails to initialise (read-only fs, bad
+/// path) the stack stays unconstructed and the caller continues
+/// without auth -- matches the project-wide degraded-over-crash
+/// policy. Seeded default users (operator / maintenance / admin) are
+/// only inserted on first run; a populated table is left alone.
+void registerAuth(
+        app::config::ConfigManager& config,
+        app::core::Logger& logger,
+        std::unique_ptr<app::auth::SqliteUserRepository>& repoOut,
+        std::unique_ptr<app::auth::Argon2PasswordHasher>& hasherOut,
+        std::unique_ptr<app::auth::AuthService>& serviceOut,
+        app::auth::Session& sessionRef) {
+    app::auth::SqliteUserRepository::Config repoCfg;
+    repoCfg.dbPath = config.getAuthDbPath();
+    repoOut = std::make_unique<app::auth::SqliteUserRepository>(
+        std::move(repoCfg));
+    repoOut->setLogger(logger);
+
+    if (!repoOut->initialize()) {
+        logger.warn("Auth disabled: user store failed to open '{}'",
+                    config.getAuthDbPath());
+        repoOut.reset();
+        return;
+    }
+
+    hasherOut  = std::make_unique<app::auth::Argon2PasswordHasher>();
+    serviceOut = std::make_unique<app::auth::AuthService>(
+        *repoOut, *hasherOut, sessionRef);
+    serviceOut->setLogger(logger);
+
+    // Seed the three demo accounts on first run. The seeder is
+    // idempotent so a populated DB is left alone.
+    serviceOut->seedDefaultUsersIfEmpty();
+}
+
 #ifdef _WIN32
 /// Windows-only platform init: Cairo renderer override + UTF-8 setup.
 ///
@@ -450,6 +494,17 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
 
+        // Auth stack. Declared so the destructor order is:
+        //   service -> hasher -> repo -> session
+        // i.e. the service goes first (it borrows the others), the
+        // session and repo go last. Session lives on the stack so the
+        // mutex inside it has a stable address through Application's
+        // entire run.
+        app::auth::Session                                authSession;
+        std::unique_ptr<app::auth::SqliteUserRepository>  authRepo;
+        std::unique_ptr<app::auth::Argon2PasswordHasher>  authHasher;
+        std::unique_ptr<app::auth::AuthService>           authService;
+
         // Historian store + bridge + maintenance worker. Store
         // outlives bridge and maintenance (both hold references into
         // it); declared in construction order so destruction reverses.
@@ -470,6 +525,11 @@ int main(int argc, char* argv[]) {
                     static_cast<std::uint16_t>(config.getTcpBackendPort()),
                     app::model::SimulatedModel::instance(),
                     app::model::DatabaseManager::instance()));
+        }
+
+        if (config.isAuthEnabled()) {
+            registerAuth(config, bootstrap.logger(),
+                         authRepo, authHasher, authService, authSession);
         }
 
         if (config.isHistorianEnabled()) {
@@ -527,6 +587,11 @@ int main(int argc, char* argv[]) {
         // store opened successfully above. Pointer (or null) flows
         // to MainWindow which decides whether to register the page.
         app.setHistoryReader(historyStore.get());
+        // Auth: when registerAuth() succeeded both pointers are non-
+        // null and Application::run() will show the LoginDialog first.
+        // When auth is disabled (or registration failed) the pointers
+        // stay null and run() goes straight to MainWindow as before.
+        app.setAuth(authService.get(), &authSession);
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 
         // Inject the app-wide logger into the SimulatedModel singleton so

@@ -1,7 +1,10 @@
 // GTK headers must come before Windows headers to avoid
 // wingdi.h macro conflicts (ERROR, IN, OUT, WINDING, IGNORE)
 #include "src/gtk/view/MainWindow.h"
+#include "src/gtk/view/LoginDialog.h"
 
+#include "src/auth/AuthService.h"
+#include "src/auth/Session.h"
 #include "src/core/Application.h"
 #include "src/core/Bootstrap.h"
 #include "src/core/LoggerImpl.h"
@@ -49,6 +52,28 @@ int Application::run(int argc, char* argv[]) {
     auto gtkApp = Gtk::Application::create(config::defaults::kGtkAppId);
 
     gtkApp->signal_activate().connect([this, &gtkApp]() {
+        // Auth gate. When the composition root wired an AuthService +
+        // Session in, show the LoginDialog FIRST and bail out of the
+        // activation handler if the operator cancels -- the GTK
+        // application then has no windows and exits cleanly with 0.
+        // Skipping the dialog when auth is disabled keeps the old
+        // demo UX unchanged (the docker compose path enables it).
+        if (authService_ != nullptr && authSession_ != nullptr) {
+            view::LoginDialog dialog(*authService_, *authSession_);
+            gtkApp->add_window(dialog);
+            const auto outcome = dialog.runModal();
+            gtkApp->remove_window(dialog);
+            if (outcome != view::LoginDialog::Result::Success) {
+                if (logger_ != nullptr) {
+                    logger_->info("Auth: operator cancelled login -- "
+                                  "exiting");
+                }
+                // No window added below; gtkApp->run() returns once
+                // the activation handler ends with no held windows.
+                return;
+            }
+        }
+
         auto* window = new MainWindow();
         gtkApp->add_window(*window);
 

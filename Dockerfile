@@ -71,6 +71,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libgtkmm-4.0-dev \
     libsqlite3-dev \
+    libsodium-dev \
     libboost-dev \
     libgtest-dev \
     libgmock-dev \
@@ -169,6 +170,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtkmm-4.0-0 \
     libsqlite3-0 \
+    libsodium23 \
     xvfb \
     x11vnc \
     novnc \
@@ -355,6 +357,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtkmm-4.0-0 \
     libsqlite3-0 \
+    libsodium23 \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
