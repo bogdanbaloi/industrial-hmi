@@ -53,7 +53,8 @@ TEST(SqliteUserRepositoryTest, CreateReturnsPopulatedRow) {
 
 TEST(SqliteUserRepositoryTest, FindByUsernameSuccess) {
     auto repo = makeRepo();
-    repo->create(sampleUser("alice", Role::Maintenance));
+    ASSERT_TRUE(repo->create(sampleUser("alice", Role::Maintenance))
+                    .has_value());
 
     const auto found = repo->findByUsername("alice");
     ASSERT_TRUE(found.has_value());
@@ -66,7 +67,7 @@ TEST(SqliteUserRepositoryTest, FindByUsernameCaseInsensitive) {
     // a request canonicalised as "alice" still finds a row inserted
     // as "Alice". Defence-in-depth: the service layer normalises too.
     auto repo = makeRepo();
-    repo->create(sampleUser("Alice"));
+    ASSERT_TRUE(repo->create(sampleUser("Alice")).has_value());
     EXPECT_TRUE(repo->findByUsername("alice").has_value());
     EXPECT_TRUE(repo->findByUsername("ALICE").has_value());
 }
@@ -86,9 +87,11 @@ TEST(SqliteUserRepositoryTest, DuplicateUsernameRejected) {
 
 TEST(SqliteUserRepositoryTest, ListAllReturnsAllRowsOrdered) {
     auto repo = makeRepo();
-    repo->create(sampleUser("alice"));
-    repo->create(sampleUser("bob", Role::Maintenance));
-    repo->create(sampleUser("carol", Role::Admin));
+    ASSERT_TRUE(repo->create(sampleUser("alice")).has_value());
+    ASSERT_TRUE(repo->create(sampleUser("bob", Role::Maintenance))
+                    .has_value());
+    ASSERT_TRUE(repo->create(sampleUser("carol", Role::Admin))
+                    .has_value());
 
     const auto rows = repo->listAll();
     ASSERT_EQ(rows.size(), 3U);
