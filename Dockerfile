@@ -177,6 +177,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxkbcommon0 \
     fluxbox \
     ca-certificates \
+    tzdata \
  && rm -rf /var/lib/apt/lists/*
 
 # Why fluxbox: Xvfb is just a framebuffer -- it has no concept of
@@ -228,15 +229,39 @@ fluxbox -display :0 2>/dev/null &
 sleep 1
 
 # Bridge X11 -> VNC.
-#   -display :0     attach to the framebuffer Xvfb created
-#   -nopw           skip VNC auth (the surface is bound to localhost
-#                   in the docker-compose case; for public deploys add
-#                   `-passwd $SOME_PASSWORD` here)
-#   -forever        keep accepting new VNC clients after disconnect
-#   -shared         allow multiple concurrent viewers
-#   -bg             daemonise so the script keeps moving
+#   -display :0      attach to the framebuffer Xvfb created
+#   -nopw            skip VNC auth (the surface is bound to localhost
+#                    in the docker-compose case; for public deploys add
+#                    `-passwd $SOME_PASSWORD` here)
+#   -forever         keep accepting new VNC clients after disconnect
+#   -shared          allow multiple concurrent viewers
+#   -bg              daemonise so the script keeps moving
+#   -threads         multi-thread the screen-poll loop. Single-threaded
+#                    x11vnc maxes one CPU on a busy framebuffer and feels
+#                    laggy in noVNC; with -threads each client handler
+#                    runs on its own thread and the encode pipeline
+#                    parallelises across cores.
+#   -nowf            skip the "wireframe drag" trick; on a small
+#                    container display it actively hurts more than it
+#                    helps.
+#   -noxdamage       skip the X DAMAGE extension. Counter-intuitive
+#                    because DAMAGE is meant as an optimisation, but on
+#                    Xvfb it reports the full screen as damaged after
+#                    GTK redraws -- x11vnc then re-encodes everything
+#                    anyway, paying the DAMAGE syscall cost on top.
+#   -wait 30         polling interval ms. Default 20 -> 30 saves CPU
+#                    without an operator-visible difference (the
+#                    dashboard updates at ~1 Hz, not 50 Hz).
+#
+# NOTE: do NOT add `-ncache N` here. x11vnc's client-side cache
+# allocates extra framebuffer height (N * screen height) below the
+# real screen; noVNC's `resize=scale` then scales the WHOLE thing,
+# shrinking the dashboard into the top tile and leaving the cache
+# region as a giant black bar. The flag works fine with native VNC
+# viewers but is incompatible with the browser-canvas client.
 x11vnc -display :0 -nopw -forever -shared -bg -rfbport 5900 \
-       -listen 0.0.0.0 -quiet
+       -listen 0.0.0.0 -quiet \
+       -threads -nowf -noxdamage -wait 30
 
 # Serve noVNC's HTML5 client + bridge WebSocket -> VNC.
 # `--web` points websockify at the noVNC static assets; clients hit
@@ -261,6 +286,11 @@ RUN mkdir -p /home/hmi/.fluxbox && \
     touch /home/hmi/.fluxbox/init && \
     touch /home/hmi/.fluxbox/keys && \
     touch /home/hmi/.fluxbox/menu
+
+# Historian SQLite directory. The bundled config points at
+# `data/historian.sqlite` (relative to the binary's cwd = /home/hmi);
+# without this the open fails and the History tab is dropped silently.
+RUN mkdir -p /home/hmi/data
 
 # Default landing page: redirect root + /vnc.html to a pre-parametrised
 # URL that (1) scales the remote desktop to fit the browser viewport

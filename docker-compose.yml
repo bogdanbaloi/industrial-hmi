@@ -119,6 +119,12 @@ services:
     depends_on:
       - mosquitto
       - modbus-slave
+    # TZ pins the container clock so the LiveClock widget matches what
+    # the operator sees on the host. Without this, the container runs
+    # in UTC and Romania users see ~3 hours behind their wall clock.
+    # Adjust to your locale; Etc/UTC keeps it timezone-agnostic.
+    environment:
+      - TZ=Europe/Bucharest
     volumes:
       # Bind-mount the docker-tuned config over the image's bundled
       # default. Hostnames inside this file resolve to other compose

@@ -134,9 +134,11 @@ TEST(SqliteHistoryStoreTest, QueryHonoursLimit) {
                                               .toMs = 100,
                                               .limit = 3});
     ASSERT_EQ(rows.size(), 3U);
-    // Oldest-first ordering: limit caps the head of the window.
-    EXPECT_FLOAT_EQ(rows[0].value, 0.0F);
-    EXPECT_FLOAT_EQ(rows[2].value, 2.0F);
+    // Newest-N semantics: the limit caps the *tail* of the window
+    // (values 7, 8, 9 from the 10-row series), returned ascending
+    // for chart-friendly consumption.
+    EXPECT_FLOAT_EQ(rows[0].value, 7.0F);
+    EXPECT_FLOAT_EQ(rows[2].value, 9.0F);
 }
 
 TEST(SqliteHistoryStoreTest, QueryAscendingOrder) {
