@@ -50,6 +50,14 @@ core.
   surfaces a uniform `IntegrationBackend` pill in the dashboard's I/O
   panel, with state semantics tuned per protocol (Connecting vs.
   Connected reflects "service up" vs. "an actual peer talking").
+- **Time-series Historian** -- optional SQLite-backed persistence for
+  quality pass rates, equipment supply levels, and system state
+  transitions. `HistorianBridge` subscribes to the same
+  `ProductionModel` signals every other consumer uses (one source of
+  truth); batched INSERTs in WAL mode amortise the commit cost.
+  A dedicated **History page** queries the read interface and renders
+  six trend charts side by side (range picker: 1h / 24h / 7d).
+  Off by default; opt-in via `historian.enabled` in `app-config.json`.
 - **Cross-platform CI** on Ubuntu 24.04 (GCC 13 + pkg-config) and
   Windows MSYS2 CLANG64; clang-tidy + cppcheck gates every PR.
 
@@ -622,6 +630,69 @@ the real C stack and run server + client on loopback --
 side, `Open62541ClientIntegrationTest` validates monitored-item
 dispatch + the subscribe-before-start / subscribe-after-start /
 lifecycle state matrix.
+
+## Time-series Historian
+
+Optional persistent storage for the scalar telemetry the model
+publishes -- quality pass rates, equipment supply levels, system
+state transitions. Off by default; flip `historian.enabled = true`
+in `app-config.json` to wire it up.
+
+```
+ProductionModel (signals)
+        │
+        ▼
+HistorianBridge       <-- subscribes to existing model callbacks,
+        │                 no new model surface
+        │ batched
+        ▼
+HistoryWriter  (abstract)        HistoryReader  (abstract)
+        △                              △
+        └──────────┬───────────────────┘
+                   │
+            SqliteHistoryStore
+            (WAL + (field, entity, ts) compound index)
+                   │
+        ┌──────────┴──────────┐
+        ▼                     ▼
+   bridge writes        HistoryPage reads
+                        (range picker + 6 charts)
+```
+
+Design points worth calling out:
+
+- **One source of truth**. The bridge reuses the same
+  `ProductionModel::onEquipmentStatusChanged` /
+  `onQualityCheckpointChanged` / `onSystemStateChanged` signals every
+  other consumer (presenters, MQTT publisher, OPC-UA server) already
+  subscribes to. Persistence becomes "another observer," not a model
+  refactor.
+- **Writer + Reader split** (ISP). Bridges only see
+  `HistoryWriter` (`write(span<HistoryRecord>) -> n_accepted`); the
+  UI only sees `HistoryReader` (`query(field, entity, range)`).
+  `SqliteHistoryStore` happens to implement both; consumers depend
+  on the surface they need.
+- **WAL mode + batched INSERT in one transaction**. The bridge holds
+  a small in-memory queue and flushes on size cap (default 32 rows)
+  or age cap (default 5 s) -- whichever comes first. Concurrent
+  readers don't block the writer; the History page can query while
+  the bridge is mid-flush.
+- **Schema is one table, three short codes**.
+  `samples(ts INTEGER, field TEXT, entity INTEGER, value REAL)` with
+  index `(field, entity, ts)`. Single character per series (`Q` /
+  `S` / `T`) keeps the archive compact at millions of rows. Tiered
+  decimation (1s -> 1m -> 1h) is the next track and slots in as
+  additional tables with no schema break.
+- **Graceful degradation**. If SQLite can't open the configured
+  path (permission denied, read-only fs), main() logs a warning and
+  drops the bridge + page -- the rest of the binary keeps running.
+  Same opt-in degradation pattern as the ML and OPC-UA paths.
+
+Coverage: `SqliteHistoryStoreTest` (10 in-memory roundtrip / batch /
+index / limit / order tests), `HistorianBridgeTest` (5 fixture-based
+signal-to-row tests with a `FakeHistoryWriter`), `HistoryPageTest`
+(4 GUI tests asserting the page queries all six series with the
+correct lookback window on construction).
 
 ## Edge AI Inference
 

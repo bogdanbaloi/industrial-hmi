@@ -742,6 +742,38 @@ if(BUILD_ML_CLASSIFIER)
     endif()
 endif()
 
+# Historian Layer - Time-series persistence for sensor data.
+# GTK-free OBJECT lib so it can be linked into either front-end. The
+# concrete SqliteHistoryStore implements both HistoryWriter and
+# HistoryReader; the bridge (added in a follow-up commit) subscribes
+# to ProductionModel signals and batches writes through the writer
+# interface. Read side is consumed by the GTK HistoryPage and
+# (eventually) a console `history` command.
+add_library(objectsHistorian OBJECT)
+target_sources(objectsHistorian
+    PRIVATE
+        src/historian/SqliteHistoryStore.cpp
+        src/historian/HistorianBridge.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        FILES
+            src/historian/HistoryRecord.h
+            src/historian/HistoryWriter.h
+            src/historian/HistoryReader.h
+            src/historian/SqliteHistoryStore.h
+            src/historian/HistorianBridge.h
+)
+target_link_libraries(objectsHistorian
+    PUBLIC
+        objectsCore
+        objectsModel
+        ${SQLITE_LIBRARIES}
+)
+target_include_directories(objectsHistorian
+    PUBLIC
+        ${SQLITE_INCLUDE_DIRS}
+)
+
 # Console Layer - Headless front-end. Shares the Model + Presenter
 # layer with the GTK View, proving MVP's View-swap promise. Links zero
 # gtkmm (see architecture receipt in README).
@@ -774,6 +806,7 @@ target_sources(objectsView
         src/gtk/view/DialogManager.cpp
         src/gtk/view/AboutDialog.cpp
         src/gtk/view/pages/DashboardPage.cpp
+        src/gtk/view/pages/HistoryPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
         src/gtk/view/pages/SettingsPage.cpp
         src/gtk/view/pages/QualityInspectionPage.cpp
@@ -787,6 +820,7 @@ target_sources(objectsView
             src/gtk/view/AboutDialog.h
             src/gtk/view/pages/Page.h
             src/gtk/view/pages/DashboardPage.h
+            src/gtk/view/pages/HistoryPage.h
             src/gtk/view/pages/ProductsPage.h
             src/gtk/view/pages/SettingsPage.h
             src/gtk/view/pages/QualityInspectionPage.h
@@ -807,6 +841,7 @@ target_link_libraries(objectsView
         objectsPresenter
         objectsAppGtk
         objectsIntegrationCore
+        objectsHistorian
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
 )
@@ -852,6 +887,7 @@ target_link_libraries(industrial-hmi
         objectsTcp
         objectsMqtt
         objectsMl
+        objectsHistorian
         Threads::Threads
 )
 if(BUILD_OPCUA_BACKEND)
@@ -893,6 +929,7 @@ target_link_libraries(industrial-hmi-console
         objectsTcp
         objectsMqtt
         objectsMl
+        objectsHistorian
         Threads::Threads
 )
 if(BUILD_OPCUA_BACKEND)

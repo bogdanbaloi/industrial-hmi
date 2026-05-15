@@ -8,6 +8,7 @@
 #include "src/gtk/view/ThemeManager.h"
 #include "src/gtk/view/pages/Page.h"
 #include "src/gtk/view/pages/DashboardPage.h"
+#include "src/gtk/view/pages/HistoryPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/gtk/view/pages/SettingsPage.h"
 #include "src/gtk/view/widgets/AlertsPanel.h"
@@ -341,6 +342,18 @@ void MainWindow::createAllPages() {
     // Settings (no presenter -- pure view over ConfigManager/ThemeManager/Logger)
     settingsPage_ = Gtk::make_managed<app::view::SettingsPage>(*dialogManager_);
     registerPage(settingsPage_);
+
+    // History page: only mounted when the historian's read interface
+    // is wired in. main() builds the SQLite store on `historian.enabled
+    // == true` AND a successful `initialize()` -- a failed open leaves
+    // the pointer null and we skip the tab silently (no useful chart
+    // without data, no point misleading the operator).
+    if (auto* reader =
+            app::core::Application::instance().historyReader()) {
+        historyPage_ = Gtk::make_managed<app::view::HistoryPage>(
+            *dialogManager_, *reader);
+        registerPage(historyPage_);
+    }
 
 #ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
     // Edge AI inspection page. Only registered when both the ONNX

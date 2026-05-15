@@ -143,4 +143,14 @@ constexpr int kLogPanelRefreshMs = 500;
 constexpr float kQualityPassThreshold = 95.0f;
 constexpr float kQualityWarningThreshold = 90.0f;
 
+// Historian time-series persistence
+// kHistorianDbPath: relative paths resolved against the executable's
+//   own directory (same convention as the locale dir). "data/" is a
+//   peer of the binary so deployments don't pollute the user's home.
+// kHistorianBatchSize / kHistorianBatchAgeMs: bridge batching defaults.
+//   See HistorianBridge::Config for the tuning rationale.
+constexpr const char* kHistorianDbPath       = "data/historian.sqlite";
+constexpr int         kHistorianBatchSize    = 32;
+constexpr int         kHistorianBatchAgeMs   = 5000;
+
 }  // namespace app::config::defaults

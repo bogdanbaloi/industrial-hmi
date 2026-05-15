@@ -23,8 +23,11 @@
 #  include "src/integration/modbus/ModbusPollLoop.h"
 #  include "src/integration/modbus/ModbusRegisterMap.h"
 #endif
+#include "src/historian/HistorianBridge.h"
+#include "src/historian/SqliteHistoryStore.h"
 #include "src/model/DatabaseManager.h"
 #include "src/model/SimulatedModel.h"
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -330,32 +333,75 @@ void registerModbusBackend(
 }
 #endif
 
-}  // namespace
+/// Build the Historian (SQLite store + bridge) when enabled in config.
+/// Extracted from main() for the same reason as registerMqttBackend
+/// etc -- keeps main() under the readability-function-size threshold,
+/// and a degraded-config audit reads as a flat list of helpers.
+///
+/// If `initialize()` fails (bad path, read-only fs, permission), the
+/// store is dropped and the bridge stays unconstructed -- the rest of
+/// the binary keeps running with a missing History tab, matching the
+/// project-wide "degraded > crash" policy.
+void registerHistorian(
+        app::config::ConfigManager& config,
+        app::core::Logger& logger,
+        std::unique_ptr<app::historian::SqliteHistoryStore>& storeOut,
+        std::unique_ptr<app::historian::HistorianBridge>& bridgeOut) {
+    app::historian::SqliteHistoryStore::Config storeCfg;
+    storeCfg.dbPath = config.getHistorianDbPath();
+    storeOut = std::make_unique<app::historian::SqliteHistoryStore>(
+        std::move(storeCfg));
+    storeOut->setLogger(logger);
 
-int main(int argc, char* argv[]) {
+    if (!storeOut->initialize()) {
+        logger.warn("Historian disabled: SqliteHistoryStore failed to "
+                    "open '{}'", config.getHistorianDbPath());
+        storeOut.reset();
+        return;
+    }
+
+    app::historian::HistorianBridge::Config bridgeCfg;
+    bridgeCfg.maxBatchSize = static_cast<std::size_t>(
+        config.getHistorianBatchSize());
+    bridgeCfg.maxBatchAge  = std::chrono::milliseconds{
+        config.getHistorianBatchAgeMs()};
+    bridgeOut = std::make_unique<app::historian::HistorianBridge>(
+        *storeOut,
+        app::model::SimulatedModel::instance(),
+        bridgeCfg);
+    bridgeOut->setLogger(logger);
+    bridgeOut->wire();
+}
+
 #ifdef _WIN32
-    // Use Cairo renderer on Windows to avoid GL flicker in GTK4.
+/// Windows-only platform init: Cairo renderer override + UTF-8 setup.
+///
+/// Three independent layers must agree on UTF-8 for the console
+/// front-end to render translated strings correctly:
+///   1. Win32 console codepage (cmd.exe stdout).
+///   2. CRT locale (.UTF-8 supported from Windows 10 v1803; older
+///      systems silently fall back).
+///   3. Binary mode on stdout -- stops the CRT from LF->CRLF +
+///      codepage conversion when stdout is a pipe (Git Bash /
+///      mintty). Without this, UTF-8 bytes become Latin-1 mojibake.
+///
+/// Extracted from main() so the readability-function-size lint stays
+/// under the 150-line threshold.
+void initWindowsConsole() {
     _putenv_s("GSK_RENDERER", "cairo");
-
-    // Windows UTF-8 setup (three layers all need cooperating):
-    //
-    //   1. Win32 console codepage -- applies when stdout is attached to
-    //      a real cmd.exe console.
-    //   2. CRT locale -- controls how the C runtime interprets bytes
-    //      in fprintf / wide-conversion paths. ".UTF-8" is supported
-    //      from Windows 10 v1803; older systems silently fall back.
-    //   3. Binary mode on stdout -- stops the CRT from doing LF->CRLF
-    //      and codepage conversion when stdout is a pipe (Git Bash /
-    //      mintty). Without this, UTF-8 sequences get mangled into
-    //      Latin-1 mojibake even though bytes were written verbatim.
-    //
-    // All three together cover console + pipe + mintty use cases.
-    // Harmless for the GTK build; critical for the console frontend.
     ::SetConsoleOutputCP(CP_UTF8);
     ::SetConsoleCP(CP_UTF8);
     std::setlocale(LC_ALL, ".UTF-8");
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stderr), _O_BINARY);
+}
+#endif
+
+}  // namespace
+
+int main(int argc, char* argv[]) {
+#ifdef _WIN32
+    initWindowsConsole();
 #endif
 
     // Top-level exception guard. Every fatal condition at or below
@@ -385,6 +431,13 @@ int main(int argc, char* argv[]) {
             productionBridge;
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
+
+        // Historian store + bridge -- store outlives bridge (bridge
+        // holds a HistoryWriter& into the store), declared in
+        // construction order so destruction reverses. See
+        // registerHistorian() above for the wiring + degraded path.
+        std::unique_ptr<app::historian::SqliteHistoryStore> historyStore;
+        std::unique_ptr<app::historian::HistorianBridge>    historianBridge;
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
         std::unique_ptr<app::integration::opcua::OpcUaIngestBridge>
             opcuaIngestBridge;
@@ -398,6 +451,11 @@ int main(int argc, char* argv[]) {
                     static_cast<std::uint16_t>(config.getTcpBackendPort()),
                     app::model::SimulatedModel::instance(),
                     app::model::DatabaseManager::instance()));
+        }
+
+        if (config.isHistorianEnabled()) {
+            registerHistorian(config, bootstrap.logger(),
+                              historyStore, historianBridge);
         }
 
         if (config.isMqttBackendEnabled()) {
@@ -445,6 +503,10 @@ int main(int argc, char* argv[]) {
         // app.run() because `integration` lives on the same stack
         // frame just above us.
         app.setIntegrationManager(&integration);
+        // Historian read side is optional -- mounted only when the
+        // store opened successfully above. Pointer (or null) flows
+        // to MainWindow which decides whether to register the page.
+        app.setHistoryReader(historyStore.get());
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 
         // Inject the app-wide logger into the SimulatedModel singleton so

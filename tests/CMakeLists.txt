@@ -88,6 +88,32 @@ target_link_libraries(test_database_manager PRIVATE
 )
 add_test(NAME DatabaseManagerTest COMMAND test_database_manager)
 
+# Historian: SqliteHistoryStore
+# Pure data-layer test -- in-memory SQLite, no model, no GTK. Links the
+# OBJECT lib so the production binary and the test share one compile
+# of SqliteHistoryStore.cpp.
+add_executable(test_sqlite_history_store SqliteHistoryStoreTest.cpp)
+target_link_libraries(test_sqlite_history_store PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+)
+add_test(NAME SqliteHistoryStoreTest COMMAND test_sqlite_history_store)
+
+# Historian: HistorianBridge
+# Drives the real SimulatedModel singleton (no model mocking) because
+# the bridge's whole point is to translate model signals correctly --
+# a mocked model would skip the wiring we want to verify. FakeHistoryWriter
+# (defined in the test TU) keeps the writer side hermetic.
+add_executable(test_historian_bridge HistorianBridgeTest.cpp)
+target_link_libraries(test_historian_bridge PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+    objectsModel
+)
+add_test(NAME HistorianBridgeTest COMMAND test_historian_bridge)
+
 # Integration: CsvSerializer (pure C++, no GTK). Compiles the source
 # directly so the test binary stays on a minimal link line independent
 # of objectsIntegrationCore.
@@ -708,8 +734,26 @@ set(VIEW_COMMON_LIBS
     objectsConfig
     objectsIntegrationCore  # interfaces + manager only -- view-layer
                             # tests don't touch concrete backends
+    objectsHistorian        # HistoryReader interface for HistoryPage tests
     Threads::Threads
 )
+
+# View: HistoryPage
+# Smoke + interaction tests for the History tab. Constructs the page
+# with a FakeHistoryReader, asserts the page makes the expected
+# queries on init and after Refresh / range changes.
+add_executable(test_history_page
+    HistoryPageTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_history_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_history_page PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_history_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME HistoryPageTest COMMAND test_history_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(HistoryPageTest PROPERTIES LABELS "gui")
 
 # View: DashboardPage
 add_executable(test_dashboard_page
@@ -788,6 +832,12 @@ if(WIN32)
     target_link_libraries(test_products_page             PRIVATE ws2_32)
     target_link_libraries(test_settings_page             PRIVATE ws2_32)
     target_link_libraries(test_dialog_manager            PRIVATE ws2_32)
+    # Historian bridge test pulls objectsModel transitively for the
+    # SimulatedModel singleton, which drags in DatabaseManager.cpp
+    # and its Boost.Asio winsock_init. The HistoryPage GUI test does
+    # too via VIEW_COMMON_LIBS (objectsModel).
+    target_link_libraries(test_historian_bridge          PRIVATE ws2_32)
+    target_link_libraries(test_history_page              PRIVATE ws2_32)
 endif()
 
 # Console scenario tests -- end-to-end MVP regression suite

@@ -24,6 +24,7 @@ namespace app {
         class DashboardPage;
         class ProductsPage;
         class SettingsPage;
+        class HistoryPage;
         class QualityInspectionPage;
         class DialogManager;
         class AlertsPanel;
@@ -168,6 +169,13 @@ private:
     app::view::ProductsPage*                 productsPage_  = nullptr;
 
     app::view::SettingsPage*                 settingsPage_  = nullptr;
+
+    // History page -- only instantiated when the historian was enabled
+    // by config AND its SQLite store opened successfully (i.e. the
+    // Application::historyReader() pointer is non-null at page-build
+    // time). Otherwise the tab is skipped silently, matching the same
+    // opt-in degradation the ML and OPC-UA paths use.
+    app::view::HistoryPage*                  historyPage_   = nullptr;
 
     // Edge AI inspection -- only instantiated when BUILD_ML_CLASSIFIER
     // is on AND the model + labels artefacts are present on disk. The
