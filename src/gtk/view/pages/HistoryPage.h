@@ -85,6 +85,14 @@ private:
     static constexpr std::size_t kEquipmentCount = 3;
     std::array<TrendChart*, kQualityCount>   qualityCharts_{};
     std::array<TrendChart*, kEquipmentCount> supplyCharts_{};
+
+    // Auto-refresh timer. Glib::SignalTimeout fires on the GTK main
+    // thread which is exactly where reader_.query() must run anyway,
+    // so the callback can update widgets directly without marshalling.
+    // The sigc::connection is held to disconnect on page destruction;
+    // a leaked timeout would call into a dead widget tree on the next
+    // tick and crash.
+    sigc::connection             autoRefreshConn_;
 };
 
 }  // namespace app::view

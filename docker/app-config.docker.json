@@ -290,6 +290,9 @@
     "enabled": true,
     "db_path": "data/historian.sqlite",
     "batch_size": 32,
-    "batch_age_ms": 5000
+    "batch_age_ms": 5000,
+    "sweep_interval_ms": 30000,
+    "raw_retention_ms": 120000,
+    "minute_retention_ms": 600000
   }
 }

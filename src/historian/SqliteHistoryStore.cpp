@@ -2,6 +2,7 @@
 
 #include <sqlite3.h>
 
+#include <algorithm>
 #include <array>
 #include <string>
 
@@ -63,6 +64,12 @@ constexpr const char* kInsertSqlRaw =
 // caller because SQLite cannot parameterise table names; the rest of
 // the values are bound, so injection isn't a vector even at this layer.
 //
+// `ORDER BY ts DESC LIMIT ?` returns the NEWEST N rows in the range
+// (rather than the oldest N). For a trend chart this matches operator
+// expectation: clicking Refresh should surface what just happened, not
+// data from the start of the window. The caller (query()) reverses
+// the result to keep the public contract of ascending-timestamp output.
+//
 // Note `LIMIT ?` accepts -1 == no cap (SQLite convention) so we don't
 // branch the SQL on whether the caller passed a limit.
 const char* selectSqlForTable(const char* table) {
@@ -70,7 +77,7 @@ const char* selectSqlForTable(const char* table) {
     buf  = "SELECT ts, value FROM ";
     buf += table;
     buf += " WHERE field = ? AND entity = ? AND ts >= ? AND ts <= ? "
-           "ORDER BY ts ASC LIMIT ?";
+           "ORDER BY ts DESC LIMIT ?";
     return buf.c_str();
 }
 
@@ -248,6 +255,12 @@ SqliteHistoryStore::query(FieldKind field,
         out.push_back(r);
     }
     sqlite3_finalize(stmt);
+
+    // SQL pulls newest-first (DESC LIMIT N); reverse here so the public
+    // contract -- and every existing consumer expectation -- stays
+    // ascending by timestamp. The cost is a single reverse on at most
+    // `limit` rows, dwarfed by the wire / decode work upstream.
+    std::reverse(out.begin(), out.end());
     return out;
 }
 

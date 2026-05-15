@@ -11,10 +11,19 @@ namespace {
 
 // Trend charts cap at this many points -- the UI does not need to
 // render every sample for a "last 24h" lookback. SQLite's LIMIT
-// downsamples the head of the window; the operator sees the shape.
+// downsamples the tail of the window (newest-N semantics), so the
+// chart always shows the most recent N samples in the requested range.
 // Matches the TrendChart widget's default capacity so the chart's
 // internal ring buffer is filled exactly once per refresh.
 constexpr std::size_t kChartLimit = 300;
+
+// Auto-refresh cadence. 5 s is the balance between "operator sees
+// live dashboard-like motion" and "SQLite query traffic stays
+// sub-1 % CPU when the page is open". The query is light (compound-
+// indexed range scan capped at 300 rows) so even tighter cadences
+// are safe, but 5 s also makes each Refresh visibly land without
+// looking nervous.
+constexpr unsigned kAutoRefreshIntervalMs = 5'000;
 
 // Layout constants for the page's outer Box and the inline toolbar.
 // Named so the magic-number lint stays clean and so a future design
@@ -45,14 +54,29 @@ HistoryPage::HistoryPage(DialogManager& dialogManager,
     : Page(dialogManager),
       reader_(reader) {
     buildUi();
-    // Don't auto-refresh on construction -- the first switch to the
-    // tab triggers refreshAllCharts() and the operator sees fresh data.
-    // (For a portfolio demo we DO refresh once so the page is non-blank
-    // at first sight even if the operator hasn't clicked anything.)
+
+    // First paint so the operator sees something the moment they
+    // switch to the tab, instead of a blank chart that fills only
+    // after the first timer tick.
     refreshAllCharts();
+
+    // Live refresh: re-query every 5 s on the GTK main loop. Glib's
+    // signal_timeout dispatches the slot on the UI thread, so the
+    // callback can touch widgets directly. Returning `true` keeps
+    // the timeout armed; the sigc::connection lets the destructor
+    // disconnect cleanly so a dangling tick can never call into a
+    // dead widget tree.
+    autoRefreshConn_ = Glib::signal_timeout().connect(
+        [this]() {
+            refreshAllCharts();
+            return true;
+        },
+        kAutoRefreshIntervalMs);
 }
 
-HistoryPage::~HistoryPage() = default;
+HistoryPage::~HistoryPage() {
+    autoRefreshConn_.disconnect();
+}
 
 Glib::ustring HistoryPage::pageTitle() const {
     return _("History");
