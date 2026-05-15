@@ -205,6 +205,17 @@ COPY --from=builder --chown=hmi:hmi /src/assets /home/hmi/assets
 # over-engineering for a demo image.
 COPY --chown=hmi:hmi <<'EOF' /home/hmi/start-gtk.sh
 #!/bin/bash
+# Clean stale X11 lock files left by the previous container run.
+#
+# `docker compose` with `restart: unless-stopped` re-launches the
+# SAME container's writable layer when the HMI exits (e.g. via the
+# Sign-out gesture). /tmp survives the restart, so Xvfb finds its
+# own `/tmp/.X0-lock` from the previous instance and refuses to
+# bind display :0 with "Server is already active for display 0".
+# Stripping the lock + socket here is safe because we only ever
+# run one Xvfb per container.
+rm -f /tmp/.X0-lock /tmp/.X11-unix/X0 2>/dev/null || true
+
 # Start an in-memory X server on display :0.
 # Resolution 1920x1080 matches `window.default_{width,height}` in
 # app-config.json so the dashboard does not overflow the viewport.
