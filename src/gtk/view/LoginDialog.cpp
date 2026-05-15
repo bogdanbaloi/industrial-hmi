@@ -17,8 +17,8 @@ constexpr int kEntryWidthChars   = 24;
 }  // namespace
 
 LoginDialog::LoginDialog(app::auth::AuthService& service,
-                         app::auth::Session& session)
-    : service_(service), session_(session) {
+                         app::auth::Session& /*session*/)
+    : service_(service) {
     buildUi();
 }
 
