@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Auth + audit log (B2)
+
+Username/password authentication with Argon2id hashing, three-role
+RBAC, and a full audit trail of operator-attributed actions. Opt-in
+via `auth.enabled` in `app-config.json`; off by default so existing
+deployments behave as before.
+
+- **`objectsAuth`**: new GTK-free OBJECT lib with:
+  - `Role.h` -- Operator / Maintenance / Admin enum + permission
+    helpers; numerically ordered for `role >= required` checks.
+  - `User.h` + DTO.
+  - `PasswordHasher` interface + `Argon2PasswordHasher` (libsodium)
+    on the INTERACTIVE profile (~50 ms hash).
+  - `UserRepository` interface + `SqliteUserRepository` with
+    NOCASE UNIQUE username column.
+  - `Session` -- thread-safe holder; reads return snapshot copies.
+  - `AuthService` -- login (canonicalised username; same
+    InvalidCredentials result for both unknown user + bad password
+    to mitigate user enumeration), logout, idempotent
+    `seedDefaultUsersIfEmpty()` for demo accounts on first run.
+- **Audit pipeline**: `AuditEvent` DTO, `AuditLogger` interface,
+  `SqliteAuditLogger` concrete writing into the same auth.sqlite
+  file with a `(category, ts)` compound index. AuthService records
+  LOGIN success + every failure path and LOGOUT; DashboardPresenter
+  records PRODUCTION START / STOP / RESET / CALIBRATE plus
+  EQUIPMENT ENABLE / DISABLE; ProductsPresenter records PRODUCT
+  ADD / UPDATE / DELETE (success + failure variants).
+- **UI**: `LoginDialog` modal Gtk::Window with its own inner
+  Glib::MainLoop (gtkmm-4 dropped `Dialog::run()`); shown before
+  the main window when auth is enabled. `AuditLogPage` admin-only
+  tab with category + username filters and 5 s auto-refresh.
+  `UserBadge` sidebar widget shows the active user + role +
+  "Sign out" button; sign out closes the main window so the next
+  launch comes back through the login dialog.
+- **Role-based gating**: each Page's `applyRole()` trims controls
+  to what the active role can do. Operator loses Calibration +
+  Reset on the Dashboard and the Add / Edit / Delete actions on
+  Products; Maintenance gets the lot except user management +
+  audit log; Admin sees everything. Disabled buttons carry a
+  "Requires Maintenance role" tooltip so the operator knows why.
+- **Docker**: builder stage installs `libsodium-dev`; runtime
+  stages install `libsodium23`. The docker-compose config opts in
+  to auth so the demo prompts for credentials on first connect.
+- **Tests (37 new)**: Argon2PasswordHasherTest (6),
+  SqliteUserRepositoryTest (11), AuthServiceTest (10),
+  SqliteAuditLoggerTest (10). 59/59 tests passing on Linux.
+
 ### Historian: tiered retention with downsampling (B1 phase 2)
 
 - **Three-tier schema**: `samples` (raw, 1s cadence, last hour),

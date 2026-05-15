@@ -44,6 +44,32 @@ Glib::ustring DashboardPage::pageTitle() const {
     return _("Dashboard");
 }
 
+void DashboardPage::applyRole(app::auth::Role role) {
+    // Calibration interrupts production and Reset wipes the work
+    // unit -- both fall under canResetSystem / canCalibrate which
+    // require Maintenance or above. Operators see the buttons in
+    // the layout (so they know what's possible) but cannot trigger
+    // them; the tooltip surfaces the reason.
+    const bool calibrateAllowed = app::auth::canCalibrate(role);
+    const bool resetAllowed     = app::auth::canResetSystem(role);
+
+    if (controlPanelWidgets_.calibrationButton != nullptr) {
+        controlPanelWidgets_.calibrationButton->set_sensitive(
+            calibrateAllowed);
+        if (!calibrateAllowed) {
+            controlPanelWidgets_.calibrationButton->set_tooltip_text(
+                _("Requires Maintenance role"));
+        }
+    }
+    if (controlPanelWidgets_.resetButton != nullptr) {
+        controlPanelWidgets_.resetButton->set_sensitive(resetAllowed);
+        if (!resetAllowed) {
+            controlPanelWidgets_.resetButton->set_tooltip_text(
+                _("Requires Maintenance role"));
+        }
+    }
+}
+
 void DashboardPage::onThemeChanged() {
     refreshThemedWidgets();
 }

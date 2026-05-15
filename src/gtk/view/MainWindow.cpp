@@ -379,6 +379,19 @@ void MainWindow::createAllPages() {
     productsPage_->initialize(productsPresenter_);
     registerPage(productsPage_);
 
+    // Role-based UI gating. When a session is wired (auth.enabled),
+    // each page's applyRole() trims its control surface to what the
+    // active role is allowed to do. Skipped when no session is set
+    // so the no-auth dev path keeps the full Admin-equivalent surface.
+    if (session != nullptr) {
+        const auto userOpt = session->currentUser();
+        if (userOpt.has_value()) {
+            const auto role = userOpt->role;
+            dashboardPage_->applyRole(role);
+            productsPage_->applyRole(role);
+        }
+    }
+
     // Settings (no presenter -- pure view over ConfigManager/ThemeManager/Logger)
     settingsPage_ = Gtk::make_managed<app::view::SettingsPage>(*dialogManager_);
     registerPage(settingsPage_);

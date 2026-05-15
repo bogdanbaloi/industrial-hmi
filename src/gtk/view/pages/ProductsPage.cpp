@@ -43,6 +43,25 @@ void ProductsPage::initialize(std::shared_ptr<ProductsPresenter> presenter) {
     presenter_->initialize();
 }
 
+void ProductsPage::applyRole(app::auth::Role role) {
+    role_ = role;
+    const bool canEdit = app::auth::canEditProducts(role);
+    // Disable the visible Add button outright -- this is the one
+    // gesture that doesn't require selecting an existing row first.
+    // The tooltip explains the gating; without it the operator sees
+    // a dead button with no rationale.
+    if (addButton_ != nullptr) {
+        addButton_->set_sensitive(canEdit);
+        if (!canEdit) {
+            addButton_->set_tooltip_text(_("Requires Maintenance role"));
+        }
+    }
+    // Edit / Delete are triggered from row context handlers rather
+    // than always-visible buttons; we gate them at the handler entry
+    // point against role_ so the same path serves any future trigger
+    // (context menu, double-click, etc.).
+}
+
 // ViewObserver implementation
 void ProductsPage::onProductsLoaded(const presenter::ProductsViewModel& vm) {
     log().trace("ProductsPage: ProductsViewModel received ({} products)",
@@ -226,6 +245,14 @@ void ProductsPage::showProductDetail(const presenter::ViewProductDialogViewModel
 
 void ProductsPage::onAddProductClicked() {
     log().debug("ProductsPage: Add button clicked");
+    if (!app::auth::canEditProducts(role_)) {
+        // The button should already be insensitive when canEdit is
+        // false; this guard covers the case where a future trigger
+        // (keyboard shortcut, automation, etc.) bypasses the widget.
+        log().warn("ProductsPage: add rejected -- role {} lacks permission",
+                   app::auth::roleName(role_));
+        return;
+    }
     showAddProductDialog();
 }
 
@@ -240,6 +267,11 @@ void ProductsPage::onViewProductClicked() {
 void ProductsPage::onDeleteProductClicked() {
     int productId = getSelectedProductId();
     log().debug("ProductsPage: Delete button clicked (selected id={})", productId);
+    if (!app::auth::canEditProducts(role_)) {
+        log().warn("ProductsPage: delete rejected -- role {} lacks permission",
+                   app::auth::roleName(role_));
+        return;
+    }
     if (productId != config::defaults::kInvalidProductId && presenter_) {
         auto product = presenter_->getProduct(productId);
         if (product.id != config::defaults::kInvalidProductId) {
@@ -250,6 +282,11 @@ void ProductsPage::onDeleteProductClicked() {
 
 void ProductsPage::onEditProductClicked() {
     int productId = getSelectedProductId();
+    if (!app::auth::canEditProducts(role_)) {
+        log().warn("ProductsPage: edit rejected -- role {} lacks permission",
+                   app::auth::roleName(role_));
+        return;
+    }
     log().debug("ProductsPage: Edit button clicked (selected id={})", productId);
     if (productId != config::defaults::kInvalidProductId && presenter_) {
         auto product = presenter_->getProduct(productId);

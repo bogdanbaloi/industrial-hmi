@@ -50,6 +50,16 @@ core.
   surfaces a uniform `IntegrationBackend` pill in the dashboard's I/O
   panel, with state semantics tuned per protocol (Connecting vs.
   Connected reflects "service up" vs. "an actual peer talking").
+- **Auth + audit log** -- optional username/password authentication
+  with **Argon2id (libsodium) hashing**, three-role RBAC
+  (Operator / Maintenance / Admin), and a SQLite-backed audit trail
+  recording every operator-attributed action (login + logout,
+  production state changes, equipment toggles, product CRUD).
+  `LoginDialog` gates the main window when `auth.enabled`; admin-only
+  `AuditLogPage` renders the trail with filter + 5 s auto-refresh.
+  Role-based gating disables Calibration + Reset for Operators and
+  the Add / Edit / Delete actions on Products. Off by default;
+  opt-in via `auth.enabled` in `app-config.json`.
 - **Time-series Historian with tiered downsampling** -- optional
   SQLite-backed persistence for quality pass rates, equipment
   supply levels, and system state transitions. `HistorianBridge`

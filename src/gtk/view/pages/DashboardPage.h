@@ -1,5 +1,6 @@
 #pragma once
 
+#include "src/auth/Role.h"
 #include "src/gtk/view/pages/Page.h"
 #include "src/presenter/ViewObserver.h"
 #include "src/presenter/DashboardPresenter.h"
@@ -40,6 +41,17 @@ public:
 
     /// Initialize the page - sets up presenter connection
     void initialize(std::shared_ptr<DashboardPresenter> presenter);
+
+    /// Gate the control panel buttons by the active role.
+    ///   Operator    -> Calibration + Reset disabled (read-only-ish).
+    ///   Maintenance -> all sensitive, including the dangerous
+    ///                  destructive ones (calibration interrupts
+    ///                  production; reset wipes work unit state).
+    ///   Admin       -> same as Maintenance.
+    /// Called once after `initialize()` by MainWindow when auth is
+    /// wired; pages built without an active session leave every
+    /// button sensitive so the no-auth dev path is unchanged.
+    void applyRole(app::auth::Role role);
 
     // Page overrides
     [[nodiscard]] Glib::ustring pageTitle() const override;
