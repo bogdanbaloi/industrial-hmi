@@ -3,7 +3,11 @@
 #include "src/auth/AuditEvent.h"
 #include "src/core/i18n.h"
 
+#include <array>
+#include <chrono>
+#include <ctime>
 #include <format>
+#include <string>
 
 namespace app::view {
 
@@ -49,6 +53,63 @@ Gtk::Label* makeCell(const std::string& text, int widthChars) {
         l->set_ellipsize(Pango::EllipsizeMode::END);
     }
     return l;
+}
+
+/// Convert the stored ISO 8601 UTC stamp (e.g. "2026-05-17T20:02:51Z")
+/// into a friendlier local-time display (e.g. "2026-05-17 23:02:51"
+/// in Europe/Bucharest). The DB keeps UTC because audit trails are
+/// archival + may cross deployment timezones; the UI shows local
+/// because operators read it against the sidebar clock + their own
+/// watch.
+///
+/// Falls back to the raw input on parse failure so a corrupted row
+/// still renders something visible (operators must be able to spot
+/// data-integrity issues).
+std::string formatTimestampLocal(const std::string& iso8601Utc) {
+    std::tm tm{};
+    // strptime is POSIX (glibc + MSYS2 clang ucrt). The Z is matched
+    // literally; %Z would try to consume a tz name which our format
+    // doesn't carry.
+    const char* end = nullptr;
+    {
+        // Manual parse: ISO 8601 layout is fixed; avoid strptime's
+        // locale-sensitive %Y wobble by reading the fields directly.
+        if (iso8601Utc.size() < 20) return iso8601Utc;
+        const auto* s = iso8601Utc.c_str();
+        // YYYY-MM-DDTHH:MM:SSZ
+        if (std::sscanf(s, "%4d-%2d-%2dT%2d:%2d:%2d",
+                        &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
+                        &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6) {
+            return iso8601Utc;
+        }
+        tm.tm_year -= 1900;
+        tm.tm_mon  -= 1;
+        end = s + iso8601Utc.size();
+    }
+    (void)end;
+
+    // Convert UTC tm to time_t (epoch seconds). timegm is glibc;
+    // _mkgmtime is the MSVC/MinGW equivalent.
+#if defined(_WIN32)
+    const std::time_t epoch = ::_mkgmtime(&tm);
+#else
+    const std::time_t epoch = ::timegm(&tm);
+#endif
+    if (epoch == static_cast<std::time_t>(-1)) return iso8601Utc;
+
+    std::tm local{};
+#if defined(_WIN32)
+    ::localtime_s(&local, &epoch);
+#else
+    ::localtime_r(&epoch, &local);
+#endif
+
+    std::array<char, 32> buf{};
+    if (std::strftime(buf.data(), buf.size(),
+                      "%Y-%m-%d %H:%M:%S", &local) == 0) {
+        return iso8601Utc;
+    }
+    return std::string{buf.data()};
 }
 
 }  // namespace
@@ -192,7 +253,8 @@ void AuditLogPage::refresh() {
 
 void AuditLogPage::appendRow(const app::auth::AuditEvent& e) {
     const int r = nextRow_++;
-    grid_->attach(*makeCell(e.timestamp, kColTimestamp), 0, r, 1, 1);
+    grid_->attach(*makeCell(formatTimestampLocal(e.timestamp),
+                            kColTimestamp), 0, r, 1, 1);
     grid_->attach(*makeCell(e.username,  kColUser),      1, r, 1, 1);
     grid_->attach(*makeCell(e.role,      kColRole),      2, r, 1, 1);
     grid_->attach(*makeCell(e.category,  kColCategory),  3, r, 1, 1);
