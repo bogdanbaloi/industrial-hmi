@@ -112,30 +112,34 @@ void AuditLogPage::buildUi() {
 
     append(*toolbar);
 
-    // Column header row. Sticky across refresh; the list below is
-    // rebuilt on every query.
-    auto* header = Gtk::make_managed<Gtk::Box>(
-        Gtk::Orientation::HORIZONTAL, kRowSpacingPx);
-    header->add_css_class("heading");
-    header->append(*makeCell(_("Timestamp"),  kColTimestamp));
-    header->append(*makeCell(_("User"),       kColUser));
-    header->append(*makeCell(_("Role"),       kColRole));
-    header->append(*makeCell(_("Category"),   kColCategory));
-    header->append(*makeCell(_("Action"),     kColAction));
-    header->append(*makeCell(_("Result"),     kColResult));
-    header->append(*makeCell(_("Details"),    0));
-    append(*header);
-
-    // Scrolling list area. The inner Box gets rebuilt on every
-    // refresh -- a smarter implementation would use Gtk::ListView +
-    // factory model, but for a few hundred rows the rebuild cost is
-    // microseconds.
+    // Scrolling grid area. Gtk::Grid (rather than a stack of Boxes)
+    // because columns must line up between the bold heading row and
+    // the regular-weight data rows; with Boxes + set_width_chars the
+    // bold characters consume more pixels per char and the
+    // misalignment accumulates left-to-right.
     scroller_ = Gtk::make_managed<Gtk::ScrolledWindow>();
     scroller_->set_vexpand(true);
-    listBox_ = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL,
-                                           kRowPaddingPx);
-    scroller_->set_child(*listBox_);
+    grid_ = Gtk::make_managed<Gtk::Grid>();
+    grid_->set_column_spacing(kRowSpacingPx);
+    grid_->set_row_spacing(kRowPaddingPx);
+    scroller_->set_child(*grid_);
     append(*scroller_);
+
+    // Header row at grid row 0. Each header cell uses the same
+    // makeCell() so width-chars logic matches the data rows exactly.
+    auto attachHeader = [&](const std::string& text, int col,
+                            int widthChars) {
+        auto* l = makeCell(text, widthChars);
+        l->add_css_class("heading");
+        grid_->attach(*l, col, 0, 1, 1);
+    };
+    attachHeader(_("Timestamp"), 0, kColTimestamp);
+    attachHeader(_("User"),      1, kColUser);
+    attachHeader(_("Role"),      2, kColRole);
+    attachHeader(_("Category"),  3, kColCategory);
+    attachHeader(_("Action"),    4, kColAction);
+    attachHeader(_("Result"),    5, kColResult);
+    attachHeader(_("Details"),   6, 0);
 
     footerLabel_ = Gtk::make_managed<Gtk::Label>("");
     footerLabel_->set_xalign(0.0F);
@@ -146,14 +150,19 @@ void AuditLogPage::onRefreshClicked() { refresh(); }
 void AuditLogPage::onFilterChanged()  { refresh(); }
 
 void AuditLogPage::refresh() {
-    // Wipe + re-fetch. Building rows from scratch every time is
-    // simpler than diffing; at 500 rows it's invisible to the user.
-    auto* child = listBox_->get_first_child();
-    while (child != nullptr) {
-        auto* next = child->get_next_sibling();
-        listBox_->remove(*child);
-        child = next;
+    // Wipe data rows + re-fetch. Grid row 0 is the header (sticky);
+    // remove rows from 1 upward, then reset the next-row counter.
+    // Walk by cell coordinates rather than child iteration so an
+    // already-cleared row doesn't trip up.
+    constexpr int kColumnCount = 7;
+    for (int r = nextRow_ - 1; r >= 1; --r) {
+        for (int c = 0; c < kColumnCount; ++c) {
+            if (auto* child = grid_->get_child_at(c, r)) {
+                grid_->remove(*child);
+            }
+        }
     }
+    nextRow_ = 1;
 
     app::auth::AuditQuery q;
     q.limit = kQueryLimit;
@@ -182,14 +191,12 @@ void AuditLogPage::refresh() {
 }
 
 void AuditLogPage::appendRow(const app::auth::AuditEvent& e) {
-    auto* row = Gtk::make_managed<Gtk::Box>(
-        Gtk::Orientation::HORIZONTAL, kRowSpacingPx);
-
-    row->append(*makeCell(e.timestamp, kColTimestamp));
-    row->append(*makeCell(e.username,  kColUser));
-    row->append(*makeCell(e.role,      kColRole));
-    row->append(*makeCell(e.category,  kColCategory));
-    row->append(*makeCell(e.action,    kColAction));
+    const int r = nextRow_++;
+    grid_->attach(*makeCell(e.timestamp, kColTimestamp), 0, r, 1, 1);
+    grid_->attach(*makeCell(e.username,  kColUser),      1, r, 1, 1);
+    grid_->attach(*makeCell(e.role,      kColRole),      2, r, 1, 1);
+    grid_->attach(*makeCell(e.category,  kColCategory),  3, r, 1, 1);
+    grid_->attach(*makeCell(e.action,    kColAction),    4, r, 1, 1);
 
     auto* resultCell = makeCell(e.result, kColResult);
     // Success/failure colouring as a quick visual scan-aid; the CSS
@@ -200,13 +207,12 @@ void AuditLogPage::appendRow(const app::auth::AuditEvent& e) {
     } else {
         resultCell->add_css_class("success");
     }
-    row->append(*resultCell);
+    grid_->attach(*resultCell, 5, r, 1, 1);
 
-    // Details column gets the remaining width -- 0 means "natural
-    // width", which expands within the row's hbox.
-    row->append(*makeCell(e.details, 0));
-
-    listBox_->append(*row);
+    // Details column gets the remaining width (widthChars=0 in
+    // makeCell sets hexpand=true so the cell flows into whatever
+    // horizontal space remains in the grid).
+    grid_->attach(*makeCell(e.details, 0), 6, r, 1, 1);
 }
 
 }  // namespace app::view
