@@ -2,6 +2,17 @@
 
 #include "src/core/i18n.h"
 
+#if defined(_WIN32)
+// GTK4 dropped set_position / move -- placement is the WM's job.
+// On Windows MSYS2 GTK4 the WM picks top-left for a small modal
+// without a parent. We centre by hand via the Win32 HWND exposed
+// through GDK once the surface is realised. Linux X11 path uses
+// the WM's own placement (centred by every mainstream WM for a
+// small modal); Wayland actively forbids client-driven placement.
+#  include <windows.h>
+#  include <gdk/win32/gdkwin32.h>
+#endif
+
 namespace app::view {
 
 namespace {
@@ -33,6 +44,18 @@ void LoginDialog::buildUi() {
     set_modal(true);
     set_default_size(kDialogWidthPx, kDialogHeightPx);
     set_deletable(true);
+
+    // Client-side decoration so the titlebar picks up the GTK CSS
+    // theme instead of falling back to native Windows chrome (light
+    // grey strip that clashes with our dark content). The
+    // .dialog-titlebar-dark class is defined in
+    // assets/styles/adwaita-theme.css and matches the rest of the
+    // app's dark palette; MainWindow uses the same approach via
+    // its .ui file.
+    auto* header = Gtk::make_managed<Gtk::HeaderBar>();
+    header->set_show_title_buttons(true);   // X close button
+    header->add_css_class("dialog-titlebar-dark");
+    set_titlebar(*header);
     // GTK4 removed the legacy set_position / move APIs -- initial
     // placement is the WM's job. Most desktop WMs centre a small,
     // non-resizable, modal toplevel without a parent on the active
@@ -114,9 +137,53 @@ void LoginDialog::buildUi() {
     set_child(*root);
 }
 
+#if defined(_WIN32)
+namespace {
+
+/// Centre a realised Gtk::Window on the monitor it currently sits on
+/// (work-area, so the taskbar doesn't push us off-screen). Pure Win32
+/// because GTK4 removed every positioning API and Windows MSYS2 GTK4
+/// places dialogs at top-left otherwise.
+void centreOnMonitor(Gtk::Window& window) {
+    auto surface = window.get_surface();
+    if (!surface) return;
+    HWND hwnd = reinterpret_cast<HWND>(
+        gdk_win32_surface_get_handle(surface->gobj()));
+    if (hwnd == nullptr) return;
+
+    RECT wr{};
+    if (GetWindowRect(hwnd, &wr) == 0) return;
+    const int width  = wr.right  - wr.left;
+    const int height = wr.bottom - wr.top;
+
+    HMONITOR mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi{};
+    mi.cbSize = sizeof(mi);
+    if (GetMonitorInfo(mon, &mi) == 0) return;
+
+    const int x = mi.rcWork.left
+                  + ((mi.rcWork.right  - mi.rcWork.left) - width)  / 2;
+    const int y = mi.rcWork.top
+                  + ((mi.rcWork.bottom - mi.rcWork.top)  - height) / 2;
+    SetWindowPos(hwnd, nullptr, x, y, 0, 0,
+                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+}  // namespace
+#endif
+
 LoginDialog::Result LoginDialog::runModal() {
     innerLoop_ = Glib::MainLoop::create();
     present();
+#if defined(_WIN32)
+    // The window's HWND is only valid after `present()` has realised
+    // the surface. Defer the centring to an idle so it runs after
+    // GTK has finished laying out + showing the window, then move
+    // the native window to the monitor centre. The idle runs once
+    // before the modal loop hands control to the operator.
+    Glib::signal_idle().connect_once(
+        [this]() { centreOnMonitor(*this); });
+#endif
     usernameEntry_->grab_focus();
     innerLoop_->run();
     return result_;
