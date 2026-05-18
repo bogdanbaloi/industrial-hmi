@@ -411,6 +411,7 @@ target_sources(objectsPresenter
         src/presenter/ProductsPresenter.cpp
         src/presenter/QualityInspectionPresenter.cpp
         src/presenter/BackendHealthPresenter.cpp
+        src/presenter/UsersPresenter.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -419,6 +420,7 @@ target_sources(objectsPresenter
             src/presenter/ProductsPresenter.h
             src/presenter/QualityInspectionPresenter.h
             src/presenter/BackendHealthPresenter.h
+            src/presenter/UsersPresenter.h
             src/presenter/ViewObserver.h
             src/presenter/modelview/BackendHealthViewModel.h
             src/presenter/modelview/EquipmentCardViewModel.h

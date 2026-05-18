@@ -165,6 +165,20 @@ target_link_libraries(test_auth_service PRIVATE
 )
 add_test(NAME AuthServiceTest COMMAND test_auth_service)
 
+# Presenter: UsersPresenter (RBAC + audit, real repo + real hasher).
+# Links objectsModel because objectsPresenter's other TUs (Products)
+# pull DatabaseManager's async API symbols at link time even though
+# this test doesn't exercise them.
+add_executable(test_users_presenter UsersPresenterTest.cpp)
+target_link_libraries(test_users_presenter PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsAuth
+    objectsModel
+)
+add_test(NAME UsersPresenterTest COMMAND test_users_presenter)
+
 # Auth: SqliteAuditLogger.
 add_executable(test_sqlite_audit_logger SqliteAuditLoggerTest.cpp)
 target_link_libraries(test_sqlite_audit_logger PRIVATE
