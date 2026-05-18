@@ -6,6 +6,7 @@
 #include <cctype>
 #include <exception>
 #include <format>
+#include <ranges>
 #include <string>
 #include <string_view>
 
@@ -52,10 +53,7 @@ bool isValidUsername(std::string_view s) {
     if (std::isalpha(static_cast<unsigned char>(s.front())) == 0) {
         return false;
     }
-    for (char c : s) {
-        if (!isAllowedUsernameChar(c)) return false;
-    }
-    return true;
+    return std::ranges::all_of(s, isAllowedUsernameChar);
 }
 
 bool isValidPassword(std::string_view s) {
@@ -124,6 +122,10 @@ std::vector<User> UsersPresenter::list() const {
         return {};
     }
     return users_.listAll();
+}
+
+std::optional<app::auth::User> UsersPresenter::currentUser() const {
+    return session_.currentUser();
 }
 
 std::optional<app::auth::Avatar>

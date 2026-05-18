@@ -1,7 +1,9 @@
 #include "src/auth/AvatarPlaceholder.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <ranges>
 #include <string>
 #include <string_view>
 
@@ -82,10 +84,9 @@ std::string initialsFromSingleToken(std::string_view token) {
 }
 
 bool containsWhitespace(std::string_view s) {
-    for (char c : s) {
-        if (std::isspace(static_cast<unsigned char>(c)) != 0) return true;
-    }
-    return false;
+    return std::ranges::any_of(s, [](char c) {
+        return std::isspace(static_cast<unsigned char>(c)) != 0;
+    });
 }
 
 }  // namespace
