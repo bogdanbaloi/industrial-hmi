@@ -22,6 +22,19 @@ struct AuditQuery {
     /// Optional category filter. Empty == all categories.
     std::string category;
 
+    /// Optional action filter (e.g. "LOGIN", "CREATE", "RESET_PASSWORD").
+    /// Empty == all actions. Compliance walks usually combine
+    /// category + action ("USER + RESET_PASSWORD over the last 7
+    /// days") so the read side accepts both filters independently
+    /// even though most call sites pass one or the other.
+    std::string action;
+
+    /// Optional result filter -- "SUCCESS" / "FAILURE". Empty == both.
+    /// Failure-only is the typical "show me suspicious activity"
+    /// view (failed logins, refused RBAC actions, validation
+    /// rejects).
+    std::string result;
+
     /// Optional username filter. Empty == all users.
     std::string username;
 

@@ -94,6 +94,14 @@ std::string buildSelectSql(const AuditQuery& q,
         sql += " AND category = ?";
         bindings.push_back(q.category);
     }
+    if (!q.action.empty()) {
+        sql += " AND action = ?";
+        bindings.push_back(q.action);
+    }
+    if (!q.result.empty()) {
+        sql += " AND result = ?";
+        bindings.push_back(q.result);
+    }
     if (!q.username.empty()) {
         sql += " AND username = ?";
         bindings.push_back(q.username);
