@@ -830,6 +830,20 @@ add_test(NAME HistoryPageTest COMMAND test_history_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(HistoryPageTest PROPERTIES LABELS "gui")
 
+# View: UsersPage (admin-only user management).
+add_executable(test_users_page
+    UsersPageTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_users_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_users_page PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_users_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME UsersPageTest COMMAND test_users_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(UsersPageTest PROPERTIES LABELS "gui")
+
 # View: DashboardPage
 add_executable(test_dashboard_page
     DashboardPageTest.cpp
@@ -913,6 +927,8 @@ if(WIN32)
     # too via VIEW_COMMON_LIBS (objectsModel).
     target_link_libraries(test_historian_bridge          PRIVATE ws2_32)
     target_link_libraries(test_history_page              PRIVATE ws2_32)
+    target_link_libraries(test_users_presenter           PRIVATE ws2_32)
+    target_link_libraries(test_users_page                PRIVATE ws2_32)
 endif()
 
 # Console scenario tests -- end-to-end MVP regression suite
