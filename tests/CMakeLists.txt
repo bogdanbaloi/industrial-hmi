@@ -146,6 +146,16 @@ target_link_libraries(test_sqlite_user_repository PRIVATE
 )
 add_test(NAME SqliteUserRepositoryTest COMMAND test_sqlite_user_repository)
 
+# Auth: avatar placeholder helpers (initials + palette). Pure logic --
+# no SQLite, no GTK, runs in microseconds.
+add_executable(test_avatar_placeholder AvatarPlaceholderTest.cpp)
+target_link_libraries(test_avatar_placeholder PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME AvatarPlaceholderTest COMMAND test_avatar_placeholder)
+
 # Auth: AuthService end-to-end (real repo + real hasher).
 add_executable(test_auth_service AuthServiceTest.cpp)
 target_link_libraries(test_auth_service PRIVATE
@@ -154,6 +164,20 @@ target_link_libraries(test_auth_service PRIVATE
     objectsAuth
 )
 add_test(NAME AuthServiceTest COMMAND test_auth_service)
+
+# Presenter: UsersPresenter (RBAC + audit, real repo + real hasher).
+# Links objectsModel because objectsPresenter's other TUs (Products)
+# pull DatabaseManager's async API symbols at link time even though
+# this test doesn't exercise them.
+add_executable(test_users_presenter UsersPresenterTest.cpp)
+target_link_libraries(test_users_presenter PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsAuth
+    objectsModel
+)
+add_test(NAME UsersPresenterTest COMMAND test_users_presenter)
 
 # Auth: SqliteAuditLogger.
 add_executable(test_sqlite_audit_logger SqliteAuditLoggerTest.cpp)
@@ -806,6 +830,20 @@ add_test(NAME HistoryPageTest COMMAND test_history_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(HistoryPageTest PROPERTIES LABELS "gui")
 
+# View: UsersPage (admin-only user management).
+add_executable(test_users_page
+    UsersPageTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_users_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_users_page PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_users_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME UsersPageTest COMMAND test_users_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(UsersPageTest PROPERTIES LABELS "gui")
+
 # View: DashboardPage
 add_executable(test_dashboard_page
     DashboardPageTest.cpp
@@ -889,6 +927,8 @@ if(WIN32)
     # too via VIEW_COMMON_LIBS (objectsModel).
     target_link_libraries(test_historian_bridge          PRIVATE ws2_32)
     target_link_libraries(test_history_page              PRIVATE ws2_32)
+    target_link_libraries(test_users_presenter           PRIVATE ws2_32)
+    target_link_libraries(test_users_page                PRIVATE ws2_32)
 endif()
 
 # Console scenario tests -- end-to-end MVP regression suite

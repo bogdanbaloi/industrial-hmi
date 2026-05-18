@@ -341,6 +341,7 @@ target_sources(objectsCore
         src/core/i18n.cpp
         src/core/Bootstrap.cpp
         src/core/StartupDialog.cpp
+        src/core/TimeFormat.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -353,6 +354,7 @@ target_sources(objectsCore
             src/core/Bootstrap.h
             src/core/StartupErrors.h
             src/core/StartupDialog.h
+            src/core/TimeFormat.h
 )
 target_link_libraries(objectsCore
     PUBLIC
@@ -411,6 +413,7 @@ target_sources(objectsPresenter
         src/presenter/ProductsPresenter.cpp
         src/presenter/QualityInspectionPresenter.cpp
         src/presenter/BackendHealthPresenter.cpp
+        src/presenter/UsersPresenter.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -419,6 +422,7 @@ target_sources(objectsPresenter
             src/presenter/ProductsPresenter.h
             src/presenter/QualityInspectionPresenter.h
             src/presenter/BackendHealthPresenter.h
+            src/presenter/UsersPresenter.h
             src/presenter/ViewObserver.h
             src/presenter/modelview/BackendHealthViewModel.h
             src/presenter/modelview/EquipmentCardViewModel.h
@@ -798,6 +802,7 @@ target_sources(objectsAuth
         src/auth/SqliteUserRepository.cpp
         src/auth/SqliteAuditLogger.cpp
         src/auth/AuthService.cpp
+        src/auth/AvatarPlaceholder.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -812,6 +817,7 @@ target_sources(objectsAuth
             src/auth/SqliteAuditLogger.h
             src/auth/Session.h
             src/auth/AuthService.h
+            src/auth/AvatarPlaceholder.h
 )
 target_link_libraries(objectsAuth
     PUBLIC
@@ -862,7 +868,12 @@ target_sources(objectsView
         src/gtk/view/pages/ProductsPage.cpp
         src/gtk/view/pages/SettingsPage.cpp
         src/gtk/view/pages/QualityInspectionPage.cpp
+        src/gtk/view/pages/UsersPage.cpp
+        src/gtk/view/dialogs/UserEditDialog.cpp
+        src/gtk/view/dialogs/ResetPasswordDialog.cpp
+        src/gtk/view/dialogs/ProfileDialog.cpp
         src/gtk/view/widgets/UserBadge.cpp
+        src/gtk/view/widgets/AvatarWidget.cpp
     PRIVATE
         FILE_SET internalHeaders
         TYPE HEADERS
@@ -878,7 +889,12 @@ target_sources(objectsView
             src/gtk/view/pages/ProductsPage.h
             src/gtk/view/pages/SettingsPage.h
             src/gtk/view/pages/QualityInspectionPage.h
+            src/gtk/view/pages/UsersPage.h
             src/gtk/view/pages/ProductObject.h
+            src/gtk/view/dialogs/UserEditDialog.h
+            src/gtk/view/dialogs/ResetPasswordDialog.h
+            src/gtk/view/dialogs/ProfileDialog.h
+            src/gtk/view/widgets/AvatarWidget.h
             src/gtk/view/widgets/QualityGauge.h
             src/gtk/view/widgets/TrendChart.h
             src/gtk/view/widgets/AlertsPanel.h
@@ -1163,19 +1179,28 @@ else()
 endif()
 message(STATUS "")
 message(STATUS "Object Libraries:")
-message(STATUS "  objectsConfig     - INTERFACE: JSON config defaults + ConfigManager (policy)")
-message(STATUS "  objectsModel      - Data layer (SimulatedModel, DatabaseManager)")
-message(STATUS "  objectsCore       - Logger, i18n mechanism, Bootstrap (GTK-free)")
-message(STATUS "  objectsAppGtk     - GTK application bootstrap (Application.cpp)")
-message(STATUS "  objectsPresenter  - Presenter layer (MVP orchestration)")
-message(STATUS "  objectsView       - View layer (GTK4 pages)")
-message(STATUS "  objectsConsole    - Headless console front-end (GTK-free)")
+message(STATUS "  objectsConfig          - INTERFACE: JSON config defaults + ConfigManager (policy)")
+message(STATUS "  objectsModel           - Data layer (SimulatedModel, DatabaseManager)")
+message(STATUS "  objectsCore            - Logger, i18n, Bootstrap, TimeFormat (GTK-free)")
+message(STATUS "  objectsAuth            - Username/password auth + RBAC + audit + avatar placeholder (GTK-free)")
+message(STATUS "  objectsMl              - Edge AI: ONNX inspection facade + plugin loader")
+message(STATUS "  objectsIntegrationCore - Integration manager + serialisers + telemetry bridges")
+message(STATUS "  objectsTcpBackend      - TCP wire backend (Boost.Asio)")
+message(STATUS "  objectsMqtt            - MQTT 3.1.1 client + backend (Boost.Asio)")
+message(STATUS "  objectsModbus          - Modbus TCP client + backend + ingest bridge")
+message(STATUS "  objectsOpcUa           - OPC-UA server + client + bridge (open62541, optional)")
+message(STATUS "  objectsAppGtk          - GTK application bootstrap (Application.cpp)")
+message(STATUS "  objectsPresenter       - Presenter layer (MVP orchestration)")
+message(STATUS "  objectsView            - View layer (GTK4 pages + dialogs + widgets)")
+message(STATUS "  objectsConsole         - Headless console front-end (GTK-free)")
 message(STATUS "")
 message(STATUS "Dependency graph (low -> high):")
-message(STATUS "  Config -> Model -> Core -> {AppGtk, Presenter}")
-message(STATUS "                                     |")
-message(STATUS "                                     +-- View    -> industrial-hmi (GTK exe)")
-message(STATUS "                                     +-- Console -> industrial-hmi-console")
+message(STATUS "  Config -> Model -> Core -> Auth   ----------+")
+message(STATUS "                          \\-> IntegrationCore -+--> Presenter")
+message(STATUS "                          \\-> Ml             --+")
+message(STATUS "                                              |")
+message(STATUS "                                              +-- View    -> industrial-hmi (GTK exe)")
+message(STATUS "                                              +-- Console -> industrial-hmi-console")
 message(STATUS "")
 if(WIN32)
     message(STATUS "Windows Build:")

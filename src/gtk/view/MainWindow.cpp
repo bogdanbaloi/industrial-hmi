@@ -11,6 +11,9 @@
 #include "src/auth/Session.h"
 #include "src/gtk/view/pages/Page.h"
 #include "src/gtk/view/pages/AuditLogPage.h"
+#include "src/gtk/view/pages/UsersPage.h"
+#include "src/gtk/view/LoginDialog.h"
+#include "src/presenter/UsersPresenter.h"
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/pages/HistoryPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
@@ -221,25 +224,10 @@ void MainWindow::buildSidebarWidgets() {
                 app::core::Application::instance().authSession();
             if (session != nullptr) {
                 userBadge_ = Gtk::make_managed<app::view::UserBadge>(
-                    *svc, *session);
-                // Sign out quits the GTK application explicitly so
-                // the main() loop returns and the container's
-                // `restart: unless-stopped` policy spins us back to
-                // the LoginDialog on a fresh process.
-                //
-                // Earlier this called `this->close()` which closes the
-                // window but doesn't always trigger Gtk::Application
-                // to return from run() -- some held references kept
-                // the process alive with no window, leaving noVNC
-                // attached to an empty Xvfb and the operator stuck
-                // (browser refresh re-connected to the same empty
-                // X session). Calling Application::quit() directly
-                // is the unambiguous gesture.
-                userBadge_->onSignOut([]() {
-                    if (auto app = Gtk::Application::get_default()) {
-                        app->quit();
-                    }
-                });
+                    *svc, *session,
+                    app::core::Application::instance().usersPresenter());
+                userBadge_->onSignOut(
+                    [this]() { handleSignOut(); });
                 systemStatusContainer_->append(*userBadge_);
             }
         }
@@ -433,6 +421,21 @@ void MainWindow::createAllPages() {
             auditLogPage_ = Gtk::make_managed<app::view::AuditLogPage>(
                 *dialogManager_, *audit);
             registerPage(auditLogPage_);
+        }
+    }
+
+    // Users management page: admin-only. Same gating story as the
+    // audit page above -- the presenter's list() also returns empty
+    // for non-admins, so even a forced registration would render
+    // blank, but skipping the tab outright is cleaner UX.
+    if (auto* users = app.usersPresenter();
+        users != nullptr && session != nullptr) {
+        const auto userOpt = session->currentUser();
+        if (userOpt.has_value()
+                && app::auth::canManageUsers(userOpt->role)) {
+            usersPage_ = Gtk::make_managed<app::view::UsersPage>(
+                *dialogManager_, *users);
+            registerPage(usersPage_);
         }
     }
 
@@ -680,6 +683,66 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
                 if (statusBadge_) statusBadge_->setState(state);
             });
     }
+}
+
+void MainWindow::handleSignOut() {
+    // Hide the main window, run the login dialog modally, then
+    // either spawn a fresh MainWindow (operator signed back in --
+    // common path for shift changes) or quit the application
+    // (operator cancelled -- they're done with the terminal).
+    //
+    // Earlier iterations just called Application::quit() and relied
+    // on the docker container's `restart: unless-stopped` policy to
+    // spin a fresh process back to the login dialog. That worked in
+    // Docker but on native Windows / Linux there's no restart
+    // supervisor, so sign-out felt like a crash. The rebuild pattern
+    // works the same on every host AND re-evaluates role-gated
+    // page registration so admin <-> operator swaps see the right
+    // tab list.
+    set_visible(false);
+
+    auto* svc     = app::core::Application::instance().authService();
+    auto* session = app::core::Application::instance().authSession();
+    // get_default() returns Gio::Application; cast to Gtk::Application
+    // so add_window / remove_window are accessible.
+    auto gtkApp = std::dynamic_pointer_cast<Gtk::Application>(
+        Gtk::Application::get_default());
+    if (svc == nullptr || session == nullptr || !gtkApp) {
+        // Defensive: no auth wiring or no app to attach the dialog
+        // to. Just close the window so main() unwinds.
+        close();
+        return;
+    }
+
+    app::view::LoginDialog dialog(*svc, *session);
+    gtkApp->add_window(dialog);
+    const auto outcome = dialog.runModal();
+    gtkApp->remove_window(dialog);
+
+    if (outcome != app::view::LoginDialog::Result::Success) {
+        // Application::quit() returns from run() so main() shuts
+        // down cleanly.
+        gtkApp->quit();
+        return;
+    }
+
+    // Re-login succeeded. Rebuild MainWindow from scratch so role-
+    // gated pages (UsersPage, AuditLogPage) re-evaluate visibility
+    // against the NEW currentUser. The auth + model + historian
+    // singletons live on main()'s stack and survive the swap; only
+    // per-window pages + presenters recycle. The swap is deferred to
+    // an idle callback so we unwind THIS MainWindow's call stack
+    // (we're inside one of its lambdas) before destroying it.
+    Glib::signal_idle().connect_once([gtkApp]() {
+        auto* fresh = new MainWindow();
+        gtkApp->add_window(*fresh);
+        // Drain pending idle callbacks from the fresh window's
+        // initial paint (mirrors what Application::run does on
+        // first activate).
+        while (g_main_context_iteration(nullptr, false)) {}
+        fresh->present();
+    });
+    close();
 }
 
 void MainWindow::reloadLayout() {

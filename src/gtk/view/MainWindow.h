@@ -26,6 +26,7 @@ namespace app {
         class SettingsPage;
         class HistoryPage;
         class AuditLogPage;
+        class UsersPage;
         class QualityInspectionPage;
         class UserBadge;
         class DialogManager;
@@ -98,6 +99,14 @@ private:
     // multiple times during a live relayout -- callers are expected to
     // have reset the member pointers to null first.
     void buildSidebarWidgets();
+
+    /// Sign-out handler installed on the UserBadge -- factored out of
+    /// buildSidebarWidgets so the latter stays under the
+    /// readability-function-size threshold. Hides the current window,
+    /// runs LoginDialog modally, then either spawns a fresh
+    /// MainWindow (on success, via an idle callback) or quits the
+    /// Gtk::Application (on cancel).
+    void handleSignOut();
     // Tear down + re-parse main-window.ui from disk when switching
     // between structurally different layouts (e.g. default -> Blueprint
     // top-bar). Keeps the user's active tab and runtime toggles.
@@ -184,6 +193,7 @@ private:
     // logged-in user holds Admin role. Operator + Maintenance never
     // see the tab.
     app::view::AuditLogPage*                 auditLogPage_  = nullptr;
+    app::view::UsersPage*                    usersPage_     = nullptr;
 
     // Sidebar user badge -- current user + role + sign out. Lives
     // in the sidebar layout; null when auth is disabled.

@@ -7,11 +7,21 @@
 
 #include <functional>
 
+namespace app::presenter {
+class UsersPresenter;     // forward decl -- non-owning pointer
+}
+
 namespace app::view {
+
+class AvatarWidget;       // forward decl -- non-owning pointer
 
 /// Sidebar widget that surfaces the currently-logged-in user.
 ///
-/// Two labels (username + role) stacked above a "Sign out" button.
+/// Layout: [Avatar 32px][VBox: username + role] plus a row of buttons
+/// (Profile + Sign out) below. The avatar renders the uploaded photo
+/// when present, otherwise generated initials over a hashed-from-
+/// username palette colour (see `AvatarPlaceholder`).
+///
 /// Empty / hidden when no session is set -- the only path that
 /// reaches the main window goes through LoginDialog, so this widget
 /// is the operator's confirmation that auth is wired and their
@@ -21,12 +31,22 @@ namespace app::view {
 /// than an inline call to `service.logout()` so the host (MainWindow)
 /// can additionally close itself / quit the application -- the
 /// presenter / service alone can't do that without coupling to GTK.
+/// The Profile button is wired in-widget because the dialog is a
+/// self-contained modal and does not need MainWindow involvement.
 class UserBadge : public Gtk::Box {
 public:
     using SignOutAction = std::function<void()>;
 
-    UserBadge(app::auth::AuthService& service,
-              app::auth::Session& session);
+    /// @param service  Auth service for logout.
+    /// @param session  Auth session for "who is logged in" reads.
+    /// @param users    Optional users presenter -- when non-null the
+    ///                 avatar renders the uploaded photo (or initials)
+    ///                 and a Profile button opens the self-service
+    ///                 dialog. Null is fine; the widget falls back to
+    ///                 initials-only and hides the Profile button.
+    UserBadge(app::auth::AuthService&            service,
+              app::auth::Session&                session,
+              app::presenter::UsersPresenter*    users = nullptr);
     ~UserBadge() override = default;
 
     /// Caller-supplied hook for "operator clicked Sign out". The
@@ -43,15 +63,20 @@ public:
 private:
     void buildUi();
     void onSignOutClicked();
+    void onProfileClicked();
 
-    app::auth::AuthService& service_;
-    app::auth::Session&     session_;
+    app::auth::AuthService&         service_;
+    app::auth::Session&             session_;
+    app::presenter::UsersPresenter* users_{nullptr};
 
+    AvatarWidget*           avatar_{nullptr};
     Gtk::Label*             usernameLabel_{nullptr};
     Gtk::Label*             roleLabel_{nullptr};
+    Gtk::Button*            profileButton_{nullptr};
     Gtk::Button*            signOutButton_{nullptr};
 
     SignOutAction           signOutAction_;
+    sigc::connection        sessionConn_;   // Session::signalChanged
 };
 
 }  // namespace app::view

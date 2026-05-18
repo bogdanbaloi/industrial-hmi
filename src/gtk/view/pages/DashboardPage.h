@@ -70,6 +70,14 @@ public:
     void onError(const std::string& errorMessage) override;
 
 private:
+    /// Active role cache. Set by `applyRole` and consulted by
+    /// `updateControlPanel` so a presenter-driven sensitivity update
+    /// cannot re-enable buttons the role forbids (Operator must not
+    /// be able to trigger Calibration / Reset even after the
+    /// presenter pushes a fresh ControlPanelViewModel). Defaults to
+    /// Admin so the no-auth dev path leaves every button live.
+    app::auth::Role currentRole_{app::auth::Role::Admin};
+
     // GTK widgets - organized by UI sections
     
     /// Work unit information section

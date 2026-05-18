@@ -50,6 +50,14 @@ void DashboardPage::applyRole(app::auth::Role role) {
     // require Maintenance or above. Operators see the buttons in
     // the layout (so they know what's possible) but cannot trigger
     // them; the tooltip surfaces the reason.
+    //
+    // Cache the role so updateControlPanel (called every time the
+    // presenter pushes a ControlPanelViewModel) gates the
+    // sensitivity update too -- otherwise a presenter update would
+    // silently re-enable buttons the role forbids, which is exactly
+    // the bug we hit during B2.5 docker testing.
+    currentRole_ = role;
+
     const bool calibrateAllowed = app::auth::canCalibrate(role);
     const bool resetAllowed     = app::auth::canResetSystem(role);
 
@@ -440,11 +448,21 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
 }
 
 void DashboardPage::updateControlPanel(const presenter::ControlPanelViewModel& vm) {
-    // Update button sensitivity (enabled/disabled)
+    // Combine the presenter's VM-level enable flag with the role
+    // gate. The presenter doesn't know about user roles -- it tells
+    // us "this button would be legal in the current production
+    // state". We AND it with canCalibrate / canResetSystem so an
+    // Operator never sees Calibration / Reset enabled even when the
+    // production state would otherwise allow it.
+    const bool calibrateAllowed = app::auth::canCalibrate(currentRole_);
+    const bool resetAllowed     = app::auth::canResetSystem(currentRole_);
+
     controlPanelWidgets_.startButton->set_sensitive(vm.startEnabled);
     controlPanelWidgets_.stopButton->set_sensitive(vm.stopEnabled);
-    controlPanelWidgets_.resetButton->set_sensitive(vm.resetRestartEnabled);
-    controlPanelWidgets_.calibrationButton->set_sensitive(vm.calibrationEnabled);
+    controlPanelWidgets_.resetButton->set_sensitive(
+        vm.resetRestartEnabled && resetAllowed);
+    controlPanelWidgets_.calibrationButton->set_sensitive(
+        vm.calibrationEnabled && calibrateAllowed);
     
     // Update active indicator
     Glib::ustring indicatorText;
