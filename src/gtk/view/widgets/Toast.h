@@ -46,13 +46,22 @@ enum class ToastPosition : std::uint8_t {
 
 class Toast : public Gtk::Revealer {
 public:
-    /// Runtime knobs. All optional -- the defaults match the original
-    /// behaviour (success fades after 3.5 s, error stays until
-    /// dismissed, top-centre placement). Set duration to 0 to keep
-    /// the banner visible until the operator dismisses it manually.
+    /// Default auto-dismiss for success toasts. 3.5 s is long enough
+    /// for an operator's eye to catch the banner after a confirming
+    /// glance away (clipboard, neighbour ask) and short enough not
+    /// to loiter and overlap with the next action.
+    static constexpr unsigned kDefaultSuccessMs = 3'500;
+    /// 0 == "stay visible until manually dismissed". Used as the
+    /// error-toast default so a failure reason isn't lost to a
+    /// quick glance away.
+    static constexpr unsigned kStayUntilDismissed = 0;
+
+    /// Runtime knobs. All optional -- the defaults match "success
+    /// fades after 3.5 s, error stays until dismissed, top-centre
+    /// placement". Override per host page via setOptions().
     struct Options {
-        unsigned       successDurationMs = 3'500;
-        unsigned       errorDurationMs   = 0;       // 0 == stay
+        unsigned       successDurationMs = kDefaultSuccessMs;
+        unsigned       errorDurationMs   = kStayUntilDismissed;
         ToastPosition  position          = ToastPosition::TopCenter;
     };
 
