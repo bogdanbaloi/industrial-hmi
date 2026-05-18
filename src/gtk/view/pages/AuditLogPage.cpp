@@ -74,6 +74,16 @@ std::string formatTimestampLocal(const std::string& iso8601Utc) {
     // std::tm::tm_year is years since 1900 (POSIX convention).
     constexpr int kTmYearEpoch = 1900;
 
+    // Per-field offsets inside "YYYY-MM-DDTHH:MM:SSZ".
+    constexpr std::size_t kYearOffset  = 0;
+    constexpr std::size_t kYearLength  = 4;
+    constexpr std::size_t kMonthOffset = 5;
+    constexpr std::size_t kDayOffset   = 8;
+    constexpr std::size_t kHourOffset  = 11;
+    constexpr std::size_t kMinOffset   = 14;
+    constexpr std::size_t kSecOffset   = 17;
+    constexpr std::size_t kFieldWidth  = 2;
+
     if (iso8601Utc.size() < kIso8601Length) return iso8601Utc;
 
     // Manual field-by-field parse using std::from_chars. Avoids
@@ -92,12 +102,12 @@ std::string formatTimestampLocal(const std::string& iso8601Utc) {
     };
 
     std::tm tm{};
-    if (!parseField(0,  4, tm.tm_year)
-        || !parseField(5,  2, tm.tm_mon)
-        || !parseField(8,  2, tm.tm_mday)
-        || !parseField(11, 2, tm.tm_hour)
-        || !parseField(14, 2, tm.tm_min)
-        || !parseField(17, 2, tm.tm_sec)) {
+    if (!parseField(kYearOffset,  kYearLength, tm.tm_year)
+        || !parseField(kMonthOffset, kFieldWidth, tm.tm_mon)
+        || !parseField(kDayOffset,   kFieldWidth, tm.tm_mday)
+        || !parseField(kHourOffset,  kFieldWidth, tm.tm_hour)
+        || !parseField(kMinOffset,   kFieldWidth, tm.tm_min)
+        || !parseField(kSecOffset,   kFieldWidth, tm.tm_sec)) {
         return iso8601Utc;
     }
     tm.tm_year -= kTmYearEpoch;
