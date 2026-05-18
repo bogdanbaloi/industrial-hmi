@@ -4,10 +4,12 @@
 #include "src/core/i18n.h"
 
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <ctime>
 #include <format>
 #include <string>
+#include <system_error>
 
 namespace app::view {
 
@@ -66,27 +68,40 @@ Gtk::Label* makeCell(const std::string& text, int widthChars) {
 /// still renders something visible (operators must be able to spot
 /// data-integrity issues).
 std::string formatTimestampLocal(const std::string& iso8601Utc) {
+    // ISO 8601 "YYYY-MM-DDTHH:MM:SSZ" is exactly 20 characters; anything
+    // shorter cannot carry the expected layout.
+    constexpr std::size_t kIso8601Length = 20;
+    // std::tm::tm_year is years since 1900 (POSIX convention).
+    constexpr int kTmYearEpoch = 1900;
+
+    if (iso8601Utc.size() < kIso8601Length) return iso8601Utc;
+
+    // Manual field-by-field parse using std::from_chars. Avoids
+    // sscanf (flagged by cert-err34-c) + strptime's locale wobble on
+    // %Y, and gives us per-field error codes without throwing.
+    //
+    // Layout: YYYY-MM-DDTHH:MM:SSZ
+    // Index:  0123456789...
+    const auto* s = iso8601Utc.data();
+    auto parseField = [s](std::size_t offset, std::size_t length,
+                          int& out) {
+        const auto* first = s + offset;
+        const auto* last  = first + length;
+        const auto r = std::from_chars(first, last, out);
+        return r.ec == std::errc{} && r.ptr == last;
+    };
+
     std::tm tm{};
-    // strptime is POSIX (glibc + MSYS2 clang ucrt). The Z is matched
-    // literally; %Z would try to consume a tz name which our format
-    // doesn't carry.
-    const char* end = nullptr;
-    {
-        // Manual parse: ISO 8601 layout is fixed; avoid strptime's
-        // locale-sensitive %Y wobble by reading the fields directly.
-        if (iso8601Utc.size() < 20) return iso8601Utc;
-        const auto* s = iso8601Utc.c_str();
-        // YYYY-MM-DDTHH:MM:SSZ
-        if (std::sscanf(s, "%4d-%2d-%2dT%2d:%2d:%2d",
-                        &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
-                        &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6) {
-            return iso8601Utc;
-        }
-        tm.tm_year -= 1900;
-        tm.tm_mon  -= 1;
-        end = s + iso8601Utc.size();
+    if (!parseField(0,  4, tm.tm_year)
+        || !parseField(5,  2, tm.tm_mon)
+        || !parseField(8,  2, tm.tm_mday)
+        || !parseField(11, 2, tm.tm_hour)
+        || !parseField(14, 2, tm.tm_min)
+        || !parseField(17, 2, tm.tm_sec)) {
+        return iso8601Utc;
     }
-    (void)end;
+    tm.tm_year -= kTmYearEpoch;
+    tm.tm_mon  -= 1;  // tm_mon is 0-based
 
     // Convert UTC tm to time_t (epoch seconds). timegm is glibc;
     // _mkgmtime is the MSVC/MinGW equivalent.
