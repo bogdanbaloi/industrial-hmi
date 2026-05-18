@@ -341,6 +341,7 @@ target_sources(objectsCore
         src/core/i18n.cpp
         src/core/Bootstrap.cpp
         src/core/StartupDialog.cpp
+        src/core/TimeFormat.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -353,6 +354,7 @@ target_sources(objectsCore
             src/core/Bootstrap.h
             src/core/StartupErrors.h
             src/core/StartupDialog.h
+            src/core/TimeFormat.h
 )
 target_link_libraries(objectsCore
     PUBLIC
@@ -869,7 +871,9 @@ target_sources(objectsView
         src/gtk/view/pages/UsersPage.cpp
         src/gtk/view/dialogs/UserEditDialog.cpp
         src/gtk/view/dialogs/ResetPasswordDialog.cpp
+        src/gtk/view/dialogs/ProfileDialog.cpp
         src/gtk/view/widgets/UserBadge.cpp
+        src/gtk/view/widgets/AvatarWidget.cpp
     PRIVATE
         FILE_SET internalHeaders
         TYPE HEADERS
@@ -889,6 +893,8 @@ target_sources(objectsView
             src/gtk/view/pages/ProductObject.h
             src/gtk/view/dialogs/UserEditDialog.h
             src/gtk/view/dialogs/ResetPasswordDialog.h
+            src/gtk/view/dialogs/ProfileDialog.h
+            src/gtk/view/widgets/AvatarWidget.h
             src/gtk/view/widgets/QualityGauge.h
             src/gtk/view/widgets/TrendChart.h
             src/gtk/view/widgets/AlertsPanel.h

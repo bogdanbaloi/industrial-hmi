@@ -1,5 +1,6 @@
 #include "src/gtk/view/pages/UsersPage.h"
 
+#include "src/core/TimeFormat.h"
 #include "src/core/i18n.h"
 #include "src/gtk/view/DialogManager.h"
 #include "src/gtk/view/dialogs/ResetPasswordDialog.h"
@@ -132,7 +133,8 @@ void UsersPage::appendRow(const app::auth::User& u) {
     grid_->attach(*makeCell(u.displayName,               kColDisplayName), 1, r, 1, 1);
     grid_->attach(*makeCell(formatRole(u.role),          kColRole),        2, r, 1, 1);
     grid_->attach(*makeCell(u.enabled ? "yes" : "no",    kColEnabled),     3, r, 1, 1);
-    grid_->attach(*makeCell(u.createdAt,                 kColCreated),     4, r, 1, 1);
+    grid_->attach(*makeCell(app::core::formatIso8601Local(u.createdAt),
+                                                         kColCreated),     4, r, 1, 1);
 
     // Per-row action buttons. Captures `u.id` + `u.username` by value
     // so they survive past the row's lifetime if the grid is rebuilt
