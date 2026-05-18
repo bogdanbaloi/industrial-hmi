@@ -730,9 +730,36 @@ void MainWindow::handleSignOut() {
     // gated pages (UsersPage, AuditLogPage) re-evaluate visibility
     // against the NEW currentUser. The auth + model + historian
     // singletons live on main()'s stack and survive the swap; only
-    // per-window pages + presenters recycle. The swap is deferred to
-    // an idle callback so we unwind THIS MainWindow's call stack
-    // (we're inside one of its lambdas) before destroying it.
+    // per-window pages + presenters recycle.
+    //
+    // Three tricky bits:
+    //
+    //  1. Application keep-alive. The current window is THIS app's
+    //     only toplevel; closing it sends the window count to 0 and
+    //     GApplication starts its shutdown sequence. By the time the
+    //     idle callback below fires, add_window() rejects the fresh
+    //     window with a "must be added after startup" critical, the
+    //     window never materialises, and the process exits. hold()
+    //     pins an extra reference so the app survives the gap;
+    //     release() in the idle callback balances it once the new
+    //     window has taken over.
+    //
+    //  2. Tear down BEFORE re-build. The old MainWindow's
+    //     presenters subscribe to the SimulatedModel singleton; if
+    //     a fresh MainWindow is constructed while the old one still
+    //     lives, BOTH presenters fire on every tick and every event
+    //     shows up twice. Calling `delete this` here is unsafe
+    //     (we're in our own method), so we close() now (queues the
+    //     gtkmm destruction) and let the idle callback fire AFTER
+    //     gtk has actually destroyed the window. The single idle
+    //     iteration is enough -- GTK reaps the closed window before
+    //     the next main loop tick.
+    //
+    //  3. Defer to idle (not direct) so we unwind THIS MainWindow's
+    //     call stack (we're inside one of its lambdas) before its
+    //     destructor runs. Calling new MainWindow inline would
+    //     re-enter widget code while our `this` is still alive.
+    gtkApp->hold();
     Glib::signal_idle().connect_once([gtkApp]() {
         auto* fresh = new MainWindow();
         gtkApp->add_window(*fresh);
@@ -741,6 +768,7 @@ void MainWindow::handleSignOut() {
         // first activate).
         while (g_main_context_iteration(nullptr, false)) {}
         fresh->present();
+        gtkApp->release();
     });
     close();
 }

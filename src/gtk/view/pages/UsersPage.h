@@ -7,6 +7,8 @@
 
 namespace app::view {
 
+class Toast;
+
 /// Admin-only user management page.
 ///
 /// Mirrors AuditLogPage in shape: scrolling Gtk::Grid for the listing
@@ -44,13 +46,17 @@ private:
     /// index. See AuditLogPage::appendRow for the Grid-vs-Box choice.
     void appendRow(const app::auth::User& u);
 
-    /// Centralised error toast: maps a UsersStatus to a localised
-    /// message and shows it via DialogManager. Used by every action
-    /// handler so the wording stays consistent.
-    void reportStatus(app::presenter::UsersStatus s);
+    /// Centralised result feedback: maps a UsersStatus to a localised
+    /// message and surfaces it via the page's Toast banner. Ok runs
+    /// `successText` through the toast on success; every other code
+    /// reports the failure message in the error tone so the operator
+    /// sees WHY the action was rejected.
+    void reportStatus(app::presenter::UsersStatus s,
+                      const Glib::ustring& successText);
 
     app::presenter::UsersPresenter& presenter_;
 
+    Toast*               toast_{nullptr};
     Gtk::Button*         addButton_{nullptr};
     Gtk::Button*         refreshButton_{nullptr};
     Gtk::ScrolledWindow* scroller_{nullptr};

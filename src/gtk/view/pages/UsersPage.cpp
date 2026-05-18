@@ -5,6 +5,7 @@
 #include "src/gtk/view/DialogManager.h"
 #include "src/gtk/view/dialogs/ResetPasswordDialog.h"
 #include "src/gtk/view/dialogs/UserEditDialog.h"
+#include "src/gtk/view/widgets/Toast.h"
 
 #include <format>
 #include <string>
@@ -68,6 +69,11 @@ void UsersPage::buildUi() {
     // --- Toolbar -------------------------------------------------------
     auto* toolbar = Gtk::make_managed<Gtk::Box>(
         Gtk::Orientation::HORIZONTAL, kToolbarSpacingPx);
+
+    // Toast above the toolbar so success/error feedback is the first
+    // thing the operator's eye lands on after submitting a dialog.
+    toast_ = Gtk::make_managed<Toast>();
+    append(*toast_);
 
     addButton_ = Gtk::make_managed<Gtk::Button>(_("Add user"));
     addButton_->add_css_class("suggested-action");
@@ -168,7 +174,10 @@ void UsersPage::onAddClicked() {
     const auto& form = dlg.formData();
     const auto status = presenter_.create(form.username, form.password,
                                           form.role, form.displayName);
-    reportStatus(status);
+    reportStatus(status,
+                 std::format("{} \xe2\x80\x9C{}\xe2\x80\x9D",
+                             std::string{_("User created:")},
+                             form.username));
     if (status == app::presenter::UsersStatus::Ok) refresh();
 }
 
@@ -182,7 +191,7 @@ void UsersPage::onEditClicked(std::int64_t id) {
         if (u.id == id) { target = u; break; }
     }
     if (!target.has_value()) {
-        reportStatus(app::presenter::UsersStatus::NotFound);
+        reportStatus(app::presenter::UsersStatus::NotFound, {});
         refresh();   // sync stale grid
         return;
     }
@@ -194,7 +203,10 @@ void UsersPage::onEditClicked(std::int64_t id) {
     const auto& form = dlg.formData();
     const auto status = presenter_.update(id, form.role,
                                           form.displayName, form.enabled);
-    reportStatus(status);
+    reportStatus(status,
+                 std::format("{} \xe2\x80\x9C{}\xe2\x80\x9D",
+                             std::string{_("User updated:")},
+                             target->username));
     if (status == app::presenter::UsersStatus::Ok) refresh();
 }
 
@@ -205,7 +217,10 @@ void UsersPage::onResetPasswordClicked(std::int64_t id,
     if (outcome != ResetPasswordDialog::Result::Submitted) return;
 
     const auto status = presenter_.resetPassword(id, dlg.newPassword());
-    reportStatus(status);
+    reportStatus(status,
+                 std::format("{} \xe2\x80\x9C{}\xe2\x80\x9D",
+                             std::string{_("Password reset for")},
+                             username));
 }
 
 void UsersPage::onDeleteClicked(std::int64_t id,
@@ -217,20 +232,27 @@ void UsersPage::onDeleteClicked(std::int64_t id,
     if (!confirmed) return;
 
     const auto status = presenter_.remove(id);
-    reportStatus(status);
+    reportStatus(status,
+                 std::format("{} \xe2\x80\x9C{}\xe2\x80\x9D",
+                             std::string{_("User deleted:")},
+                             username));
     if (status == app::presenter::UsersStatus::Ok) refresh();
 }
 
-void UsersPage::reportStatus(app::presenter::UsersStatus s) {
+void UsersPage::reportStatus(app::presenter::UsersStatus s,
+                             const Glib::ustring& successText) {
     using app::presenter::UsersStatus;
+    if (toast_ == nullptr) return;
     if (s == UsersStatus::Ok) {
-        // Silent success -- the grid refresh is the visible
-        // confirmation. A toast on every CRUD action would be noise.
+        // Auto-dismissing success toast -- positive feedback without
+        // blocking the operator's next click.
+        toast_->showSuccess(successText);
         return;
     }
-    dialogManager_.showError(
-        std::string{_("User management")},
-        std::string{app::presenter::statusMessage(s)});
+    // Error toast stays visible until dismissed so the operator
+    // catches WHY the action was rejected even when looking away
+    // (e.g. clipboard transcription).
+    toast_->showError(std::string{app::presenter::statusMessage(s)});
 }
 
 }  // namespace app::view

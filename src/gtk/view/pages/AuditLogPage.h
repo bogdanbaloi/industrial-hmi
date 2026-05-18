@@ -51,6 +51,9 @@ private:
     app::auth::AuditLogger& reader_;
 
     Gtk::ComboBoxText*           categoryFilter_{nullptr};
+    Gtk::ComboBoxText*           actionFilter_{nullptr};
+    Gtk::ComboBoxText*           resultFilter_{nullptr};
+    Gtk::ComboBoxText*           rangeFilter_{nullptr};
     Gtk::Entry*                  usernameFilter_{nullptr};
     Gtk::Button*                 refreshButton_{nullptr};
     Gtk::ScrolledWindow*         scroller_{nullptr};

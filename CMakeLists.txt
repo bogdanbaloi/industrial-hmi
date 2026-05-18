@@ -874,6 +874,7 @@ target_sources(objectsView
         src/gtk/view/dialogs/ProfileDialog.cpp
         src/gtk/view/widgets/UserBadge.cpp
         src/gtk/view/widgets/AvatarWidget.cpp
+        src/gtk/view/widgets/Toast.cpp
     PRIVATE
         FILE_SET internalHeaders
         TYPE HEADERS
@@ -901,6 +902,7 @@ target_sources(objectsView
             src/gtk/view/widgets/SystemStatusBadge.h
             src/gtk/view/widgets/LiveClock.h
             src/gtk/view/widgets/UserBadge.h
+            src/gtk/view/widgets/Toast.h
             src/presenter/AlertCenter.h
             src/presenter/modelview/AlertViewModel.h
             src/gtk/view/css_classes.h

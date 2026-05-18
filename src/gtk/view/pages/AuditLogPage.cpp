@@ -4,8 +4,14 @@
 #include "src/core/TimeFormat.h"
 #include "src/core/i18n.h"
 
+#include <array>
+#include <chrono>
+#include <ctime>
 #include <format>
+#include <iomanip>
+#include <sstream>
 #include <string>
+#include <string_view>
 
 namespace app::view {
 
@@ -53,6 +59,61 @@ Gtk::Label* makeCell(const std::string& text, int widthChars) {
     return l;
 }
 
+// Known action verbs across all categories. Listed alphabetically so a
+// compliance auditor scanning the dropdown finds what they expect
+// quickly. Adding a new verb is one new entry here; the SqliteAuditLogger
+// query layer is verb-agnostic so no other change is needed.
+constexpr std::array<std::string_view, 17> kActionList = {
+    "ADD",
+    "CALIBRATE",
+    "CHANGE_AVATAR",
+    "CHANGE_PASSWORD",
+    "CLEAR_AVATAR",
+    "CREATE",
+    "DELETE",
+    "DISABLE",
+    "ENABLE",
+    "LOGIN",
+    "LOGOUT",
+    "RESET",
+    "RESET_PASSWORD",
+    "START",
+    "STOP",
+    "UPDATE",
+    "VIEW",
+};
+
+// Range picker presets -- map to a lookback in seconds. Stored as a
+// distinct enum-like sentinel (0 = "all time") so the refresh() path
+// can decide whether to set q.fromTs at all.
+struct RangePreset {
+    std::string_view label;
+    std::int64_t     lookbackSeconds;  // 0 == no lower bound
+};
+constexpr std::array<RangePreset, 4> kRangePresets = {{
+    {"All time",       0},
+    {"Last hour",      60LL * 60},
+    {"Last 24 hours",  24LL * 60 * 60},
+    {"Last 7 days",    7LL  * 24 * 60 * 60},
+}};
+
+/// Format a `time_point` as ISO 8601 UTC -- matches the stamps the
+/// writers emit so range queries compare apples to apples. Used by
+/// the range picker to translate "Last hour" into a `fromTs` SQL
+/// parameter.
+std::string isoFromTimePoint(std::chrono::system_clock::time_point tp) {
+    const auto tt = std::chrono::system_clock::to_time_t(tp);
+    std::tm tm{};
+#if defined(_WIN32)
+    ::gmtime_s(&tm, &tt);
+#else
+    ::gmtime_r(&tt, &tm);
+#endif
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+    return oss.str();
+}
+
 }  // namespace
 
 AuditLogPage::AuditLogPage(DialogManager& dialogManager,
@@ -96,6 +157,49 @@ void AuditLogPage::buildUi() {
     categoryFilter_->signal_changed().connect(
         sigc::mem_fun(*this, &AuditLogPage::onFilterChanged));
     toolbar->append(*categoryFilter_);
+
+    // Action filter. Independent of category -- a compliance walk
+    // typically goes "show me every RESET_PASSWORD" across all
+    // categories rather than scoping to USER first. The All entry is
+    // the row 0 sentinel matching the pattern of categoryFilter_.
+    toolbar->append(*Gtk::make_managed<Gtk::Label>(_("Action:")));
+    actionFilter_ = Gtk::make_managed<Gtk::ComboBoxText>();
+    actionFilter_->append(_("All"));
+    for (auto verb : kActionList) {
+        actionFilter_->append(std::string{verb});
+    }
+    actionFilter_->set_active(0);
+    actionFilter_->signal_changed().connect(
+        sigc::mem_fun(*this, &AuditLogPage::onFilterChanged));
+    toolbar->append(*actionFilter_);
+
+    // Result filter -- the most common compliance ask is
+    // "FAILURE only" (failed logins, refused RBAC actions,
+    // validation rejects), so the three options stay short.
+    toolbar->append(*Gtk::make_managed<Gtk::Label>(_("Result:")));
+    resultFilter_ = Gtk::make_managed<Gtk::ComboBoxText>();
+    resultFilter_->append(_("All"));
+    resultFilter_->append("SUCCESS");
+    resultFilter_->append("FAILURE");
+    resultFilter_->set_active(0);
+    resultFilter_->signal_changed().connect(
+        sigc::mem_fun(*this, &AuditLogPage::onFilterChanged));
+    toolbar->append(*resultFilter_);
+
+    // Range picker. Preset durations (Last hour / 24h / 7 days) rather
+    // than calendar pickers -- operators rarely need an exact
+    // start-of-day range and the presets translate one-to-one to a
+    // `fromTs` parameter at refresh time. "All time" leaves fromTs
+    // empty so the SQL WHERE clause skips the lower bound.
+    toolbar->append(*Gtk::make_managed<Gtk::Label>(_("Range:")));
+    rangeFilter_ = Gtk::make_managed<Gtk::ComboBoxText>();
+    for (const auto& preset : kRangePresets) {
+        rangeFilter_->append(std::string{preset.label});
+    }
+    rangeFilter_->set_active(0);
+    rangeFilter_->signal_changed().connect(
+        sigc::mem_fun(*this, &AuditLogPage::onFilterChanged));
+    toolbar->append(*rangeFilter_);
 
     toolbar->append(*Gtk::make_managed<Gtk::Label>(_("User:")));
     usernameFilter_ = Gtk::make_managed<Gtk::Entry>();
@@ -173,6 +277,25 @@ void AuditLogPage::refresh() {
         // Index 0 == "All" -> leave the field empty.
         if (idx > 0) {
             q.category = categoryFilter_->get_active_text().raw();
+        }
+    }
+    if (actionFilter_ != nullptr
+            && actionFilter_->get_active_row_number() > 0) {
+        q.action = actionFilter_->get_active_text().raw();
+    }
+    if (resultFilter_ != nullptr
+            && resultFilter_->get_active_row_number() > 0) {
+        q.result = resultFilter_->get_active_text().raw();
+    }
+    if (rangeFilter_ != nullptr) {
+        const auto idx = static_cast<std::size_t>(
+            rangeFilter_->get_active_row_number());
+        if (idx < kRangePresets.size()
+                && kRangePresets[idx].lookbackSeconds > 0) {
+            const auto cutoff = std::chrono::system_clock::now()
+                - std::chrono::seconds{
+                    kRangePresets[idx].lookbackSeconds};
+            q.fromTs = isoFromTimePoint(cutoff);
         }
     }
     if (usernameFilter_ != nullptr) {
