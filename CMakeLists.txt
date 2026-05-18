@@ -798,6 +798,7 @@ target_sources(objectsAuth
         src/auth/SqliteUserRepository.cpp
         src/auth/SqliteAuditLogger.cpp
         src/auth/AuthService.cpp
+        src/auth/AvatarPlaceholder.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -812,6 +813,7 @@ target_sources(objectsAuth
             src/auth/SqliteAuditLogger.h
             src/auth/Session.h
             src/auth/AuthService.h
+            src/auth/AvatarPlaceholder.h
 )
 target_link_libraries(objectsAuth
     PUBLIC

@@ -146,6 +146,16 @@ target_link_libraries(test_sqlite_user_repository PRIVATE
 )
 add_test(NAME SqliteUserRepositoryTest COMMAND test_sqlite_user_repository)
 
+# Auth: avatar placeholder helpers (initials + palette). Pure logic --
+# no SQLite, no GTK, runs in microseconds.
+add_executable(test_avatar_placeholder AvatarPlaceholderTest.cpp)
+target_link_libraries(test_avatar_placeholder PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME AvatarPlaceholderTest COMMAND test_avatar_placeholder)
+
 # Auth: AuthService end-to-end (real repo + real hasher).
 add_executable(test_auth_service AuthServiceTest.cpp)
 target_link_libraries(test_auth_service PRIVATE
