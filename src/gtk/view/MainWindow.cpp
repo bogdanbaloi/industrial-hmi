@@ -11,6 +11,8 @@
 #include "src/auth/Session.h"
 #include "src/gtk/view/pages/Page.h"
 #include "src/gtk/view/pages/AuditLogPage.h"
+#include "src/gtk/view/pages/UsersPage.h"
+#include "src/presenter/UsersPresenter.h"
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/pages/HistoryPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
@@ -433,6 +435,21 @@ void MainWindow::createAllPages() {
             auditLogPage_ = Gtk::make_managed<app::view::AuditLogPage>(
                 *dialogManager_, *audit);
             registerPage(auditLogPage_);
+        }
+    }
+
+    // Users management page: admin-only. Same gating story as the
+    // audit page above -- the presenter's list() also returns empty
+    // for non-admins, so even a forced registration would render
+    // blank, but skipping the tab outright is cleaner UX.
+    if (auto* users = app.usersPresenter();
+        users != nullptr && session != nullptr) {
+        const auto userOpt = session->currentUser();
+        if (userOpt.has_value()
+                && app::auth::canManageUsers(userOpt->role)) {
+            usersPage_ = Gtk::make_managed<app::view::UsersPage>(
+                *dialogManager_, *users);
+            registerPage(usersPage_);
         }
     }
 

@@ -866,6 +866,9 @@ target_sources(objectsView
         src/gtk/view/pages/ProductsPage.cpp
         src/gtk/view/pages/SettingsPage.cpp
         src/gtk/view/pages/QualityInspectionPage.cpp
+        src/gtk/view/pages/UsersPage.cpp
+        src/gtk/view/dialogs/UserEditDialog.cpp
+        src/gtk/view/dialogs/ResetPasswordDialog.cpp
         src/gtk/view/widgets/UserBadge.cpp
     PRIVATE
         FILE_SET internalHeaders
@@ -882,7 +885,10 @@ target_sources(objectsView
             src/gtk/view/pages/ProductsPage.h
             src/gtk/view/pages/SettingsPage.h
             src/gtk/view/pages/QualityInspectionPage.h
+            src/gtk/view/pages/UsersPage.h
             src/gtk/view/pages/ProductObject.h
+            src/gtk/view/dialogs/UserEditDialog.h
+            src/gtk/view/dialogs/ResetPasswordDialog.h
             src/gtk/view/widgets/QualityGauge.h
             src/gtk/view/widgets/TrendChart.h
             src/gtk/view/widgets/AlertsPanel.h

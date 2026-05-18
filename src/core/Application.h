@@ -20,6 +20,10 @@ class Session;             // forward decl -- non-owning pointer
 class AuditLogger;         // forward decl -- non-owning pointer
 }
 
+namespace app::presenter {
+class UsersPresenter;      // forward decl -- non-owning pointer
+}
+
 namespace app::core {
 
 class Bootstrap;  // forward decl -- defined in Bootstrap.h
@@ -127,6 +131,18 @@ public:
         return auditLogger_;
     }
 
+    /// Inject the users management presenter. Non-owning; the
+    /// concrete is built in main() next to the user repository +
+    /// hasher + session and lives the same scope. MainWindow
+    /// registers the UsersPage (admin-only) when this pointer is
+    /// non-null AND the current session holds Admin.
+    void setUsersPresenter(presenter::UsersPresenter* p) noexcept {
+        usersPresenter_ = p;
+    }
+    [[nodiscard]] presenter::UsersPresenter* usersPresenter() const noexcept {
+        return usersPresenter_;
+    }
+
 private:
     Application() = default;
     ~Application();
@@ -139,6 +155,7 @@ private:
     auth::AuthService*      authService_ = nullptr;                  // non-owning
     auth::Session*          authSession_ = nullptr;                  // non-owning
     auth::AuditLogger*      auditLogger_ = nullptr;                  // non-owning
+    presenter::UsersPresenter* usersPresenter_ = nullptr;             // non-owning
     std::vector<std::string> startupWarnings_;
     bool                    initialized_{false};
 };

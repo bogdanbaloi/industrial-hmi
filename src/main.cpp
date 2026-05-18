@@ -28,6 +28,7 @@
 #include "src/auth/Session.h"
 #include "src/auth/SqliteAuditLogger.h"
 #include "src/auth/SqliteUserRepository.h"
+#include "src/presenter/UsersPresenter.h"
 #include "src/historian/HistorianBridge.h"
 #include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
@@ -592,6 +593,18 @@ int main(int argc, char* argv[]) {
         // stay null and run() goes straight to MainWindow as before.
         app.setAuth(authService.get(), &authSession);
         app.setAuditLogger(auditLogger.get());
+
+        // Users management presenter -- wired only when the full auth
+        // stack is up (repo + hasher + audit + session). MainWindow
+        // gates UsersPage on `currentUser.role == Admin`; non-admins
+        // never see the tab even though the presenter is alive.
+        std::unique_ptr<app::presenter::UsersPresenter> usersPresenter;
+        if (authRepo && authHasher && auditLogger) {
+            usersPresenter = std::make_unique<app::presenter::UsersPresenter>(
+                *authRepo, *authHasher, authSession, *auditLogger);
+            app.setUsersPresenter(usersPresenter.get());
+        }
+
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 
         // Inject the app-wide logger into the SimulatedModel singleton so

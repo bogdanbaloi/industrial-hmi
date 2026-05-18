@@ -26,6 +26,7 @@ namespace app {
         class SettingsPage;
         class HistoryPage;
         class AuditLogPage;
+        class UsersPage;
         class QualityInspectionPage;
         class UserBadge;
         class DialogManager;
@@ -184,6 +185,7 @@ private:
     // logged-in user holds Admin role. Operator + Maintenance never
     // see the tab.
     app::view::AuditLogPage*                 auditLogPage_  = nullptr;
+    app::view::UsersPage*                    usersPage_     = nullptr;
 
     // Sidebar user badge -- current user + role + sign out. Lives
     // in the sidebar layout; null when auth is disabled.
