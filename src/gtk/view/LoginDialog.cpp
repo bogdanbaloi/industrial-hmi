@@ -9,6 +9,11 @@ namespace {
 // Layout constants -- named so the clang-tidy magic-numbers lint stays
 // clean and tweaks land in one place.
 constexpr int kDialogWidthPx     = 360;
+// Explicit height (rather than -1 / "natural") helps the WM decide
+// initial placement -- on Windows MSYS2 GTK4 a window with both
+// dimensions known is centred on the active monitor; with -1 it
+// often lands top-left.
+constexpr int kDialogHeightPx    = 320;
 constexpr int kRootMarginPx      = 24;
 constexpr int kRootSpacingPx     = 12;
 constexpr int kButtonRowSpacing  = 12;
@@ -26,8 +31,15 @@ void LoginDialog::buildUi() {
     set_title(_("Sign in"));
     set_resizable(false);
     set_modal(true);
-    set_default_size(kDialogWidthPx, -1);
+    set_default_size(kDialogWidthPx, kDialogHeightPx);
     set_deletable(true);
+    // GTK4 removed the legacy set_position / move APIs -- initial
+    // placement is the WM's job. Most desktop WMs centre a small,
+    // non-resizable, modal toplevel without a parent on the active
+    // monitor when both default-size dimensions are explicit; -1
+    // for the height triggers a delayed "natural size" pass which
+    // then lands top-left on Windows MSYS2 GTK4. Hence the explicit
+    // kDialogHeightPx above.
 
     // ESC / window-close maps to cancel so the operator can opt out
     // without juggling buttons.
