@@ -223,7 +223,8 @@ void MainWindow::buildSidebarWidgets() {
                 app::core::Application::instance().authSession();
             if (session != nullptr) {
                 userBadge_ = Gtk::make_managed<app::view::UserBadge>(
-                    *svc, *session);
+                    *svc, *session,
+                    app::core::Application::instance().usersPresenter());
                 // Sign out quits the GTK application explicitly so
                 // the main() loop returns and the container's
                 // `restart: unless-stopped` policy spins us back to

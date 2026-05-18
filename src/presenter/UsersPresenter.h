@@ -106,6 +106,12 @@ public:
     [[nodiscard]] std::optional<app::auth::Avatar>
     getAvatar(std::int64_t id) const;
 
+    /// Snapshot of the currently signed-in user. Convenience proxy
+    /// over Session so view widgets (UserBadge, ProfileDialog) can
+    /// depend on a single object rather than juggling presenter +
+    /// session refs. Returns nullopt when no one is signed in.
+    [[nodiscard]] std::optional<app::auth::User> currentUser() const;
+
     // --- admin mutations ------------------------------------------------
 
     /// Create a new account. Admin only. Hashes the password before
