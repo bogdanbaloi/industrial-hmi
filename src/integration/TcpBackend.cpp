@@ -156,11 +156,25 @@ void TcpBackend::start() {
     // synchronously on the same io_context thread (one-client-at-a-
     // time is fine for a portfolio HMI; production deployments would
     // spawn a coroutine per connection).
+    //
+    // The accept loop is recursive: each completion re-arms the next
+    // accept. The first cut stored the lambda in
+    // `shared_ptr<function>` and captured the shared_ptr inside the
+    // lambda for the tail call -- classic self-referencing cycle. The
+    // shared_ptr's refcount never reached zero, and Valgrind
+    // (correctly) flagged 192 bytes leaked per test case.
+    //
+    // Fix: capture `weak_ptr` instead. The owning shared_ptr lives in
+    // an outer scope; once the lambda is no longer in use (after
+    // stop() cancels the acceptor and the io_context drains), the
+    // outer scope's shared_ptr drops the only strong ref and the
+    // cycle is broken cleanly.
     auto* self = this;
     auto acceptLoop = std::make_shared<std::function<void()>>();
-    *acceptLoop = [self, acceptor, acceptLoop]() {
+    std::weak_ptr<std::function<void()>> weakLoop = acceptLoop;
+    *acceptLoop = [self, acceptor, weakLoop]() {
         acceptor->async_accept(
-            [self, acceptor, acceptLoop](
+            [self, acceptor, weakLoop](
                 const boost::system::error_code& ec,
                 tcp::socket socket) {
                 if (ec) {
@@ -176,9 +190,13 @@ void TcpBackend::start() {
                 auto socketPtr = std::make_unique<tcp::socket>(std::move(socket));
                 self->handleConnection(socketPtr.release());
                 // Re-arm for the next client.
-                (*acceptLoop)();
+                if (auto loop = weakLoop.lock()) (*loop)();
             });
     };
+    // Stash the owning shared_ptr as a member so the lambda chain
+    // stays alive across async_accept completions but releases
+    // deterministically in stop().
+    acceptLoop_ = acceptLoop;
     (*acceptLoop)();
 
     // Start the worker thread. jthread auto-joins on stop() / dtor.
@@ -219,6 +237,13 @@ void TcpBackend::stopImpl() noexcept {
         if (io_) io_->stop();
         if (thread_.joinable()) thread_.join();
         boundPort_.store(0, std::memory_order_release);
+
+        // Release the recursive accept-loop closure. With the io
+        // context stopped no further callbacks fire, so the weak_ptr
+        // refs the lambdas hold expire on lock() and the chain
+        // unwinds. Dropping our shared_ptr removes the last strong
+        // ref and the memory is reclaimed before the next start().
+        acceptLoop_.reset();
 
         // Reset io_context so a future start() begins from a clean slate.
         io_ = std::make_unique<asio::io_context>();

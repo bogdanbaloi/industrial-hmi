@@ -81,7 +81,7 @@ SqliteUserRepository::SqliteUserRepository(Config config)
 SqliteUserRepository::~SqliteUserRepository() {
     const std::scoped_lock lock(mutex_);
     if (db_ != nullptr) {
-        sqlite3_close(db_);
+        sqlite3_close_v2(db_);
         db_ = nullptr;
     }
 }
@@ -98,7 +98,7 @@ bool SqliteUserRepository::initialize() {
                                           : "(no handle)");
         }
         if (db_ != nullptr) {
-            sqlite3_close(db_);
+            sqlite3_close_v2(db_);
             db_ = nullptr;
         }
         return false;

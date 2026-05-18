@@ -1,0 +1,52 @@
+# Valgrind Memcheck suppression file for industrial-hmi.
+#
+# Purpose: silence library-level "process-exit" leaks that are not
+# user-fixable, so the CI's --errors-for-leak-kinds=definite gate
+# reports new bugs in OUR code without drowning in noise from
+# upstream libraries we don't control.
+#
+# Same approach Firefox / Chromium / Qt / GLib / Python use --
+# Valgrind itself ships /usr/lib/valgrind/default.supp with similar
+# entries for glibc.
+#
+# Adding entries: include a header that explains what + why, then the
+# block. Patterns use the standard Memcheck suppression syntax (see
+# `man 1 valgrind`).
+
+# -----------------------------------------------------------------------------
+# SQLite -- lazy-initialised global state allocated by sqlite3_initialize()
+# the first time any sqlite3_open* call runs. Released only by an explicit
+# sqlite3_shutdown() at process exit. Calling shutdown is safe only when no
+# connections are open AND no other library in the process holds one; we
+# defer to OS reclaim because:
+#   * Some test binaries open multiple connections (auth + audit + history)
+#     with shared destruction ordering we don't fully control.
+#   * sqlite3_shutdown is documented as best-effort and may itself leak on
+#     certain build configurations of libsqlite3.
+# Same pattern every SQLite-using app (Firefox, Chromium, Python sqlite3)
+# suppresses.
+# -----------------------------------------------------------------------------
+{
+   sqlite-initialize-globals
+   Memcheck:Leak
+   match-leak-kinds: definite,indirect
+   fun:malloc
+   ...
+   obj:*libsqlite3*
+}
+{
+   sqlite-initialize-globals-realloc
+   Memcheck:Leak
+   match-leak-kinds: definite,indirect
+   fun:realloc
+   ...
+   obj:*libsqlite3*
+}
+{
+   sqlite-initialize-globals-calloc
+   Memcheck:Leak
+   match-leak-kinds: definite,indirect
+   fun:calloc
+   ...
+   obj:*libsqlite3*
+}

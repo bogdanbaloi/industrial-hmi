@@ -261,7 +261,7 @@ public:
     
     ~DatabaseManager() {
         if (db_) {
-            sqlite3_close(db_);
+            sqlite3_close_v2(db_);
         }
     }
 

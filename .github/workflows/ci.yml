@@ -445,6 +445,92 @@ jobs:
         TSAN_OPTIONS: "halt_on_error=1:second_deadlock_stack=1:history_size=7:suppressions=${{ github.workspace }}/tsan.supp"
       run: xvfb-run ctest --output-on-failure --no-tests=error --label-exclude gui
 
+  valgrind:
+    name: Valgrind Memcheck
+    runs-on: ubuntu-24.04
+
+    # Valgrind Memcheck overlaps with AddressSanitizer (use-after-free,
+    # invalid free, out-of-bounds reads / writes) but also catches
+    # uninitialised-value reads that ASan's shadow-memory scheme can
+    # miss when the unset byte happens to match the previous heap
+    # block's pattern. Running both gives dual coverage at the cost of
+    # one extra CI job.
+    #
+    # The job runs Memcheck under a Debug build WITHOUT sanitizers --
+    # Valgrind cannot coexist with ASan / TSan instrumentation in the
+    # same binary. GUI tests are excluded because:
+    #   * Memcheck slows the process ~20x and the GUI tests already
+    #     spend most of their time in gtkmm's Glib::MainLoop pumps,
+    #     pushing run time past the runner timeout.
+    #   * gtkmm + glib report a long list of known-benign reads
+    #     (interned strings, lazy-init globals) that would need a
+    #     dedicated suppression file to silence.
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev \
+          libgtest-dev libgmock-dev \
+          valgrind
+
+    - name: Configure (Debug, no sanitizers)
+      run: |
+        cmake -S . -B build/valgrind -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DENABLE_SANITIZERS=OFF \
+          -DENABLE_TSAN=OFF \
+          -DENABLE_COVERAGE=OFF
+
+    - name: Build
+      run: cmake --build build/valgrind -- -j$(nproc)
+
+    # Policy: fail on real memory errors AND on definite leaks. Known
+    # library-level "process-exit" leaks (SQLite's lazy-init globals
+    # via sqlite3_initialize -- not released without an explicit
+    # sqlite3_shutdown that is unsafe when multiple connections live
+    # in the same process) are routed through `valgrind.supp` at the
+    # repo root. Same pattern Firefox / Chromium / Qt / GLib use.
+    #
+    # The TcpBackend's recursive accept-loop shared_ptr self-reference
+    # cycle was fixed at source; Memcheck now reports zero leaks for
+    # that test instead of 18.
+    #
+    # Valgrind options:
+    #   --tool=memcheck                explicit for clarity
+    #   --leak-check=full              full stack trace per leak
+    #   --show-leak-kinds=definite     scope the leak summary
+    #   --errors-for-leak-kinds=def..  count definite leaks as errors
+    #                                   (combined with --error-exitcode)
+    #   --track-origins=yes            attribute uninitialised reads to
+    #                                   their source allocation (the
+    #                                   Memcheck feature ASan lacks)
+    #   --error-exitcode=1             non-zero on errors -> ctest fails
+    #   --suppressions=valgrind.supp   ignore library globals (see file)
+    - name: Run tests under Valgrind Memcheck
+      working-directory: build/valgrind
+      run: |
+        ctest --output-on-failure --no-tests=error --label-exclude gui \
+              --overwrite MemoryCheckCommand=$(which valgrind) \
+              --overwrite MemoryCheckCommandOptions="--tool=memcheck --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --track-origins=yes --error-exitcode=1 --suppressions=${{ github.workspace }}/valgrind.supp" \
+              --test-action memcheck \
+              --timeout 300
+
+    - name: Surface Valgrind logs on failure
+      if: failure()
+      working-directory: build/valgrind
+      run: |
+        echo "::group::Valgrind raw logs"
+        find Testing/Temporary -name 'MemoryChecker.*.log' \
+            -exec sh -c 'echo "--- $1 ---"; cat "$1"' _ {} \;
+        echo "::endgroup::"
+
   documentation:
     name: Documentation
     runs-on: ubuntu-24.04
