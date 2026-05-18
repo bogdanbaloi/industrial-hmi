@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <thread>
@@ -127,6 +128,12 @@ private:
     std::jthread thread_;
     std::atomic<bool> running_{false};
     std::atomic<std::size_t> activeClients_{0};
+
+    /// Owning ref to the recursive accept-loop closure. The lambdas
+    /// inside capture a weak_ptr to this slot so the cycle that would
+    /// otherwise form (lambda holds shared_ptr that holds the lambda)
+    /// breaks cleanly when stop() / dtor clears the slot.
+    std::shared_ptr<std::function<void()>> acceptLoop_;
 };
 
 }  // namespace app::integration

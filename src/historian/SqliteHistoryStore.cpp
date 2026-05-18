@@ -122,7 +122,7 @@ SqliteHistoryStore::~SqliteHistoryStore() {
     // to reason about during shutdown ordering.
     const std::scoped_lock lock(mutex_);
     if (db_ != nullptr) {
-        sqlite3_close(db_);
+        sqlite3_close_v2(db_);
         db_ = nullptr;
     }
 }
@@ -138,7 +138,7 @@ bool SqliteHistoryStore::initialize() {
                            db_ != nullptr ? sqlite3_errmsg(db_) : "(no handle)");
         }
         if (db_ != nullptr) {
-            sqlite3_close(db_);
+            sqlite3_close_v2(db_);
             db_ = nullptr;
         }
         return false;

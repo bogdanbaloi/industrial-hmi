@@ -491,78 +491,45 @@ jobs:
     - name: Build
       run: cmake --build build/valgrind -- -j$(nproc)
 
-    # Policy: fail only on real memory ERRORS (invalid reads/writes,
-    # use-after-free, uninitialised value used in a branch, double-
-    # free). Leaks are reported for visibility but do NOT fail the
-    # job -- the codebase carries known library-level "process-exit"
-    # leaks (SQLite's lazy-init globals; Boost.Asio's queued handler
-    # shared_ptr's released when io_context destructs) that are
-    # benign in production and would require either calling
-    # sqlite3_shutdown() at exit or a suppression file maintained
-    # against every library version bump. The job's purpose is to
-    # catch the dangerous classes ASan can miss (uninitialised reads
-    # whose shadow byte happens to match neighbouring heap), not to
-    # nag about cleanup at termination.
+    # Policy: fail on real memory errors AND on definite leaks. Known
+    # library-level "process-exit" leaks (SQLite's lazy-init globals
+    # via sqlite3_initialize -- not released without an explicit
+    # sqlite3_shutdown that is unsafe when multiple connections live
+    # in the same process) are routed through `valgrind.supp` at the
+    # repo root. Same pattern Firefox / Chromium / Qt / GLib use.
+    #
+    # The TcpBackend's recursive accept-loop shared_ptr self-reference
+    # cycle was fixed at source; Memcheck now reports zero leaks for
+    # that test instead of 18.
     #
     # Valgrind options:
     #   --tool=memcheck                explicit for clarity
-    #   --leak-check=full              report every leak with stack
-    #                                   (informational; doesn't fail)
+    #   --leak-check=full              full stack trace per leak
     #   --show-leak-kinds=definite     scope the leak summary
+    #   --errors-for-leak-kinds=def..  count definite leaks as errors
+    #                                   (combined with --error-exitcode)
     #   --track-origins=yes            attribute uninitialised reads to
-    #                                   their source allocation
-    #                                   (Memcheck's killer feature ASan
-    #                                   lacks)
-    #   --error-exitcode=1             non-zero on real memory errors
-    #
-    # Note the deliberate absence of --errors-for-leak-kinds. Add it
-    # back once we want leak-free shutdown enforced + a supp file.
-    #
-    # `|| true` swallows ctest's non-zero exit (which fires on ANY
-    # memcheck defect including the known library leaks). The next
-    # step does the actual pass/fail decision by scanning the
-    # per-test logs for the memory-error patterns we DO care about.
+    #                                   their source allocation (the
+    #                                   Memcheck feature ASan lacks)
+    #   --error-exitcode=1             non-zero on errors -> ctest fails
+    #   --suppressions=valgrind.supp   ignore library globals (see file)
     - name: Run tests under Valgrind Memcheck
       working-directory: build/valgrind
       run: |
         ctest --output-on-failure --no-tests=error --label-exclude gui \
               --overwrite MemoryCheckCommand=$(which valgrind) \
-              --overwrite MemoryCheckCommandOptions="--tool=memcheck --leak-check=full --show-leak-kinds=definite --track-origins=yes --error-exitcode=1" \
+              --overwrite MemoryCheckCommandOptions="--tool=memcheck --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --track-origins=yes --error-exitcode=1 --suppressions=${{ github.workspace }}/valgrind.supp" \
               --test-action memcheck \
-              --timeout 300 || true
+              --timeout 300
 
-    # Pass/fail gate: fail the job if any test surfaced a real memory
-    # error -- invalid read/write, use-after-free, double free, or an
-    # uninitialised value used in a branch. Leaks are reported in the
-    # summary above but do not trigger failure here.
-    - name: Fail on real memory errors (skip leaks)
+    - name: Surface Valgrind logs on failure
+      if: failure()
       working-directory: build/valgrind
       run: |
-        echo "::group::Valgrind leak summary"
+        echo "::group::Valgrind raw logs"
         find Testing/Temporary -name 'MemoryChecker.*.log' \
-            -exec sh -c 'echo "--- $1 ---"; grep -E "(definitely lost|indirectly lost)" "$1" | head -5' _ {} \;
+            -exec sh -c 'echo "--- $1 ---"; cat "$1"' _ {} \;
         echo "::endgroup::"
-
-        # Patterns that indicate a REAL memory bug, not a process-exit
-        # leak. Each Memcheck error prints one of these as the first
-        # line of its block.
-        ERROR_PATTERNS='Invalid read|Invalid write|Use of uninitialised value|Conditional jump or move depends on uninitialised value|Syscall param.*points to uninitialised|Invalid free|Mismatched free|Source and destination overlap'
-
-        FOUND=0
-        for log in Testing/Temporary/MemoryChecker.*.log; do
-            [ -f "$log" ] || continue
-            if grep -qE "$ERROR_PATTERNS" "$log"; then
-                echo "::error::Real memory error in $(basename "$log"):"
-                grep -B1 -A20 -E "$ERROR_PATTERNS" "$log" | head -100
-                FOUND=1
-            fi
-        done
-
-        if [ "$FOUND" -eq 1 ]; then
-            echo "::error::Valgrind detected real memory errors (see above)."
-            exit 1
-        fi
-        echo "No real memory errors detected (leaks reported above are informational)."
 
   documentation:
     name: Documentation
