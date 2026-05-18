@@ -27,7 +27,7 @@ constexpr double kTextAlphaWhite      = 1.0;
 
 }  // namespace
 
-AvatarWidget::AvatarWidget(int sizePx) : size_(sizePx) {
+AvatarWidget::AvatarWidget(int sizePx) {
     set_content_width(sizePx);
     set_content_height(sizePx);
     set_draw_func(sigc::mem_fun(*this, &AvatarWidget::onDraw));

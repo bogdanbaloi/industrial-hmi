@@ -64,7 +64,10 @@ private:
     static Glib::RefPtr<Gdk::Pixbuf> decodeAvatar(
         const std::vector<std::uint8_t>& bytes);
 
-    int                                size_;
+    // NOTE: no `size_` field -- the constructor pins content width +
+    // height on the DrawingArea, and onDraw is handed `width, height`
+    // arguments by GTK at paint time; storing the size again would be
+    // dead state (clang -Wunused-private-field flags it).
     std::string                        initials_{"?"};
     app::auth::AvatarColor             color_{0x6B, 0x6B, 0x6B};  // neutral grey
     Glib::RefPtr<Gdk::Pixbuf>          pixbuf_;  // null when no upload
