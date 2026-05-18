@@ -237,6 +237,18 @@ UsersStatus UsersPresenter::update(std::int64_t     id,
         return UsersStatus::StorageFailure;
     }
 
+    // If the admin just edited their own row (display name change is
+    // the common case), refresh the Session so the sidebar badge +
+    // ProfileDialog preview see the new fields immediately. Without
+    // this the cached snapshot stays stale until the next sign-in.
+    if (target->id == me->id) {
+        // Re-fetch so updatedAt etc. reflect what storage stamped.
+        const auto refreshed = users_.findById(target->id);
+        if (refreshed.has_value()) {
+            session_.setUser(*refreshed);
+        }
+    }
+
     audit_.record(makeEvent(session_, kActionUpdate,
                             std::format("id={} username={} role={} enabled={}",
                                         target->id, target->username,
@@ -416,6 +428,11 @@ UsersStatus UsersPresenter::setOwnAvatar(
                                 false));
         return UsersStatus::ValidationFailed;
     }
+    // Refresh Session so `User::avatarMime` flips non-empty and the
+    // badge widget knows to re-fetch the blob on its next paint.
+    const auto refreshed = users_.findById(me->id);
+    if (refreshed.has_value()) session_.setUser(*refreshed);
+
     audit_.record(makeEvent(session_, kActionChangeAvatar,
                             std::format("id={} mime={} bytes={}",
                                         me->id, std::string{mime},
@@ -434,6 +451,11 @@ UsersStatus UsersPresenter::clearOwnAvatar() {
                                 false));
         return UsersStatus::StorageFailure;
     }
+    // Symmetric with setOwnAvatar -- refresh Session so the badge
+    // falls back to initials on its next paint.
+    const auto refreshed = users_.findById(me->id);
+    if (refreshed.has_value()) session_.setUser(*refreshed);
+
     audit_.record(makeEvent(session_, kActionClearAvatar,
                             std::format("id={} username={}",
                                         me->id, me->username),

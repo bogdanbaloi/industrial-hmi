@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <numbers>
 #include <stdexcept>
 
@@ -25,9 +26,18 @@ constexpr double kFontSizeRatio       = 0.45;   // initials height as
                                                 // fraction of the tile
 constexpr double kTextAlphaWhite      = 1.0;
 
+// Pre-session placeholder colour -- mid-grey, distinguishable from
+// the user-derived palette colours so it visibly reads as "no user
+// yet" during the brief window between widget construction and the
+// first setUser() / clear() call.
+constexpr std::uint8_t kEmptyRgbChannel = 0x6B;
+constexpr app::auth::AvatarColor kEmptyColor{
+    kEmptyRgbChannel, kEmptyRgbChannel, kEmptyRgbChannel};
+
 }  // namespace
 
 AvatarWidget::AvatarWidget(int sizePx) {
+    color_ = kEmptyColor;
     set_content_width(sizePx);
     set_content_height(sizePx);
     set_draw_func(sigc::mem_fun(*this, &AvatarWidget::onDraw));
@@ -49,7 +59,7 @@ void AvatarWidget::setUser(
 
 void AvatarWidget::clear() {
     initials_ = "?";
-    color_    = app::auth::AvatarColor{0x6B, 0x6B, 0x6B};
+    color_    = kEmptyColor;
     pixbuf_.reset();
     queue_draw();
 }
@@ -76,8 +86,8 @@ AvatarWidget::decodeAvatar(const std::vector<std::uint8_t>& bytes) {
 
 void AvatarWidget::onDraw(const Cairo::RefPtr<Cairo::Context>& cr,
                           int width, int height) {
-    const double w = static_cast<double>(width);
-    const double h = static_cast<double>(height);
+    const auto w = static_cast<double>(width);
+    const auto h = static_cast<double>(height);
 
     // Clip the entire draw to a rounded-square path so both the
     // pixbuf path and the initials path get the same outer shape.

@@ -76,6 +76,7 @@ private:
     Gtk::Button*            signOutButton_{nullptr};
 
     SignOutAction           signOutAction_;
+    sigc::connection        sessionConn_;   // Session::signal_changed
 };
 
 }  // namespace app::view

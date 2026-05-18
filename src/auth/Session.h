@@ -2,6 +2,8 @@
 
 #include "src/auth/User.h"
 
+#include <sigc++/signal.h>
+
 #include <mutex>
 #include <optional>
 #include <string>
@@ -34,15 +36,27 @@ public:
     /// Set the currently-logged-in user. AuthService calls this after
     /// a successful login; the LoginDialog reads `currentUser()`
     /// before allowing the main window to spawn.
+    ///
+    /// Also called by UsersPresenter when the signed-in user's own
+    /// row is edited (display name / avatar change) so the cached
+    /// snapshot stays in sync with storage. Fires `signal_changed`
+    /// after the write so observers (UserBadge) refresh.
     void setUser(User user) {
-        const std::scoped_lock lock(mutex_);
-        current_ = std::move(user);
+        {
+            const std::scoped_lock lock(mutex_);
+            current_ = std::move(user);
+        }
+        signal_changed_.emit();
     }
 
-    /// Clear the session (logout / startup).
+    /// Clear the session (logout / startup). Also fires
+    /// `signal_changed` so observers can drop their cached view.
     void clear() {
-        const std::scoped_lock lock(mutex_);
-        current_.reset();
+        {
+            const std::scoped_lock lock(mutex_);
+            current_.reset();
+        }
+        signal_changed_.emit();
     }
 
     /// Snapshot copy of the active user, or `nullopt` when no one is
@@ -67,9 +81,19 @@ public:
         return current_.has_value() ? current_->username : std::string{"unknown"};
     }
 
+    /// Notification fired after every `setUser` / `clear`. Connect from
+    /// view widgets (UserBadge) that mirror the current identity so
+    /// they redraw when an admin edits the signed-in user's row mid-
+    /// session. Emitted outside the mutex so observers can re-enter
+    /// `currentUser()` without deadlocking.
+    [[nodiscard]] sigc::signal<void()>& signal_changed() {
+        return signal_changed_;
+    }
+
 private:
     mutable std::mutex   mutex_;
     std::optional<User>  current_;
+    sigc::signal<void()> signal_changed_;
 };
 
 }  // namespace app::auth

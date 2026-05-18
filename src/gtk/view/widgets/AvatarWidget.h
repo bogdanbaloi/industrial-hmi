@@ -69,7 +69,10 @@ private:
     // arguments by GTK at paint time; storing the size again would be
     // dead state (clang -Wunused-private-field flags it).
     std::string                        initials_{"?"};
-    app::auth::AvatarColor             color_{0x6B, 0x6B, 0x6B};  // neutral grey
+    // Neutral mid-grey placeholder until setUser() runs -- matches the
+    // "no session yet" empty state. Value lives in the .cpp (kEmptyColor)
+    // so the magic-numbers lint stays happy.
+    app::auth::AvatarColor             color_{};
     Glib::RefPtr<Gdk::Pixbuf>          pixbuf_;  // null when no upload
 };
 

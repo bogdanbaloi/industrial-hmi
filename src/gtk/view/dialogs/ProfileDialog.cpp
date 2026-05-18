@@ -226,8 +226,16 @@ void ProfileDialog::onUploadClicked() {
                                    app::presenter::statusMessage(status)},
                                false);
                 }
-            } catch (const Glib::Error&) {
-                // User cancelled the picker -- not an error.
+            } catch (const Glib::Error& e) {
+                // Gtk::FileDialog also reports "user dismissed the
+                // picker" through Glib::Error. We can't cleanly
+                // distinguish dismissal from a real I/O failure
+                // across gtkmm versions, so surface every code as a
+                // status line and let the operator dismiss it if it
+                // was just a cancel. (clang-tidy bugprone-empty-catch
+                // rightly dislikes a silent catch-all -- this gives
+                // the caller a visible signal.)
+                showStatus(e.what(), false);
             }
         });
 }

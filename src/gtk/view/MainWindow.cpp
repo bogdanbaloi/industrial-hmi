@@ -12,6 +12,7 @@
 #include "src/gtk/view/pages/Page.h"
 #include "src/gtk/view/pages/AuditLogPage.h"
 #include "src/gtk/view/pages/UsersPage.h"
+#include "src/gtk/view/LoginDialog.h"
 #include "src/presenter/UsersPresenter.h"
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/pages/HistoryPage.h"
@@ -225,23 +226,79 @@ void MainWindow::buildSidebarWidgets() {
                 userBadge_ = Gtk::make_managed<app::view::UserBadge>(
                     *svc, *session,
                     app::core::Application::instance().usersPresenter());
-                // Sign out quits the GTK application explicitly so
-                // the main() loop returns and the container's
-                // `restart: unless-stopped` policy spins us back to
-                // the LoginDialog on a fresh process.
+                // Sign out flow: hide the main window, run the login
+                // dialog modally, then either re-show the window
+                // (operator signed back in -- common path for shift
+                // changes) or quit the application (operator
+                // cancelled -- they're done with the terminal).
                 //
-                // Earlier this called `this->close()` which closes the
-                // window but doesn't always trigger Gtk::Application
-                // to return from run() -- some held references kept
-                // the process alive with no window, leaving noVNC
-                // attached to an empty Xvfb and the operator stuck
-                // (browser refresh re-connected to the same empty
-                // X session). Calling Application::quit() directly
-                // is the unambiguous gesture.
-                userBadge_->onSignOut([]() {
-                    if (auto app = Gtk::Application::get_default()) {
-                        app->quit();
+                // Earlier iterations just called Application::quit()
+                // and relied on the docker container's `restart:
+                // unless-stopped` policy to spin a fresh process
+                // back to the login dialog. That worked in Docker
+                // but on native Windows / Linux there's no restart
+                // supervisor, so sign-out felt like a crash. The
+                // hide-relogin-reshow pattern works the same on
+                // every host.
+                userBadge_->onSignOut([this, svc, session]() {
+                    set_visible(false);
+                    // get_default() returns Gio::Application; cast to
+                    // Gtk::Application so add_window / remove_window
+                    // are accessible.
+                    auto gtkApp = std::dynamic_pointer_cast<Gtk::Application>(
+                        Gtk::Application::get_default());
+                    if (!gtkApp) {
+                        // Defensive: no app to attach the dialog to;
+                        // just close the window.
+                        close();
+                        return;
                     }
+
+                    app::view::LoginDialog dialog(*svc, *session);
+                    gtkApp->add_window(dialog);
+                    const auto outcome = dialog.runModal();
+                    gtkApp->remove_window(dialog);
+
+                    if (outcome
+                            != app::view::LoginDialog::Result::Success) {
+                        // Operator cancelled -- they're done; exit.
+                        // Application::quit() returns from run() so
+                        // main() can shut down cleanly.
+                        gtkApp->quit();
+                        return;
+                    }
+
+                    // Re-login succeeded. Rebuild MainWindow from
+                    // scratch so role-gated pages (UsersPage,
+                    // AuditLogPage) re-evaluate visibility against
+                    // the NEW user's role -- admin signing out and
+                    // an operator signing back in must see the
+                    // operator's reduced tab set, not the previous
+                    // admin's. Cheaper + safer than mutating the
+                    // live Notebook + presenter wiring in place;
+                    // the auth singletons (Session, AuthService,
+                    // UserRepository, AuditLogger, UsersPresenter)
+                    // and the model singletons (SimulatedModel,
+                    // DatabaseManager, HistoryReader) live on
+                    // main()'s stack so they survive the swap.
+                    //
+                    // The swap is deferred to an idle callback so we
+                    // unwind THIS MainWindow's call stack (we're
+                    // inside one of its lambdas) before destroying it.
+                    Glib::signal_idle().connect_once([gtkApp]() {
+                        auto* fresh = new MainWindow();
+                        gtkApp->add_window(*fresh);
+                        // Drain any pending idle callbacks from the
+                        // new window's initial paint (mirrors what
+                        // Application::run does on first activate).
+                        while (g_main_context_iteration(nullptr, false)) {}
+                        fresh->present();
+                    });
+                    // Close the current window; gtkApp owns it via
+                    // add_window so the ref drops + destructor runs
+                    // once the idle callback above has handed off
+                    // focus to the replacement.
+                    close();
                 });
                 systemStatusContainer_->append(*userBadge_);
             }
