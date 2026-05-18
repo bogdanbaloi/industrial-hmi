@@ -24,7 +24,7 @@ UserBadge::UserBadge(app::auth::AuthService&            service,
     refresh();
     // Subscribe so an admin editing their own row (display name,
     // avatar) sees the change in the badge without re-logging in.
-    sessionConn_ = session_.signal_changed().connect(
+    sessionConn_ = session_.signalChanged().connect(
         sigc::mem_fun(*this, &UserBadge::refresh));
 }
 

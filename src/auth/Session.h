@@ -39,24 +39,24 @@ public:
     ///
     /// Also called by UsersPresenter when the signed-in user's own
     /// row is edited (display name / avatar change) so the cached
-    /// snapshot stays in sync with storage. Fires `signal_changed`
+    /// snapshot stays in sync with storage. Fires `signalChanged`
     /// after the write so observers (UserBadge) refresh.
     void setUser(User user) {
         {
             const std::scoped_lock lock(mutex_);
             current_ = std::move(user);
         }
-        signal_changed_.emit();
+        signalChanged_.emit();
     }
 
     /// Clear the session (logout / startup). Also fires
-    /// `signal_changed` so observers can drop their cached view.
+    /// `signalChanged` so observers can drop their cached view.
     void clear() {
         {
             const std::scoped_lock lock(mutex_);
             current_.reset();
         }
-        signal_changed_.emit();
+        signalChanged_.emit();
     }
 
     /// Snapshot copy of the active user, or `nullopt` when no one is
@@ -86,14 +86,14 @@ public:
     /// they redraw when an admin edits the signed-in user's row mid-
     /// session. Emitted outside the mutex so observers can re-enter
     /// `currentUser()` without deadlocking.
-    [[nodiscard]] sigc::signal<void()>& signal_changed() {
-        return signal_changed_;
+    [[nodiscard]] sigc::signal<void()>& signalChanged() {
+        return signalChanged_;
     }
 
 private:
     mutable std::mutex   mutex_;
     std::optional<User>  current_;
-    sigc::signal<void()> signal_changed_;
+    sigc::signal<void()> signalChanged_;
 };
 
 }  // namespace app::auth
