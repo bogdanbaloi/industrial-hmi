@@ -445,6 +445,125 @@ jobs:
         TSAN_OPTIONS: "halt_on_error=1:second_deadlock_stack=1:history_size=7:suppressions=${{ github.workspace }}/tsan.supp"
       run: xvfb-run ctest --output-on-failure --no-tests=error --label-exclude gui
 
+  valgrind:
+    name: Valgrind Memcheck
+    runs-on: ubuntu-24.04
+
+    # Valgrind Memcheck overlaps with AddressSanitizer (use-after-free,
+    # invalid free, out-of-bounds reads / writes) but also catches
+    # uninitialised-value reads that ASan's shadow-memory scheme can
+    # miss when the unset byte happens to match the previous heap
+    # block's pattern. Running both gives dual coverage at the cost of
+    # one extra CI job.
+    #
+    # The job runs Memcheck under a Debug build WITHOUT sanitizers --
+    # Valgrind cannot coexist with ASan / TSan instrumentation in the
+    # same binary. GUI tests are excluded because:
+    #   * Memcheck slows the process ~20x and the GUI tests already
+    #     spend most of their time in gtkmm's Glib::MainLoop pumps,
+    #     pushing run time past the runner timeout.
+    #   * gtkmm + glib report a long list of known-benign reads
+    #     (interned strings, lazy-init globals) that would need a
+    #     dedicated suppression file to silence.
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev \
+          libgtest-dev libgmock-dev \
+          valgrind
+
+    - name: Configure (Debug, no sanitizers)
+      run: |
+        cmake -S . -B build/valgrind -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DENABLE_SANITIZERS=OFF \
+          -DENABLE_TSAN=OFF \
+          -DENABLE_COVERAGE=OFF
+
+    - name: Build
+      run: cmake --build build/valgrind -- -j$(nproc)
+
+    # Policy: fail only on real memory ERRORS (invalid reads/writes,
+    # use-after-free, uninitialised value used in a branch, double-
+    # free). Leaks are reported for visibility but do NOT fail the
+    # job -- the codebase carries known library-level "process-exit"
+    # leaks (SQLite's lazy-init globals; Boost.Asio's queued handler
+    # shared_ptr's released when io_context destructs) that are
+    # benign in production and would require either calling
+    # sqlite3_shutdown() at exit or a suppression file maintained
+    # against every library version bump. The job's purpose is to
+    # catch the dangerous classes ASan can miss (uninitialised reads
+    # whose shadow byte happens to match neighbouring heap), not to
+    # nag about cleanup at termination.
+    #
+    # Valgrind options:
+    #   --tool=memcheck                explicit for clarity
+    #   --leak-check=full              report every leak with stack
+    #                                   (informational; doesn't fail)
+    #   --show-leak-kinds=definite     scope the leak summary
+    #   --track-origins=yes            attribute uninitialised reads to
+    #                                   their source allocation
+    #                                   (Memcheck's killer feature ASan
+    #                                   lacks)
+    #   --error-exitcode=1             non-zero on real memory errors
+    #
+    # Note the deliberate absence of --errors-for-leak-kinds. Add it
+    # back once we want leak-free shutdown enforced + a supp file.
+    #
+    # `|| true` swallows ctest's non-zero exit (which fires on ANY
+    # memcheck defect including the known library leaks). The next
+    # step does the actual pass/fail decision by scanning the
+    # per-test logs for the memory-error patterns we DO care about.
+    - name: Run tests under Valgrind Memcheck
+      working-directory: build/valgrind
+      run: |
+        ctest --output-on-failure --no-tests=error --label-exclude gui \
+              --overwrite MemoryCheckCommand=$(which valgrind) \
+              --overwrite MemoryCheckCommandOptions="--tool=memcheck --leak-check=full --show-leak-kinds=definite --track-origins=yes --error-exitcode=1" \
+              --test-action memcheck \
+              --timeout 300 || true
+
+    # Pass/fail gate: fail the job if any test surfaced a real memory
+    # error -- invalid read/write, use-after-free, double free, or an
+    # uninitialised value used in a branch. Leaks are reported in the
+    # summary above but do not trigger failure here.
+    - name: Fail on real memory errors (skip leaks)
+      working-directory: build/valgrind
+      run: |
+        echo "::group::Valgrind leak summary"
+        find Testing/Temporary -name 'MemoryChecker.*.log' \
+            -exec sh -c 'echo "--- $1 ---"; grep -E "(definitely lost|indirectly lost)" "$1" | head -5' _ {} \;
+        echo "::endgroup::"
+
+        # Patterns that indicate a REAL memory bug, not a process-exit
+        # leak. Each Memcheck error prints one of these as the first
+        # line of its block.
+        ERROR_PATTERNS='Invalid read|Invalid write|Use of uninitialised value|Conditional jump or move depends on uninitialised value|Syscall param.*points to uninitialised|Invalid free|Mismatched free|Source and destination overlap'
+
+        FOUND=0
+        for log in Testing/Temporary/MemoryChecker.*.log; do
+            [ -f "$log" ] || continue
+            if grep -qE "$ERROR_PATTERNS" "$log"; then
+                echo "::error::Real memory error in $(basename "$log"):"
+                grep -B1 -A20 -E "$ERROR_PATTERNS" "$log" | head -100
+                FOUND=1
+            fi
+        done
+
+        if [ "$FOUND" -eq 1 ]; then
+            echo "::error::Valgrind detected real memory errors (see above)."
+            exit 1
+        fi
+        echo "No real memory errors detected (leaks reported above are informational)."
+
   documentation:
     name: Documentation
     runs-on: ubuntu-24.04
