@@ -51,8 +51,10 @@ private:
     /// Run the current filter set against the audit logger with no
     /// row cap and write the resulting events to `path` as RFC 4180
     /// CSV (UTF-8 BOM so Excel detects encoding). Returns the number
-    /// of rows written, or `-1` on I/O failure.
-    [[nodiscard]] long writeCsvExport(const std::string& path);
+    /// of rows written, or `-1` on I/O failure. `std::int64_t` (not
+    /// `long`) for portable width -- `long` is 32-bit on Windows LLP64
+    /// and clang-tidy google-runtime-int rejects it.
+    [[nodiscard]] std::int64_t writeCsvExport(const std::string& path);
 
     /// Append one row's worth of cells to the grid at the next row
     /// index. A Gtk::Grid is used (rather than a stack of Boxes)

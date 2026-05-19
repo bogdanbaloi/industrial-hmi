@@ -9,6 +9,7 @@
 
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <format>
 #include <fstream>
@@ -339,7 +340,7 @@ AuditLogPage::buildQuery(std::size_t limit) const {
     return q;
 }
 
-long AuditLogPage::writeCsvExport(const std::string& path) {
+std::int64_t AuditLogPage::writeCsvExport(const std::string& path) {
     // Pull the full match (limit = 0) -- compliance exports must
     // include every row that matches the filter, not just the
     // UI-friendly slice.
@@ -359,7 +360,7 @@ long AuditLogPage::writeCsvExport(const std::string& path) {
     // The on-screen labels are translated; the file isn't.
     out << "Timestamp,Username,Role,Category,Action,Result,Details\r\n";
 
-    long written = 0;
+    std::int64_t written = 0;
     for (const auto& e : rows) {
         out << escapeCsv(e.timestamp) << ','
             << escapeCsv(e.username)  << ','
@@ -405,7 +406,7 @@ void AuditLogPage::onExportClicked() {
                 auto file = dialog->save_finish(result);
                 if (!file) return;
                 const auto path = file->get_path();
-                const long written = writeCsvExport(path);
+                const std::int64_t written = writeCsvExport(path);
                 if (written < 0) {
                     if (toast_ != nullptr) {
                         toast_->showError(_("CSV export failed (I/O error)."));
