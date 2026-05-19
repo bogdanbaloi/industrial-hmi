@@ -9,6 +9,8 @@
 
 namespace app::view {
 
+class Toast;
+
 /// Admin-only audit log viewer.
 ///
 /// Renders a filter row (category, username, time range) plus a
@@ -37,7 +39,22 @@ private:
     void buildUi();
     void onRefreshClicked();
     void onFilterChanged();
+    void onExportClicked();
     void refresh();
+
+    /// Translate the current filter widgets into an AuditQuery. The
+    /// row cap is parameterised so the on-screen path passes
+    /// kQueryLimit (UI-friendly slice) while CSV export passes 0
+    /// (no cap, full match).
+    [[nodiscard]] app::auth::AuditQuery buildQuery(std::size_t limit) const;
+
+    /// Run the current filter set against the audit logger with no
+    /// row cap and write the resulting events to `path` as RFC 4180
+    /// CSV (UTF-8 BOM so Excel detects encoding). Returns the number
+    /// of rows written, or `-1` on I/O failure. `std::int64_t` (not
+    /// `long`) for portable width -- `long` is 32-bit on Windows LLP64
+    /// and clang-tidy google-runtime-int rejects it.
+    [[nodiscard]] std::int64_t writeCsvExport(const std::string& path);
 
     /// Append one row's worth of cells to the grid at the next row
     /// index. A Gtk::Grid is used (rather than a stack of Boxes)
@@ -56,6 +73,8 @@ private:
     Gtk::ComboBoxText*           rangeFilter_{nullptr};
     Gtk::Entry*                  usernameFilter_{nullptr};
     Gtk::Button*                 refreshButton_{nullptr};
+    Gtk::Button*                 exportButton_{nullptr};
+    Toast*                       toast_{nullptr};
     Gtk::ScrolledWindow*         scroller_{nullptr};
     Gtk::Grid*                   grid_{nullptr};
     Gtk::Label*                  footerLabel_{nullptr};

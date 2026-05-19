@@ -3,12 +3,18 @@
 #include "src/auth/AuditEvent.h"
 #include "src/core/TimeFormat.h"
 #include "src/core/i18n.h"
+#include "src/gtk/view/widgets/Toast.h"
+
+#include <giomm/file.h>
 
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <format>
+#include <fstream>
 #include <iomanip>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -96,6 +102,33 @@ constexpr std::array<RangePreset, 4> kRangePresets = {{
     {"Last 24 hours",  24LL * 60 * 60},
     {"Last 7 days",    7LL  * 24 * 60 * 60},
 }};
+
+/// Escape a single CSV field per RFC 4180: wrap in double quotes if
+/// the value contains a comma, double quote, CR or LF; double any
+/// embedded quotes inside. Plain ASCII fields pass through unchanged.
+/// Inline (rather than re-using integration/CsvSerializer which is
+/// Product-specific) so the audit export stays self-contained -- a
+/// future refactor can lift this into src/core if a third caller
+/// wants RFC 4180 too.
+std::string escapeCsv(std::string_view field) {
+    bool mustQuote = false;
+    for (char c : field) {
+        if (c == ',' || c == '"' || c == '\n' || c == '\r') {
+            mustQuote = true;
+            break;
+        }
+    }
+    if (!mustQuote) return std::string{field};
+    std::string out;
+    out.reserve(field.size() + 2);
+    out.push_back('"');
+    for (char c : field) {
+        if (c == '"') out.push_back('"');   // double embedded quotes
+        out.push_back(c);
+    }
+    out.push_back('"');
+    return out;
+}
 
 /// Format a `time_point` as ISO 8601 UTC -- matches the stamps the
 /// writers emit so range queries compare apples to apples. Used by
@@ -216,7 +249,22 @@ void AuditLogPage::buildUi() {
         sigc::mem_fun(*this, &AuditLogPage::onRefreshClicked));
     toolbar->append(*refreshButton_);
 
+    // Export CSV -- compliance walkers (21 CFR Part 11, GMP) need a
+    // file they can hand to auditors. The button runs the current
+    // filter set against the logger with no row cap, so what the
+    // operator sees on screen matches what lands in the spreadsheet.
+    exportButton_ = Gtk::make_managed<Gtk::Button>(_("Export CSV..."));
+    exportButton_->signal_clicked().connect(
+        sigc::mem_fun(*this, &AuditLogPage::onExportClicked));
+    toolbar->append(*exportButton_);
+
     append(*toolbar);
+
+    // Toast under the toolbar -- shows the export result + any
+    // future filter feedback. Same widget as UsersPage; .success
+    // auto-dismisses, .error stays until acknowledged.
+    toast_ = Gtk::make_managed<Toast>();
+    append(*toast_);
 
     // Scrolling grid area. Gtk::Grid (rather than a stack of Boxes)
     // because columns must line up between the bold heading row and
@@ -255,23 +303,10 @@ void AuditLogPage::buildUi() {
 void AuditLogPage::onRefreshClicked() { refresh(); }
 void AuditLogPage::onFilterChanged()  { refresh(); }
 
-void AuditLogPage::refresh() {
-    // Wipe data rows + re-fetch. Grid row 0 is the header (sticky);
-    // remove rows from 1 upward, then reset the next-row counter.
-    // Walk by cell coordinates rather than child iteration so an
-    // already-cleared row doesn't trip up.
-    constexpr int kColumnCount = 7;
-    for (int r = nextRow_ - 1; r >= 1; --r) {
-        for (int c = 0; c < kColumnCount; ++c) {
-            if (auto* child = grid_->get_child_at(c, r)) {
-                grid_->remove(*child);
-            }
-        }
-    }
-    nextRow_ = 1;
-
+app::auth::AuditQuery
+AuditLogPage::buildQuery(std::size_t limit) const {
     app::auth::AuditQuery q;
-    q.limit = kQueryLimit;
+    q.limit = limit;
     if (categoryFilter_ != nullptr) {
         const auto idx = categoryFilter_->get_active_row_number();
         // Index 0 == "All" -> leave the field empty.
@@ -302,8 +337,118 @@ void AuditLogPage::refresh() {
         const auto raw = usernameFilter_->get_text().raw();
         if (!raw.empty()) q.username = raw;
     }
+    return q;
+}
 
-    const auto rows = reader_.query(q);
+std::int64_t AuditLogPage::writeCsvExport(const std::string& path) {
+    // Pull the full match (limit = 0) -- compliance exports must
+    // include every row that matches the filter, not just the
+    // UI-friendly slice.
+    constexpr std::size_t kNoLimit = 0;
+    const auto rows = reader_.query(buildQuery(kNoLimit));
+
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out) return -1;
+
+    // UTF-8 BOM so Excel detects the encoding and doesn't mangle
+    // non-ASCII characters in usernames / details. Same trick the
+    // existing products CsvSerializer uses.
+    out << "\xEF\xBB\xBF";
+
+    // Header row -- column names are stable (NOT localised) so the
+    // CSV stays diffable + parseable across deployments / languages.
+    // The on-screen labels are translated; the file isn't.
+    out << "Timestamp,Username,Role,Category,Action,Result,Details\r\n";
+
+    std::int64_t written = 0;
+    for (const auto& e : rows) {
+        out << escapeCsv(e.timestamp) << ','
+            << escapeCsv(e.username)  << ','
+            << escapeCsv(e.role)      << ','
+            << escapeCsv(e.category)  << ','
+            << escapeCsv(e.action)    << ','
+            << escapeCsv(e.result)    << ','
+            << escapeCsv(e.details)
+            << "\r\n";
+        ++written;
+    }
+    return out.good() ? written : -1;
+}
+
+void AuditLogPage::onExportClicked() {
+    // Suggested filename -- matches the audit-log-YYYY-MM-DD-HHMMSS
+    // convention compliance auditors expect when archiving exports
+    // by date.
+    const auto suggested = std::format(
+        "audit-log-{}.csv",
+        isoFromTimePoint(std::chrono::system_clock::now()));
+
+    auto dialog = Gtk::FileDialog::create();
+    dialog->set_title(_("Export audit log"));
+    dialog->set_initial_name(suggested);
+
+    auto filter = Gtk::FileFilter::create();
+    filter->set_name(_("CSV files"));
+    filter->add_mime_type("text/csv");
+    filter->add_pattern("*.csv");
+    auto filterList = Gio::ListStore<Gtk::FileFilter>::create();
+    filterList->append(filter);
+    dialog->set_filters(filterList);
+    dialog->set_default_filter(filter);
+
+    // get_root() returns the toplevel; cast to Window for the dialog
+    // parent. Null falls back to "no parent" which still works.
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    dialog->save(
+        *parent,
+        [this, dialog](const Glib::RefPtr<Gio::AsyncResult>& result) {
+            try {
+                auto file = dialog->save_finish(result);
+                if (!file) return;
+                const auto path = file->get_path();
+                const std::int64_t written = writeCsvExport(path);
+                if (written < 0) {
+                    if (toast_ != nullptr) {
+                        toast_->showError(_("CSV export failed (I/O error)."));
+                    }
+                    return;
+                }
+                if (toast_ != nullptr) {
+                    toast_->showSuccess(std::format(
+                        "{} {} {} {}",
+                        std::string{_("Exported")},
+                        written,
+                        std::string{_("rows to")},
+                        path));
+                }
+            } catch (const Glib::Error& e) {
+                // Operator dismissed the picker, OR a real I/O issue
+                // bubbled up from gtkmm. We can't cleanly tell the
+                // two apart across gtkmm versions, so always surface
+                // the message; cancel reads as a benign status line.
+                if (toast_ != nullptr) {
+                    toast_->showError(e.what());
+                }
+            }
+        });
+}
+
+void AuditLogPage::refresh() {
+    // Wipe data rows + re-fetch. Grid row 0 is the header (sticky);
+    // remove rows from 1 upward, then reset the next-row counter.
+    // Walk by cell coordinates rather than child iteration so an
+    // already-cleared row doesn't trip up.
+    constexpr int kColumnCount = 7;
+    for (int r = nextRow_ - 1; r >= 1; --r) {
+        for (int c = 0; c < kColumnCount; ++c) {
+            if (auto* child = grid_->get_child_at(c, r)) {
+                grid_->remove(*child);
+            }
+        }
+    }
+    nextRow_ = 1;
+
+    const auto rows = reader_.query(buildQuery(kQueryLimit));
     for (const auto& e : rows) {
         appendRow(e);
     }
