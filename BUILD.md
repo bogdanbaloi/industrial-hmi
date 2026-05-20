@@ -2,7 +2,11 @@
 
 ## Prerequisites
 
-### Linux (Ubuntu 22.04+ / Debian 12+)
+### Linux (Ubuntu 24.04+ / Debian 12+)
+
+> CI runs on `ubuntu-24.04`. 22.04 may still work but is no longer
+> tested; on older systems some gtkmm-4 features may regress.
+
 
 ```bash
 sudo apt install cmake ninja-build g++ pkg-config \
@@ -60,6 +64,29 @@ cmake --preset windows-msys2-debug
 cmake --build build/debug
 ./build/debug/industrial-hmi.exe
 ```
+
+### Demo with authentication enabled
+
+Auth and historian default to **off** in the source-tree config so
+unit tests + the no-auth dev path aren't gated by a login prompt.
+To enable them for a local demo run of the native binary (Linux or
+Windows), use the helper script:
+
+```bash
+./enable-auth.sh                # defaults to build/debug
+./enable-auth.sh build/release  # or a different build dir
+```
+
+It flips `auth.enabled` + `historian.enabled` in
+`<build-dir>/config/app-config.json` and ensures `<build-dir>/data/`
+exists. Re-run after any build that refreshes config files from the
+source tree.
+
+The Docker compose stack uses its own config override
+(`docker/app-config.docker.json`) and does not need this script.
+
+Default credentials seeded on first launch: `operator / operpass`,
+`maint / maintpass`, `admin / adminpass`.
 
 ---
 

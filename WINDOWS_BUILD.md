@@ -41,6 +41,20 @@ cmake --build build/debug
 ./build/debug/industrial-hmi.exe
 ```
 
+### Demo with authentication enabled
+
+Auth + historian default to **off** in the source-tree config so
+unit tests aren't gated by a login prompt. For a local demo run
+with the login flow + audit log enabled, use the helper:
+
+```bash
+./enable-auth.sh                # default: build/debug
+./build/debug/industrial-hmi.exe
+```
+
+Default credentials: `operator / operpass`, `maint / maintpass`,
+`admin / adminpass`.
+
 ## Troubleshooting
 
 ### "CMake not found"
