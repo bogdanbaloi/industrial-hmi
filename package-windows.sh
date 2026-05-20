@@ -100,8 +100,13 @@ if [[ -d "$PIXBUF_SRC" ]]; then
     mkdir -p "$PIXBUF_DST"
     cp -r "$PIXBUF_SRC"/* "$PIXBUF_DST/"
 
-    # Copy loader DLL dependencies
-    for loader in "$PIXBUF_DST/loaders"/*.dll 2>/dev/null; do
+    # Copy loader DLL dependencies. `nullglob` + `dotglob` would let
+    # us cleanly skip when no .dll matches, but they affect script-
+    # wide glob behaviour; the inline `[[ -f ]] || continue` is the
+    # minimal-impact alternative. (A trailing `2>/dev/null` on the
+    # `for` line is a bash parse error -- redirections aren't valid
+    # there.)
+    for loader in "$PIXBUF_DST/loaders"/*.dll; do
         [[ -f "$loader" ]] || continue
         ldd "$loader" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read -r dep; do
             if [[ -f "$dep" ]] && ! is_system_dll "$dep"; then
