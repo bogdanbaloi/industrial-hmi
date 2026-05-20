@@ -141,24 +141,31 @@ jobs:
       run: cmake --build build/release
 
     - name: Package
+      # Delegate to package-windows.sh (the same script the local
+      # MSYS2 dev workflow runs) so the CI zip contains the FULL
+      # runtime closure: ldd DLLs + gdk-pixbuf loaders +
+      # GSettings schemas + Adwaita + hicolor icon themes +
+      # gdbus.exe. Earlier the workflow inlined a thin ldd-only
+      # grep that shipped a zip which crashed on first run on a
+      # PC without MSYS2 (avatar pixbuf loader missing -> Gdk
+      # threw at decode time; icons missing -> bare-bones UI).
+      # Single source of truth here.
       run: |
         TAG="${{ steps.tag.outputs.value }}"
-        DIST=industrial-hmi-windows-${TAG}
-        mkdir -p "${DIST}"
-        cp build/release/industrial-hmi.exe "${DIST}/"
-        cp build/release/industrial-hmi-console.exe "${DIST}/" 2>/dev/null || true
-        cp -r build/release/assets "${DIST}/"
-        cp -r build/release/config "${DIST}/"
-        cp README.md LICENSE CHANGELOG.md "${DIST}/" 2>/dev/null || true
-        # Bundle MSYS2 runtime DLLs the binary needs at launch -- without
-        # these, double-clicking on a system without MSYS2 installed
-        # produces "missing DLL" errors before main() even runs.
-        ldd build/release/industrial-hmi.exe \
-          | grep -i "/clang64/bin/" \
-          | awk '{print $3}' \
-          | xargs -I{} cp {} "${DIST}/" || true
-        zip -r "${DIST}.zip" "${DIST}"
-        ls -lh "${DIST}.zip"
+        chmod +x ./package-windows.sh
+        # `-t .` writes the zip to the project root so the upload
+        # glob below has a flat, predictable path.
+        ./package-windows.sh -b build/release -t .
+        # package-windows.sh names the zip
+        # industrial-hmi_release_<sha>.zip; rename to the tag-based
+        # asset name the publish job expects.
+        PRODUCED=$(ls industrial-hmi_release_*.zip 2>/dev/null | head -1)
+        if [ -z "${PRODUCED}" ]; then
+          echo "package-windows.sh did not produce a zip"
+          exit 1
+        fi
+        mv "${PRODUCED}" "industrial-hmi-windows-${TAG}.zip"
+        ls -lh "industrial-hmi-windows-${TAG}.zip"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v5
