@@ -6,7 +6,7 @@ if(POLICY CMP0167)
 endif()
 
 project(industrial-hmi
-    VERSION 1.0.0
+    VERSION 1.2.0
     DESCRIPTION "Industrial HMI MVP Architecture - Cross-Platform (Linux/Windows)"
     LANGUAGES CXX)
 
