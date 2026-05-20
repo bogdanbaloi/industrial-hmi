@@ -20,10 +20,21 @@ core.
   `main.cpp` via `#ifdef CONSOLE_MODE`. The console binary links
   **zero gtkmm** -- concrete proof that the `ViewObserver` abstraction
   is a real View-swap seam, not just marketing.
-- **79% test coverage** verified by gcovr in CI on every PR, across
-  4000+ lines and **31 ctest targets**: scenario-based E2E, async
-  presenter tests with `Glib::MainLoop` pump, view-layer tests under
-  real GTK via Xvfb, dialog dispatch via programmatic `response()`.
+- **68% test coverage** verified by gcovr in CI on every PR, across
+  9,442 instrumented lines and **62 ctest targets**: scenario-based
+  E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
+  tests under real GTK via Xvfb, dialog dispatch via programmatic
+  `response()`. Auth + presenter + integration backends sit between
+  75% and 100%; GUI dialogs sit at 0% by design (exercised via Xvfb
+  smoke tests instead).
+- **Every module ships as a standalone library** -- 9 README.md
+  files under `src/` (auth / integration / presenter / historian /
+  ml / gtk-view / model / core / config), each with API surface,
+  SOLID-per-interface rationale, threading model, and an
+  embedding-in-another-project guide. Drop the auth core into a Qt
+  app, the integration backends into a CLI daemon, the historian
+  into a logging tool -- zero rewrites, just composition root
+  changes.
 - **Staged Bootstrap** resolves the classic config-vs-logger
   chicken-and-egg with a two-phase logger; both front-ends share the
   same `Bootstrap` orchestrator (logger -> config -> configured
@@ -182,6 +193,38 @@ console) without touching Presenter / Model.
 `src/core/Bootstrap.{h,cpp}` owns this sequence so both `main.cpp`
 branches enter their front-ends from the same prepared state.
 
+### Module documentation
+
+Each `src/` module ships a standalone `README.md` that reads as a
+library reference (architecture, SOLID per interface, API surface,
+embedding guide, threading, testing). Recommended entry points if
+you're evaluating the codebase:
+
+- **[`src/auth/`](src/auth/README.md)** -- Authentication, RBAC,
+  audit trail (Argon2id, three-role permission model, SQLite audit
+  log with CSV export).
+- **[`src/integration/`](src/integration/README.md)** -- Four
+  network backends (TCP, MQTT 3.1.1/5.0, Modbus TCP, OPC-UA) +
+  telemetry bridges + serializers.
+- **[`src/presenter/`](src/presenter/README.md)** -- MVP backbone,
+  ViewObserver pattern, RBAC integration, six concrete presenters.
+- **[`src/historian/`](src/historian/README.md)** -- Time-series
+  store with batch flush + retention policy.
+- **[`src/ml/`](src/ml/README.md)** -- ONNX Runtime via plugin
+  (dlopen workaround for ORT heap corruption), preprocessor +
+  swappable classifier.
+- **[`src/gtk/view/`](src/gtk/view/README.md)** -- GTK4 view layer
+  (page registry, theme system, custom Cairo widgets, modal
+  dialog lifecycle).
+- **[`src/model/`](src/model/README.md)** -- MVP M layer
+  (SimulatedModel + ProductionModel interface, DatabaseManager,
+  Boost.Asio context).
+- **[`src/core/`](src/core/README.md)** -- Shared utilities
+  (Bootstrap two-phase logger, Result<T,E>, typed startup
+  exceptions, i18n mechanism, TimeFormat).
+- **[`src/config/`](src/config/README.md)** -- JSON config policy
+  + compiled defaults + applyI18n pattern.
+
 ### Project layout
 
 ```
@@ -269,15 +312,167 @@ scripts/
 po/                     gettext catalogs (11 languages)
 config/                 app-config.json
 cmake/                  FindOnnxRuntime.cmake
-tests/                  40+ ctest targets (see Testing section)
+tests/                  62 ctest targets (see Testing section)
 ```
+
+## Extensibility -- how to add X
+
+Every extension point below is **localised to one or two files**.
+The architecture pays this dividend: a recruiter reading the
+codebase can see exactly where a new feature lands, and the
+diffs stay reviewable.
+
+### Add a new page to the GTK front-end
+
+Cost: ~1 hour for a non-trivial page.
+
+1. Build a ViewModel struct under `src/presenter/modelview/` (plain
+   aggregate, one field per piece of state the view renders).
+2. Add the corresponding callback to `src/presenter/ViewObserver.h`
+   with an **empty default implementation** so existing views
+   compile unchanged.
+3. Subclass `BasePresenter` in `src/presenter/`, subscribe to the
+   model signals you need in `initialize()`, transform to the
+   ViewModel, call `notifyAll(...)`.
+4. Subclass `Page` in `src/gtk/view/pages/`, implement
+   `ViewObserver` with the callback from step 2, draw the
+   ViewModel into widgets.
+5. Register in `src/gtk/view/MainWindow.cpp::buildPages()` --
+   one new `registerPage(...)` call. Gate by role if needed
+   (the existing `AuditLogPage` / `UsersPage` registrations are
+   the template).
+
+Zero touches to the model, the auth core, integration backends,
+or any other page. **The console front-end keeps running**
+because it just doesn't override the new ViewObserver callback.
+
+### Add a new presenter (no UI yet)
+
+1. Define the ViewModel(s) under `src/presenter/modelview/`.
+2. Subclass `BasePresenter`, take the model + collaborators by
+   reference in the constructor (interfaces only, not concretes).
+3. Wire from `MainWindow::buildPages()` (or any composition root
+   that already builds presenters).
+
+Test stays GTK-free: real presenter + real auth core + fake
+`ViewObserver` recording calls. Pattern lives in every
+`tests/*PresenterTest.cpp`.
+
+### Add a new UI language
+
+Cost: ~30 minutes plus translation time.
+
+1. Create `po/<lang>.po` from `po/template.pot` (every translation
+   tool -- POEdit, Crowdin, Lokalise -- handles this).
+2. Translate the strings; the keys are the original English
+   text inside `_(...)`.
+3. Add the language to the dropdown in `SettingsPage::buildUi()`.
+4. Add the language code to the locale list in
+   `src/core/Bootstrap.cpp::detectLanguage()`.
+
+No string changes anywhere else. The runtime language switch
+already exists: change in Settings → page tree rebuilds → every
+`_()` re-resolves against the new catalog.
+
+### Add a new integration backend
+
+Cost: ~3-5 hours depending on protocol complexity.
+
+1. Subclass `IntegrationBackend` in `src/integration/<protocol>/`,
+   implement `start() / stop() / state() / name() /
+   metricsSummary()`.
+2. Take `ProductionModel&` (or whatever subset the protocol
+   needs) by reference in the constructor.
+3. Run the I/O loop on a `std::jthread` or a Boost.Asio
+   `io_context::run` worker -- never block the calling thread.
+4. Wire from `main.cpp`: `manager.registerBackend(std::make_unique
+   <YourBackend>(...))` -- one line.
+
+The dashboard's I/O panel auto-discovers the new backend through
+`IntegrationManager::backends()`; no UI change needed.
+
+Reference templates in the codebase: `TcpBackend` (line-protocol
+server, simplest), `MqttClient` (long-lived client connection),
+`OpcUaBackend` (heavy protocol with both server + client roles).
+
+### Add a new serialisation format
+
+1. Subclass `Serializer` in `src/integration/`, implement
+   `writeProducts` + `readProducts`.
+2. Inject into the backend that needs it via the constructor.
+
+No backend code changes. The existing `CsvSerializer` and
+`JsonSerializer` are the templates.
+
+### Add a new auth backend (e.g. LDAP, OAuth claim cache)
+
+1. Subclass `UserRepository` in `src/auth/`, implement the CRUD +
+   avatar methods.
+2. Swap the concrete in `main.cpp`: replace
+   `SqliteUserRepository` with your new one in the
+   `AuthService` constructor.
+
+Zero changes to `AuthService`, `LoginDialog`, `UsersPresenter`,
+audit log, or any presenter. Tests prove it: every auth test
+uses `MockUserRepository` for the same surface.
+
+### Add a new storage backend (e.g. Postgres)
+
+Same pattern as auth -- the repository interface is the seam.
+Three places to add a Postgres concrete:
+
+- `src/auth/PostgresUserRepository.{h,cpp}` (alongside SQLite)
+- `src/model/PostgresProductsRepository.{h,cpp}` (alongside
+  DatabaseManager)
+- `src/historian/PostgresHistoryStore.{h,cpp}` (alongside
+  SqliteHistoryStore)
+
+Composition root in `main.cpp` chooses by config flag. The auth
+service, presenters, bridges, history page never know which
+backend they're talking to.
+
+### Add a new audit event verb
+
+1. Emit the event from wherever the action lands (presenter,
+   service). Use the existing `AuditEvent` shape:
+   `{category, action, details, result, ...}` -- no new types.
+2. Add the verb string to `kActionList` in
+   `src/gtk/view/pages/AuditLogPage.cpp` (alphabetical, drives
+   the Action filter dropdown).
+3. Test the row format in
+   `tests/UsersPresenterTest.cpp` (the 12 audit-format tests
+   are the template).
+
+No schema migration. The audit log table is already verb-
+agnostic.
+
+### Add a new front-end (Qt, web, REST)
+
+This is what the project is built for. The architecture promise:
+
+1. Implement `ViewObserver` in your toolkit (Qt: a `QObject`
+   subclass; web: a websocket endpoint serialising ViewModels
+   as JSON; REST: a polling adapter).
+2. Wire your presenters from a new composition root -- copy
+   `src/main.cpp` minus the GTK-specific bits, replace
+   `MainWindow` construction with your toolkit's window.
+3. Done. Auth, model, integration, historian, presenters --
+   every module under `src/` works unchanged.
+
+The console front-end (`industrial-hmi-console`) is the
+existence proof: it links **zero gtkmm** and uses the same
+presenters as the GTK binary.
+
+---
 
 ## Test Strategy
 
 Coverage is measured by **gcovr** on the Ubuntu CI job and posted at
-the top of every PR's Actions run. Currently **79% across 4095
-lines**, achieved by combining several testing styles instead of one
-monoculture:
+the top of every PR's Actions run. Currently **68% across 9,442
+instrumented lines** (auth, presenter, and integration backends sit
+between 75% and 100%; GUI dialogs sit at 0% by design -- they're
+exercised via Xvfb-backed smoke tests instead), achieved by combining
+several testing styles instead of one monoculture:
 
 | Category | What it covers | Examples |
 |---|---|---|
