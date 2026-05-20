@@ -7,6 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-20
+
+### User management + audit polish (B2.5)
+
+Admin surface for user CRUD + self-service profile + reusable Toast
+widget + granular audit filters + CSV export for compliance walks.
+Extends the auth track (B2) into a complete day-to-day admin
+experience.
+
+- **`UsersPresenter`** -- synchronous RBAC facade over
+  `UserRepository`, `PasswordHasher`, `Session`, `AuditLogger`.
+  Verbs: `list`, `create`, `update`, `remove`, `resetPassword`,
+  `changeOwnPassword`, `setOwnAvatar`, `clearOwnAvatar`, `getAvatar`.
+  Defence-in-depth: refuses self-delete + self-disable so the
+  binary can't lock itself out. Emits a USER-category audit row
+  per verb (success OR failure with the rejection reason).
+- **Admin UI (`UsersPage`)** -- admin-only Gtk::Grid with Add /
+  Edit / Reset Password / Delete buttons per row. Toast feedback
+  on every action (success auto-dismisses, error stays).
+- **Self-service (`ProfileDialog`)** -- avatar upload + change-own-
+  password (verified against stored hash). Available to every
+  signed-in role via the `UserBadge` `Profile` button.
+- **Avatars**: BLOB storage in `auth.sqlite` with 256 KiB cap +
+  MIME whitelist (image/png, image/jpeg) at the repository
+  boundary. Fallback to generated initials over a hashed-from-
+  username palette colour (`AvatarPlaceholder` -- pure logic,
+  GTK-free, reusable in future Qt/web front-ends).
+- **Schema migration v1 -> v2 via `PRAGMA user_version`** ladder.
+  ALTER TABLE ADD COLUMN for `display_name`, `avatar_mime`,
+  `avatar_blob`, `updated_at`. Online + idempotent at any scale.
+- **`Session::signalChanged`** sigc::signal emitted on every
+  `setUser` / `clear` so `UserBadge` re-renders immediately when
+  an admin edits their own row mid-session. Emit is outside the
+  mutex so observers can re-enter `currentUser()` without
+  deadlocking.
+- **Sign-out flow rebuilds MainWindow** from an idle callback
+  (under `gtkApp->hold()` to survive the zero-windows transition)
+  so role-gated pages (`UsersPage`, `AuditLogPage`) re-evaluate
+  for the newly signed-in user. Auth + model + historian
+  singletons live on main()'s stack and survive the swap.
+- **`LoginDialog` polish**: HeaderBar CSD with the
+  `.dialog-titlebar-dark` palette class so the titlebar matches
+  the dark content instead of falling back to native Windows
+  chrome. `#ifdef _WIN32` path centres the window via
+  `SetWindowPos` against the active monitor (GTK4 dropped
+  positioning APIs; Win32 doesn't centre small modals by
+  default).
+- **AuditLogPage filters granulare**: Action dropdown (alpha
+  list of every verb the codebase emits), Result dropdown
+  (All / SUCCESS / FAILURE), Range picker (All time / Last
+  hour / 24h / 7 days) translating to `fromTs` at refresh
+  time. AuditQuery + SqliteAuditLogger gain `action` + `result`
+  fields; backwards-compatible.
+- **AuditLogPage CSV export** -- compliance-grade RFC 4180 with
+  UTF-8 BOM + CRLF + non-localised header so the file stays
+  diffable across deployments + languages. Suggested filename
+  `audit-log-YYYY-MM-DDTHH:MM:SSZ.csv`. Toast on success +
+  error.
+- **Reusable `Toast` widget** -- Gtk::Revealer-based banner with
+  `.success` / `.error` CSS classes from the existing palette.
+  Configurable duration + position via Options struct;
+  success auto-dismisses (3.5s default), error stays until
+  manually dismissed so failure reasons aren't lost.
+- **`enable-auth.sh` helper** at the repo root -- flips
+  `auth.enabled` + `historian.enabled` in the build's runtime
+  config + ensures `data/` exists. Useful for local demo runs;
+  the source-tree config keeps both off by default so unit
+  tests aren't gated by a login prompt.
+- **Tests (78 new)**: SqliteUserRepositoryTest extended from
+  11 to 25 (avatar BLOB round-trips, size + MIME validation,
+  PRAGMA migration idempotency), AvatarPlaceholderTest (13),
+  UsersPresenterTest (40 -- 28 RBAC + **12 audit-format tests
+  pinning row content per verb**, including the assertion that
+  plaintext passwords NEVER appear in audit details).
+
 ### Per-module documentation (D1)
 
 Every module under `src/` now ships a standalone `README.md` that
@@ -591,6 +666,7 @@ presenter_->addProduct(code, name, status, stock, quality,
 **New dependencies** -- Boost.Asio (already pulled in by signals2);
 C++20 compiler (GCC 10+, MSVC 2019+, Clang 10+).
 
-[Unreleased]: https://github.com/bogdanbaloi/industrial-hmi/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/bogdanbaloi/industrial-hmi/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/bogdanbaloi/industrial-hmi/releases/tag/v1.2.0
 [1.0.0]: https://github.com/bogdanbaloi/industrial-hmi/releases/tag/v1.0.0
 [0.5.0]: https://github.com/bogdanbaloi/industrial-hmi/releases/tag/v0.5.0

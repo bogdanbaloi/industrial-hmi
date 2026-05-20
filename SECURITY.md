@@ -11,11 +11,12 @@ through the channels below rather than ignored.
 Security fixes are provided for the latest minor release line on
 `main`. Older lines are not patched.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.1.x   | yes (current)      |
-| 1.0.x   | no -- upgrade to 1.1 |
-| 0.x     | no                 |
+| Version | Supported            |
+| ------- | -------------------- |
+| 1.2.x   | yes (current)        |
+| 1.1.x   | no -- upgrade to 1.2 |
+| 1.0.x   | no                   |
+| 0.x     | no                   |
 
 `main` itself is the development branch. Do not run it in production;
 use a tagged release.
