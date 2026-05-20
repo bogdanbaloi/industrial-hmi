@@ -395,5 +395,24 @@ auto result = stmt.execute();
 
 ---
 
+## See also -- per-module deep-dives
+
+This document is the high-level architecture. Each module under
+`src/` ships its own `README.md` that goes further on its specific
+surface (SOLID per interface, API surface, embedding guide,
+threading, testing):
+
+- [`src/auth/README.md`](../src/auth/README.md) -- Auth + RBAC + audit
+- [`src/integration/README.md`](../src/integration/README.md) -- TCP / MQTT / Modbus / OPC-UA backends
+- [`src/presenter/README.md`](../src/presenter/README.md) -- MVP backbone + ViewObserver pattern
+- [`src/historian/README.md`](../src/historian/README.md) -- Time-series store + retention
+- [`src/ml/README.md`](../src/ml/README.md) -- ONNX Runtime + plugin loader
+- [`src/gtk/view/README.md`](../src/gtk/view/README.md) -- GTK4 view layer
+- [`src/model/README.md`](../src/model/README.md) -- M of MVP + DatabaseManager
+- [`src/core/README.md`](../src/core/README.md) -- Bootstrap + Logger + Result + i18n
+- [`src/config/README.md`](../src/config/README.md) -- JSON config policy
+
+---
+
 **Author:** Bogdan Baloi  
 **Last Updated:** April 2026

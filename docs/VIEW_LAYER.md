@@ -419,3 +419,15 @@ src/gtk/view/
 ---
 
 **Remember:** Views are **renderers**, not **thinkers**. All intelligence lives in the Presenter!
+
+---
+
+## See also -- per-module deep-dives
+
+This document covers the view-layer **principles**. For the
+GTK4-specific implementation walk-through (page registry, theme
+system, custom Cairo widgets, modal dialog lifecycle, sign-out
+rebuild story), see [`src/gtk/view/README.md`](../src/gtk/view/README.md).
+For the presenter side of the contract (ViewObserver pattern, RBAC
+integration, concrete presenters), see
+[`src/presenter/README.md`](../src/presenter/README.md).

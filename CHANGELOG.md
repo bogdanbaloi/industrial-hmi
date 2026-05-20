@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Per-module documentation (D1)
+
+Every module under `src/` now ships a standalone `README.md` that
+reads as a library reference: why it exists, SOLID per interface,
+API surface class by class, embedding-in-another-project guide,
+threading model, testing coverage, out-of-scope items called out.
+
+- `src/auth/README.md` -- Authentication + RBAC + audit core.
+- `src/integration/README.md` -- Four backends (TCP, MQTT 3.1.1/5.0,
+  Modbus TCP, OPC-UA) + telemetry bridges + serializers.
+- `src/presenter/README.md` -- MVP backbone, ViewObserver pattern,
+  RBAC integration.
+- `src/historian/README.md` -- Time-series store + batch flush +
+  retention policy.
+- `src/ml/README.md` -- ONNX Runtime via plugin (dlopen workaround
+  for ORT heap corruption).
+- `src/gtk/view/README.md` -- GTK4 view layer (page registry,
+  theme system, custom Cairo widgets, modal dialog lifecycle,
+  sign-out rebuild story).
+- `src/model/README.md` -- MVP M layer (SimulatedModel,
+  ProductionModel interface, DatabaseManager, Boost.Asio context).
+- `src/core/README.md` -- Bootstrap two-phase logger, Result<T,E>,
+  typed startup exceptions, i18n mechanism, TimeFormat.
+- `src/config/README.md` -- JSON config policy + compiled defaults +
+  applyI18n pattern.
+
+Root README updated with a "Module documentation" navigation
+section + stale metrics refreshed (62 ctest targets, 68% coverage
+on 9,442 instrumented lines).
+
 ### Auth + audit log (B2)
 
 Username/password authentication with Argon2id hashing, three-role

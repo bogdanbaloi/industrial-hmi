@@ -86,8 +86,22 @@ The following constitute security vulnerabilities for this project:
 - Race conditions between the GTK main thread and the Boost.Asio
   I/O thread that could corrupt model state or crash the binary.
 - Logic flaws that let a non-privileged operator perform an action
-  the UI was supposed to gate (currently this surface is small;
-  RBAC is not implemented).
+  the role gating was supposed to refuse. The codebase enforces
+  RBAC at three layers (sidebar / page registration, presenter
+  method gate, view-level widget sensitivity); a report that
+  bypasses ALL three is in scope. Reports that only bypass one
+  layer are interesting but lower severity -- defense in depth
+  is the explicit policy.
+- Plaintext passwords leaking into the audit log (the
+  `RESET_PASSWORD` / `CHANGE_PASSWORD` rows MUST contain only
+  identifiers, never the secret). Verified by dedicated tests in
+  `tests/UsersPresenterTest.cpp`; a regression here is a real
+  vulnerability.
+- Avatar uploads exceeding the 256 KiB cap or carrying a non-
+  whitelisted MIME (`image/png` / `image/jpeg` only) reaching
+  SQLite -- the repository validates these at the boundary.
+- Argon2id parameter regressions (interactive profile, no
+  downgrade to faster KDFs without an explicit migration path).
 
 ## Out of scope
 
@@ -127,14 +141,46 @@ regular bug or feature request instead:
 For context, the existing CI gates that prevent classes of bugs from
 landing in `main`:
 
-- AddressSanitizer + UndefinedBehaviorSanitizer on every PR
+- **AddressSanitizer + UndefinedBehaviorSanitizer** on every PR
   (use-after-free, buffer overflow, signed overflow, null deref,
   misaligned access, OOB shift).
-- clang-tidy strict (`WarningsAsErrors: '*'`) covering bugprone-*,
-  cert-*, clang-analyzer-*, concurrency-*, cppcoreguidelines-*.
-- cppcheck warning + style + performance categories.
-- Branch protection on `main` requires all of the above to pass
-  before merge.
+- **ThreadSanitizer** on every PR (data races, lock-order
+  inversions, unsynchronised access).
+- **Valgrind Memcheck** with `--errors-for-leak-kinds=definite`
+  on every PR (catches leaks that ASan misses, e.g. `shared_ptr`
+  self-reference cycles).
+- **clang-tidy strict** (`WarningsAsErrors: '*'`) covering
+  bugprone-*, cert-*, clang-analyzer-*, concurrency-*,
+  cppcoreguidelines-*.
+- **cppcheck** warning + style + performance categories.
+- **Branch protection** on `main` requires all of the above to
+  pass before merge.
+
+For the auth + audit surface specifically:
+
+- **Argon2id (libsodium) password hashing** with the interactive
+  profile (~50 ms per hash, memory-hard). Encoded hashes are
+  self-describing (algorithm + params + salt + digest in one
+  string); a future parameter upgrade does not break existing
+  rows.
+- **User enumeration mitigation** -- `LoginResult::
+  InvalidCredentials` merges "wrong user" and "wrong password"
+  so the UI cannot leak the distinction. Audit log records the
+  attempted username + the merged outcome.
+- **COLLATE NOCASE** UNIQUE constraint on usernames at the
+  storage layer, defence-in-depth on top of presenter-side
+  lower-casing.
+- **Audit log is append-only** -- no UPDATE / DELETE paths
+  exposed via the API. An admin can read + export; corrupting
+  the trail requires direct DB access.
+- **Self-mutation refusal** -- the only admin cannot be deleted
+  or disabled by themselves; the binary cannot lock itself out.
+- **Plaintext NEVER in audit details** for password operations.
+  Pinned by 12 audit-format tests in `tests/UsersPresenterTest.
+  cpp`.
+- **Avatar boundary validation** -- 256 KiB cap + MIME whitelist
+  enforced at the `SqliteUserRepository::setAvatar` boundary,
+  not just at the UI.
 
 These reduce -- but do not eliminate -- the chance of a vulnerability
 shipping. Reports remain welcome.
