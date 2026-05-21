@@ -156,11 +156,17 @@ jobs:
         chmod +x ./package-windows.sh
         # `-t .` writes the zip to the project root so the upload
         # glob below has a flat, predictable path.
-        ./package-windows.sh -b build/release -t .
-        # package-windows.sh names the zip
-        # industrial-hmi_release_<sha>.zip; rename to the tag-based
-        # asset name the publish job expects.
-        PRODUCED=$(ls industrial-hmi_release_*.zip 2>/dev/null | head -1)
+        # `BUILD_TYPE=release` (lowercase) overrides the workflow-
+        # level `env: BUILD_TYPE: Release` so the script's default
+        # output name uses lowercase "release", matching the glob
+        # below. Without this override the script picks up "Release"
+        # from env -> produces industrial-hmi_Release_*.zip ->
+        # lowercase glob doesn't match -> ls returns nothing ->
+        # bash -e kills the step.
+        BUILD_TYPE=release ./package-windows.sh -b build/release -t .
+        # Match any case + any sha suffix produced by the script so
+        # the rename is robust against future env / git-state quirks.
+        PRODUCED=$(ls industrial-hmi_*.zip 2>/dev/null | head -1)
         if [ -z "${PRODUCED}" ]; then
           echo "package-windows.sh did not produce a zip"
           exit 1
