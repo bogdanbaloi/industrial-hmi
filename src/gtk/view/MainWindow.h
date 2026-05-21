@@ -145,6 +145,7 @@ private:
     Gtk::Box*        alertsContainer_        = nullptr;
     Gtk::Box*        systemStatusContainer_  = nullptr;
     Gtk::Box*        backendHealthContainer_ = nullptr;
+    Gtk::Box*        userContainer_          = nullptr;
     Gtk::Box*        clockContainer_         = nullptr;
     Gtk::Button*     estopButton_           = nullptr;
     // Only present in Blueprint layout -- hosts log_panel in a popover

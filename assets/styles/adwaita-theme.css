@@ -436,18 +436,220 @@ messagedialog.light-mode button {
     border-color: #dadce0;
 }
 
-.dialog-titlebar-dark {
+/* Custom titlebar palettes for client-side decorated dialogs.
+   The plain `.dialog-titlebar-*` selector loses specificity to
+   Adwaita's built-in `headerbar { ... }` rule, so we anchor on the
+   element name + class and also target the inner windowhandle that
+   GTK4 actually paints. background-image: none clears any gradient
+   the theme set; box-shadow: none drops the inset highlight. */
+headerbar.dialog-titlebar-dark,
+headerbar.dialog-titlebar-dark > windowhandle {
     background: @headerbar_bg_color;
+    background-image: none;
     color: @headerbar_fg_color;
+    box-shadow: none;
     border-bottom: 1px solid @border_color;
 }
 
-.dialog-titlebar-light {
+headerbar.dialog-titlebar-light,
+headerbar.dialog-titlebar-light > windowhandle {
     background: @light_headerbar_bg_color;
+    background-image: none;
     color: @light_headerbar_fg_color;
+    box-shadow: none;
     border-bottom: 1px solid #dadce0;
-    color: @light_headerbar_fg_color;
 }
+
+/*
+   SIDEBAR DESIGN SYSTEM
+
+   The sidebar follows three visual tiers:
+
+     1. BRAND header  -- single card at the top with the logo + app
+        title + subtitle. Acts as the application identity.
+     2. SECTION header + CARD pairs -- "STATUS", "ALERTS", "I/O" labels
+        in small uppercase letter-spaced dim text, followed by a card
+        containing the actual widget. Pattern from Grafana / Datadog
+        sidebars.
+     3. ACTION row -- E-STOP (primary, destructive) + Close (secondary,
+        subtle). Live clock + version footer sit below.
+
+   Spacing scale:
+     - Card padding: 14px
+     - Between sections (card + next header): 16px
+     - Within a card: 8px between rows
+     - Tight metadata rows: 4px
+
+   Colour discipline: cards use a translucent lift of `card_bg_color`
+   over the sidebar gradient so they "float" without heavy borders.
+   The accent comes only from state (success / warning / error).
+   */
+
+/* App logo -- 3 vertical bars stylised as a production line.
+   Inline SVG via background-image so the asset has no separate
+   file to ship; tinted via @accent_color so it follows the
+   palette. 28x28 to match the title's vertical rhythm. */
+.app-logo {
+    /* Gauge arc (270 deg, gap at bottom) with an EKG-style waveform
+       inside -- reads as "production monitoring" without the toy /
+       emoji vibe of stacked coloured bars. Single accent colour so it
+       skins cleanly across palettes; stroke-linecap=round for a
+       softer industrial look. Inline SVG so the logo ships with the
+       stylesheet, no extra asset to bundle per platform. */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><path d='M 6 22 A 12 12 0 1 1 26 22' stroke='%2300d4aa' stroke-width='2.5' stroke-linecap='round'/><path d='M 8 18 L 11 18 L 13 14 L 15 22 L 17 14 L 19 18 L 24 18' stroke='%2300d4aa' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    min-width: 28px;
+    min-height: 28px;
+}
+
+/* Brand header card -- top-of-sidebar identity block.
+   Slightly bolder background than the other cards so it reads
+   as the anchor. */
+.sidebar-brand {
+    background-color: alpha(@card_bg_color, 0.75);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 12px 12px 16px 12px;
+}
+
+.sidebar-brand .sidebar-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.sidebar-brand .sidebar-subtitle {
+    font-size: 11px;
+    color: alpha(@sidebar_fg_color, 0.55);
+    letter-spacing: 0.5px;
+}
+
+/* Section header -- small uppercase letter-spaced dim text that
+   labels each card group ("STATUS", "ALERTS", "I/O"). Thin top
+   border separates this section from the one above, with a bit of
+   padding so the line isn't glued to the label. Margin keeps the
+   separator inset from the sidebar edges. */
+.sidebar-section-header {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: alpha(@sidebar_fg_color, 0.45);
+    margin: 14px 16px 6px 16px;
+    padding-top: 10px;
+    border-top: 1px solid alpha(@sidebar_fg_color, 0.10);
+}
+
+/* Optional count badge / link on the right of a section header
+   (e.g. "ALERTS · 2  [Clear all]"). Plain button rendered as a
+   text link, no border, no background. */
+.sidebar-section-action {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: alpha(@sidebar_fg_color, 0.65);
+    font-size: 11px;
+    text-decoration: underline;
+}
+
+.sidebar-section-action:hover {
+    color: @sidebar_fg_color;
+}
+
+/* Shared card chrome -- subtle translucent lift over the sidebar
+   gradient. No border (the bg shift is enough); a 1px hairline
+   only on hover for interactive cards. */
+.sidebar-card {
+    background-color: alpha(@card_bg_color, 0.45);
+    border: 1px solid alpha(@border_subtle, 0.4);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 0 12px;
+}
+
+/* Tight variant for compact widgets (status pills, version meta). */
+.sidebar-card-tight {
+    background-color: alpha(@card_bg_color, 0.45);
+    border: 1px solid alpha(@border_subtle, 0.4);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 0 12px;
+}
+
+/* Alert card -- individual alert row inside the alerts container.
+   Left severity stripe via border-left; subtle bg lifts it from
+   the sidebar. */
+.alert-card {
+    background-color: alpha(@card_bg_color, 0.55);
+    border-left: 3px solid alpha(@warning_color, 0.85);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 4px 12px;
+}
+
+.alert-card.severity-critical {
+    border-left-color: @error_color;
+}
+
+.alert-card.severity-info {
+    border-left-color: alpha(@accent_color, 0.7);
+}
+
+/* I/O pill row -- compact backend health pills inline with no
+   surrounding card chrome (the pills are already self-contained). */
+.sidebar-io-row {
+    padding: 8px 16px;
+}
+
+/* Avatar tile inside the user card -- slightly larger than the
+   inline badge so it reads as identity, not decoration. */
+.user-badge .app-logo {
+    min-width: 40px;
+    min-height: 40px;
+}
+
+/* Compact icon-button -- used for Profile + Sign out in the
+   user card top-right corner. 24x24 hit target, transparent
+   bg, dim icon. */
+.sidebar-icon-button {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 4px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: alpha(@sidebar_fg_color, 0.65);
+}
+
+.sidebar-icon-button:hover {
+    background-color: alpha(@card_bg_color, 0.6);
+    color: @sidebar_fg_color;
+}
+
+/* Text buttons inside the user card (Profile + Sign out). Subtle
+   surface to read as buttons without competing with the avatar /
+   identity row above. Equal width via Box::homogeneous in code. */
+.sidebar-card-button {
+    padding: 6px 10px;
+    background-color: alpha(@card_bg_color, 0.5);
+    color: @sidebar_fg_color;
+    border: 1px solid alpha(@border_color, 0.5);
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.92em;
+}
+
+.sidebar-card-button:hover {
+    background-color: alpha(@accent_color, 0.18);
+    border-color: alpha(@accent_color, 0.5);
+}
+
+.sidebar-card-button:active {
+    background-color: alpha(@accent_color, 0.30);
+}
+
 
 /*
    POPOVERS

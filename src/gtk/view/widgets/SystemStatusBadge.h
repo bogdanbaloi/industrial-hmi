@@ -17,11 +17,12 @@ class SystemStatusBadge : public Gtk::Box {
 public:
     SystemStatusBadge()
         : Gtk::Box(Gtk::Orientation::HORIZONTAL, sizes::kSpacingSmall) {
+        // `system-status-badge` stays for any legacy CSS that targets
+        // it; `sidebar-card-tight` provides the card chrome the rest
+        // of the sidebar uses (compact variant -- this widget only
+        // shows a dot + a short label).
         add_css_class("system-status-badge");
-        set_margin_start(sizes::kSpacingLarge);
-        set_margin_end(sizes::kSpacingLarge);
-        set_margin_top(sizes::kSpacingMedium);
-        set_margin_bottom(sizes::kSpacingMedium);
+        add_css_class("sidebar-card-tight");
 
         dot_ = Gtk::make_managed<Gtk::Label>("●");
         dot_->add_css_class("system-status-dot");

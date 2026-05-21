@@ -3,10 +3,12 @@
   <requires lib="gtk" version="4.0"/>
 
   <!--
-    Right-sidebar layout — mirror of the baseline. Content on the
-    left, sidebar (branding + alerts + E-STOP + clock + version) on
-    the right. Same widget IDs as main-window.ui so MainWindow.cpp
-    doesn't need to know which side the sidebar lives on.
+    Right-sidebar layout - mirror of the baseline. Content on the
+    left, sidebar (branding + user + status + alerts + I/O + E-STOP +
+    clock + version) on the right. Same widget IDs as main-window.ui
+    so MainWindow.cpp does not need to know which side the sidebar
+    lives on. Card-based visual system; see main-window.ui for the
+    detailed comments on each section.
   -->
   <object class="GtkBox" id="root_container">
     <property name="orientation">horizontal</property>
@@ -54,45 +56,67 @@
       </object>
     </child>
 
-    <!-- RIGHT SIDEBAR -->
+    <!-- RIGHT SIDEBAR - branding + user + status + alerts + I/O + Close -->
     <child>
       <object class="GtkBox" id="sidebar">
         <property name="orientation">vertical</property>
         <property name="width-request">200</property>
         <property name="css-classes">sidebar</property>
 
+        <!-- Brand header: logo + app title + subtitle -->
         <child>
           <object class="GtkBox" id="sidebar_header">
-            <property name="orientation">vertical</property>
-            <property name="spacing">8</property>
-            <property name="margin-top">24</property>
-            <property name="margin-bottom">24</property>
-            <property name="margin-start">20</property>
-            <property name="margin-end">20</property>
-            <property name="css-classes">sidebar-header</property>
+            <property name="orientation">horizontal</property>
+            <property name="spacing">12</property>
+            <property name="css-classes">sidebar-brand</property>
 
             <child>
-              <object class="GtkLabel" id="app_title">
-                <property name="label" translatable="yes">[BB] Industrial HMI</property>
-                <property name="css-classes">sidebar-title</property>
-                <property name="xalign">0</property>
+              <object class="GtkBox" id="app_logo">
+                <property name="css-classes">app-logo</property>
+                <property name="valign">center</property>
               </object>
             </child>
+
             <child>
-              <object class="GtkLabel" id="app_subtitle">
-                <property name="label" translatable="yes">MVP Architecture</property>
-                <property name="css-classes">sidebar-subtitle</property>
-                <property name="xalign">0</property>
+              <object class="GtkBox" id="brand_text_column">
+                <property name="orientation">vertical</property>
+                <property name="spacing">2</property>
+                <property name="valign">center</property>
+                <property name="hexpand">true</property>
+
+                <child>
+                  <object class="GtkLabel" id="app_title">
+                    <property name="label" translatable="yes">Industrial HMI</property>
+                    <property name="css-classes">sidebar-title</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkLabel" id="app_subtitle">
+                    <property name="label" translatable="yes">Production Monitor</property>
+                    <property name="css-classes">sidebar-subtitle</property>
+                    <property name="xalign">0</property>
+                  </object>
+                </child>
               </object>
             </child>
           </object>
         </child>
 
+        <!-- USER card mount -->
         <child>
-          <object class="GtkSeparator">
-            <property name="orientation">horizontal</property>
-            <property name="margin-start">12</property>
-            <property name="margin-end">12</property>
+          <object class="GtkBox" id="user_container">
+            <property name="orientation">vertical</property>
+          </object>
+        </child>
+
+        <!-- STATUS section -->
+        <child>
+          <object class="GtkLabel" id="status_section_header">
+            <property name="label" translatable="yes">STATUS</property>
+            <property name="css-classes">sidebar-section-header</property>
+            <property name="xalign">0</property>
           </object>
         </child>
 
@@ -102,14 +126,7 @@
           </object>
         </child>
 
-        <child>
-          <object class="GtkSeparator">
-            <property name="orientation">horizontal</property>
-            <property name="margin-start">12</property>
-            <property name="margin-end">12</property>
-          </object>
-        </child>
-
+        <!-- ALERTS panel mount -->
         <child>
           <object class="GtkBox" id="alerts_container">
             <property name="orientation">vertical</property>
@@ -117,17 +134,25 @@
           </object>
         </child>
 
-        <!-- Backend health bar mount point. MainWindow appends the
-             bar only when an IntegrationManager was injected. -->
+        <!-- I/O section -->
+        <child>
+          <object class="GtkLabel" id="io_section_header">
+            <property name="label" translatable="yes">I/O</property>
+            <property name="css-classes">sidebar-section-header</property>
+            <property name="xalign">0</property>
+          </object>
+        </child>
+
         <child>
           <object class="GtkBox" id="backend_health_container">
             <property name="orientation">vertical</property>
-            <property name="margin-start">20</property>
-            <property name="margin-end">20</property>
+            <property name="margin-start">12</property>
+            <property name="margin-end">12</property>
             <property name="margin-bottom">8</property>
           </object>
         </child>
 
+        <!-- Emergency Stop -->
         <child>
           <object class="GtkButton" id="estop_button">
             <property name="label" translatable="yes">E-STOP</property>
@@ -138,6 +163,7 @@
           </object>
         </child>
 
+        <!-- Close Application -->
         <child>
           <object class="GtkButton" id="close_app_button">
             <property name="label" translatable="yes">Close Application</property>
@@ -148,6 +174,7 @@
           </object>
         </child>
 
+        <!-- Live clock mount point -->
         <child>
           <object class="GtkBox" id="clock_container">
             <property name="orientation">vertical</property>
@@ -155,6 +182,7 @@
           </object>
         </child>
 
+        <!-- Footer - version info -->
         <child>
           <object class="GtkBox" id="sidebar_footer">
             <property name="orientation">vertical</property>
@@ -165,11 +193,12 @@
 
             <child>
               <object class="GtkLabel" id="version_label">
-                <property name="label" translatable="yes">Version 1.0.0</property>
+                <property name="label" translatable="yes">Version 1.2.0</property>
                 <property name="css-classes">sidebar-version</property>
                 <property name="xalign">0</property>
               </object>
             </child>
+
             <child>
               <object class="GtkLabel" id="author_label">
                 <property name="label" translatable="yes">Portfolio Demo</property>
