@@ -32,6 +32,33 @@
 
 .sidebar-version, .sidebar-author { color: #6A8294; }
 
+/* New sidebar design system overrides for the Right palette --
+   teal-tinted cards on the dark deep-water bg so the chrome reads
+   without falling back to Industrial defaults. */
+.sidebar-brand {
+    background-color: rgba(0, 212, 177, 0.06);
+    border: 1px solid rgba(0, 212, 177, 0.22);
+}
+.sidebar-card,
+.sidebar-card-tight {
+    background-color: rgba(230, 238, 244, 0.04);
+    border: 1px solid rgba(0, 212, 177, 0.20);
+    color: #E6EEF4;
+}
+.sidebar-section-header {
+    color: #A0B4C3;
+    border-top-color: rgba(160, 180, 195, 0.20);
+}
+.sidebar-card-button {
+    background-color: rgba(50, 74, 86, 0.55);
+    border: 1px solid rgba(0, 212, 177, 0.30);
+    color: #E6EEF4;
+}
+.sidebar-card-button:hover {
+    background-color: rgba(0, 212, 177, 0.18);
+    border-color: #00D4B1;
+}
+
 .live-clock-time { color: #00D4B1; font-weight: 600; }
 .live-clock-date { color: #A0B4C3; }
 
@@ -196,6 +223,33 @@ window.light-mode .sidebar button:hover {
 }
 window.light-mode .sidebar-version,
 window.light-mode .sidebar-author { color: #7A8E98; }
+
+/* New sidebar design system, Right palette light variant.
+   White cards on a soft off-white sidebar bg with teal-tinted
+   borders so the chrome stays visible. */
+window.light-mode .sidebar-brand {
+    background-color: #FFFFFF;
+    border: 1px solid #D6DEE2;
+}
+window.light-mode .sidebar-card,
+window.light-mode .sidebar-card-tight {
+    background-color: #FFFFFF;
+    border: 1px solid #D6DEE2;
+    color: #0E2A33;
+}
+window.light-mode .sidebar-section-header {
+    color: #007A66;
+    border-top-color: #D6DEE2;
+}
+window.light-mode .sidebar-card-button {
+    background-color: #F0F4F5;
+    border: 1px solid #D6DEE2;
+    color: #0E2A33;
+}
+window.light-mode .sidebar-card-button:hover {
+    background-color: rgba(0, 122, 102, 0.10);
+    border-color: #007A66;
+}
 
 window.light-mode .live-clock-time { color: #007A66; }
 window.light-mode .live-clock-date { color: #4A6470; }

@@ -32,6 +32,34 @@
 
 .sidebar-version, .sidebar-author { color: #4C566A; }
 
+/* New sidebar design system (cards + section headers + brand) --
+   pin the colours so the dark sidebar reads coherently against
+   Nord's Polar Night palette instead of falling back to Industrial
+   defaults. */
+.sidebar-brand {
+    background-color: rgba(216, 222, 233, 0.06);
+    border: 1px solid rgba(136, 192, 208, 0.20);
+}
+.sidebar-card,
+.sidebar-card-tight {
+    background-color: rgba(216, 222, 233, 0.05);
+    border: 1px solid rgba(136, 192, 208, 0.18);
+    color: #ECEFF4;
+}
+.sidebar-section-header {
+    color: rgba(216, 222, 233, 0.55);
+    border-top-color: rgba(216, 222, 233, 0.12);
+}
+.sidebar-card-button {
+    background-color: rgba(76, 86, 106, 0.55);
+    border: 1px solid rgba(136, 192, 208, 0.30);
+    color: #ECEFF4;
+}
+.sidebar-card-button:hover {
+    background-color: rgba(136, 192, 208, 0.20);
+    border-color: rgba(136, 192, 208, 0.55);
+}
+
 /* Clock */
 .live-clock-time { color: #88C0D0; }
 .live-clock-date { color: #D8DEE9; }
@@ -156,6 +184,33 @@ button.alert-dismiss:hover   { color: #ECEFF4; background: rgba(216,222,233,0.08
     border-color: #D8DEE9;
 }
 .sidebar button:hover { background: #D8DEE9; }
+
+/* New sidebar design system, Nord light variant.
+   Snow Storm surfaces with Frost-tinted borders so the cards still
+   read as bordered chrome against the light sidebar bg. */
+.sidebar-brand {
+    background-color: #ffffff;
+    border: 1px solid #D8DEE9;
+}
+.sidebar-card,
+.sidebar-card-tight {
+    background-color: #ffffff;
+    border: 1px solid #D8DEE9;
+    color: #2E3440;
+}
+.sidebar-section-header {
+    color: #5E81AC;
+    border-top-color: #D8DEE9;
+}
+.sidebar-card-button {
+    background-color: #E5E9F0;
+    border: 1px solid #D8DEE9;
+    color: #2E3440;
+}
+.sidebar-card-button:hover {
+    background-color: rgba(94, 129, 172, 0.12);
+    border-color: rgba(94, 129, 172, 0.45);
+}
 
 .sidebar-version,
 .sidebar-author { color: #4C566A; }

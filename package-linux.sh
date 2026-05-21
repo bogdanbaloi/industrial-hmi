@@ -64,6 +64,20 @@ for dir in assets config ui; do
     fi
 done
 
+# Demo packaging: flip auth + historian ON so clients see the user
+# management + RBAC stack out of the box without having to edit JSON
+# or run enable-auth.sh. Source-tree config stays OFF so unit tests
+# and the dev path aren't gated by a login prompt.
+PKG_CONFIG="$TMP_DIR/config/app-config.json"
+if [[ -f "$PKG_CONFIG" ]]; then
+    echo "Enabling auth + historian for demo packaging..."
+    sed -i \
+        -e '/"historian":/,/}/ s/"enabled": false/"enabled": true/' \
+        -e '/"auth":/,/}/ s/"enabled": false/"enabled": true/' \
+        "$PKG_CONFIG"
+    mkdir -p "$TMP_DIR/data"
+fi
+
 # Create launch script
 cat > "$TMP_DIR/run.sh" << 'LAUNCHER'
 #!/bin/bash

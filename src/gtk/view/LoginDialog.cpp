@@ -1,5 +1,6 @@
 #include "src/gtk/view/LoginDialog.h"
 
+#include "src/config/ConfigManager.h"
 #include "src/core/i18n.h"
 
 #if defined(_WIN32)
@@ -48,13 +49,19 @@ void LoginDialog::buildUi() {
     // Client-side decoration so the titlebar picks up the GTK CSS
     // theme instead of falling back to native Windows chrome (light
     // grey strip that clashes with our dark content). The
-    // .dialog-titlebar-dark class is defined in
-    // assets/styles/adwaita-theme.css and matches the rest of the
-    // app's dark palette; MainWindow uses the same approach via
-    // its .ui file.
+    // .dialog-titlebar-dark / -light classes are defined in
+    // assets/styles/adwaita-theme.css; pick the one that matches the
+    // configured mode so the login pop-up doesn't look out of place
+    // on the very first launch (before MainWindow exists to set the
+    // global GTK Settings). Default is "dark" -- anything other than
+    // an explicit "light" stays dark.
     auto* header = Gtk::make_managed<Gtk::HeaderBar>();
     header->set_show_title_buttons(true);   // X close button
-    header->add_css_class("dialog-titlebar-dark");
+    const auto theme =
+        app::config::ConfigManager::instance().getDefaultTheme();
+    const bool isDark = (theme != "light");
+    header->add_css_class(isDark ? "dialog-titlebar-dark"
+                                 : "dialog-titlebar-light");
     set_titlebar(*header);
     // GTK4 removed the legacy set_position / move APIs -- initial
     // placement is the WM's job. Most desktop WMs centre a small,

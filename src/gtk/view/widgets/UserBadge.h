@@ -5,6 +5,7 @@
 
 #include <gtkmm.h>
 
+#include <chrono>
 #include <functional>
 
 namespace app::presenter {
@@ -74,6 +75,13 @@ private:
     Gtk::Label*             roleLabel_{nullptr};
     Gtk::Button*            profileButton_{nullptr};
     Gtk::Button*            signOutButton_{nullptr};
+
+    // Approximate sign-in time -- captured at widget construction
+    // since the widget is built right after a successful LoginDialog.
+    // Session has no built-in login timestamp; this keeps the change
+    // local to the view rather than reaching into the auth layer.
+    std::chrono::system_clock::time_point sessionStart_{
+        std::chrono::system_clock::now()};
 
     SignOutAction           signOutAction_;
     sigc::connection        sessionConn_;   // Session::signalChanged

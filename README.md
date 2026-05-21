@@ -7,7 +7,7 @@ and a headless console binary, sharing one tested Model + Presenter
 core.
 
 [![CI](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml)
-![Coverage](https://img.shields.io/badge/coverage-79%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-68%25-green)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows-lightgrey)
 

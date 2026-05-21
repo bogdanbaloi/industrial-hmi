@@ -170,6 +170,16 @@ Gtk::Box* MainWindow::parseLayoutUI() {
     alertsContainer_       = pendingBuilder_->get_widget<Gtk::Box>("alerts_container");
     systemStatusContainer_  = pendingBuilder_->get_widget<Gtk::Box>("system_status_container");
     backendHealthContainer_ = pendingBuilder_->get_widget<Gtk::Box>("backend_health_container");
+    // `user_container` is only present in the redesigned default
+    // layout (main-window.ui); Blueprint + Right variants still
+    // stack UserBadge into system_status_container. Use the
+    // optional-id pattern (object lookup + dynamic_cast) so the
+    // missing id doesn't emit a Gtk-CRITICAL on those layouts.
+    if (auto obj = pendingBuilder_->get_object("user_container")) {
+        userContainer_ = dynamic_cast<Gtk::Box*>(obj.get());
+    } else {
+        userContainer_ = nullptr;
+    }
     clockContainer_         = pendingBuilder_->get_widget<Gtk::Box>("clock_container");
     estopButton_           = pendingBuilder_->get_widget<Gtk::Button>("estop_button");
     // Only present in Blueprint layout (nullptr elsewhere).
@@ -213,25 +223,31 @@ void MainWindow::buildSidebarWidgets() {
         alertsContainer_->append(*alertsPanel_);
     }
 
-    // System status LED badge -- driven by DashboardPresenter's signal.
-    // Pre-pended by the UserBadge below when auth is enabled so the
-    // "who" and the "what" land next to each other in the sidebar.
-    if (systemStatusContainer_) {
-        // UserBadge first so it appears at the top of the block.
-        if (auto* svc = app::core::Application::instance().authService();
-            svc != nullptr) {
-            auto* session =
-                app::core::Application::instance().authSession();
-            if (session != nullptr) {
-                userBadge_ = Gtk::make_managed<app::view::UserBadge>(
-                    *svc, *session,
-                    app::core::Application::instance().usersPresenter());
-                userBadge_->onSignOut(
-                    [this]() { handleSignOut(); });
-                systemStatusContainer_->append(*userBadge_);
+    // UserBadge -- prefer the dedicated `user_container` (redesigned
+    // default layout). Falls back to `system_status_container` for
+    // Blueprint + Right layouts that haven't been migrated yet.
+    if (auto* svc = app::core::Application::instance().authService();
+        svc != nullptr) {
+        auto* session =
+            app::core::Application::instance().authSession();
+        if (session != nullptr) {
+            userBadge_ = Gtk::make_managed<app::view::UserBadge>(
+                *svc, *session,
+                app::core::Application::instance().usersPresenter());
+            userBadge_->onSignOut(
+                [this]() { handleSignOut(); });
+
+            Gtk::Box* host = userContainer_
+                ? userContainer_
+                : systemStatusContainer_;
+            if (host != nullptr) {
+                host->append(*userBadge_);
             }
         }
+    }
 
+    // System status LED badge -- driven by DashboardPresenter's signal.
+    if (systemStatusContainer_) {
         statusBadge_ = Gtk::make_managed<app::view::SystemStatusBadge>();
         systemStatusContainer_->append(*statusBadge_);
         if (dashboardPresenter_) {
@@ -303,10 +319,10 @@ void MainWindow::refreshSidebarTranslations() {
     // translation machinery doesn't run again after a runtime language
     // switch. Re-assign the strings manually via `_()` -- that hits the
     // freshly re-bound gettext catalog.
-    if (appTitleLabel_)    appTitleLabel_->set_label(_("[BB] Industrial HMI"));
-    if (appSubtitleLabel_) appSubtitleLabel_->set_label(_("MVP Architecture"));
+    if (appTitleLabel_)    appTitleLabel_->set_label(_("Industrial HMI"));
+    if (appSubtitleLabel_) appSubtitleLabel_->set_label(_("Production Monitor"));
     if (closeAppButton_)   closeAppButton_->set_label(_("Close Application"));
-    if (versionLabel_)     versionLabel_->set_label(_("Version 1.0.0"));
+    if (versionLabel_)     versionLabel_->set_label(_("Version 1.2.0"));
     if (authorLabel_)      authorLabel_->set_label(_("Portfolio Demo"));
     if (alertsPanel_)      alertsPanel_->refreshTranslations();
     if (statusBadge_)      statusBadge_->refreshTranslations();
