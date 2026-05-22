@@ -22,6 +22,7 @@ namespace app {
     namespace view {
         class Page;
         class DashboardPage;
+        class MultiStationDashboardPage;
         class ProductsPage;
         class SettingsPage;
         class HistoryPage;
@@ -176,6 +177,16 @@ private:
     // (observer wiring, settings-signal connections, themed-widget redraw).
     std::shared_ptr<app::DashboardPresenter> dashboardPresenter_;
     app::view::DashboardPage*                dashboardPage_ = nullptr;
+
+    // Multi-station mode: when Application::slaveProductionModel() is
+    // non-null at createAllPages() time, MainWindow constructs a
+    // SECOND DashboardPresenter wired to that slave model, then mounts
+    // a MultiStationDashboardPage hosting both presenters instead of
+    // the standalone DashboardPage. Sidebar (E-STOP / status badge /
+    // alerts / I/O) stays bound to the master presenter -- the canonical
+    // operator surface. See ADR-0011 + docs/design/multi-station-master-slave.md
+    std::shared_ptr<app::DashboardPresenter> slaveDashboardPresenter_;
+    app::view::MultiStationDashboardPage*    multiStationDashboardPage_ = nullptr;
 
     std::shared_ptr<app::ProductsPresenter>  productsPresenter_;
     app::view::ProductsPage*                 productsPage_  = nullptr;

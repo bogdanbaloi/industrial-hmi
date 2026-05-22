@@ -526,6 +526,21 @@ headerbar.dialog-titlebar-light > windowhandle {
     letter-spacing: 0.5px;
 }
 
+/* Multi-station dashboard pane header -- "MASTER STATION" /
+   "SLAVE STATION" labels above each of the two DashboardPage
+   children when the multi-station layout is active. Same visual
+   language as the sidebar section headers but at the content-area
+   scale: bigger letter-spacing, slight margin, accent colour to
+   tie into the brand. */
+.multistation-pane-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: @accent_color;
+    margin: 8px 8px 4px 8px;
+}
+
 /* Section header -- small uppercase letter-spaced dim text that
    labels each card group ("STATUS", "ALERTS", "I/O"). Thin top
    border separates this section from the one above, with a bit of

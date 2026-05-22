@@ -293,10 +293,12 @@ add_library(objectsModel OBJECT)
 target_sources(objectsModel
     PRIVATE
         src/model/DatabaseManager.cpp
+        src/model/MirrorModel.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
             src/model/SimulatedModel.h
+            src/model/MirrorModel.h
             src/model/DatabaseManager.h
             src/model/ModelContext.h
             src/model/Product.h
@@ -866,6 +868,7 @@ target_sources(objectsView
         src/gtk/view/AboutDialog.cpp
         src/gtk/view/pages/AuditLogPage.cpp
         src/gtk/view/pages/DashboardPage.cpp
+        src/gtk/view/pages/MultiStationDashboardPage.cpp
         src/gtk/view/pages/HistoryPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
         src/gtk/view/pages/SettingsPage.cpp
@@ -888,6 +891,7 @@ target_sources(objectsView
             src/gtk/view/pages/Page.h
             src/gtk/view/pages/AuditLogPage.h
             src/gtk/view/pages/DashboardPage.h
+            src/gtk/view/pages/MultiStationDashboardPage.h
             src/gtk/view/pages/HistoryPage.h
             src/gtk/view/pages/ProductsPage.h
             src/gtk/view/pages/SettingsPage.h

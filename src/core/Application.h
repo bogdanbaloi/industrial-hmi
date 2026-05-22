@@ -24,6 +24,10 @@ namespace app::presenter {
 class UsersPresenter;      // forward decl -- non-owning pointer
 }
 
+namespace app::model {
+class ProductionModel;     // forward decl -- non-owning pointer
+}
+
 namespace app::core {
 
 class Bootstrap;  // forward decl -- defined in Bootstrap.h
@@ -143,6 +147,26 @@ public:
         return usersPresenter_;
     }
 
+    /// Inject the slave-station production model. Only set when
+    /// multi-station mode is enabled (config flag
+    /// `ui.multistation_enabled` true). When non-null, MainWindow
+    /// builds TWO DashboardPresenter instances -- one for the master
+    /// (SimulatedModel singleton) and one for this slave model --
+    /// and replaces the Dashboard tab with the
+    /// MultiStationDashboardPage. The MasterToSlaveBridge that links
+    /// the two models is registered separately on the
+    /// IntegrationManager so it appears in the sidebar BackendHealthBar
+    /// like every other integration backend.
+    ///
+    /// Non-owning; the slave model is constructed in main() alongside
+    /// the bridge and lives the same scope as the IntegrationManager.
+    void setSlaveProductionModel(model::ProductionModel* m) noexcept {
+        slaveProductionModel_ = m;
+    }
+    [[nodiscard]] model::ProductionModel* slaveProductionModel() const noexcept {
+        return slaveProductionModel_;
+    }
+
 private:
     Application() = default;
     ~Application();
@@ -156,6 +180,7 @@ private:
     auth::Session*          authSession_ = nullptr;                  // non-owning
     auth::AuditLogger*      auditLogger_ = nullptr;                  // non-owning
     presenter::UsersPresenter* usersPresenter_ = nullptr;             // non-owning
+    model::ProductionModel* slaveProductionModel_ = nullptr;          // non-owning -- multi-station slave
     std::vector<std::string> startupWarnings_;
     bool                    initialized_{false};
 };

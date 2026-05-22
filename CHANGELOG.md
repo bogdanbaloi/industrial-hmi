@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Multi-station support (Master/Slave first instance)
+
+Opt-in via `ui.multistation_enabled` in config. When enabled the HMI
+instantiates a second `ProductionModel` (`MirrorModel`) for the slave
+role and a `MasterToSlaveBridge` linking it to the singleton
+`SimulatedModel` master. The new `MultiStationDashboardPage` hosts
+two `DashboardPage` instances side by side, each bound to its own
+presenter; the bridge appears in the sidebar `BackendHealthBar`
+alongside TCP / MQTT / Modbus / OPC-UA. Single-station deployments
+are unaffected by default. See ADR-0011 and
+`docs/design/multi-station-master-slave.md` for the full design.
+
+### Added
+
+- `MasterToSlaveBridge` integration backend (in-process bridge linking
+  two `ProductionModel` instances; 6 unit tests).
+- `MirrorModel` concrete `ProductionModel` for the slave role: passive
+  state holder driven by the bridge, no internal simulation.
+- `MultiStationDashboardPage` view that composes two `DashboardPage`
+  instances in a horizontal split.
+- `ConfigManager::isMultiStationEnabled()` getter (defaults false).
+- `Application::setSlaveProductionModel()` injector.
+- ADR-0011 capturing the design + alternatives + roadmap for N-station,
+  fleet view, and the cross-process MQTT-backed bridge replacement.
+
 ## [1.2.0] - 2026-05-20
 
 ### User management + audit polish (B2.5)

@@ -4,6 +4,7 @@
 #include "src/config/ConfigManager.h"
 #include "src/integration/IntegrationManager.h"
 #include "src/integration/MqttClient.h"
+#include "src/integration/MasterToSlaveBridge.h"
 #include "src/integration/SensorIngestBridge.h"
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
@@ -33,6 +34,7 @@
 #include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
 #include "src/model/DatabaseManager.h"
+#include "src/model/MirrorModel.h"
 #include "src/model/SimulatedModel.h"
 #include <chrono>
 #include <cstdint>
@@ -504,6 +506,15 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
 
+        // Multi-station mode -- when enabled, instantiate a slave
+        // MirrorModel and a MasterToSlaveBridge linking the singleton
+        // SimulatedModel (master) into the mirror (slave). Both live
+        // on this stack frame so RAII tears them down after the
+        // IntegrationManager.stopAll() above. See ADR-0011 +
+        // docs/design/multi-station-master-slave.md
+        std::unique_ptr<app::model::MirrorModel>            slaveModel;
+        std::unique_ptr<app::integration::MasterToSlaveBridge> masterSlaveBridge;
+
         // Auth + Historian stacks. Declared in construction order so
         // destruction reverses naturally. See registerAuth() /
         // registerHistorian() for the wiring + degraded-open paths.
@@ -568,6 +579,20 @@ int main(int argc, char* argv[]) {
         }
 #endif
 
+        // Multi-station: build the slave model + the bridge before
+        // startAll so the bridge appears in the BackendHealthBar
+        // alongside TCP/MQTT/Modbus/OPC-UA. The bridge is a regular
+        // IntegrationBackend -- its start() subscribes to the master's
+        // equipment events and forwards them to the slave.
+        if (config.isMultiStationEnabled()) {
+            slaveModel = std::make_unique<app::model::MirrorModel>();
+            masterSlaveBridge =
+                std::make_unique<app::integration::MasterToSlaveBridge>(
+                    app::model::SimulatedModel::instance(),
+                    *slaveModel);
+            integration.registerBackend(std::move(masterSlaveBridge));
+        }
+
         integration.startAll();
 
 #ifdef CONSOLE_MODE
@@ -593,6 +618,13 @@ int main(int argc, char* argv[]) {
         // stay null and run() goes straight to MainWindow as before.
         app.setAuth(authService.get(), &authSession);
         app.setAuditLogger(auditLogger.get());
+
+        // Multi-station slave: when ui.multistation_enabled was true
+        // the slave MirrorModel was constructed above; flow the
+        // pointer into Application so MainWindow can build a second
+        // DashboardPresenter and swap the Dashboard tab for the
+        // MultiStationDashboardPage.
+        app.setSlaveProductionModel(slaveModel.get());
 
         // Users management presenter -- wired only when the full auth
         // stack is up (repo + hasher + audit + session). MainWindow

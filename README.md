@@ -47,6 +47,13 @@ core.
   palettes are single-mode by design), and **alternate window layouts**
   (Right Sidebar mirror; Blueprint top-bar with alerts/logs in
   popovers) swapped at runtime by parsing a different `.ui`.
+- **Multi-station support** -- opt-in via `ui.multistation_enabled`,
+  the HMI hosts two `ProductionModel` instances linked by a
+  `MasterToSlaveBridge` (an `IntegrationBackend` like every other
+  protocol) and renders both stations side by side in a single
+  `MultiStationDashboardPage`. First instance of the multi-station
+  architecture; extends to N-station and to cross-process MQTT-backed
+  bridges without view or presenter changes. See ADR-0011.
 - **11 UI languages** via gettext, runtime switch (no restart) -- the
   page tree is rebuilt so every `_()` and every `translatable="yes"`
   re-resolves against the new catalog.

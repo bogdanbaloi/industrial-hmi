@@ -15,6 +15,7 @@
 #include "src/gtk/view/LoginDialog.h"
 #include "src/presenter/UsersPresenter.h"
 #include "src/gtk/view/pages/DashboardPage.h"
+#include "src/gtk/view/pages/MultiStationDashboardPage.h"
 #include "src/gtk/view/pages/HistoryPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/gtk/view/pages/SettingsPage.h"
@@ -372,7 +373,10 @@ void MainWindow::createAllPages() {
     auto* audit   = app.auditLogger();
     auto* session = app.authSession();
 
-    // Dashboard
+    // Dashboard -- single station by default, multi-station when the
+    // composition root injected a slave model (set via
+    // `Application::setSlaveProductionModel` when config has
+    // `ui.multistation_enabled = true`; see ADR-0011).
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
     dashboardPresenter_->setLogger(logger);
     if (alertCenter_) {
@@ -381,9 +385,31 @@ void MainWindow::createAllPages() {
     if (audit != nullptr && session != nullptr) {
         dashboardPresenter_->setAudit(*audit, *session);
     }
-    dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
-    dashboardPage_->initialize(dashboardPresenter_);
-    registerPage(dashboardPage_);
+
+    auto* slaveModel = app.slaveProductionModel();
+    if (slaveModel != nullptr) {
+        // Multi-station path: build a SECOND DashboardPresenter for
+        // the slave and host both in a MultiStationDashboardPage.
+        // Sidebar (E-STOP, status badge, alerts, I/O) stays bound to
+        // the master presenter -- that's the canonical operator
+        // surface; the slave is a passive secondary monitor here.
+        // Slave presenter intentionally does NOT get the alert center
+        // or audit logger: alerts and audit are an operator-level
+        // concern handled by the master.
+        slaveDashboardPresenter_ =
+            std::make_shared<app::DashboardPresenter>(*slaveModel);
+        slaveDashboardPresenter_->setLogger(logger);
+
+        multiStationDashboardPage_ =
+            Gtk::make_managed<app::view::MultiStationDashboardPage>(*dialogManager_);
+        multiStationDashboardPage_->initialize(dashboardPresenter_,
+                                               slaveDashboardPresenter_);
+        registerPage(multiStationDashboardPage_);
+    } else {
+        dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
+        dashboardPage_->initialize(dashboardPresenter_);
+        registerPage(dashboardPage_);
+    }
 
     // Products
     productsPresenter_ = std::make_shared<app::ProductsPresenter>();
@@ -403,7 +429,12 @@ void MainWindow::createAllPages() {
         const auto userOpt = session->currentUser();
         if (userOpt.has_value()) {
             const auto role = userOpt->role;
-            dashboardPage_->applyRole(role);
+            if (dashboardPage_ != nullptr) {
+                dashboardPage_->applyRole(role);
+            }
+            if (multiStationDashboardPage_ != nullptr) {
+                multiStationDashboardPage_->applyRole(role);
+            }
             productsPage_->applyRole(role);
         }
     }
@@ -519,9 +550,10 @@ void MainWindow::clearPages() {
         mainNotebook_->remove_page(-1);
     }
     pages_.clear();
-    dashboardPage_ = nullptr;
-    productsPage_  = nullptr;
-    settingsPage_  = nullptr;
+    dashboardPage_             = nullptr;
+    multiStationDashboardPage_ = nullptr;
+    productsPage_              = nullptr;
+    settingsPage_              = nullptr;
 #ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
     // mainNotebook_->remove_page above destroyed QualityInspectionPage;
     // its destructor unregistered itself from the presenter, so the
@@ -639,6 +671,7 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     //    drop) and release the presenters.
     clearPages();
     dashboardPresenter_.reset();
+    slaveDashboardPresenter_.reset();
     productsPresenter_.reset();
 
     // 4) Re-point gettext at the new catalog. After this call, both `_()`
@@ -814,6 +847,7 @@ void MainWindow::reloadLayout() {
     //    on screen until we swap. That keeps the UI visually stable
     //    during the rebuild.
     dashboardPresenter_.reset();
+    slaveDashboardPresenter_.reset();
     productsPresenter_.reset();
 
     // 5) Parse the new .ui into a DETACHED subtree (no set_child yet).
@@ -824,12 +858,13 @@ void MainWindow::reloadLayout() {
     //    corresponding widgets will be destroyed when set_child swaps
     //    the roots below.
     pages_.clear();
-    dashboardPage_  = nullptr;
-    productsPage_   = nullptr;
-    settingsPage_   = nullptr;
-    alertsPanel_    = nullptr;
-    statusBadge_    = nullptr;
-    clock_          = nullptr;
+    dashboardPage_             = nullptr;
+    multiStationDashboardPage_ = nullptr;
+    productsPage_              = nullptr;
+    settingsPage_              = nullptr;
+    alertsPanel_               = nullptr;
+    statusBadge_               = nullptr;
+    clock_                     = nullptr;
     Gtk::Box* newRoot = parseLayoutUI();
 
     // 6) Populate the new notebook + sidebar while still detached,
