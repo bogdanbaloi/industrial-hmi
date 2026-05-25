@@ -94,6 +94,71 @@ void UserBadge::buildUi() {
     set_spacing(kBadgeSpacingPx);
 }
 
+void UserBadge::setHorizontal() {
+    // Wipe the current vertical layout and rebuild flat. Called by
+    // MainWindow when mounting the badge into the horizontal sidebar
+    // of the multistation layout. We can't simply set_orientation()
+    // on the outer Box -- the inner structure (identity row + button
+    // row) needs to flatten too.
+    set_orientation(Gtk::Orientation::HORIZONTAL);
+    set_spacing(10);
+    set_valign(Gtk::Align::CENTER);
+
+    // Drop the card chrome -- in the horizontal bar the row backdrop
+    // is provided by the sidebar itself; per-widget cards would
+    // clash visually.
+    remove_css_class("sidebar-card");
+    add_css_class("user-badge-horizontal");
+
+    // Remove existing children (the two original boxes built by
+    // buildUi). GTK4: iterate via get_first_child() / remove().
+    while (auto* child = get_first_child()) {
+        remove(*child);
+    }
+
+    constexpr int kHorizontalAvatarPx = 28;
+
+    avatar_ = Gtk::make_managed<AvatarWidget>(kHorizontalAvatarPx);
+    avatar_->set_valign(Gtk::Align::CENTER);
+    append(*avatar_);
+
+    auto* textCol = Gtk::make_managed<Gtk::Box>(
+        Gtk::Orientation::VERTICAL, 0);
+    textCol->set_valign(Gtk::Align::CENTER);
+
+    usernameLabel_ = Gtk::make_managed<Gtk::Label>();
+    usernameLabel_->set_xalign(0.0F);
+    usernameLabel_->add_css_class("heading");
+    usernameLabel_->set_ellipsize(Pango::EllipsizeMode::END);
+    textCol->append(*usernameLabel_);
+
+    roleLabel_ = Gtk::make_managed<Gtk::Label>();
+    roleLabel_->set_xalign(0.0F);
+    roleLabel_->add_css_class("dim-label");
+    textCol->append(*roleLabel_);
+
+    append(*textCol);
+
+    if (users_ != nullptr) {
+        profileButton_ = Gtk::make_managed<Gtk::Button>(_("Profile"));
+        profileButton_->add_css_class("sidebar-card-button");
+        profileButton_->set_valign(Gtk::Align::CENTER);
+        profileButton_->signal_clicked().connect(
+            sigc::mem_fun(*this, &UserBadge::onProfileClicked));
+        append(*profileButton_);
+    }
+
+    signOutButton_ = Gtk::make_managed<Gtk::Button>(_("Sign out"));
+    signOutButton_->add_css_class("sidebar-card-button");
+    signOutButton_->set_valign(Gtk::Align::CENTER);
+    signOutButton_->signal_clicked().connect(
+        sigc::mem_fun(*this, &UserBadge::onSignOutClicked));
+    append(*signOutButton_);
+
+    // Re-populate from the current session.
+    refresh();
+}
+
 void UserBadge::refresh() {
     const auto userOpt = session_.currentUser();
     if (!userOpt.has_value()) {

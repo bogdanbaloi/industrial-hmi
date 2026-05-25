@@ -1,13 +1,13 @@
-# Multi-station support — Master/Slave layout
+# Multi-station support — Primary/Secondary layout
 
 Implementation plan for the first multi-station HMI layout. The
-shipped feature is **Master → Slave** (calibration station feeds
+shipped feature is **Primary → Secondary** (calibration station feeds
 production station). The architecture is intentionally designed
 to extend to N stations and to fleet view later, captured as
 future work in ADR-0011.
 
 Saved locally until we cut a feature branch. Will move into the
-repo as `docs/design/multi-station-master-slave.md` once work
+repo as `docs/design/multi-station-primary-secondary.md` once work
 begins, so reviewers see the plan alongside the code.
 
 ---
@@ -22,11 +22,11 @@ HMI terminal supervises both.
 
 **Goals.**
 
-1. Ship a working Master/Slave dashboard the operator can switch
+1. Ship a working Primary/Secondary dashboard the operator can switch
    to from the existing palette/layout picker.
 2. Demonstrate that the MVP architecture genuinely supports
    multiple Model instances cleanly.
-3. Establish the integration primitive (`MasterToSlaveBridge`)
+3. Establish the integration primitive (`PrimaryToSecondaryBridge`)
    that extends to N-station fleet topologies as future work.
 4. Document the decision in ADR-0011 with the alternatives
    considered.
@@ -38,7 +38,7 @@ HMI terminal supervises both.
 - Adding new presenters or breaking existing single-station
   layout — current Industrial / Right / Blueprint layouts stay
   unchanged.
-- Cross-process master/slave (over a real network). The bridge
+- Cross-process primary/secondary (over a real network). The bridge
   is in-process for v1; a future PR replaces the bridge with an
   MQTT bridge for cross-process deployment, no presenter or view
   changes needed.
@@ -47,10 +47,10 @@ HMI terminal supervises both.
 
 ## 2. Architecture decision
 
-### Chosen: two ProductionModel instances + MasterToSlaveBridge
+### Chosen: two ProductionModel instances + PrimaryToSecondaryBridge
 
 ```
-       Master                        Slave
+       Primary                        Secondary
    ┌───────────┐                  ┌───────────┐
    │ Production│                  │ Production│
    │  Model A  │─── Bridge ──────▶│  Model B  │
@@ -66,16 +66,16 @@ HMI terminal supervises both.
 
 - **Two `ProductionModel` instances**, fully independent — same
   class, different state.
-- **`MasterToSlaveBridge`** subscribes to Master's "calibration
+- **`PrimaryToSecondaryBridge`** subscribes to Primary's "calibration
   complete" event and calls a `setCalibration(...)` setter on
-  Slave. Implements the existing `IntegrationBackend` interface
+  Secondary. Implements the existing `IntegrationBackend` interface
   so it shows up in the sidebar's BackendHealthBar alongside
   TCP/MQTT/Modbus/OPC-UA — same operational visibility.
 - **Two `DashboardPresenter` instances**, each wired to its own
   model. Same class, configured per instance.
 - **One new page `MultiStationDashboardPage`** in `src/gtk/view/
   pages/`. Holds both presenters, renders two `DashboardPage`-
-  shaped subtrees in a horizontal split (master left, slave
+  shaped subtrees in a horizontal split (primary left, secondary
   right).
 - **New layout `.ui` file** `main-window-multistation.ui` —
   same MainWindow shell, but `main_notebook` is replaced by the
@@ -92,9 +92,9 @@ would need to know about groups too, adding `groupId` parameters
 to every command.
 
 **C. Two ProductionModel + direct cross-pointer (no bridge)**.
-Rejected because: couples the two models at class level (Slave
-holds a pointer to Master), breaks the test isolation property
-(can't unit-test Slave without instantiating Master). The bridge
+Rejected because: couples the two models at class level (Secondary
+holds a pointer to Primary), breaks the test isolation property
+(can't unit-test Secondary without instantiating Primary). The bridge
 keeps both models pristine and pushes the coupling into one
 testable component.
 
@@ -113,8 +113,8 @@ the v1 scope tight.
 
 ```
 src/integration/
-  MasterToSlaveBridge.h
-  MasterToSlaveBridge.cpp
+  PrimaryToSecondaryBridge.h
+  PrimaryToSecondaryBridge.cpp
 
 src/gtk/view/pages/
   MultiStationDashboardPage.h
@@ -127,11 +127,11 @@ docs/adr/
   0011-multi-station-support.md
 
 docs/design/
-  multi-station-master-slave.md    # this file, moved at branch cut
+  multi-station-primary-secondary.md    # this file, moved at branch cut
   multi-station-roadmap.png        # optional architecture diagram
 
 tests/integration/
-  master_to_slave_bridge_test.cpp
+  primary_to_secondary_bridge_test.cpp
 
 tests/scenarios/
   multistation_calibration.txt
@@ -141,13 +141,13 @@ tests/scenarios/
 ### Modified files
 
 ```
-src/main.cpp                         # register MasterToSlaveBridge when enabled
+src/main.cpp                         # register PrimaryToSecondaryBridge when enabled
 src/gtk/view/MainWindow.cpp          # palette/layout picker entry + page mount
 src/gtk/view/MainWindow.h            # add multistation handle if needed
 src/config/config_defaults.h         # kMainWindowMultistationUI constant
 src/config/ConfigManager.h           # getMultiStationEnabled() getter
 CMakeLists.txt                       # add MultiStationDashboardPage to objectsView,
-                                       MasterToSlaveBridge to objectsIntegration
+                                       PrimaryToSecondaryBridge to objectsIntegration
 docs/adr/README.md                   # index entry for ADR-0011
 CHANGELOG.md                         # Unreleased entry
 README.md                            # Highlights bullet for multi-station support
@@ -158,7 +158,7 @@ config/app-config.json               # ui.layout new option documented
 
 - `ProductionModel` — used as-is, two instances
 - `DashboardPresenter` — used as-is, two instances
-- `IntegrationBackend` interface — `MasterToSlaveBridge` implements it
+- `IntegrationBackend` interface — `PrimaryToSecondaryBridge` implements it
 - `BackendHealthPresenter` + `BackendHealthBar` — bridge auto-appears
 - Existing single-station layouts (Industrial / Right / Blueprint)
 - All existing tests
@@ -171,43 +171,43 @@ Each phase has a clear exit criterion. You can stop at the end of
 any phase and the code in `main` is shippable — no half-merged
 states.
 
-### Phase 1 — `MasterToSlaveBridge` skeleton + tests (4-6 h)
+### Phase 1 — `PrimaryToSecondaryBridge` skeleton + tests (4-6 h)
 
 **Goal.** The bridge exists as a tested unit, not yet wired into
 the app.
 
 **Tasks.**
 
-1. Create `MasterToSlaveBridge.{h,cpp}` implementing
+1. Create `PrimaryToSecondaryBridge.{h,cpp}` implementing
    `IntegrationBackend`:
-   - Ctor takes `ProductionModel& master, ProductionModel& slave`.
-   - On `start()`: subscribes to Master's "calibration complete"
+   - Ctor takes `ProductionModel& primary, ProductionModel& secondary`.
+   - On `start()`: subscribes to Primary's "calibration complete"
      callback. State → `Connected`.
-   - On Master event: extracts calibration result, calls
-     `slave.setCalibration(value)`.
+   - On Primary event: extracts calibration result, calls
+     `secondary.setCalibration(value)`.
    - On `stop()`: unsubscribes. State → `Disconnected`.
-   - `name()` returns `"Master→Slave"`.
+   - `name()` returns `"Master→Secondary"`.
    - `metricsSummary()` returns last-bridged timestamp + count.
 
-2. Write `tests/integration/master_to_slave_bridge_test.cpp`:
+2. Write `tests/integration/primary_to_secondary_bridge_test.cpp`:
    - Bridge wires two model fakes correctly.
-   - Master event triggers slave setter.
-   - `stop()` properly unsubscribes (subsequent Master events do
-     NOT reach slave).
+   - Primary event triggers secondary setter.
+   - `stop()` properly unsubscribes (subsequent Primary events do
+     NOT reach secondary).
    - Bridge state transitions correctly.
    - Bridge metrics report correctly.
 
 3. Add to `CMakeLists.txt` under `objectsIntegration`. Add test to
    `tests/CMakeLists.txt`.
 
-**Exit criterion.** `ctest -R master_to_slave` passes 5+ cases.
+**Exit criterion.** `ctest -R master_to_secondary` passes 5+ cases.
 Bridge is unused in `main.cpp` yet — no behavior change to the
 running app.
 
 **Verification.**
 ```bash
 cmake --build build/debug
-cd build/debug && ctest --output-on-failure -R master_to_slave
+cd build/debug && ctest --output-on-failure -R master_to_secondary
 ```
 
 ---
@@ -221,15 +221,15 @@ instances side-by-side. Page is not yet mountable from a layout
 **Tasks.**
 
 1. Create `MultiStationDashboardPage.{h,cpp}` inheriting `Page`:
-   - Ctor takes two `DashboardPresenter*` (master, slave) +
+   - Ctor takes two `DashboardPresenter*` (primary, secondary) +
      services.
    - Builds a horizontal `Gtk::Box` with two child boxes (60/40
      or 50/50 split, decide on visual review).
    - Each child mounts the same subtree DashboardPage already
      builds (work-unit card, equipment row, quality row, control
      panel) but bound to its own presenter.
-   - Each child has a small header label: "MASTER STATION (A)" /
-     "SLAVE STATION (B)" so the operator knows which is which.
+   - Each child has a small header label: "PRIMARY STATION (A)" /
+     "SECONDARY STATION (B)" so the operator knows which is which.
    - Both panes refresh on their own presenter's observer
      callbacks (independent state).
 
@@ -259,7 +259,7 @@ cmake --build build/debug
 
 ### Phase 3 — Wire it up: layout, config, picker (4-5 h)
 
-**Goal.** The operator can pick "Multi-Station (Master/Slave)"
+**Goal.** The operator can pick "Multi-Station (Primary/Secondary)"
 from Settings → Palette/Layout, and the page renders with both
 stations live.
 
@@ -271,7 +271,7 @@ stations live.
      where `MultiStationDashboardPage` is appended programmatically
      by MainWindow.
    - Sidebar stays the same (USER / STATUS / ALERTS / I/O sections);
-     I/O section will auto-show the MasterToSlaveBridge alongside
+     I/O section will auto-show the PrimaryToSecondaryBridge alongside
      other backends.
 
 2. Add layout option:
@@ -280,18 +280,18 @@ stations live.
    - `MainWindow::chooseMainWindowUI(palette)`: add case
      `palette == "multistation"`.
    - Settings page palette picker: add new entry "Multi-Station
-     (Master/Slave) — DARK + LIGHT".
+     (Primary/Secondary) — DARK + LIGHT".
 
 3. `main.cpp` composition root:
    - When config says `ui.multistation_enabled = true` (new flag,
      defaults to false): instantiate **two**
      `SimulatedModel` instances + two `DashboardPresenter`
-     instances + `MasterToSlaveBridge` registered with
+     instances + `PrimaryToSecondaryBridge` registered with
      `IntegrationManager`.
    - When false: existing single-model path.
    - Both branches must not break each other; if multi-station
      is enabled, the existing single-station layouts gracefully
-     show only the master (or are disabled — decide on UX).
+     show only the primary (or are disabled — decide on UX).
 
 4. `MainWindow::createAllPages()`: when current layout is
    multistation, mount `MultiStationDashboardPage` into the
@@ -303,10 +303,10 @@ stations live.
 
 **Exit criterion.** Launch the GTK binary with
 `ui.multistation_enabled=true`, select the multistation layout
-in Settings. Two dashboards render side-by-side. Master shows
-calibration progressing; Slave shows production using the
+in Settings. Two dashboards render side-by-side. Primary shows
+calibration progressing; Secondary shows production using the
 calibration result mirrored via the bridge. BackendHealthBar
-shows "Master→Slave: CONNECTED".
+shows "Master→Secondary: CONNECTED".
 
 **Verification.**
 ```bash
@@ -328,12 +328,12 @@ the decision; CHANGELOG + README reflect the new feature.
 1. Write `tests/scenarios/multistation_calibration.txt` +
    `.expected`:
    - Console binary starts with multistation enabled.
-   - `start master` → master begins calibration.
-   - `status master` → shows calibrating.
-   - Wait, then `status slave` → shows new calibration value
+   - `start primary` → primary begins calibration.
+   - `status primary` → shows calibrating.
+   - Wait, then `status secondary` → shows new calibration value
      received.
    - `quit`.
-   - Expected output captures the master + slave state lines.
+   - Expected output captures the primary + secondary state lines.
 
 2. Add the scenario to `tests/CMakeLists.txt` so ctest runs it.
 
@@ -350,13 +350,13 @@ the decision; CHANGELOG + README reflect the new feature.
 
 4. Add index entry to `docs/adr/README.md`.
 
-5. `CHANGELOG.md` Unreleased entry: *"Multi-station Master/Slave
+5. `CHANGELOG.md` Unreleased entry: *"Multi-station Primary/Secondary
    layout (opt-in via `ui.multistation_enabled`). New
-   `MasterToSlaveBridge` integration backend connects two
+   `PrimaryToSecondaryBridge` integration backend connects two
    `ProductionModel` instances in-process. See ADR-0011."*
 
 6. `README.md` Highlights bullet (under existing palette/layout
-   bullet): *"**Multi-station support** — Master/Slave dashboard
+   bullet): *"**Multi-station support** — Primary/Secondary dashboard
    for paired calibration/production stations; first instance of
    the multi-station architecture documented in ADR-0011."*
 
@@ -383,7 +383,7 @@ Outline only — fleshed out at write time with the actual decisions
 locked in from Phase 1-3 experience:
 
 ```
-# 0011. Multi-station support (Master/Slave first instance)
+# 0011. Multi-station support (Primary/Secondary first instance)
 
 ## Status
 Accepted (2026-MM, PR #NNN)
@@ -397,7 +397,7 @@ N-station and fleet topologies.
 
 ## Decision
 - Two independent `ProductionModel` instances, one per station.
-- `MasterToSlaveBridge` connects them, implementing the existing
+- `PrimaryToSecondaryBridge` connects them, implementing the existing
   `IntegrationBackend` interface so it appears in the sidebar's
   BackendHealthBar with the same operational visibility as TCP/
   MQTT/Modbus/OPC-UA.
@@ -423,7 +423,7 @@ N-station and fleet topologies.
   application; nothing new to reason about.
 - Two models in memory = roughly 2x state footprint for the
   multi-station mode. Acceptable on a manufacturing terminal.
-- Bridge is currently in-process. Cross-process master/slave
+- Bridge is currently in-process. Cross-process primary/secondary
   needs a future PR (MQTT-backed bridge); the interface is
   designed to support this without presenter changes.
 
@@ -432,7 +432,7 @@ N-station and fleet topologies.
 - Fleet view (M sites, each with N stations, via central MQTT).
 - Compare mode (current batch vs historical batch from historian).
 - Cross-process bridge (MQTT-backed replacement for the in-process
-  MasterToSlaveBridge).
+  PrimaryToSecondaryBridge).
 ```
 
 ---
@@ -440,13 +440,13 @@ N-station and fleet topologies.
 ## 6. Test plan
 
 **Unit (Phase 1):**
-- `MasterToSlaveBridge` correct wiring (5+ cases)
+- `PrimaryToSecondaryBridge` correct wiring (5+ cases)
 - Bridge state transitions
 - Bridge metrics
 
 **Integration (Phase 4):**
 - Console scenario: `multistation_calibration.txt` — end-to-end
-  master → bridge → slave through real `Bootstrap`.
+  primary → bridge → secondary through real `Bootstrap`.
 
 **Manual smoke (Phase 3):**
 - Launch GTK binary, switch to multi-station layout, verify
@@ -485,7 +485,7 @@ page-rebuild mechanism (same pattern as language swap).
 
 A 1920×1080 touchscreen split 50/50 leaves each pane at 960px
 wide — tight for the current DashboardPage's element density.
-Decide on review: either a 60/40 split (master gets the
+Decide on review: either a 60/40 split (primary gets the
 attention), or a denser layout in the multi-station variant.
 
 **Open question: E-STOP semantics**
@@ -493,7 +493,7 @@ attention), or a denser layout in the multi-station variant.
 Should E-STOP stop both stations or only the focused one? Real-
 world deployment likely stops both (operator at panel sees
 emergency, hits one button). Default: stop both. Document in ADR.
-Add a "Stop master only" / "Stop slave only" affordance later if
+Add a "Stop primary only" / "Stop secondary only" affordance later if
 operators ask.
 
 **Open question: alerts**
@@ -520,7 +520,7 @@ review cycles + iterations on visual layout. **Plan for 2 weeks
 calendar** to ship cleanly without crunch.
 
 **Concrete branch + commit cadence**:
-- Branch `feature/multi-station-master-slave` cut from `main`
+- Branch `feature/multi-station-primary-secondary` cut from `main`
   at Phase 1 start.
 - Commits per phase: 1-3 commits each.
 - PR opened at end of Phase 3 (working feature visible to
@@ -533,7 +533,7 @@ calendar** to ship cleanly without crunch.
 ## 9. Next action
 
 When you give the go: I create the feature branch, copy this plan
-into `docs/design/multi-station-master-slave.md` so reviewers
+into `docs/design/multi-station-primary-secondary.md` so reviewers
 see it alongside the code, and start Phase 1.
 
 If you want to iterate the plan first (different bridge design,

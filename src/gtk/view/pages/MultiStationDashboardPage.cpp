@@ -28,56 +28,69 @@ void MultiStationDashboardPage::buildUi() {
     split->set_vexpand(true);
     split->set_homogeneous(true);   // 50/50 split; revisit if visual review wants 60/40
 
-    // Master pane: header + DashboardPage in a vertical box.
-    auto* masterColumn = Gtk::make_managed<Gtk::Box>(
+    // Primary pane: header + DashboardPage in a vertical box.
+    auto* primaryColumn = Gtk::make_managed<Gtk::Box>(
         Gtk::Orientation::VERTICAL, kHeaderSpacingPx);
-    masterColumn->set_hexpand(true);
-    auto* masterHeader = Gtk::make_managed<Gtk::Label>(_("MASTER STATION"));
-    masterHeader->set_xalign(0.0F);
-    masterHeader->add_css_class("multistation-pane-header");
-    masterColumn->append(*masterHeader);
+    primaryColumn->set_hexpand(true);
+    auto* primaryHeader = Gtk::make_managed<Gtk::Label>(_("PRIMARY STATION"));
+    primaryHeader->set_xalign(0.0F);
+    primaryHeader->add_css_class("multistation-pane-header");
+    primaryColumn->append(*primaryHeader);
 
-    masterPage_ = Gtk::make_managed<DashboardPage>(dialogManager_);
-    masterPage_->set_hexpand(true);
-    masterPage_->set_vexpand(true);
-    masterColumn->append(*masterPage_);
-    split->append(*masterColumn);
+    primaryPage_ = Gtk::make_managed<DashboardPage>(dialogManager_);
+    primaryPage_->set_hexpand(true);
+    primaryPage_->set_vexpand(true);
+    // Compact CSS variant -- reduces card padding, font sizes, button
+    // sizing so the full DashboardPage fits the ~860px-per-pane budget
+    // a 1920x1080 terminal leaves after the sidebar takes 200px and
+    // the split is 50/50. Class drives .dashboard-compact rules in
+    // adwaita-theme.css.
+    primaryPage_->add_css_class("dashboard-compact");
+    primaryColumn->append(*primaryPage_);
+    split->append(*primaryColumn);
 
-    // Slave pane: same shape.
-    auto* slaveColumn = Gtk::make_managed<Gtk::Box>(
+    // Secondary pane: same shape.
+    auto* secondaryColumn = Gtk::make_managed<Gtk::Box>(
         Gtk::Orientation::VERTICAL, kHeaderSpacingPx);
-    slaveColumn->set_hexpand(true);
-    auto* slaveHeader = Gtk::make_managed<Gtk::Label>(_("SLAVE STATION"));
-    slaveHeader->set_xalign(0.0F);
-    slaveHeader->add_css_class("multistation-pane-header");
-    slaveColumn->append(*slaveHeader);
+    secondaryColumn->set_hexpand(true);
+    auto* secondaryHeader = Gtk::make_managed<Gtk::Label>(_("SECONDARY STATION"));
+    secondaryHeader->set_xalign(0.0F);
+    secondaryHeader->add_css_class("multistation-pane-header");
+    secondaryColumn->append(*secondaryHeader);
 
-    slavePage_ = Gtk::make_managed<DashboardPage>(dialogManager_);
-    slavePage_->set_hexpand(true);
-    slavePage_->set_vexpand(true);
-    slaveColumn->append(*slavePage_);
-    split->append(*slaveColumn);
+    secondaryPage_ = Gtk::make_managed<DashboardPage>(dialogManager_);
+    secondaryPage_->set_hexpand(true);
+    secondaryPage_->set_vexpand(true);
+    secondaryPage_->add_css_class("dashboard-compact");
+    secondaryColumn->append(*secondaryPage_);
+    split->append(*secondaryColumn);
 
     append(*split);
 }
 
 void MultiStationDashboardPage::initialize(
-        std::shared_ptr<DashboardPresenter> masterPresenter,
-        std::shared_ptr<DashboardPresenter> slavePresenter) {
+        std::shared_ptr<DashboardPresenter> primaryPresenter,
+        std::shared_ptr<DashboardPresenter> secondaryPresenter) {
     // Each child page wires up to its own presenter independently.
     // Observer registration happens inside DashboardPage::initialize,
     // identical to single-station deployment.
-    if (masterPage_ != nullptr) {
-        masterPage_->initialize(std::move(masterPresenter));
+    if (primaryPage_ != nullptr) {
+        primaryPage_->initialize(std::move(primaryPresenter));
+        // Shrink the wide Cairo widgets so three quality cards fit
+        // in the ~860px-per-pane budget without clipping. The
+        // dashboard-compact CSS class handles paddings + fonts; this
+        // call handles gauge + trend-chart explicit sizing.
+        primaryPage_->setCompact(true);
     }
-    if (slavePage_ != nullptr) {
-        slavePage_->initialize(std::move(slavePresenter));
+    if (secondaryPage_ != nullptr) {
+        secondaryPage_->initialize(std::move(secondaryPresenter));
+        secondaryPage_->setCompact(true);
     }
 }
 
 void MultiStationDashboardPage::applyRole(app::auth::Role role) {
-    if (masterPage_ != nullptr) masterPage_->applyRole(role);
-    if (slavePage_ != nullptr) slavePage_->applyRole(role);
+    if (primaryPage_ != nullptr) primaryPage_->applyRole(role);
+    if (secondaryPage_ != nullptr) secondaryPage_->applyRole(role);
 }
 
 Glib::ustring MultiStationDashboardPage::pageTitle() const {
@@ -87,18 +100,18 @@ Glib::ustring MultiStationDashboardPage::pageTitle() const {
 }
 
 void MultiStationDashboardPage::onThemeChanged() {
-    if (masterPage_ != nullptr) masterPage_->onThemeChanged();
-    if (slavePage_ != nullptr) slavePage_->onThemeChanged();
+    if (primaryPage_ != nullptr) primaryPage_->onThemeChanged();
+    if (secondaryPage_ != nullptr) secondaryPage_->onThemeChanged();
 }
 
 void MultiStationDashboardPage::onLanguageChanged() {
-    if (masterPage_ != nullptr) masterPage_->onLanguageChanged();
-    if (slavePage_ != nullptr) slavePage_->onLanguageChanged();
+    if (primaryPage_ != nullptr) primaryPage_->onLanguageChanged();
+    if (secondaryPage_ != nullptr) secondaryPage_->onLanguageChanged();
 }
 
 void MultiStationDashboardPage::refreshThemedWidgets() {
-    if (masterPage_ != nullptr) masterPage_->refreshThemedWidgets();
-    if (slavePage_ != nullptr) slavePage_->refreshThemedWidgets();
+    if (primaryPage_ != nullptr) primaryPage_->refreshThemedWidgets();
+    if (secondaryPage_ != nullptr) secondaryPage_->refreshThemedWidgets();
 }
 
 }  // namespace app::view

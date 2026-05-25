@@ -482,7 +482,7 @@ target_sources(objectsIntegrationCore
         src/integration/PlainTextTelemetryFormatter.cpp
         src/integration/JsonTelemetryFormatter.cpp
         src/integration/SensorIngestBridge.cpp
-        src/integration/MasterToSlaveBridge.cpp
+        src/integration/PrimaryToSecondaryBridge.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -498,7 +498,7 @@ target_sources(objectsIntegrationCore
             src/integration/JsonTelemetryFormatter.h
             src/integration/ProductionTelemetryBridge.h
             src/integration/SensorIngestBridge.h
-            src/integration/MasterToSlaveBridge.h
+            src/integration/PrimaryToSecondaryBridge.h
 )
 target_link_libraries(objectsIntegrationCore
     PUBLIC

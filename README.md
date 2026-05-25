@@ -49,7 +49,7 @@ core.
   popovers) swapped at runtime by parsing a different `.ui`.
 - **Multi-station support** -- opt-in via `ui.multistation_enabled`,
   the HMI hosts two `ProductionModel` instances linked by a
-  `MasterToSlaveBridge` (an `IntegrationBackend` like every other
+  `PrimaryToSecondaryBridge` (an `IntegrationBackend` like every other
   protocol) and renders both stations side by side in a single
   `MultiStationDashboardPage`. First instance of the multi-station
   architecture; extends to N-station and to cross-process MQTT-backed
@@ -62,7 +62,7 @@ core.
   traffic on one socket (publish + subscribe bridges). OPC-UA runs
   the HMI as both server (SCADA reads our state) and client (we read
   PLC telemetry), the canonical "data hub" topology. TCP exposes a
-  command surface for external supervisors. **Modbus master** polls
+  command surface for external supervisors. **Modbus primary** polls
   remote slaves / PLCs on a configurable register map and drives the
   same Model setters as every other inbound channel. Every channel
   surfaces a uniform `IntegrationBackend` pill in the dashboard's I/O
@@ -135,7 +135,7 @@ python examples/mqtt_subscribe_telemetry.py # tail outbound MQTT publishes
 python examples/mqtt_publish_sensor.py 0 off# drive A-LINE off via inbound MQTT
 python examples/opcua_read_state.py         # browse + read the OPC-UA address space
 python examples/opcua_subscribe_equipment.py# live notifications via OPC-UA subscribe
-python examples/modbus_slave_simulator.py   # host a Modbus TCP slave, toggle registers
+python examples/modbus_slave_simulator.py   # host a Modbus TCP secondary, toggle registers
 python examples/factory_simulation.py       # orchestrate all four protocols in parallel
 ```
 
@@ -286,7 +286,7 @@ src/
     ProductionTelemetryBridge   Manufacturing -> MQTT outbound bridge
     SensorIngestBridge          MQTT -> Manufacturing inbound bridge
     opcua/              OPC-UA (BUILD_OPCUA_BACKEND=ON), open62541-backed
-    modbus/             Modbus master (BUILD_MODBUS_BACKEND=ON, default),
+    modbus/             Modbus primary (BUILD_MODBUS_BACKEND=ON, default),
                         hand-rolled MBAP framing over Boost.Asio. Reader
                         interface + concrete TCP client + register map +
                         ingest bridge + jthread poll loop + IntegrationBackend

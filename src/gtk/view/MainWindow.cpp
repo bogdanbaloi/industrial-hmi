@@ -148,7 +148,15 @@ MainWindow::~MainWindow() {
 }
 
 const char* MainWindow::chooseMainWindowUI(const std::string& palette) {
-    // Palettes with a structurally different layout get their own .ui.
+    // Multi-station mode does NOT override layout -- it reuses the
+    // palette's existing main-window .ui so the full sidebar (with
+    // UserBadge / AlertsPanel / BackendHealthBar) stays visible.
+    // The Dashboard tab content is swapped in createAllPages: when
+    // a secondary model is wired in, a MultiStationDashboardPage is
+    // mounted instead of the single DashboardPage. The two
+    // dashboards inside are aggressively compacted (see
+    // DashboardPage::setCompact) so they fit alongside the full
+    // sidebar without overflow. See ADR-0011.
     if (palette == "blueprint") return app::config::defaults::kMainWindowBlueprintUI;
     if (palette == "right")     return app::config::defaults::kMainWindowRightUI;
     return app::config::defaults::kMainWindowUI;
@@ -269,6 +277,8 @@ void MainWindow::buildSidebarWidgets() {
                 app::core::Application::instance().integrationManager()) {
             // Compact strip on Blueprint (top-bar host has no vertical
             // budget for a card); full sidebar card everywhere else.
+            // Multi-station reuses the full sidebar layout now too;
+            // see chooseMainWindowUI + ADR-0011.
             const auto layout =
                 app::config::ConfigManager::instance().getPalette() ==
                         "blueprint"
@@ -374,8 +384,8 @@ void MainWindow::createAllPages() {
     auto* session = app.authSession();
 
     // Dashboard -- single station by default, multi-station when the
-    // composition root injected a slave model (set via
-    // `Application::setSlaveProductionModel` when config has
+    // composition root injected a secondary model (set via
+    // `Application::setSecondaryProductionModel` when config has
     // `ui.multistation_enabled = true`; see ADR-0011).
     dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
     dashboardPresenter_->setLogger(logger);
@@ -386,24 +396,30 @@ void MainWindow::createAllPages() {
         dashboardPresenter_->setAudit(*audit, *session);
     }
 
-    auto* slaveModel = app.slaveProductionModel();
-    if (slaveModel != nullptr) {
+    // Multi-station: when a secondary model is wired in, replace
+    // the Dashboard tab with MultiStationDashboardPage hosting two
+    // DashboardPage instances. The page uses an aggressively
+    // compacted variant (smaller gauges, no trend charts) so the
+    // two panes fit alongside the full sidebar without overflow.
+    // See ADR-0011.
+    auto* secondaryModel = app.secondaryProductionModel();
+    if (secondaryModel != nullptr) {
         // Multi-station path: build a SECOND DashboardPresenter for
-        // the slave and host both in a MultiStationDashboardPage.
+        // the secondary and host both in a MultiStationDashboardPage.
         // Sidebar (E-STOP, status badge, alerts, I/O) stays bound to
-        // the master presenter -- that's the canonical operator
-        // surface; the slave is a passive secondary monitor here.
-        // Slave presenter intentionally does NOT get the alert center
+        // the primary presenter -- that's the canonical operator
+        // surface; the secondary is a passive secondary monitor here.
+        // Secondary presenter intentionally does NOT get the alert center
         // or audit logger: alerts and audit are an operator-level
-        // concern handled by the master.
-        slaveDashboardPresenter_ =
-            std::make_shared<app::DashboardPresenter>(*slaveModel);
-        slaveDashboardPresenter_->setLogger(logger);
+        // concern handled by the primary.
+        secondaryDashboardPresenter_ =
+            std::make_shared<app::DashboardPresenter>(*secondaryModel);
+        secondaryDashboardPresenter_->setLogger(logger);
 
         multiStationDashboardPage_ =
             Gtk::make_managed<app::view::MultiStationDashboardPage>(*dialogManager_);
         multiStationDashboardPage_->initialize(dashboardPresenter_,
-                                               slaveDashboardPresenter_);
+                                               secondaryDashboardPresenter_);
         registerPage(multiStationDashboardPage_);
     } else {
         dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
@@ -671,7 +687,7 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     //    drop) and release the presenters.
     clearPages();
     dashboardPresenter_.reset();
-    slaveDashboardPresenter_.reset();
+    secondaryDashboardPresenter_.reset();
     productsPresenter_.reset();
 
     // 4) Re-point gettext at the new catalog. After this call, both `_()`
@@ -847,7 +863,7 @@ void MainWindow::reloadLayout() {
     //    on screen until we swap. That keeps the UI visually stable
     //    during the rebuild.
     dashboardPresenter_.reset();
-    slaveDashboardPresenter_.reset();
+    secondaryDashboardPresenter_.reset();
     productsPresenter_.reset();
 
     // 5) Parse the new .ui into a DETACHED subtree (no set_child yet).

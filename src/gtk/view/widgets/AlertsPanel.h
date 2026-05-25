@@ -79,6 +79,30 @@ public:
         refresh();
     }
 
+    /// Switch to a compact horizontal-bar variant: hides the scrolling
+    /// list, makes the header inline ("ALERTS . N") so the panel fits
+    /// in a single row of the multistation bottom-bar sidebar without
+    /// dominating. Operator still sees count + can clear; detailed
+    /// per-alert cards are only visible in the regular vertical
+    /// layout. Idempotent. One-way for v1; reverting requires a fresh
+    /// panel instance.
+    void setCompact() {
+        compact_ = true;
+        // Slim the panel's own margins -- horizontal bar has tighter
+        // visual budget than the vertical sidebar.
+        set_margin_start(8);
+        set_margin_end(8);
+        set_margin_top(0);
+        set_margin_bottom(0);
+        if (scroller_ != nullptr) scroller_->set_visible(false);
+        // Suppress the history toggle in compact mode -- there's no
+        // list to swap into. Operator opens the future Alerts tab for
+        // history detail. Clear-all stays so the operator can resolve
+        // active alerts inline.
+        if (historyToggle_ != nullptr) historyToggle_->set_visible(false);
+        updateHeaderLabels();
+    }
+
 private:
     // Queue a single GTK-thread refresh. Repeated calls while an idle
     // is already pending collapse into one -- cheaper redraw + avoids
@@ -132,7 +156,15 @@ private:
     // Keep header text in sync with the current view mode + locale.
     void updateHeaderLabels() {
         if (headerLabel_) {
-            headerLabel_->set_label(showingHistory_ ? _("History") : _("Alerts"));
+            std::string base = showingHistory_ ? _("History") : _("Alerts");
+            if (compact_) {
+                // Append the active alert count so the operator still
+                // sees the badge even though the list is hidden.
+                const auto n = alertCenter_.snapshot().size();
+                base += " \xC2\xB7 ";              // U+00B7 MIDDLE DOT
+                base += std::to_string(n);
+            }
+            headerLabel_->set_label(base);
         }
         if (clearButton_) {
             clearButton_->set_label(showingHistory_ ? _("Clear history")
@@ -167,6 +199,13 @@ private:
     }
 
     void refresh() {
+        // Compact mode -- header carries the count; we still need to
+        // refresh that label every alert change so the badge updates.
+        if (compact_) {
+            updateHeaderLabels();
+            return;
+        }
+
         // Wipe + rebuild. Small lists, no flicker concern in practice.
         while (auto* child = listBox_->get_first_child()) {
             listBox_->remove(*child);
@@ -280,6 +319,7 @@ private:
     Gtk::ScrolledWindow* scroller_{nullptr};
     Gtk::Box*            listBox_{nullptr};
     bool                 showingHistory_{false};
+    bool                 compact_{false};
     sigc::connection     pendingRefresh_;
 };
 

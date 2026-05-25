@@ -12,7 +12,7 @@ namespace app::model {
 
 /// Concrete ProductionModel that holds state but does not run its own
 /// simulation. Designed for the SLAVE role in a multi-station
-/// deployment: state changes arrive from a `MasterToSlaveBridge`
+/// deployment: state changes arrive from a `PrimaryToSecondaryBridge`
 /// (or, in a future cross-process variant, from an MQTT/OPC-UA ingest
 /// bridge) and the model just stores them + fires observer callbacks.
 ///
@@ -21,7 +21,7 @@ namespace app::model {
 ///   HMI assumes one model instance per process. Lifting that
 ///   constraint touches every caller of `SimulatedModel::instance()`.
 ///   MirrorModel is the lower-risk path: introduce a separate concrete
-///   for the slave role, keep SimulatedModel as the master, both
+///   for the secondary role, keep SimulatedModel as the primary, both
 ///   implement the same ProductionModel interface. See ADR-0011 for
 ///   the trade-off discussion.
 ///
@@ -33,18 +33,18 @@ namespace app::model {
 ///     startCalibration) DO update the local system state and fire
 ///     onSystemStateChanged, so the operator sees something happen
 ///     when they click. They do NOT trigger any background ticking;
-///     the slave is a mirror, not an independent producer. Sufficient
-///     for v1; cross-process v2 will route slave commands back upstream.
+///     the secondary is a mirror, not an independent producer. Sufficient
+///     for v1; cross-process v2 will route secondary commands back upstream.
 ///   * Queries return whatever is in local state.
 ///
 /// Thread safety: the bridge fires from whatever thread produced the
-/// master event (typically the simulator tick thread). Setters take
+/// primary event (typically the simulator tick thread). Setters take
 /// the model mutex; callbacks are invoked under the mutex with copies
 /// so the observer can safely read.
 class MirrorModel final : public ProductionModel {
 public:
     /// Pre-populates with `equipmentCount` equipment slots and
-    /// `qualityCount` quality checkpoints so the slave's dashboard
+    /// `qualityCount` quality checkpoints so the secondary's dashboard
     /// renders cards from the very first frame, before any bridge
     /// event arrives. Defaults match SimulatedModel's three-line
     /// layout.

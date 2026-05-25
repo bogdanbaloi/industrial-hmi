@@ -267,11 +267,11 @@ public:
 
     // Multi-station mode. When true, main() instantiates a second
     // ProductionModel (MirrorModel) for the SLAVE role, registers a
-    // MasterToSlaveBridge between the two models with the
+    // PrimaryToSecondaryBridge between the two models with the
     // IntegrationManager, and MainWindow swaps the regular Dashboard
     // tab for the MultiStationDashboardPage which renders both
     // stations side by side. Default off so single-station deployments
-    // are unaffected. See ADR-0011 + docs/design/multi-station-master-slave.md
+    // are unaffected. See ADR-0011 + docs/design/multi-station-primary-secondary.md
     [[nodiscard]] bool isMultiStationEnabled() const {
         return getValue("ui.multistation_enabled", "false") == "true";
     }

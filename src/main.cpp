@@ -4,7 +4,7 @@
 #include "src/config/ConfigManager.h"
 #include "src/integration/IntegrationManager.h"
 #include "src/integration/MqttClient.h"
-#include "src/integration/MasterToSlaveBridge.h"
+#include "src/integration/PrimaryToSecondaryBridge.h"
 #include "src/integration/SensorIngestBridge.h"
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
@@ -222,7 +222,7 @@ void registerOpcUaClient(
 #endif
 
 #ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-/// Build + register the Modbus master backend. Composes the four
+/// Build + register the Modbus primary backend. Composes the four
 /// pieces (client + register map + ingest bridge + poll loop) and
 /// hands ownership to the IntegrationManager. Same shape as
 /// registerOpcUaBackend / registerMqttBackend; lives in a helper so
@@ -252,7 +252,7 @@ void registerModbusBackend(
         std::move(clientConfig));
 
     // Build the register map. The default layout exposes three
-    // contiguous blocks on the same slave:
+    // contiguous blocks on the same secondary:
     //
     //   Block A (boolean):   addresses base+[0..N-1]   EquipmentEnabled
     //   Block B (supply):    addresses supplyBase+[0..N-1]
@@ -506,14 +506,14 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
 
-        // Multi-station mode -- when enabled, instantiate a slave
-        // MirrorModel and a MasterToSlaveBridge linking the singleton
-        // SimulatedModel (master) into the mirror (slave). Both live
+        // Multi-station mode -- when enabled, instantiate a secondary
+        // MirrorModel and a PrimaryToSecondaryBridge linking the singleton
+        // SimulatedModel (primary) into the mirror (secondary). Both live
         // on this stack frame so RAII tears them down after the
         // IntegrationManager.stopAll() above. See ADR-0011 +
-        // docs/design/multi-station-master-slave.md
-        std::unique_ptr<app::model::MirrorModel>            slaveModel;
-        std::unique_ptr<app::integration::MasterToSlaveBridge> masterSlaveBridge;
+        // docs/design/multi-station-primary-secondary.md
+        std::unique_ptr<app::model::MirrorModel>            secondaryModel;
+        std::unique_ptr<app::integration::PrimaryToSecondaryBridge> primarySecondaryBridge;
 
         // Auth + Historian stacks. Declared in construction order so
         // destruction reverses naturally. See registerAuth() /
@@ -572,25 +572,25 @@ int main(int argc, char* argv[]) {
 #endif
 
 #ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-        // Modbus master -- opt-in via config; compiled out via
+        // Modbus primary -- opt-in via config; compiled out via
         // BUILD_MODBUS_BACKEND=OFF. See registerModbusBackend().
         if (config.isModbusBackendEnabled()) {
             registerModbusBackend(integration, config, bootstrap.logger());
         }
 #endif
 
-        // Multi-station: build the slave model + the bridge before
+        // Multi-station: build the secondary model + the bridge before
         // startAll so the bridge appears in the BackendHealthBar
         // alongside TCP/MQTT/Modbus/OPC-UA. The bridge is a regular
-        // IntegrationBackend -- its start() subscribes to the master's
-        // equipment events and forwards them to the slave.
+        // IntegrationBackend -- its start() subscribes to the primary's
+        // equipment events and forwards them to the secondary.
         if (config.isMultiStationEnabled()) {
-            slaveModel = std::make_unique<app::model::MirrorModel>();
-            masterSlaveBridge =
-                std::make_unique<app::integration::MasterToSlaveBridge>(
+            secondaryModel = std::make_unique<app::model::MirrorModel>();
+            primarySecondaryBridge =
+                std::make_unique<app::integration::PrimaryToSecondaryBridge>(
                     app::model::SimulatedModel::instance(),
-                    *slaveModel);
-            integration.registerBackend(std::move(masterSlaveBridge));
+                    *secondaryModel);
+            integration.registerBackend(std::move(primarySecondaryBridge));
         }
 
         integration.startAll();
@@ -619,12 +619,12 @@ int main(int argc, char* argv[]) {
         app.setAuth(authService.get(), &authSession);
         app.setAuditLogger(auditLogger.get());
 
-        // Multi-station slave: when ui.multistation_enabled was true
-        // the slave MirrorModel was constructed above; flow the
+        // Multi-station secondary: when ui.multistation_enabled was true
+        // the secondary MirrorModel was constructed above; flow the
         // pointer into Application so MainWindow can build a second
         // DashboardPresenter and swap the Dashboard tab for the
         // MultiStationDashboardPage.
-        app.setSlaveProductionModel(slaveModel.get());
+        app.setSecondaryProductionModel(secondaryModel.get());
 
         // Users management presenter -- wired only when the full auth
         // stack is up (repo + hasher + audit + session). MainWindow

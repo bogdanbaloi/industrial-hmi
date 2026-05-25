@@ -14,7 +14,7 @@ constexpr float  kMinPassRate      = 0.0f;
 constexpr float  kMaxPassRate      = 100.0f;
 
 // Default equipment status seed when an id is first observed --
-// matches the SimulatedModel defaults so the slave's dashboard
+// matches the SimulatedModel defaults so the secondary's dashboard
 // looks consistent before any bridge event has arrived.
 constexpr int kDefaultStatus       = 1;   // ONLINE
 constexpr int kDefaultSupplyLevel  = 100;

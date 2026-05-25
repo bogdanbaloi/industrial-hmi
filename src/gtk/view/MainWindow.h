@@ -178,14 +178,14 @@ private:
     std::shared_ptr<app::DashboardPresenter> dashboardPresenter_;
     app::view::DashboardPage*                dashboardPage_ = nullptr;
 
-    // Multi-station mode: when Application::slaveProductionModel() is
+    // Multi-station mode: when Application::secondaryProductionModel() is
     // non-null at createAllPages() time, MainWindow constructs a
-    // SECOND DashboardPresenter wired to that slave model, then mounts
+    // SECOND DashboardPresenter wired to that secondary model, then mounts
     // a MultiStationDashboardPage hosting both presenters instead of
     // the standalone DashboardPage. Sidebar (E-STOP / status badge /
-    // alerts / I/O) stays bound to the master presenter -- the canonical
-    // operator surface. See ADR-0011 + docs/design/multi-station-master-slave.md
-    std::shared_ptr<app::DashboardPresenter> slaveDashboardPresenter_;
+    // alerts / I/O) stays bound to the primary presenter -- the canonical
+    // operator surface. See ADR-0011 + docs/design/multi-station-primary-secondary.md
+    std::shared_ptr<app::DashboardPresenter> secondaryDashboardPresenter_;
     app::view::MultiStationDashboardPage*    multiStationDashboardPage_ = nullptr;
 
     std::shared_ptr<app::ProductsPresenter>  productsPresenter_;

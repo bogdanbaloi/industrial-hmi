@@ -147,24 +147,24 @@ public:
         return usersPresenter_;
     }
 
-    /// Inject the slave-station production model. Only set when
+    /// Inject the secondary-station production model. Only set when
     /// multi-station mode is enabled (config flag
     /// `ui.multistation_enabled` true). When non-null, MainWindow
-    /// builds TWO DashboardPresenter instances -- one for the master
-    /// (SimulatedModel singleton) and one for this slave model --
+    /// builds TWO DashboardPresenter instances -- one for the primary
+    /// (SimulatedModel singleton) and one for this secondary model --
     /// and replaces the Dashboard tab with the
-    /// MultiStationDashboardPage. The MasterToSlaveBridge that links
+    /// MultiStationDashboardPage. The PrimaryToSecondaryBridge that links
     /// the two models is registered separately on the
     /// IntegrationManager so it appears in the sidebar BackendHealthBar
     /// like every other integration backend.
     ///
-    /// Non-owning; the slave model is constructed in main() alongside
+    /// Non-owning; the secondary model is constructed in main() alongside
     /// the bridge and lives the same scope as the IntegrationManager.
-    void setSlaveProductionModel(model::ProductionModel* m) noexcept {
-        slaveProductionModel_ = m;
+    void setSecondaryProductionModel(model::ProductionModel* m) noexcept {
+        secondaryProductionModel_ = m;
     }
-    [[nodiscard]] model::ProductionModel* slaveProductionModel() const noexcept {
-        return slaveProductionModel_;
+    [[nodiscard]] model::ProductionModel* secondaryProductionModel() const noexcept {
+        return secondaryProductionModel_;
     }
 
 private:
@@ -180,7 +180,7 @@ private:
     auth::Session*          authSession_ = nullptr;                  // non-owning
     auth::AuditLogger*      auditLogger_ = nullptr;                  // non-owning
     presenter::UsersPresenter* usersPresenter_ = nullptr;             // non-owning
-    model::ProductionModel* slaveProductionModel_ = nullptr;          // non-owning -- multi-station slave
+    model::ProductionModel* secondaryProductionModel_ = nullptr;          // non-owning -- multi-station secondary
     std::vector<std::string> startupWarnings_;
     bool                    initialized_{false};
 };

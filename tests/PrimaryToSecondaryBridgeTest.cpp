@@ -1,4 +1,4 @@
-// Tests for app::integration::MasterToSlaveBridge.
+// Tests for app::integration::PrimaryToSecondaryBridge.
 //
 // The bridge has one job: forward equipment-status events from a
 // "master" ProductionModel onto a "slave" ProductionModel via the
@@ -13,7 +13,7 @@
 //     setEquipmentSupplyLevel.
 //   * No real model, no real wire format.
 
-#include "src/integration/MasterToSlaveBridge.h"
+#include "src/integration/PrimaryToSecondaryBridge.h"
 
 #include "tests/mocks/MockProductionModel.h"
 
@@ -23,7 +23,7 @@
 namespace {
 
 using app::integration::BackendState;
-using app::integration::MasterToSlaveBridge;
+using app::integration::PrimaryToSecondaryBridge;
 using app::model::EquipmentStatus;
 using app::model::ProductionModel;
 using app::test::MockProductionModel;
@@ -35,7 +35,7 @@ using testing::SaveArg;
 /// Fixture: builds master + slave mocks and the bridge, captures the
 /// callback the bridge registers on master at start() so individual
 /// tests can fire fake equipment events at will.
-class MasterToSlaveBridgeTest : public ::testing::Test {
+class PrimaryToSecondaryBridgeTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Bridge subscribes lazily on first start(). Capture the
@@ -45,7 +45,7 @@ protected:
             .Times(AnyNumber())
             .WillRepeatedly(SaveArg<0>(&masterCb_));
 
-        bridge_ = std::make_unique<MasterToSlaveBridge>(master_, slave_);
+        bridge_ = std::make_unique<PrimaryToSecondaryBridge>(master_, slave_);
     }
 
     /// Inject a fake equipment-status event "from master". Only valid
@@ -62,7 +62,7 @@ protected:
 
     MockProductionModel              master_;
     MockProductionModel              slave_;
-    std::unique_ptr<MasterToSlaveBridge> bridge_;
+    std::unique_ptr<PrimaryToSecondaryBridge> bridge_;
     ProductionModel::EquipmentCallback   masterCb_;
 };
 
@@ -70,10 +70,10 @@ protected:
 // 1. Initial state                                                  //
 // ---------------------------------------------------------------- //
 
-TEST_F(MasterToSlaveBridgeTest, StartsDisconnectedAndDoesNotForward) {
+TEST_F(PrimaryToSecondaryBridgeTest, StartsDisconnectedAndDoesNotForward) {
     EXPECT_FALSE(bridge_->isRunning());
     EXPECT_EQ(bridge_->connectionState(), BackendState::Disconnected);
-    EXPECT_EQ(bridge_->name(), "Master->Slave");
+    EXPECT_EQ(bridge_->name(), "Primary->Secondary");
     EXPECT_EQ(bridge_->forwardedCount(), 0u);
 
     // Slave should NEVER see a forward before start(). We use a strict
@@ -85,7 +85,7 @@ TEST_F(MasterToSlaveBridgeTest, StartsDisconnectedAndDoesNotForward) {
 // 2. Happy path: start -> event -> slave gets the forward            //
 // ---------------------------------------------------------------- //
 
-TEST_F(MasterToSlaveBridgeTest, ForwardsEquipmentSupplyToSlaveWhenRunning) {
+TEST_F(PrimaryToSecondaryBridgeTest, ForwardsEquipmentSupplyToSlaveWhenRunning) {
     bridge_->start();
     EXPECT_TRUE(bridge_->isRunning());
     EXPECT_EQ(bridge_->connectionState(), BackendState::Connected);
@@ -101,7 +101,7 @@ TEST_F(MasterToSlaveBridgeTest, ForwardsEquipmentSupplyToSlaveWhenRunning) {
 // 3. Multiple events: counter accumulates, every event forwarded     //
 // ---------------------------------------------------------------- //
 
-TEST_F(MasterToSlaveBridgeTest, ForwardsEveryEventAndAccumulatesCount) {
+TEST_F(PrimaryToSecondaryBridgeTest, ForwardsEveryEventAndAccumulatesCount) {
     bridge_->start();
 
     EXPECT_CALL(slave_, setEquipmentSupplyLevel(1u, 10)).Times(1);
@@ -119,7 +119,7 @@ TEST_F(MasterToSlaveBridgeTest, ForwardsEveryEventAndAccumulatesCount) {
 // 4. stop() mutes forwarding -- new events DON'T reach the slave     //
 // ---------------------------------------------------------------- //
 
-TEST_F(MasterToSlaveBridgeTest, StopMutesForwarding) {
+TEST_F(PrimaryToSecondaryBridgeTest, StopMutesForwarding) {
     bridge_->start();
     EXPECT_CALL(slave_, setEquipmentSupplyLevel(1u, 30)).Times(1);
     injectMasterEvent(1, 30);
@@ -143,7 +143,7 @@ TEST_F(MasterToSlaveBridgeTest, StopMutesForwarding) {
 // 5. Restart after stop continues to work without duplicate subscribe //
 // ---------------------------------------------------------------- //
 
-TEST_F(MasterToSlaveBridgeTest, RestartContinuesForwardingWithoutDuplicateSubscribe) {
+TEST_F(PrimaryToSecondaryBridgeTest, RestartContinuesForwardingWithoutDuplicateSubscribe) {
     // start/stop/start cycle. The CRITICAL property: master's
     // onEquipmentStatusChanged must be called exactly ONCE across the
     // whole cycle -- the bridge guards subscription with a one-shot
@@ -169,7 +169,7 @@ TEST_F(MasterToSlaveBridgeTest, RestartContinuesForwardingWithoutDuplicateSubscr
 // 6. metricsSummary reports count + last forward                     //
 // ---------------------------------------------------------------- //
 
-TEST_F(MasterToSlaveBridgeTest, MetricsSummaryReportsCount) {
+TEST_F(PrimaryToSecondaryBridgeTest, MetricsSummaryReportsCount) {
     // Before start: zero forwards, summary just says "0 forwarded".
     EXPECT_EQ(bridge_->metricsSummary(), "0 forwarded");
 

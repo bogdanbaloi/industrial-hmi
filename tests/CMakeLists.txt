@@ -295,18 +295,18 @@ target_link_libraries(test_sensor_ingest_bridge PRIVATE
 add_test(NAME SensorIngestBridgeTest
          COMMAND test_sensor_ingest_bridge)
 
-# Integration: MasterToSlaveBridge -- in-process bridge that mirrors
+# Integration: PrimaryToSecondaryBridge -- in-process bridge that mirrors
 # equipment supply levels from a master ProductionModel to a slave.
 # Tested with two MockProductionModel instances; no I/O, no threads.
-add_executable(test_master_to_slave_bridge
-    MasterToSlaveBridgeTest.cpp
-    ${CMAKE_SOURCE_DIR}/src/integration/MasterToSlaveBridge.cpp)
-target_link_libraries(test_master_to_slave_bridge PRIVATE
+add_executable(test_primary_to_secondary_bridge
+    PrimaryToSecondaryBridgeTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/PrimaryToSecondaryBridge.cpp)
+target_link_libraries(test_primary_to_secondary_bridge PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes
 )
-add_test(NAME MasterToSlaveBridgeTest
-         COMMAND test_master_to_slave_bridge)
+add_test(NAME PrimaryToSecondaryBridgeTest
+         COMMAND test_primary_to_secondary_bridge)
 
 # Modbus: pure PDU codec -- encode/decode MBAP+PDU bytes. No socket,
 # no thread; the test compiles the .cpp directly rather than linking

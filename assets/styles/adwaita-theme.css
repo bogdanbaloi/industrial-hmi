@@ -316,6 +316,52 @@ button.destructive-action:hover {
     letter-spacing: 0.5px;
 }
 
+/* ---- Compact dashboard variant ------------------------------------
+ * Applied to each DashboardPage hosted inside MultiStationDashboardPage
+ * so the cards squeeze into ~860px per pane on a 1920x1080 terminal
+ * without horizontal scrolling. Reduces padding, margins, font sizes,
+ * and gauge sizes. Tightens the equipment + quality + work-unit cards
+ * uniformly; the dashboard's overall structure (3-column equipment +
+ * 3-column quality) stays the same. */
+.dashboard-compact .equipment-card,
+.dashboard-compact .quality-card,
+.dashboard-compact .work-unit-card {
+    padding: 8px;
+    margin: 6px;
+    border-radius: 6px;
+}
+.dashboard-compact .equipment-title {
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.dashboard-compact .equipment-subtitle {
+    font-size: 10px;
+    margin-bottom: 6px;
+}
+.dashboard-compact .equipment-metric {
+    font-size: 15px;
+}
+.dashboard-compact .equipment-metric-label {
+    font-size: 9px;
+    letter-spacing: 0.3px;
+}
+/* Pane control panel buttons -- shrink them too so the 4-button row
+ * (Idle / Start / Stop / Reset / Calibration) doesn't push past the
+ * compressed pane width. */
+.dashboard-compact button {
+    padding: 4px 10px;
+    min-height: 28px;
+    font-size: 12px;
+}
+/* Compact section headers ("WORK UNIT", "EQUIPMENT STATIONS",
+ * "QUALITY CHECKPOINTS"). */
+.dashboard-compact label.section-title,
+.dashboard-compact .section-title {
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    margin: 6px 8px 2px 8px;
+}
+
 /*
    STATUS INDICATORS
    */
@@ -524,6 +570,183 @@ headerbar.dialog-titlebar-light > windowhandle {
     font-size: 11px;
     color: alpha(@sidebar_fg_color, 0.55);
     letter-spacing: 0.5px;
+}
+
+/* Slim vertical sidebar variant -- used by main-window-multistation.ui.
+   80px wide instead of the default ~200px. Reclaims horizontal space
+   for the two-pane MultiStationDashboardPage. Hosts only minimal
+   indicators: status LED, alert count badge, backend health dots,
+   E-STOP, clock. UserBadge + full AlertsPanel are dropped in this
+   mode; operator uses the Users / Audit tabs for full detail. */
+.sidebar.sidebar-slim {
+    padding: 0;
+}
+
+.sidebar-slim .app-logo {
+    min-width: 32px;
+    min-height: 32px;
+    background-size: contain;
+}
+
+.sidebar-slim .system-status-badge {
+    padding: 4px;
+    margin: 0;
+    min-width: 0;
+}
+
+.sidebar-slim .system-status-label {
+    font-size: 9px;
+    letter-spacing: 0.4px;
+}
+
+.sidebar-slim .alerts-panel {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+}
+
+.sidebar-slim .section-header {
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-slim .backend-health-bar {
+    min-width: 0;
+    padding: 4px 0;
+    font-size: 9px;
+}
+
+/* Slim backend health -- vertical stack of colored dots, no labels.
+   Used in the multi-station 80px sidebar. Each dot is a label with
+   the U+25CF BLACK CIRCLE glyph; CSS just colors it per state and
+   sizes it for visibility at arm's length. */
+.backend-health-slim {
+    min-width: 0;
+    padding: 4px 0;
+}
+
+.backend-health-slim-row {
+    min-width: 0;
+}
+
+.backend-health-slim .backend-health-dot {
+    font-size: 14px;
+    padding: 2px;
+    margin: 0;
+}
+
+.backend-health-slim .backend-health-dot.state-disconnected {
+    color: alpha(@sidebar_fg_color, 0.35);
+}
+
+.backend-health-slim .backend-health-dot.state-connecting {
+    color: @warning_color;
+}
+
+.backend-health-slim .backend-health-dot.state-connected {
+    color: @success_color;
+}
+
+.backend-health-slim .backend-health-dot.state-degraded {
+    color: @error_color;
+}
+
+.sidebar-slim .sidebar-estop {
+    min-height: 56px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.sidebar-slim .sidebar-close-app {
+    min-height: 28px;
+    min-width: 28px;
+    font-size: 11px;
+    padding: 0;
+}
+
+.sidebar-slim .live-clock-time {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.sidebar-slim .live-clock-date {
+    font-size: 8px;
+}
+
+.sidebar-slim .sidebar-version {
+    font-size: 9px;
+}
+
+/* Light-mode overrides for the slim multi-station sidebar.
+   Without these, components built for the dark sidebar (status
+   badge with black bg, alerts header with white text, etc.) keep
+   their dark styling and look broken against a light sidebar bg.
+   Mirror the same colours the standard light-mode sidebar uses
+   so the slim variant blends in. */
+window.light-mode .sidebar.sidebar-slim {
+    background-color: @light_sidebar_bg_end;
+    border-left: 1px solid @light_sidebar_border_color;
+    color: @light_sidebar_fg_color;
+}
+
+window.light-mode .sidebar-slim .system-status-badge {
+    background-color: transparent;
+    color: @light_text_primary;
+    border: none;
+}
+
+window.light-mode .sidebar-slim .system-status-label {
+    color: @light_text_primary;
+}
+
+window.light-mode .sidebar-slim .alerts-panel {
+    color: @light_text_primary;
+}
+
+window.light-mode .sidebar-slim .alerts-panel label {
+    color: @light_text_primary;
+}
+
+window.light-mode .sidebar-slim .alerts-panel .section-header {
+    color: @light_text_secondary;
+}
+
+window.light-mode .sidebar-slim .alerts-panel button,
+window.light-mode .sidebar-slim .alerts-panel button.flat {
+    background-color: transparent;
+    color: @light_text_primary;
+    border: 1px solid alpha(@light_sidebar_border_color, 0.5);
+}
+
+window.light-mode .sidebar-slim .backend-health-dot.state-disconnected {
+    color: alpha(@light_sidebar_fg_color, 0.35);
+}
+
+window.light-mode .sidebar-slim .sidebar-close-app {
+    background-color: @light_surface_raised;
+    color: @light_text_primary;
+    border: 1px solid @light_sidebar_border_color;
+}
+
+window.light-mode .sidebar-slim .sidebar-close-app:hover {
+    background-color: @light_surface_base;
+}
+
+window.light-mode .sidebar-slim .live-clock-time {
+    color: @accent_color;
+}
+
+window.light-mode .sidebar-slim .live-clock-date,
+window.light-mode .sidebar-slim .sidebar-version {
+    color: @light_text_secondary;
+}
+
+window.light-mode .sidebar-slim .app-logo {
+    /* Logo SVG uses fixed teal; works on both dark and light
+       backgrounds. No override needed unless contrast becomes
+       an issue. */
 }
 
 /* Multi-station dashboard pane header -- "MASTER STATION" /

@@ -53,6 +53,13 @@ public:
     /// button sensitive so the no-auth dev path is unchanged.
     void applyRole(app::auth::Role role);
 
+    /// Shrink the dashboard's wide elements (QualityGauge,
+    /// TrendChart) for narrow-pane contexts -- specifically when
+    /// hosted inside MultiStationDashboardPage where the available
+    /// width per pane is roughly half of a normal single-station
+    /// terminal. Idempotent. No-op when called with false.
+    void setCompact(bool compact);
+
     // Page overrides
     [[nodiscard]] Glib::ustring pageTitle() const override;
     void onThemeChanged() override;

@@ -43,7 +43,7 @@ Each file has the following sections:
 | 0008 | [Runtime palette + layout swap](0008-runtime-palette-layout-swap.md) | Accepted |
 | 0009 | [ML plugin gated by build-time flag](0009-ml-plugin-conditional-compile.md) | Accepted |
 | 0010 | [ConfigManager: policy / mechanism split](0010-config-policy-vs-mechanism.md) | Accepted |
-| 0011 | [Multi-station support (Master/Slave first instance)](0011-multi-station-support.md) | Accepted |
+| 0011 | [Multi-station support (Primary/Secondary first instance)](0011-multi-station-support.md) | Accepted |
 
 ## Adding a new ADR
 

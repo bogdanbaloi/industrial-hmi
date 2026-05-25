@@ -7,28 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Multi-station support (Master/Slave first instance)
+### Multi-station support (Primary/Secondary first instance)
 
 Opt-in via `ui.multistation_enabled` in config. When enabled the HMI
-instantiates a second `ProductionModel` (`MirrorModel`) for the slave
-role and a `MasterToSlaveBridge` linking it to the singleton
-`SimulatedModel` master. The new `MultiStationDashboardPage` hosts
+instantiates a second `ProductionModel` (`MirrorModel`) for the secondary
+role and a `PrimaryToSecondaryBridge` linking it to the singleton
+`SimulatedModel` primary. The new `MultiStationDashboardPage` hosts
 two `DashboardPage` instances side by side, each bound to its own
 presenter; the bridge appears in the sidebar `BackendHealthBar`
 alongside TCP / MQTT / Modbus / OPC-UA. Single-station deployments
 are unaffected by default. See ADR-0011 and
-`docs/design/multi-station-master-slave.md` for the full design.
+`docs/design/multi-station-primary-secondary.md` for the full design.
 
 ### Added
 
-- `MasterToSlaveBridge` integration backend (in-process bridge linking
+- `PrimaryToSecondaryBridge` integration backend (in-process bridge linking
   two `ProductionModel` instances; 6 unit tests).
-- `MirrorModel` concrete `ProductionModel` for the slave role: passive
+- `MirrorModel` concrete `ProductionModel` for the secondary role: passive
   state holder driven by the bridge, no internal simulation.
 - `MultiStationDashboardPage` view that composes two `DashboardPage`
   instances in a horizontal split.
 - `ConfigManager::isMultiStationEnabled()` getter (defaults false).
-- `Application::setSlaveProductionModel()` injector.
+- `Application::setSecondaryProductionModel()` injector.
 - ADR-0011 capturing the design + alternatives + roadmap for N-station,
   fleet view, and the cross-process MQTT-backed bridge replacement.
 
@@ -289,9 +289,9 @@ deployments behave as before.
   float matcher for 987 * 0.1f). `Mock` + `Capturing` ProductionModel
   subclasses in three other test files pick up matching overrides.
 
-### Modbus master backend (A1)
+### Modbus primary backend (A1)
 
-- **End-to-end Modbus/TCP master.** New `objectsModbus` object library
+- **End-to-end Modbus/TCP primary.** New `objectsModbus` object library
   parallel to `objectsOpcUa`: hand-rolled MBAP framing + PDU codec
   (FC03 + FC04 read), Boost.Asio synchronous client with
   `io_context::run_for()` timeouts and lazy reconnect, register map +
@@ -318,14 +318,14 @@ deployments behave as before.
   off build links cleanly without modbus symbols.
 - **Tests: 54 across 5 suites.** ModbusPdu (19 -- happy paths,
   framing failure classes, exception responses, 125-register
-  boundary), ModbusClient (8 -- loopback via FakeModbusSlave +
+  boundary), ModbusClient (8 -- loopback via FakeModbusSecondary +
   reconnect + exception caching), ModbusIngestBridge (12 -- dedup,
   per-entity tracking, out-of-range guard), ModbusPollLoop (9 --
   pollOnce dispatch + start/stop cycle + cancellation budget +
   destructor join), ModbusBackend (6 -- lifecycle aggregate). All
-  green; FakeModbusSlave mirrors the MqttClientTest acceptor pattern.
+  green; FakeModbusSecondary mirrors the MqttClientTest acceptor pattern.
 - **Demo:** `examples/modbus_slave_simulator.py` (pymodbus 3.7
-  async slave) toggles holding registers round-robin so the HMI's
+  async secondary) toggles holding registers round-robin so the HMI's
   equipment switches flip in lockstep. Integrated into
   `examples/factory_simulation.py` so a single command runs four
   protocols (TCP + MQTT + OPC-UA + Modbus) against the HMI.

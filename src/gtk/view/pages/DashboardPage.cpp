@@ -82,6 +82,43 @@ void DashboardPage::onThemeChanged() {
     refreshThemedWidgets();
 }
 
+void DashboardPage::setCompact(bool compact) {
+    // Compact mode -- driven by MultiStationDashboardPage when the
+    // dashboard is hosted in a narrow pane. Multi-station with the
+    // full 200px sidebar leaves ~760px per pane on a 1920x1080
+    // terminal -- below the natural width of the standard cards.
+    // Aggressive measures:
+    //   * Quality gauges shrink to 50x50 (from 100x100).
+    //   * Trend charts are hidden entirely -- the gauges + numeric
+    //     pass-rate are sufficient for at-a-glance monitoring;
+    //     sparkline detail belongs in the dedicated History tab.
+    //   * The .dashboard-compact CSS class on the page also shrinks
+    //     paddings and font sizes (see adwaita-theme.css).
+    constexpr int kCompactGaugeSize     = 50;   // 100 -> 50
+
+    for (auto& card : qualityCards_) {
+        if (card.gauge != nullptr) {
+            if (compact) {
+                card.gauge->set_content_width(kCompactGaugeSize);
+                card.gauge->set_content_height(kCompactGaugeSize);
+                card.gauge->set_size_request(kCompactGaugeSize, kCompactGaugeSize);
+            }
+            card.gauge->queue_draw();
+        }
+    }
+    for (auto* chart : trendCharts_) {
+        if (chart != nullptr) {
+            // Hide entirely in compact mode -- they're the widest
+            // element per quality card and provide detail the
+            // operator can reach in the History tab anyway.
+            if (compact) {
+                chart->set_visible(false);
+            }
+            chart->queue_draw();
+        }
+    }
+}
+
 void DashboardPage::refreshThemedWidgets() {
     for (auto& card : qualityCards_) {
         if (card.gauge) card.gauge->queue_draw();

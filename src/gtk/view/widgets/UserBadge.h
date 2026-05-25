@@ -61,6 +61,16 @@ public:
     /// be re-called by the host after a logout/login cycle.
     void refresh();
 
+    /// Switch the badge into a horizontal inline layout suitable for
+    /// the multistation bottom-bar sidebar. Removes the card chrome
+    /// (no padding / no border), shrinks the avatar to 28px, lays
+    /// out children as
+    ///   `[avatar] [username] [ROLE . since HH:MM] [Profile] [Sign out]`
+    /// on one row. Must be called BEFORE the badge becomes visible
+    /// (i.e. from the MainWindow code that mounts it). One-way --
+    /// going back to vertical requires recreating the badge.
+    void setHorizontal();
+
 private:
     void buildUi();
     void onSignOutClicked();

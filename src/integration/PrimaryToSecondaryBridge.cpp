@@ -1,4 +1,4 @@
-#include "src/integration/MasterToSlaveBridge.h"
+#include "src/integration/PrimaryToSecondaryBridge.h"
 
 #include <ctime>
 #include <sstream>
@@ -10,14 +10,14 @@ namespace {
 // Bridge name surfaced to logs + the BackendHealthBar. Kept ASCII
 // (no arrow glyph) so it renders identically across all platforms
 // and fonts; the visual treatment is the sidebar's job.
-constexpr const char* kBridgeName = "Master->Slave";
+constexpr const char* kBridgeName = "Primary->Secondary";
 }  // namespace
 
-MasterToSlaveBridge::MasterToSlaveBridge(model::ProductionModel& master,
-                                         model::ProductionModel& slave) noexcept
-    : master_(master), slave_(slave) {}
+PrimaryToSecondaryBridge::PrimaryToSecondaryBridge(model::ProductionModel& primary,
+                                         model::ProductionModel& secondary) noexcept
+    : master_(primary), slave_(secondary) {}
 
-void MasterToSlaveBridge::start() {
+void PrimaryToSecondaryBridge::start() {
     // Subscribe exactly once across the bridge's lifetime.
     // ProductionModel intentionally has no remove-callback path; we
     // gate the forward on `running_` instead. See the class docstring
@@ -32,31 +32,31 @@ void MasterToSlaveBridge::start() {
     running_.store(true, std::memory_order_release);
 }
 
-void MasterToSlaveBridge::stop() {
+void PrimaryToSecondaryBridge::stop() {
     // Mute the forward. A callback already in flight past the
     // running-check will still complete -- that's a single setter
     // call, harmless. New callbacks see running_=false and bail.
     running_.store(false, std::memory_order_release);
 }
 
-bool MasterToSlaveBridge::isRunning() const {
+bool PrimaryToSecondaryBridge::isRunning() const {
     return running_.load(std::memory_order_acquire);
 }
 
-std::string MasterToSlaveBridge::name() const {
+std::string PrimaryToSecondaryBridge::name() const {
     return kBridgeName;
 }
 
-BackendState MasterToSlaveBridge::connectionState() const noexcept {
+BackendState PrimaryToSecondaryBridge::connectionState() const noexcept {
     // The bridge has no external dependency that can be "Connecting"
-    // or "Degraded" -- it's either wired to the master callback
+    // or "Degraded" -- it's either wired to the primary callback
     // (Connected) or muted (Disconnected). Mapping cleanly into the
     // dashboard's coloured-dot vocabulary.
     return isRunning() ? BackendState::Connected
                        : BackendState::Disconnected;
 }
 
-std::string MasterToSlaveBridge::metricsSummary() const {
+std::string PrimaryToSecondaryBridge::metricsSummary() const {
     std::size_t count;
     std::chrono::system_clock::time_point last;
     {
@@ -82,11 +82,11 @@ std::string MasterToSlaveBridge::metricsSummary() const {
     return out.str();
 }
 
-std::size_t MasterToSlaveBridge::forwardedCount() const noexcept {
+std::size_t PrimaryToSecondaryBridge::forwardedCount() const noexcept {
     return forwarded_.load(std::memory_order_acquire);
 }
 
-void MasterToSlaveBridge::onMasterEquipmentEvent(
+void PrimaryToSecondaryBridge::onMasterEquipmentEvent(
         const model::EquipmentStatus& status) {
     // Gate on running_ so a stop() flips us off cleanly without
     // needing to unsubscribe from the model (which has no remove API).
@@ -94,11 +94,11 @@ void MasterToSlaveBridge::onMasterEquipmentEvent(
         return;
     }
 
-    // Mirror the master's supply level onto the slave's same equipment
+    // Mirror the primary's supply level onto the secondary's same equipment
     // id. setEquipmentSupplyLevel is the ProductionModel-wide inbound
     // setter: every other ingest bridge (MQTT, Modbus, OPC-UA) calls
-    // the same entry point, so the slave's behaviour under this bridge
-    // is indistinguishable from a real cross-process master feeding
+    // the same entry point, so the secondary's behaviour under this bridge
+    // is indistinguishable from a real cross-process primary feeding
     // it via MQTT -- which is exactly what we'll swap this for in the
     // cross-process follow-up.
     slave_.setEquipmentSupplyLevel(status.equipmentId,
