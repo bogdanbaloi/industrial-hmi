@@ -309,7 +309,13 @@ void DashboardPage::buildUI() {
         card.gauge->set_margin_bottom(sizes::kSpacingSmall);
         gaugeContainer->append(*card.gauge);
 
-        // Inject dynamic trend chart into the container defined in XML
+        // Inject dynamic trend chart into the container defined in XML.
+        // Hidden by default since Phase 8E -- the KPI top strip's
+        // aggregate Pass Rate plus the per-checkpoint gauge already
+        // cover at-a-glance quality monitoring. Sparkline detail
+        // belongs in the History tab; keeping the widget constructed
+        // (just invisible) so a future operator-toggle or compact-
+        // mode flag can flip it back on without re-plumbing.
         auto* trendContainer = builder->get_widget<Gtk::Box>("qc_trend_container_" + id);
         auto* chart = Gtk::make_managed<TrendChart>(
             "", sizes::kTrendChartMinY, sizes::kTrendChartMaxY,
@@ -318,6 +324,7 @@ void DashboardPage::buildUI() {
         chart->set_vexpand(true);
         chart->set_hexpand(true);
         trendContainer->append(*chart);
+        trendContainer->set_visible(false);
         trendCharts_.push_back(chart);
 
         qualityCards_.push_back(card);
