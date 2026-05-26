@@ -42,6 +42,11 @@ namespace app {
         class ExceptionHandler;
     }
 
+    namespace auth {
+        class AuditLogger;
+        class Session;
+    }
+
     namespace ml {
         class ImageDecoder;
         class OnnxImageClassifier;
@@ -84,6 +89,16 @@ private:
     void loadSidebarCSS();
     void setupKeyboardShortcuts();
     void createAllPages();
+    // Extracted from createAllPages to keep it under the 150-line
+    // readability cap. Dashboard helper builds the single- or
+    // multi-station dashboard depending on whether the composition
+    // root injected a secondary model.
+    void createDashboardPages(app::core::Logger& logger,
+                              app::auth::AuditLogger* audit,
+                              app::auth::Session* session);
+#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
+    void createInspectionPage(app::core::Logger& logger);
+#endif
     void wireSettingsSignals();
     void registerPage(app::view::Page* page);
     void clearPages();

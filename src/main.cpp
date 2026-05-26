@@ -482,6 +482,74 @@ void initWindowsConsole() {
 }
 #endif
 
+/// Multi-station: build the secondary MirrorModel + the in-process
+/// PrimaryToSecondaryBridge linking the singleton SimulatedModel
+/// (primary) into the mirror (secondary), then hand the bridge to the
+/// IntegrationManager so it surfaces in the BackendHealthBar next to
+/// the other protocols. See ADR-0011.
+void registerMultiStation(
+        app::integration::IntegrationManager& integration,
+        std::unique_ptr<app::model::MirrorModel>& secondaryModelOut,
+        std::unique_ptr<app::integration::PrimaryToSecondaryBridge>& bridgeOut) {
+    secondaryModelOut = std::make_unique<app::model::MirrorModel>();
+    bridgeOut = std::make_unique<app::integration::PrimaryToSecondaryBridge>(
+        app::model::SimulatedModel::instance(),
+        *secondaryModelOut);
+    integration.registerBackend(std::move(bridgeOut));
+}
+
+#ifndef CONSOLE_MODE
+/// Flow composition-root pointers into the Application singleton and
+/// build the (optional) UsersPresenter. Extracted from main() so the
+/// readability-function-size lint stays under the 150-line threshold.
+/// Every pointer source lives on main()'s stack frame; this helper
+/// just plumbs them in without taking ownership.
+void wireApplicationServices(
+        app::core::Application&                     app,
+        app::integration::IntegrationManager&       integration,
+        std::unique_ptr<app::historian::SqliteHistoryStore>& historyStore,
+        std::unique_ptr<app::auth::AuthService>&    authService,
+        app::auth::Session&                         authSession,
+        std::unique_ptr<app::auth::SqliteAuditLogger>& auditLogger,
+        std::unique_ptr<app::model::MirrorModel>&   secondaryModel,
+        std::unique_ptr<app::auth::SqliteUserRepository>& authRepo,
+        std::unique_ptr<app::auth::Argon2PasswordHasher>& authHasher,
+        std::unique_ptr<app::presenter::UsersPresenter>& usersPresenterOut) {
+    // Inject the manager so MainWindow can mount the backend-
+    // health bar in the sidebar. Pointer stays valid through
+    // app.run() because `integration` lives on main()'s stack
+    // frame just above us.
+    app.setIntegrationManager(&integration);
+    // Historian read side is optional -- mounted only when the
+    // store opened successfully above. Pointer (or null) flows
+    // to MainWindow which decides whether to register the page.
+    app.setHistoryReader(historyStore.get());
+    // Auth: when registerAuth() succeeded both pointers are non-
+    // null and Application::run() will show the LoginDialog first.
+    // When auth is disabled (or registration failed) the pointers
+    // stay null and run() goes straight to MainWindow as before.
+    app.setAuth(authService.get(), &authSession);
+    app.setAuditLogger(auditLogger.get());
+
+    // Multi-station secondary: when ui.multistation_enabled was true
+    // the secondary MirrorModel was constructed above; flow the
+    // pointer into Application so MainWindow can build a second
+    // DashboardPresenter and swap the Dashboard tab for the
+    // MultiStationDashboardPage.
+    app.setSecondaryProductionModel(secondaryModel.get());
+
+    // Users management presenter -- wired only when the full auth
+    // stack is up (repo + hasher + audit + session). MainWindow
+    // gates UsersPage on `currentUser.role == Admin`; non-admins
+    // never see the tab even though the presenter is alive.
+    if (authRepo && authHasher && auditLogger) {
+        usersPresenterOut = std::make_unique<app::presenter::UsersPresenter>(
+            *authRepo, *authHasher, authSession, *auditLogger);
+        app.setUsersPresenter(usersPresenterOut.get());
+    }
+}
+#endif  // !CONSOLE_MODE
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -581,16 +649,10 @@ int main(int argc, char* argv[]) {
 
         // Multi-station: build the secondary model + the bridge before
         // startAll so the bridge appears in the BackendHealthBar
-        // alongside TCP/MQTT/Modbus/OPC-UA. The bridge is a regular
-        // IntegrationBackend -- its start() subscribes to the primary's
-        // equipment events and forwards them to the secondary.
+        // alongside TCP/MQTT/Modbus/OPC-UA. See registerMultiStation().
         if (config.isMultiStationEnabled()) {
-            secondaryModel = std::make_unique<app::model::MirrorModel>();
-            primarySecondaryBridge =
-                std::make_unique<app::integration::PrimaryToSecondaryBridge>(
-                    app::model::SimulatedModel::instance(),
-                    *secondaryModel);
-            integration.registerBackend(std::move(primarySecondaryBridge));
+            registerMultiStation(integration, secondaryModel,
+                                 primarySecondaryBridge);
         }
 
         integration.startAll();
@@ -603,39 +665,11 @@ int main(int argc, char* argv[]) {
         return kExitOk;
 #else
         auto& app = app::core::Application::instance();
-        // Inject the manager so MainWindow can mount the backend-
-        // health bar in the sidebar. Pointer stays valid through
-        // app.run() because `integration` lives on the same stack
-        // frame just above us.
-        app.setIntegrationManager(&integration);
-        // Historian read side is optional -- mounted only when the
-        // store opened successfully above. Pointer (or null) flows
-        // to MainWindow which decides whether to register the page.
-        app.setHistoryReader(historyStore.get());
-        // Auth: when registerAuth() succeeded both pointers are non-
-        // null and Application::run() will show the LoginDialog first.
-        // When auth is disabled (or registration failed) the pointers
-        // stay null and run() goes straight to MainWindow as before.
-        app.setAuth(authService.get(), &authSession);
-        app.setAuditLogger(auditLogger.get());
-
-        // Multi-station secondary: when ui.multistation_enabled was true
-        // the secondary MirrorModel was constructed above; flow the
-        // pointer into Application so MainWindow can build a second
-        // DashboardPresenter and swap the Dashboard tab for the
-        // MultiStationDashboardPage.
-        app.setSecondaryProductionModel(secondaryModel.get());
-
-        // Users management presenter -- wired only when the full auth
-        // stack is up (repo + hasher + audit + session). MainWindow
-        // gates UsersPage on `currentUser.role == Admin`; non-admins
-        // never see the tab even though the presenter is alive.
         std::unique_ptr<app::presenter::UsersPresenter> usersPresenter;
-        if (authRepo && authHasher && auditLogger) {
-            usersPresenter = std::make_unique<app::presenter::UsersPresenter>(
-                *authRepo, *authHasher, authSession, *auditLogger);
-            app.setUsersPresenter(usersPresenter.get());
-        }
+        wireApplicationServices(app, integration, historyStore,
+                                authService, authSession, auditLogger,
+                                secondaryModel, authRepo, authHasher,
+                                usersPresenter);
 
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 

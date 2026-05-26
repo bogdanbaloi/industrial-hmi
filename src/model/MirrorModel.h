@@ -85,8 +85,8 @@ private:
     // Helpers: clamp + dispatch. The setEquipmentSupplyLevel /
     // setQualityPassRate spec says values are clamped to the field's
     // natural domain (0-100). Out-of-range ids are silently dropped.
-    void updateEquipmentSnapshot_locked(EquipmentStatus snapshot);
-    void updateQualitySnapshot_locked(QualityCheckpoint snapshot);
+    void updateEquipmentSnapshotLocked(EquipmentStatus snapshot);
+    void updateQualitySnapshotLocked(QualityCheckpoint snapshot);
     void publishSystemStateChange(SystemState newState);
 
     mutable std::mutex mutex_;

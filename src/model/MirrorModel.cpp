@@ -113,7 +113,7 @@ void MirrorModel::setEquipmentSupplyLevel(std::uint32_t equipmentId, int level) 
         it->second.supplyLevel = level;
         snapshot = it->second;
     }
-    updateEquipmentSnapshot_locked(std::move(snapshot));
+    updateEquipmentSnapshotLocked(std::move(snapshot));
 }
 
 void MirrorModel::setQualityPassRate(std::uint32_t checkpointId, float rate) {
@@ -126,7 +126,7 @@ void MirrorModel::setQualityPassRate(std::uint32_t checkpointId, float rate) {
         it->second.passRate = rate;
         snapshot = it->second;
     }
-    updateQualitySnapshot_locked(std::move(snapshot));
+    updateQualitySnapshotLocked(std::move(snapshot));
 }
 
 // ---------------------------------------------------------------- //
@@ -153,7 +153,7 @@ WorkUnit MirrorModel::getWorkUnit() const {
 // Helpers                                                           //
 // ---------------------------------------------------------------- //
 
-void MirrorModel::updateEquipmentSnapshot_locked(EquipmentStatus snapshot) {
+void MirrorModel::updateEquipmentSnapshotLocked(EquipmentStatus snapshot) {
     // Caller already updated the entry under the lock; we just need
     // the observer callbacks. Copy out the observer list so we can
     // fire them without holding the model mutex (observers may
@@ -166,7 +166,7 @@ void MirrorModel::updateEquipmentSnapshot_locked(EquipmentStatus snapshot) {
     for (const auto& cb : observersCopy) cb(snapshot);
 }
 
-void MirrorModel::updateQualitySnapshot_locked(QualityCheckpoint snapshot) {
+void MirrorModel::updateQualitySnapshotLocked(QualityCheckpoint snapshot) {
     std::vector<QualityCheckpointCallback> observersCopy;
     {
         const std::lock_guard<std::mutex> lock(mutex_);
