@@ -88,6 +88,12 @@ private:
     /// bridge is running and not muted.
     void onMasterEquipmentEvent(const model::EquipmentStatus& status);
 
+    /// Callback installed on primary at start(). Forwards the pass
+    /// rate into secondary's setQualityPassRate setter so the secondary
+    /// dashboard's quality cards (and the KPI top strip's aggregate)
+    /// track the primary in real time.
+    void onMasterQualityEvent(const model::QualityCheckpoint& checkpoint);
+
     model::ProductionModel& master_;
     model::ProductionModel& slave_;
 
