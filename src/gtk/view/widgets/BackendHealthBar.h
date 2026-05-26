@@ -36,11 +36,12 @@ namespace app::view {
 ///         state updates only flip CSS classes + tooltips.
 class BackendHealthBar : public Gtk::Box {
 public:
-    enum class Layout { Sidebar, Compact };
+    enum class Layout { Sidebar, Compact, Slim };
 
     explicit BackendHealthBar(Layout layout = Layout::Sidebar)
-        : Gtk::Box(layout == Layout::Sidebar ? Gtk::Orientation::VERTICAL
-                                             : Gtk::Orientation::HORIZONTAL,
+        : Gtk::Box(layout == Layout::Compact
+                       ? Gtk::Orientation::HORIZONTAL
+                       : Gtk::Orientation::VERTICAL,
                    sizes::kSpacingSmall),
           layout_(layout) {
         if (layout_ == Layout::Sidebar) {
@@ -56,6 +57,15 @@ public:
             header_->set_xalign(0);
             header_->add_css_class("backend-health-header");
             append(*header_);
+        } else if (layout_ == Layout::Slim) {
+            // Slim: vertical stack of colored dots only, no labels, no
+            // card chrome. Designed for the 80px multistation sidebar.
+            // Backend identity surfaces via tooltip on hover. Width
+            // collapses to the dot's intrinsic ~12px so the sidebar
+            // actually shrinks to its width-request.
+            add_css_class("backend-health-slim");
+            set_halign(Gtk::Align::CENTER);
+            set_spacing(sizes::kSpacingSmall);
         } else {
             // Compact: just the row of dot+name pairs. No card border,
             // no header -- the host top bar already provides the chrome.
@@ -136,6 +146,19 @@ private:
                 entry.pill->add_css_class("backend-pill");
                 entry.pill->set_halign(Gtk::Align::END);
                 entry.row->append(*entry.pill);
+            } else if (layout_ == Layout::Slim) {
+                // Slim: a single colored dot. No name label, no row
+                // chrome. The dot is its own row (this is a vertical
+                // box). nameLabel stays nullptr; backend identity
+                // surfaces via the tooltip on hover.
+                entry.row = Gtk::make_managed<Gtk::Box>(
+                    Gtk::Orientation::HORIZONTAL, 0);
+                entry.row->add_css_class("backend-health-slim-row");
+                entry.row->set_halign(Gtk::Align::CENTER);
+
+                entry.pill = Gtk::make_managed<Gtk::Label>("\xE2\x97\x8F"); // U+25CF BLACK CIRCLE
+                entry.pill->add_css_class("backend-health-dot");
+                entry.row->append(*entry.pill);
             } else {
                 // Compact: small dot + name, side by side, no chrome.
                 entry.row = Gtk::make_managed<Gtk::Box>(
@@ -143,7 +166,7 @@ private:
                 entry.row->add_css_class("backend-health-chip");
                 entry.row->set_valign(Gtk::Align::CENTER);
 
-                entry.pill = Gtk::make_managed<Gtk::Label>("●");
+                entry.pill = Gtk::make_managed<Gtk::Label>("\xE2\x97\x8F");
                 entry.pill->add_css_class("backend-health-dot");
                 entry.row->append(*entry.pill);
 
@@ -200,11 +223,25 @@ private:
         }
 
         // Tooltip carries the metrics line ("port 4840 | 2 sessions").
-        // Empty -> no tooltip; gtkmm hides the popover automatically.
-        // Cached above so we don't rewrite it every tick.
-        if (entry.lastMetrics != src.metricsLine) {
-            entry.row->set_tooltip_text(src.metricsLine);
-            entry.lastMetrics = src.metricsLine;
+        // In Slim layout where the dot has no visible label, the
+        // tooltip is the only place the operator can read the backend
+        // name + state -- prefix both into the tooltip so hover is
+        // self-explanatory.
+        std::string tooltip = src.metricsLine;
+        if (layout_ == Layout::Slim) {
+            std::string slimTip = entry.name;
+            slimTip += ": ";
+            slimTip += stateLabel(src.state);
+            if (!src.metricsLine.empty()) {
+                slimTip += " (";
+                slimTip += src.metricsLine;
+                slimTip += ")";
+            }
+            tooltip = std::move(slimTip);
+        }
+        if (entry.lastMetrics != tooltip) {
+            entry.row->set_tooltip_text(tooltip);
+            entry.lastMetrics = tooltip;
         }
     }
 

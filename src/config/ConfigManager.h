@@ -265,6 +265,17 @@ public:
         return getValue("auth.db_path", defaults::kAuthDbPath);
     }
 
+    // Multi-station mode. When true, main() instantiates a second
+    // ProductionModel (MirrorModel) for the SLAVE role, registers a
+    // PrimaryToSecondaryBridge between the two models with the
+    // IntegrationManager, and MainWindow swaps the regular Dashboard
+    // tab for the MultiStationDashboardPage which renders both
+    // stations side by side. Default off so single-station deployments
+    // are unaffected. See ADR-0011 + docs/design/multi-station-primary-secondary.md
+    [[nodiscard]] bool isMultiStationEnabled() const {
+        return getValue("ui.multistation_enabled", "false") == "true";
+    }
+
     // Historian time-series persistence. Off by default -- enabling it
     // creates a SQLite file at `historian.db_path` and starts batching
     // scalar telemetry. See HistorianBridge for the batching contract.

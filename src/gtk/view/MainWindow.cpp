@@ -15,6 +15,7 @@
 #include "src/gtk/view/LoginDialog.h"
 #include "src/presenter/UsersPresenter.h"
 #include "src/gtk/view/pages/DashboardPage.h"
+#include "src/gtk/view/pages/MultiStationDashboardPage.h"
 #include "src/gtk/view/pages/HistoryPage.h"
 #include "src/gtk/view/pages/ProductsPage.h"
 #include "src/gtk/view/pages/SettingsPage.h"
@@ -147,7 +148,15 @@ MainWindow::~MainWindow() {
 }
 
 const char* MainWindow::chooseMainWindowUI(const std::string& palette) {
-    // Palettes with a structurally different layout get their own .ui.
+    // Multi-station mode does NOT override layout -- it reuses the
+    // palette's existing main-window .ui so the full sidebar (with
+    // UserBadge / AlertsPanel / BackendHealthBar) stays visible.
+    // The Dashboard tab content is swapped in createAllPages: when
+    // a secondary model is wired in, a MultiStationDashboardPage is
+    // mounted instead of the single DashboardPage. The two
+    // dashboards inside are aggressively compacted (see
+    // DashboardPage::setCompact) so they fit alongside the full
+    // sidebar without overflow. See ADR-0011.
     if (palette == "blueprint") return app::config::defaults::kMainWindowBlueprintUI;
     if (palette == "right")     return app::config::defaults::kMainWindowRightUI;
     return app::config::defaults::kMainWindowUI;
@@ -268,6 +277,8 @@ void MainWindow::buildSidebarWidgets() {
                 app::core::Application::instance().integrationManager()) {
             // Compact strip on Blueprint (top-bar host has no vertical
             // budget for a card); full sidebar card everywhere else.
+            // Multi-station reuses the full sidebar layout now too;
+            // see chooseMainWindowUI + ADR-0011.
             const auto layout =
                 app::config::ConfigManager::instance().getPalette() ==
                         "blueprint"
@@ -360,6 +371,105 @@ void MainWindow::registerPage(app::view::Page* page) {
     pages_.push_back(page);
 }
 
+void MainWindow::createDashboardPages(app::core::Logger& logger,
+                                      app::auth::AuditLogger* audit,
+                                      app::auth::Session* session) {
+    auto& app = app::core::Application::instance();
+
+    // Dashboard -- single station by default, multi-station when the
+    // composition root injected a secondary model (set via
+    // `Application::setSecondaryProductionModel` when config has
+    // `ui.multistation_enabled = true`; see ADR-0011).
+    dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
+    dashboardPresenter_->setLogger(logger);
+    if (alertCenter_) {
+        dashboardPresenter_->setAlertCenter(*alertCenter_);
+    }
+    if (audit != nullptr && session != nullptr) {
+        dashboardPresenter_->setAudit(*audit, *session);
+    }
+
+    // Multi-station: when a secondary model is wired in, replace
+    // the Dashboard tab with MultiStationDashboardPage hosting two
+    // DashboardPage instances. The page uses an aggressively
+    // compacted variant (smaller gauges, no trend charts) so the
+    // two panes fit alongside the full sidebar without overflow.
+    // See ADR-0011.
+    auto* secondaryModel = app.secondaryProductionModel();
+    if (secondaryModel != nullptr) {
+        // Multi-station path: build a SECOND DashboardPresenter for
+        // the secondary and host both in a MultiStationDashboardPage.
+        // Sidebar (E-STOP, status badge, alerts, I/O) stays bound to
+        // the primary presenter -- that's the canonical operator
+        // surface; the secondary is a passive secondary monitor here.
+        // Secondary presenter intentionally does NOT get the alert center
+        // or audit logger: alerts and audit are an operator-level
+        // concern handled by the primary.
+        secondaryDashboardPresenter_ =
+            std::make_shared<app::DashboardPresenter>(*secondaryModel);
+        secondaryDashboardPresenter_->setLogger(logger);
+
+        multiStationDashboardPage_ =
+            Gtk::make_managed<app::view::MultiStationDashboardPage>(*dialogManager_);
+        multiStationDashboardPage_->initialize(dashboardPresenter_,
+                                               secondaryDashboardPresenter_);
+        registerPage(multiStationDashboardPage_);
+    } else {
+        dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
+        dashboardPage_->initialize(dashboardPresenter_);
+        registerPage(dashboardPage_);
+    }
+}
+
+#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
+void MainWindow::createInspectionPage(app::core::Logger& logger) {
+    // Edge AI inspection page. Only registered when both the ONNX
+    // model and the ImageNet labels file are on disk. Missing either
+    // is a soft skip -- the rest of the UI keeps working without the
+    // tab, and a log line points at the Python pipeline.
+    const std::filesystem::path modelPath(
+        "assets/models/mobilenetv2_int8.onnx");
+    const std::filesystem::path labelsPath(
+        "assets/models/imagenet_labels.txt");
+
+    if (!std::filesystem::exists(modelPath) ||
+        !std::filesystem::exists(labelsPath)) {
+        logger.warn(
+            "Edge AI: skipping Inspection tab -- model or labels "
+            "missing under assets/models/. Run scripts/ml/quantize_model.py "
+            "and scripts/ml/export_labels.py to generate them.");
+        return;
+    }
+    try {
+        inspectionDecoder_ =
+            std::make_unique<app::ml::ImageDecoder>();
+        // Plugin-loading classifier; ORT shared library is NOT
+        // pulled into industrial-hmi.exe at boot. The dlopen
+        // happens here on first construction.
+        inspectionClassifier_ =
+            std::make_unique<app::ml::OnnxImageClassifier>(
+                modelPath, labelsPath);
+        inspectionPresenter_ = std::make_shared<
+            app::presenter::QualityInspectionPresenter>(
+                *inspectionClassifier_, *inspectionDecoder_);
+        inspectionPresenter_->setLogger(logger);
+
+        inspectionPage_ = Gtk::make_managed<
+            app::view::QualityInspectionPage>(*dialogManager_);
+        inspectionPage_->initialize(inspectionPresenter_);
+        inspectionPresenter_->initialize();
+        registerPage(inspectionPage_);
+        logger.info(
+            "Edge AI: Inspection tab registered (model={})",
+            modelPath.string());
+    } catch (const std::exception& exc) {
+        logger.error(
+            "Edge AI: failed to wire Inspection tab: {}",
+            exc.what());
+    }
+}
+#endif
+
 void MainWindow::createAllPages() {
     auto& app    = app::core::Application::instance();
     auto& logger = app.logger();
@@ -372,18 +482,7 @@ void MainWindow::createAllPages() {
     auto* audit   = app.auditLogger();
     auto* session = app.authSession();
 
-    // Dashboard
-    dashboardPresenter_ = std::make_shared<app::DashboardPresenter>();
-    dashboardPresenter_->setLogger(logger);
-    if (alertCenter_) {
-        dashboardPresenter_->setAlertCenter(*alertCenter_);
-    }
-    if (audit != nullptr && session != nullptr) {
-        dashboardPresenter_->setAudit(*audit, *session);
-    }
-    dashboardPage_ = Gtk::make_managed<app::view::DashboardPage>(*dialogManager_);
-    dashboardPage_->initialize(dashboardPresenter_);
-    registerPage(dashboardPage_);
+    createDashboardPages(logger, audit, session);
 
     // Products
     productsPresenter_ = std::make_shared<app::ProductsPresenter>();
@@ -403,7 +502,12 @@ void MainWindow::createAllPages() {
         const auto userOpt = session->currentUser();
         if (userOpt.has_value()) {
             const auto role = userOpt->role;
-            dashboardPage_->applyRole(role);
+            if (dashboardPage_ != nullptr) {
+                dashboardPage_->applyRole(role);
+            }
+            if (multiStationDashboardPage_ != nullptr) {
+                multiStationDashboardPage_->applyRole(role);
+            }
             productsPage_->applyRole(role);
         }
     }
@@ -456,52 +560,7 @@ void MainWindow::createAllPages() {
     }
 
 #ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
-    // Edge AI inspection page. Only registered when both the ONNX
-    // model and the ImageNet labels file are on disk. Missing either
-    // is a soft skip -- the rest of the UI keeps working without the
-    // tab, and a log line points at the Python pipeline.
-    {
-        const std::filesystem::path modelPath(
-            "assets/models/mobilenetv2_int8.onnx");
-        const std::filesystem::path labelsPath(
-            "assets/models/imagenet_labels.txt");
-
-        if (!std::filesystem::exists(modelPath) ||
-            !std::filesystem::exists(labelsPath)) {
-            logger.warn(
-                "Edge AI: skipping Inspection tab -- model or labels "
-                "missing under assets/models/. Run scripts/ml/quantize_model.py "
-                "and scripts/ml/export_labels.py to generate them.");
-        } else {
-            try {
-                inspectionDecoder_ =
-                    std::make_unique<app::ml::ImageDecoder>();
-                // Plugin-loading classifier; ORT shared library is NOT
-                // pulled into industrial-hmi.exe at boot. The dlopen
-                // happens here on first construction.
-                inspectionClassifier_ =
-                    std::make_unique<app::ml::OnnxImageClassifier>(
-                        modelPath, labelsPath);
-                inspectionPresenter_ = std::make_shared<
-                    app::presenter::QualityInspectionPresenter>(
-                        *inspectionClassifier_, *inspectionDecoder_);
-                inspectionPresenter_->setLogger(logger);
-
-                inspectionPage_ = Gtk::make_managed<
-                    app::view::QualityInspectionPage>(*dialogManager_);
-                inspectionPage_->initialize(inspectionPresenter_);
-                inspectionPresenter_->initialize();
-                registerPage(inspectionPage_);
-                logger.info(
-                    "Edge AI: Inspection tab registered (model={})",
-                    modelPath.string());
-            } catch (const std::exception& exc) {
-                logger.error(
-                    "Edge AI: failed to wire Inspection tab: {}",
-                    exc.what());
-            }
-        }
-    }
+    createInspectionPage(logger);
 #endif
 
     dashboardPresenter_->initialize();
@@ -519,9 +578,10 @@ void MainWindow::clearPages() {
         mainNotebook_->remove_page(-1);
     }
     pages_.clear();
-    dashboardPage_ = nullptr;
-    productsPage_  = nullptr;
-    settingsPage_  = nullptr;
+    dashboardPage_             = nullptr;
+    multiStationDashboardPage_ = nullptr;
+    productsPage_              = nullptr;
+    settingsPage_              = nullptr;
 #ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
     // mainNotebook_->remove_page above destroyed QualityInspectionPage;
     // its destructor unregistered itself from the presenter, so the
@@ -639,6 +699,7 @@ void MainWindow::rebuildPages(const Glib::ustring& newLanguage) {
     //    drop) and release the presenters.
     clearPages();
     dashboardPresenter_.reset();
+    secondaryDashboardPresenter_.reset();
     productsPresenter_.reset();
 
     // 4) Re-point gettext at the new catalog. After this call, both `_()`
@@ -814,6 +875,7 @@ void MainWindow::reloadLayout() {
     //    on screen until we swap. That keeps the UI visually stable
     //    during the rebuild.
     dashboardPresenter_.reset();
+    secondaryDashboardPresenter_.reset();
     productsPresenter_.reset();
 
     // 5) Parse the new .ui into a DETACHED subtree (no set_child yet).
@@ -824,12 +886,13 @@ void MainWindow::reloadLayout() {
     //    corresponding widgets will be destroyed when set_child swaps
     //    the roots below.
     pages_.clear();
-    dashboardPage_  = nullptr;
-    productsPage_   = nullptr;
-    settingsPage_   = nullptr;
-    alertsPanel_    = nullptr;
-    statusBadge_    = nullptr;
-    clock_          = nullptr;
+    dashboardPage_             = nullptr;
+    multiStationDashboardPage_ = nullptr;
+    productsPage_              = nullptr;
+    settingsPage_              = nullptr;
+    alertsPanel_               = nullptr;
+    statusBadge_               = nullptr;
+    clock_                     = nullptr;
     Gtk::Box* newRoot = parseLayoutUI();
 
     // 6) Populate the new notebook + sidebar while still detached,

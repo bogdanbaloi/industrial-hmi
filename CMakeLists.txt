@@ -293,10 +293,12 @@ add_library(objectsModel OBJECT)
 target_sources(objectsModel
     PRIVATE
         src/model/DatabaseManager.cpp
+        src/model/MirrorModel.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
             src/model/SimulatedModel.h
+            src/model/MirrorModel.h
             src/model/DatabaseManager.h
             src/model/ModelContext.h
             src/model/Product.h
@@ -480,6 +482,7 @@ target_sources(objectsIntegrationCore
         src/integration/PlainTextTelemetryFormatter.cpp
         src/integration/JsonTelemetryFormatter.cpp
         src/integration/SensorIngestBridge.cpp
+        src/integration/PrimaryToSecondaryBridge.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -495,6 +498,7 @@ target_sources(objectsIntegrationCore
             src/integration/JsonTelemetryFormatter.h
             src/integration/ProductionTelemetryBridge.h
             src/integration/SensorIngestBridge.h
+            src/integration/PrimaryToSecondaryBridge.h
 )
 target_link_libraries(objectsIntegrationCore
     PUBLIC
@@ -864,6 +868,7 @@ target_sources(objectsView
         src/gtk/view/AboutDialog.cpp
         src/gtk/view/pages/AuditLogPage.cpp
         src/gtk/view/pages/DashboardPage.cpp
+        src/gtk/view/pages/MultiStationDashboardPage.cpp
         src/gtk/view/pages/HistoryPage.cpp
         src/gtk/view/pages/ProductsPage.cpp
         src/gtk/view/pages/SettingsPage.cpp
@@ -886,6 +891,7 @@ target_sources(objectsView
             src/gtk/view/pages/Page.h
             src/gtk/view/pages/AuditLogPage.h
             src/gtk/view/pages/DashboardPage.h
+            src/gtk/view/pages/MultiStationDashboardPage.h
             src/gtk/view/pages/HistoryPage.h
             src/gtk/view/pages/ProductsPage.h
             src/gtk/view/pages/SettingsPage.h

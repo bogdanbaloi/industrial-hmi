@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+
+  <!--
+    Multi-station layout - slim vertical sidebar (80px wide) on the
+    right. The narrow sidebar drops the per-widget cards (UserBadge,
+    full AlertsPanel) in favour of minimal indicators - status LED,
+    alert count, backend dots, E-STOP, clock. The 120px reclaimed
+    (200 -> 80) lets the MultiStationDashboardPage host both
+    DashboardPage instances at ~920px each on a 1920x1080 terminal
+    without clipping.
+
+    Same widget IDs as main-window.ui so MainWindow.cpp stays
+    layout-agnostic. user_container intentionally absent -- in this
+    slim variant the UserBadge is not mounted; the operator uses
+    the Users tab for profile / sign-out actions.
+  -->
+  <object class="GtkBox" id="root_container">
+    <property name="orientation">horizontal</property>
+    <property name="spacing">0</property>
+
+    <!-- LEFT CONTENT AREA - full window width minus the slim sidebar -->
+    <child>
+      <object class="GtkBox" id="content_area">
+        <property name="orientation">vertical</property>
+        <property name="hexpand">true</property>
+        <property name="vexpand">true</property>
+
+        <child>
+          <object class="GtkNotebook" id="main_notebook">
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            <property name="tab-pos">top</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkBox" id="log_panel">
+            <property name="orientation">vertical</property>
+            <property name="visible">false</property>
+            <property name="height-request">70</property>
+            <property name="css-classes">log-panel</property>
+
+            <child>
+              <object class="GtkScrolledWindow" id="log_scroll">
+                <property name="vexpand">true</property>
+                <property name="hexpand">true</property>
+                <child>
+                  <object class="GtkTextView" id="log_text_view">
+                    <property name="editable">false</property>
+                    <property name="cursor-visible">false</property>
+                    <property name="monospace">true</property>
+                    <property name="wrap-mode">word</property>
+                    <property name="css-classes">log-text</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- RIGHT SIDEBAR - slim vertical, 80px wide -->
+    <child>
+      <object class="GtkBox" id="sidebar">
+        <property name="orientation">vertical</property>
+        <property name="width-request">80</property>
+        <property name="spacing">10</property>
+        <property name="css-classes">sidebar sidebar-slim</property>
+
+        <!-- Compact brand: just the logo, centered -->
+        <child>
+          <object class="GtkBox" id="sidebar_header">
+            <property name="orientation">vertical</property>
+            <property name="halign">center</property>
+            <property name="margin-top">12</property>
+            <property name="margin-bottom">8</property>
+
+            <child>
+              <object class="GtkBox" id="app_logo">
+                <property name="css-classes">app-logo</property>
+                <property name="halign">center</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Brand text - hidden in slim mode but the labels still
+             exist so the live language switch + version checks find
+             their widget IDs. visible="false" hides them at runtime. -->
+        <child>
+          <object class="GtkLabel" id="app_title">
+            <property name="label" translatable="yes">Industrial HMI</property>
+            <property name="visible">false</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="app_subtitle">
+            <property name="label" translatable="yes">Production Monitor</property>
+            <property name="visible">false</property>
+          </object>
+        </child>
+
+        <!-- STATUS LED container - the SystemStatusBadge mounts here -->
+        <child>
+          <object class="GtkBox" id="system_status_container">
+            <property name="orientation">vertical</property>
+            <property name="halign">center</property>
+          </object>
+        </child>
+
+        <!-- ALERTS container - the AlertsPanel mounts here in compact
+             mode (just "Alerts . N" header, no list). -->
+        <child>
+          <object class="GtkBox" id="alerts_container">
+            <property name="orientation">vertical</property>
+            <property name="halign">center</property>
+          </object>
+        </child>
+
+        <!-- I/O backend health dots -->
+        <child>
+          <object class="GtkBox" id="backend_health_container">
+            <property name="orientation">vertical</property>
+            <property name="halign">center</property>
+            <property name="margin-start">4</property>
+            <property name="margin-end">4</property>
+          </object>
+        </child>
+
+        <!-- Spacer so E-STOP + tail sit at the bottom -->
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="vexpand">true</property>
+          </object>
+        </child>
+
+        <!-- E-STOP - big, full width minus margins -->
+        <child>
+          <object class="GtkButton" id="estop_button">
+            <property name="label" translatable="yes">E-STOP</property>
+            <property name="margin-start">8</property>
+            <property name="margin-end">8</property>
+            <property name="margin-bottom">8</property>
+            <property name="css-classes">sidebar-estop</property>
+          </object>
+        </child>
+
+        <!-- Close button - small "X" -->
+        <child>
+          <object class="GtkButton" id="close_app_button">
+            <property name="label" translatable="yes">X</property>
+            <property name="margin-start">8</property>
+            <property name="margin-end">8</property>
+            <property name="margin-bottom">8</property>
+            <property name="css-classes">sidebar-close-app</property>
+          </object>
+        </child>
+
+        <!-- Clock - compact, time only -->
+        <child>
+          <object class="GtkBox" id="clock_container">
+            <property name="orientation">vertical</property>
+            <property name="halign">center</property>
+            <property name="margin-bottom">8</property>
+          </object>
+        </child>
+
+        <!-- Version footer - tiny -->
+        <child>
+          <object class="GtkBox" id="sidebar_footer">
+            <property name="orientation">vertical</property>
+            <property name="halign">center</property>
+            <property name="margin-bottom">8</property>
+
+            <child>
+              <object class="GtkLabel" id="version_label">
+                <property name="label" translatable="yes">v1.2.0</property>
+                <property name="css-classes">sidebar-version</property>
+                <property name="halign">center</property>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkLabel" id="author_label">
+                <property name="label" translatable="yes"></property>
+                <property name="visible">false</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

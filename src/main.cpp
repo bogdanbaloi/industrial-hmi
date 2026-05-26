@@ -4,6 +4,7 @@
 #include "src/config/ConfigManager.h"
 #include "src/integration/IntegrationManager.h"
 #include "src/integration/MqttClient.h"
+#include "src/integration/PrimaryToSecondaryBridge.h"
 #include "src/integration/SensorIngestBridge.h"
 #include "src/integration/ProductionTelemetryBridge.h"
 #include "src/integration/TcpBackend.h"
@@ -33,6 +34,7 @@
 #include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
 #include "src/model/DatabaseManager.h"
+#include "src/model/MirrorModel.h"
 #include "src/model/SimulatedModel.h"
 #include <chrono>
 #include <cstdint>
@@ -220,7 +222,7 @@ void registerOpcUaClient(
 #endif
 
 #ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-/// Build + register the Modbus master backend. Composes the four
+/// Build + register the Modbus primary backend. Composes the four
 /// pieces (client + register map + ingest bridge + poll loop) and
 /// hands ownership to the IntegrationManager. Same shape as
 /// registerOpcUaBackend / registerMqttBackend; lives in a helper so
@@ -250,7 +252,7 @@ void registerModbusBackend(
         std::move(clientConfig));
 
     // Build the register map. The default layout exposes three
-    // contiguous blocks on the same slave:
+    // contiguous blocks on the same secondary:
     //
     //   Block A (boolean):   addresses base+[0..N-1]   EquipmentEnabled
     //   Block B (supply):    addresses supplyBase+[0..N-1]
@@ -480,6 +482,81 @@ void initWindowsConsole() {
 }
 #endif
 
+/// Multi-station: build the secondary MirrorModel + the in-process
+/// PrimaryToSecondaryBridge linking the singleton SimulatedModel
+/// (primary) into the mirror (secondary), then hand the bridge to the
+/// IntegrationManager so it surfaces in the BackendHealthBar next to
+/// the other protocols. See ADR-0011.
+void registerMultiStation(
+        app::integration::IntegrationManager& integration,
+        std::unique_ptr<app::model::MirrorModel>& secondaryModelOut,
+        std::unique_ptr<app::integration::PrimaryToSecondaryBridge>& bridgeOut) {
+    secondaryModelOut = std::make_unique<app::model::MirrorModel>();
+    bridgeOut = std::make_unique<app::integration::PrimaryToSecondaryBridge>(
+        app::model::SimulatedModel::instance(),
+        *secondaryModelOut);
+    integration.registerBackend(std::move(bridgeOut));
+}
+
+#ifndef CONSOLE_MODE
+/// Composition-root bundle passed to wireApplicationServices().
+/// Grouped into a struct (rather than a long parameter list) so the
+/// helper stays under the clang-tidy 8-parameter readability threshold.
+/// Every member references storage owned by main()'s stack frame; the
+/// helper writes through them but never takes ownership.
+struct CompositionRoot {
+    std::unique_ptr<app::historian::SqliteHistoryStore>&    historyStore;
+    std::unique_ptr<app::auth::AuthService>&                authService;
+    app::auth::Session&                                     authSession;
+    std::unique_ptr<app::auth::SqliteAuditLogger>&          auditLogger;
+    std::unique_ptr<app::model::MirrorModel>&               secondaryModel;
+    std::unique_ptr<app::auth::SqliteUserRepository>&       authRepo;
+    std::unique_ptr<app::auth::Argon2PasswordHasher>&       authHasher;
+    std::unique_ptr<app::presenter::UsersPresenter>&        usersPresenterOut;
+};
+
+/// Flow composition-root pointers into the Application singleton and
+/// build the (optional) UsersPresenter. Extracted from main() so the
+/// readability-function-size lint stays under the 150-line threshold.
+void wireApplicationServices(
+        app::core::Application&               app,
+        app::integration::IntegrationManager& integration,
+        CompositionRoot&                      root) {
+    // Inject the manager so MainWindow can mount the backend-
+    // health bar in the sidebar. Pointer stays valid through
+    // app.run() because `integration` lives on main()'s stack
+    // frame just above us.
+    app.setIntegrationManager(&integration);
+    // Historian read side is optional -- mounted only when the
+    // store opened successfully above. Pointer (or null) flows
+    // to MainWindow which decides whether to register the page.
+    app.setHistoryReader(root.historyStore.get());
+    // Auth: when registerAuth() succeeded both pointers are non-
+    // null and Application::run() will show the LoginDialog first.
+    // When auth is disabled (or registration failed) the pointers
+    // stay null and run() goes straight to MainWindow as before.
+    app.setAuth(root.authService.get(), &root.authSession);
+    app.setAuditLogger(root.auditLogger.get());
+
+    // Multi-station secondary: when ui.multistation_enabled was true
+    // the secondary MirrorModel was constructed above; flow the
+    // pointer into Application so MainWindow can build a second
+    // DashboardPresenter and swap the Dashboard tab for the
+    // MultiStationDashboardPage.
+    app.setSecondaryProductionModel(root.secondaryModel.get());
+
+    // Users management presenter -- wired only when the full auth
+    // stack is up (repo + hasher + audit + session). MainWindow
+    // gates UsersPage on `currentUser.role == Admin`; non-admins
+    // never see the tab even though the presenter is alive.
+    if (root.authRepo && root.authHasher && root.auditLogger) {
+        root.usersPresenterOut = std::make_unique<app::presenter::UsersPresenter>(
+            *root.authRepo, *root.authHasher, root.authSession, *root.auditLogger);
+        app.setUsersPresenter(root.usersPresenterOut.get());
+    }
+}
+#endif  // !CONSOLE_MODE
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -503,6 +580,15 @@ int main(int argc, char* argv[]) {
             productionBridge;
         std::unique_ptr<app::integration::SensorIngestBridge>
             sensorIngestBridge;
+
+        // Multi-station mode -- when enabled, instantiate a secondary
+        // MirrorModel and a PrimaryToSecondaryBridge linking the singleton
+        // SimulatedModel (primary) into the mirror (secondary). Both live
+        // on this stack frame so RAII tears them down after the
+        // IntegrationManager.stopAll() above. See ADR-0011 +
+        // docs/design/multi-station-primary-secondary.md
+        std::unique_ptr<app::model::MirrorModel>            secondaryModel;
+        std::unique_ptr<app::integration::PrimaryToSecondaryBridge> primarySecondaryBridge;
 
         // Auth + Historian stacks. Declared in construction order so
         // destruction reverses naturally. See registerAuth() /
@@ -561,12 +647,20 @@ int main(int argc, char* argv[]) {
 #endif
 
 #ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-        // Modbus master -- opt-in via config; compiled out via
+        // Modbus primary -- opt-in via config; compiled out via
         // BUILD_MODBUS_BACKEND=OFF. See registerModbusBackend().
         if (config.isModbusBackendEnabled()) {
             registerModbusBackend(integration, config, bootstrap.logger());
         }
 #endif
+
+        // Multi-station: build the secondary model + the bridge before
+        // startAll so the bridge appears in the BackendHealthBar
+        // alongside TCP/MQTT/Modbus/OPC-UA. See registerMultiStation().
+        if (config.isMultiStationEnabled()) {
+            registerMultiStation(integration, secondaryModel,
+                                 primarySecondaryBridge);
+        }
 
         integration.startAll();
 
@@ -578,32 +672,11 @@ int main(int argc, char* argv[]) {
         return kExitOk;
 #else
         auto& app = app::core::Application::instance();
-        // Inject the manager so MainWindow can mount the backend-
-        // health bar in the sidebar. Pointer stays valid through
-        // app.run() because `integration` lives on the same stack
-        // frame just above us.
-        app.setIntegrationManager(&integration);
-        // Historian read side is optional -- mounted only when the
-        // store opened successfully above. Pointer (or null) flows
-        // to MainWindow which decides whether to register the page.
-        app.setHistoryReader(historyStore.get());
-        // Auth: when registerAuth() succeeded both pointers are non-
-        // null and Application::run() will show the LoginDialog first.
-        // When auth is disabled (or registration failed) the pointers
-        // stay null and run() goes straight to MainWindow as before.
-        app.setAuth(authService.get(), &authSession);
-        app.setAuditLogger(auditLogger.get());
-
-        // Users management presenter -- wired only when the full auth
-        // stack is up (repo + hasher + audit + session). MainWindow
-        // gates UsersPage on `currentUser.role == Admin`; non-admins
-        // never see the tab even though the presenter is alive.
         std::unique_ptr<app::presenter::UsersPresenter> usersPresenter;
-        if (authRepo && authHasher && auditLogger) {
-            usersPresenter = std::make_unique<app::presenter::UsersPresenter>(
-                *authRepo, *authHasher, authSession, *auditLogger);
-            app.setUsersPresenter(usersPresenter.get());
-        }
+        CompositionRoot root{
+            historyStore, authService, authSession, auditLogger,
+            secondaryModel, authRepo, authHasher, usersPresenter};
+        wireApplicationServices(app, integration, root);
 
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 

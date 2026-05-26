@@ -22,6 +22,7 @@ namespace app {
     namespace view {
         class Page;
         class DashboardPage;
+        class MultiStationDashboardPage;
         class ProductsPage;
         class SettingsPage;
         class HistoryPage;
@@ -39,6 +40,11 @@ namespace app {
     namespace core {
         class Logger;
         class ExceptionHandler;
+    }
+
+    namespace auth {
+        class AuditLogger;
+        class Session;
     }
 
     namespace ml {
@@ -83,6 +89,16 @@ private:
     void loadSidebarCSS();
     void setupKeyboardShortcuts();
     void createAllPages();
+    // Extracted from createAllPages to keep it under the 150-line
+    // readability cap. Dashboard helper builds the single- or
+    // multi-station dashboard depending on whether the composition
+    // root injected a secondary model.
+    void createDashboardPages(app::core::Logger& logger,
+                              app::auth::AuditLogger* audit,
+                              app::auth::Session* session);
+#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN
+    void createInspectionPage(app::core::Logger& logger);
+#endif
     void wireSettingsSignals();
     void registerPage(app::view::Page* page);
     void clearPages();
@@ -176,6 +192,16 @@ private:
     // (observer wiring, settings-signal connections, themed-widget redraw).
     std::shared_ptr<app::DashboardPresenter> dashboardPresenter_;
     app::view::DashboardPage*                dashboardPage_ = nullptr;
+
+    // Multi-station mode: when Application::secondaryProductionModel() is
+    // non-null at createAllPages() time, MainWindow constructs a
+    // SECOND DashboardPresenter wired to that secondary model, then mounts
+    // a MultiStationDashboardPage hosting both presenters instead of
+    // the standalone DashboardPage. Sidebar (E-STOP / status badge /
+    // alerts / I/O) stays bound to the primary presenter -- the canonical
+    // operator surface. See ADR-0011 + docs/design/multi-station-primary-secondary.md
+    std::shared_ptr<app::DashboardPresenter> secondaryDashboardPresenter_;
+    app::view::MultiStationDashboardPage*    multiStationDashboardPage_ = nullptr;
 
     std::shared_ptr<app::ProductsPresenter>  productsPresenter_;
     app::view::ProductsPage*                 productsPage_  = nullptr;

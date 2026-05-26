@@ -114,8 +114,13 @@ constexpr const char* kMainWindowUI    = "assets/ui/main-window.ui";
 // Alternative MainWindow layouts picked by palette at startup. Each
 // must expose the same set of widget IDs as main-window.ui so
 // MainWindow.cpp stays agnostic about which file was loaded.
-constexpr const char* kMainWindowBlueprintUI = "assets/ui/main-window-blueprint.ui";
-constexpr const char* kMainWindowRightUI     = "assets/ui/main-window-right.ui";
+constexpr const char* kMainWindowBlueprintUI    = "assets/ui/main-window-blueprint.ui";
+constexpr const char* kMainWindowRightUI        = "assets/ui/main-window-right.ui";
+// Multi-station layout: sidebar moves to a horizontal bottom bar so
+// the two-pane MultiStationDashboardPage gets the full window width.
+// Selected by MainWindow when config has `ui.multistation_enabled =
+// true`, regardless of palette. See ADR-0011.
+constexpr const char* kMainWindowMultistationUI = "assets/ui/main-window-multistation.ui";
 constexpr const char* kDashboardPageUI  = "assets/ui/dashboard-page.ui";
 constexpr const char* kProductsPageUI   = "assets/ui/products-page.ui";
 constexpr const char* kSettingsPageUI   = "assets/ui/settings-page.ui";
