@@ -17,6 +17,13 @@ namespace {
 // kMinContentWidth/Height defaults but scale via the (width, height)
 // passed to onDraw, which is what GTK actually allocates.
 constexpr double kStripWidthPx       = 4.0;
+constexpr double kStripVerticalInset = 8.0;   // top/bottom inset so the
+                                              // strip floats as an accent
+                                              // instead of touching the
+                                              // card edges (avoids
+                                              // visual collision with
+                                              // tab indicators or
+                                              // adjacent borders).
 constexpr double kCardPaddingPx      = 16.0;
 constexpr double kRowGapPx           = 6.0;
 
@@ -167,7 +174,10 @@ void BigNumberCard::onDraw(const Cairo::RefPtr<Cairo::Context>& cr,
     // Status strip on the left edge -- 4 px regardless of width so
     // the visual weight stays consistent across responsive layouts.
     setSource(cr, strip);
-    cr->rectangle(0.0, 0.0, kStripWidthPx, static_cast<double>(height));
+    cr->rectangle(0.0,
+                  kStripVerticalInset,
+                  kStripWidthPx,
+                  static_cast<double>(height) - 2.0 * kStripVerticalInset);
     cr->fill();
 
     const double xStart = kStripWidthPx + kCardPaddingPx;

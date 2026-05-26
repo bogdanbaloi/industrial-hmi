@@ -5,10 +5,12 @@
 #include "src/presenter/ViewObserver.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/gtk/view/widgets/BigNumberCard.h"
+#include "src/gtk/view/widgets/DonutChartWidget.h"
 #include "src/gtk/view/widgets/QualityGauge.h"
 #include "src/gtk/view/widgets/TrendChart.h"
 #include <gtkmm.h>
 #include <array>
+#include <chrono>
 #include <memory>
 #include <optional>
 
@@ -164,6 +166,50 @@ private:
     /// push the new value to the OEE + Pass Rate cards. Called on
     /// every quality observer notification.
     void updateTopMetrics();
+
+    /// Session uptime breakdown (Phase 8C). Tracks how long the
+    /// system spends in each SystemState across the current
+    /// session and renders the proportions as a coloured donut
+    /// chart with a headline percentage in the centre.
+    struct UptimeWidgets {
+        Gtk::Box*         container{nullptr};
+        DonutChartWidget* donut{nullptr};
+    } uptimeWidgets_;
+
+    /// Accumulated seconds per system state. Index matches the
+    /// SystemState enum's int value (0 IDLE, 1 RUNNING, 2 ERROR,
+    /// 3 CALIBRATION); the array sizes to one slot past the
+    /// highest known value so a new state added to the enum
+    /// doesn't immediately segfault here (it just gets ignored
+    /// at refresh time, surfacing as a bug we can spot in CI).
+    std::array<double, 4> uptimeSecondsByState_{};
+    int                   currentUptimeState_{0};
+    std::chrono::steady_clock::time_point uptimeSegmentStart_{
+        std::chrono::steady_clock::now()};
+
+    /// Periodic timer (5 s) that recomputes the current state's
+    /// duration on the fly and refreshes the donut so the operator
+    /// sees the ring tick forward while the system is sitting in
+    /// one state (without it, the donut only updates on state
+    /// transitions which is too sparse for an "uptime" view).
+    sigc::connection uptimeRefreshConn_;
+
+    /// Build the inline session-uptime donut inside the Work Unit
+    /// card. Extracted out of buildUI so the latter stays under
+    /// the readability-function-size threshold.
+    void buildUptimeDonut(const Glib::RefPtr<Gtk::Builder>& builder);
+
+    /// Called when the presenter signals a system-state change.
+    /// Accumulates the current state's elapsed time before
+    /// switching to the new one, then pushes a fresh segment list
+    /// to the donut.
+    void onSystemStateChangedForUptime(int newState);
+
+    /// Pure-render helper: builds the segment list from
+    /// uptimeSecondsByState_ + the current segment's in-flight
+    /// duration, then hands the result to the donut along with
+    /// the centre title (running % uptime) and subtitle.
+    void refreshUptimeDonut();
 
     /// Presenter reference
     std::shared_ptr<DashboardPresenter> presenter_;
