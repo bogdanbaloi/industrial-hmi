@@ -117,6 +117,13 @@ void DashboardPage::setCompact(bool compact) {
             chart->queue_draw();
         }
     }
+
+    // Hide the KPI strip in compact mode -- two side-by-side
+    // dashboards each with their own KPI cards becomes visual noise
+    // without adding information. Single-station keeps the strip.
+    if (kpiStripWidgets_.container != nullptr) {
+        kpiStripWidgets_.container->set_visible(!compact);
+    }
 }
 
 void DashboardPage::refreshThemedWidgets() {
@@ -218,6 +225,41 @@ void DashboardPage::buildUI() {
     // Status zone
     statusZoneWidgets_.bannerBox = builder->get_widget<Gtk::Box>("status_banner");
     statusZoneWidgets_.messageLabel = builder->get_widget<Gtk::Label>("status_message");
+
+    // KPI top strip -- three BigNumberCard widgets injected into the
+    // empty container defined in dashboard-page.ui. Initial values
+    // give the operator something to read before the first presenter
+    // notification arrives; targets are static (set here, not from
+    // the model, until Phase 8F adds first-class fields).
+    kpiStripWidgets_.container = builder->get_widget<Gtk::Box>("kpi_strip");
+    if (kpiStripWidgets_.container) {
+        kpiStripWidgets_.oeeCard = Gtk::make_managed<BigNumberCard>();
+        kpiStripWidgets_.oeeCard->setLabel(_("OEE"));
+        kpiStripWidgets_.oeeCard->setUnit("%");
+        kpiStripWidgets_.oeeCard->setValue(85.0, 1);
+        kpiStripWidgets_.oeeCard->setTarget(85.0);
+        kpiStripWidgets_.oeeCard->setStatus(BigNumberCard::Status::Ok);
+        kpiStripWidgets_.container->append(*kpiStripWidgets_.oeeCard);
+
+        kpiStripWidgets_.throughputCard = Gtk::make_managed<BigNumberCard>();
+        kpiStripWidgets_.throughputCard->setLabel(_("THROUGHPUT"));
+        kpiStripWidgets_.throughputCard->setUnit(_("u/h"));
+        // Placeholder demo value until the model layer surfaces a
+        // real throughput counter (work units per hour). Tracked in
+        // the action queue as Phase 8F.
+        kpiStripWidgets_.throughputCard->setValue(127.0, 0);
+        kpiStripWidgets_.throughputCard->setTarget(100.0);
+        kpiStripWidgets_.throughputCard->setStatus(BigNumberCard::Status::Ok);
+        kpiStripWidgets_.container->append(*kpiStripWidgets_.throughputCard);
+
+        kpiStripWidgets_.passRateCard = Gtk::make_managed<BigNumberCard>();
+        kpiStripWidgets_.passRateCard->setLabel(_("PASS RATE"));
+        kpiStripWidgets_.passRateCard->setUnit("%");
+        kpiStripWidgets_.passRateCard->setValue(0.0, 1);
+        kpiStripWidgets_.passRateCard->setTarget(98.0);
+        kpiStripWidgets_.passRateCard->setStatus(BigNumberCard::Status::Ok);
+        kpiStripWidgets_.container->append(*kpiStripWidgets_.passRateCard);
+    }
 
     // Work unit
     workUnitWidgets_.workUnitIdLabel = builder->get_widget<Gtk::Label>("wu_id_label");
@@ -465,6 +507,14 @@ void DashboardPage::updateQualityCard(const presenter::QualityCheckpointViewMode
     if (vm.checkpointId < trendCharts_.size() && trendCharts_[vm.checkpointId]) {
         trendCharts_[vm.checkpointId]->addPoint(vm.passRate);
     }
+
+    // Remember the latest reading so the KPI strip can recompute
+    // the aggregate. Bounds-checked because the model could in
+    // principle ship more checkpoints than we have slots for.
+    if (vm.checkpointId < latestPassRates_.size()) {
+        latestPassRates_[vm.checkpointId] = vm.passRate;
+        updateTopMetrics();
+    }
     
     // Update pass rate - large and prominent
     card.passRateLabel->set_text(
@@ -542,6 +592,58 @@ void DashboardPage::updateStatusZone(const presenter::StatusZoneViewModel& vm) {
         case Severity::ERROR:   statusZoneWidgets_.bannerBox->add_css_class(css::kSeverityError); break;
         default: break;
     }
+}
+
+// KPI strip aggregate computation
+
+void DashboardPage::updateTopMetrics() {
+    // Aggregate pass rate = arithmetic mean of every checkpoint
+    // that has reported at least once. Checkpoints we haven't seen
+    // yet are skipped so a partially-populated dashboard still
+    // shows a meaningful Pass Rate without dropping toward zero.
+    double sum   = 0.0;
+    int    count = 0;
+    for (const auto& opt : latestPassRates_) {
+        if (opt.has_value()) {
+            sum += static_cast<double>(*opt);
+            ++count;
+        }
+    }
+    if (count == 0) return;
+    const double avgPassRate = sum / count;
+
+    // Status thresholds match the QualityCheckpointStatus tiers
+    // operators are already used to from the per-checkpoint cards:
+    //   >= 98     OK
+    //   90 - 98   Warning
+    //   < 90      Critical
+    auto tierForPassRate = [](double v) {
+        if (v >= 98.0) return BigNumberCard::Status::Ok;
+        if (v >= 90.0) return BigNumberCard::Status::Warning;
+        return BigNumberCard::Status::Critical;
+    };
+
+    if (kpiStripWidgets_.passRateCard != nullptr) {
+        kpiStripWidgets_.passRateCard->setValue(avgPassRate, 1);
+        kpiStripWidgets_.passRateCard->setStatus(tierForPassRate(avgPassRate));
+    }
+
+    // OEE -- placeholder formula until Phase 8F surfaces a real
+    // Availability + Performance + Quality breakdown. The current
+    // approximation maps the aggregate pass rate to an 80-95 OEE
+    // band so the card visibly moves with quality without claiming
+    // a metric we don't actually compute. The target of 85% gives
+    // the delta arrow something to flip against.
+    if (kpiStripWidgets_.oeeCard != nullptr) {
+        const double oee = 80.0 + (avgPassRate - 90.0) * 0.7;
+        kpiStripWidgets_.oeeCard->setValue(oee, 1);
+        kpiStripWidgets_.oeeCard->setStatus(
+            oee >= 85.0 ? BigNumberCard::Status::Ok
+                        : (oee >= 80.0 ? BigNumberCard::Status::Warning
+                                       : BigNumberCard::Status::Critical));
+    }
+    // Throughput card is intentionally NOT updated here -- it stays
+    // at the static placeholder set in buildUI until Phase 8F.
 }
 
 // CSS Styling

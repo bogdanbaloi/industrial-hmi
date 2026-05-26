@@ -4,10 +4,13 @@
 #include "src/gtk/view/pages/Page.h"
 #include "src/presenter/ViewObserver.h"
 #include "src/presenter/DashboardPresenter.h"
+#include "src/gtk/view/widgets/BigNumberCard.h"
 #include "src/gtk/view/widgets/QualityGauge.h"
 #include "src/gtk/view/widgets/TrendChart.h"
 #include <gtkmm.h>
+#include <array>
 #include <memory>
+#include <optional>
 
 class DashboardPageTest;  // forward-declare the gtest fixture
 
@@ -137,6 +140,30 @@ private:
         Gtk::Box* bannerBox{nullptr};
         Gtk::Label* messageLabel{nullptr};
     } statusZoneWidgets_;
+
+    /// Top KPI strip: three BigNumberCard widgets stretched across
+    /// the top of the dashboard. OEE and Throughput are placeholder
+    /// values today (model layer has no first-class fields for them
+    /// -- proper wiring is Phase 8F). Pass Rate is the aggregate
+    /// average across the three quality checkpoints and updates on
+    /// every quality observer notification.
+    struct KpiStripWidgets {
+        Gtk::Box*       container{nullptr};   // .ui-managed Gtk::Box
+        BigNumberCard*  oeeCard{nullptr};
+        BigNumberCard*  throughputCard{nullptr};
+        BigNumberCard*  passRateCard{nullptr};
+    } kpiStripWidgets_;
+
+    /// Latest pass rate per checkpoint id (index = checkpointId).
+    /// Used to compute the aggregate pass rate shown in the top
+    /// strip without holding a reference to the presenter's quality
+    /// state.
+    std::array<std::optional<float>, 3> latestPassRates_{};
+
+    /// Recompute the aggregate pass rate from latestPassRates_ and
+    /// push the new value to the OEE + Pass Rate cards. Called on
+    /// every quality observer notification.
+    void updateTopMetrics();
 
     /// Presenter reference
     std::shared_ptr<DashboardPresenter> presenter_;

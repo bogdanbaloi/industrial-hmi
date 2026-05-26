@@ -35,6 +35,25 @@
     </child>
 
     <!-- = -->
+    <!-- KPI TOP STRIP                                                -->
+    <!-- Three BigNumberCard widgets injected programmatically by    -->
+    <!-- DashboardPage::buildUI -- OEE / Throughput / Pass Rate.     -->
+    <!-- Hidden by setCompact(true) in multi-station mode since the  -->
+    <!-- two side-by-side panes already make the KPI duplication a   -->
+    <!-- visual repetition without information gain.                 -->
+    <!-- = -->
+    <child>
+      <object class="GtkBox" id="kpi_strip">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">12</property>
+        <property name="homogeneous">true</property>
+        <property name="margin-top">2</property>
+        <property name="margin-bottom">4</property>
+        <property name="css-classes">kpi-strip</property>
+      </object>
+    </child>
+
+    <!-- = -->
     <!-- WORK UNIT                                                    -->
     <!-- = -->
     <child>
