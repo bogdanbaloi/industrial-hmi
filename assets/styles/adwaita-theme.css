@@ -260,6 +260,24 @@ button.destructive-action:hover {
     min-height: 130px;
 }
 
+/* Session uptime section (Phase 8C). The DonutChartWidget is
+ * Cairo-drawn so it owns its own paint; the surrounding box just
+ * provides a card-style surface matching the dashboard's other
+ * sections. drawingarea kept transparent so the donut's own ring
+ * shows through. */
+.uptime-section {
+    background: @surface_alt;
+    border: 1px solid @border_subtle;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.uptime-section > drawingarea {
+    background: transparent;
+    min-height: 200px;
+    min-width: 200px;
+}
+
 .card-content {
     color: @text_secondary;
     line-height: 1.5;

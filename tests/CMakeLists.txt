@@ -888,6 +888,22 @@ add_test(NAME BigNumberCardTest COMMAND test_big_number_card
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(BigNumberCardTest PROPERTIES LABELS "gui")
 
+# View: DonutChartWidget (Phase 8C of the dashboard redesign).
+# Same shape as BigNumberCardTest -- state tests via the public
+# accessor surface; pixel-level rendering verified manually.
+add_executable(test_donut_chart_widget
+    DonutChartWidgetTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_donut_chart_widget PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_donut_chart_widget PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_donut_chart_widget PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME DonutChartWidgetTest COMMAND test_donut_chart_widget
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(DonutChartWidgetTest PROPERTIES LABELS "gui")
+
 # View: ProductsPage
 add_executable(test_products_page
     ProductsPageTest.cpp
@@ -948,6 +964,7 @@ if(WIN32)
     target_link_libraries(test_dashboard_presenter       PRIVATE ws2_32)
     target_link_libraries(test_dashboard_page            PRIVATE ws2_32)
     target_link_libraries(test_big_number_card           PRIVATE ws2_32)
+    target_link_libraries(test_donut_chart_widget        PRIVATE ws2_32)
     target_link_libraries(test_products_page             PRIVATE ws2_32)
     target_link_libraries(test_settings_page             PRIVATE ws2_32)
     target_link_libraries(test_dialog_manager            PRIVATE ws2_32)

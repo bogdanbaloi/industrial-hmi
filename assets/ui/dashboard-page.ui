@@ -345,6 +345,30 @@
     </child>
 
     <!-- = -->
+    <!-- SESSION UPTIME                                               -->
+    <!-- DonutChartWidget injected programmatically by DashboardPage  -->
+    <!-- showing % time spent in each SystemState during the session  -->
+    <!-- (Idle / Running / Calibration / Error). See Phase 8C.        -->
+    <!-- = -->
+    <child>
+      <object class="GtkLabel">
+        <property name="label" translatable="yes">SESSION UPTIME</property>
+        <property name="xalign">0</property>
+        <property name="css-classes">section-header</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkBox" id="uptime_donut_container">
+        <property name="orientation">horizontal</property>
+        <property name="halign">center</property>
+        <property name="margin-top">4</property>
+        <property name="margin-bottom">4</property>
+        <property name="css-classes">uptime-section</property>
+      </object>
+    </child>
+
+    <!-- = -->
     <!-- CONTROL PANEL                                                -->
     <!-- = -->
     <child>

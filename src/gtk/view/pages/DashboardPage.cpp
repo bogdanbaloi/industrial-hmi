@@ -51,6 +51,16 @@ constexpr double kOeeWarningThresholdPct = 80.0;
 constexpr double kOeeFormulaBaseline      = 80.0;
 constexpr double kOeeFormulaPivotPct      = 90.0;
 constexpr double kOeeFormulaQualityWeight = 0.7;
+
+// Session-uptime donut palette (Phase 8C). Idle gets a calmer
+// neutral blue since it is neither good nor bad on its own; the
+// other three states reuse the QualityCheckpointStatus colour
+// vocabulary so the dashboard reads as one visual language.
+constexpr Rgb kUptimeIdleColor = {0.42, 0.55, 0.78};
+
+// Percent scale -- used wherever a 0..1 share is converted to a
+// 0..100 percentage for display.
+constexpr double kPercentScale = 100.0;
 }  // namespace
 
 DashboardPage::DashboardPage(DialogManager& dialogManager)
@@ -65,6 +75,11 @@ DashboardPage::~DashboardPage() {
     if (presenter_) {
         presenter_->removeObserver(this);
     }
+    // Stop the uptime refresh timer so its lambda doesn't fire
+    // against a half-destructed page on the next Glib tick.
+    if (uptimeRefreshConn_.connected()) {
+        uptimeRefreshConn_.disconnect();
+    }
 }
 
 void DashboardPage::initialize(std::shared_ptr<DashboardPresenter> presenter) {
@@ -73,6 +88,30 @@ void DashboardPage::initialize(std::shared_ptr<DashboardPresenter> presenter) {
 
     // Register as observer - will receive all state updates
     presenter_->addObserver(this);
+
+    // Hook the presenter's system-state signal to drive the
+    // session-uptime donut (Phase 8C). The signal fires on every
+    // state transition; we accumulate the previous state's
+    // elapsed time and push a fresh segment list to the donut.
+    presenter_->signalSystemStateChanged().connect(
+        sigc::mem_fun(*this, &DashboardPage::onSystemStateChangedForUptime));
+
+    // Periodic refresh -- 5 s strikes a balance between visible
+    // motion (the operator sees the donut tick forward while the
+    // system holds in one state) and CPU cost (a static donut
+    // re-render is cheap but not free).
+    constexpr unsigned kUptimeRefreshIntervalMs = 5'000;
+    uptimeRefreshConn_ = Glib::signal_timeout().connect(
+        [this]() {
+            refreshUptimeDonut();
+            return true;  // keep firing
+        },
+        kUptimeRefreshIntervalMs);
+
+    // Anchor the first segment at "now" so the donut starts
+    // accumulating immediately, even before the first explicit
+    // state-change signal arrives.
+    uptimeSegmentStart_ = std::chrono::steady_clock::now();
 
     // Presenter will send initial state after registration
 }
@@ -368,6 +407,18 @@ void DashboardPage::buildUI() {
     }
 
     // Control panel
+    // Session uptime donut (Phase 8C). Container is defined in the
+    // .ui as an empty box; we inject the Cairo DonutChartWidget and
+    // seed the centre labels so the section reads as "no uptime yet"
+    // before the first state-change event lands.
+    uptimeWidgets_.container = builder->get_widget<Gtk::Box>("uptime_donut_container");
+    if (uptimeWidgets_.container) {
+        uptimeWidgets_.donut = Gtk::make_managed<DonutChartWidget>();
+        uptimeWidgets_.donut->setCenterTitle("--");
+        uptimeWidgets_.donut->setCenterSubtitle(_("session uptime"));
+        uptimeWidgets_.container->append(*uptimeWidgets_.donut);
+    }
+
     controlPanelWidgets_.activeIndicator = builder->get_widget<Gtk::Label>("cp_indicator");
     controlPanelWidgets_.startButton = builder->get_widget<Gtk::Button>("cp_start");
     controlPanelWidgets_.stopButton = builder->get_widget<Gtk::Button>("cp_stop");
@@ -692,6 +743,76 @@ void DashboardPage::updateTopMetrics() {
     }
     // Throughput card is intentionally NOT updated here -- it stays
     // at the static placeholder set in buildUI until Phase 8F.
+}
+
+// Session-uptime tracking (Phase 8C donut)
+
+void DashboardPage::onSystemStateChangedForUptime(int newState) {
+    // Accumulate the time spent in the *previous* state before
+    // switching the active slot. Bounds-checked so a new state
+    // beyond the array doesn't smash a neighbour.
+    const auto now = std::chrono::steady_clock::now();
+    const double elapsed =
+        std::chrono::duration<double>(now - uptimeSegmentStart_).count();
+    if (currentUptimeState_ >= 0 &&
+        static_cast<size_t>(currentUptimeState_) < uptimeSecondsByState_.size()) {
+        uptimeSecondsByState_[currentUptimeState_] += elapsed;
+    }
+
+    currentUptimeState_  = newState;
+    uptimeSegmentStart_  = now;
+
+    // Push immediately so the donut reflects the transition without
+    // waiting for the next periodic refresh.
+    refreshUptimeDonut();
+}
+
+void DashboardPage::refreshUptimeDonut() {
+    if (uptimeWidgets_.donut == nullptr) return;
+
+    // Per-state colours -- aligned with the QualityCheckpointStatus
+    // colour vocabulary the rest of the dashboard already uses
+    // (passing-green for "good" Running time, amber for Calibration
+    // which is a paused-but-not-broken state, red for Error). Idle
+    // gets a calmer neutral blue since it is neither good nor bad
+    // on its own.
+    using Seg = DonutChartWidget::Segment;
+    // SystemState int mapping: 0 IDLE, 1 RUNNING, 2 ERROR, 3 CALIBRATION
+    static constexpr Rgb kIdleColor        = kUptimeIdleColor;
+    static constexpr Rgb kCalibrationColor = colors::kStatusWarningAmber;
+
+    // Snapshot the accumulator with the in-flight current segment
+    // folded in so the donut shows a continuously-advancing ring
+    // even while the system holds in one state.
+    auto live = uptimeSecondsByState_;
+    if (currentUptimeState_ >= 0 &&
+        static_cast<size_t>(currentUptimeState_) < live.size()) {
+        const auto now = std::chrono::steady_clock::now();
+        const double inFlight =
+            std::chrono::duration<double>(now - uptimeSegmentStart_).count();
+        live[currentUptimeState_] += inFlight;
+    }
+
+    std::vector<Seg> segments;
+    segments.reserve(live.size());
+    segments.push_back({_("Idle"),        live[0], kIdleColor});
+    segments.push_back({_("Running"),     live[1], colors::kStatusPassingGreen});
+    segments.push_back({_("Error"),       live[2], colors::kStatusCriticalRed});
+    segments.push_back({_("Calibration"), live[3], kCalibrationColor});
+    uptimeWidgets_.donut->setSegments(std::move(segments));
+
+    // Headline: percentage of session time the system was Running.
+    // Reads as "production uptime" -- the operator's primary metric.
+    const double total = live[0] + live[1] + live[2] + live[3];
+    if (total <= 0.0) {
+        uptimeWidgets_.donut->setCenterTitle("--");
+        uptimeWidgets_.donut->setCenterSubtitle(_("session uptime"));
+        return;
+    }
+    const double runningShare = (live[1] / total) * kPercentScale;
+    uptimeWidgets_.donut->setCenterTitle(
+        std::vformat("{:.0f}%", std::make_format_args(runningShare)));
+    uptimeWidgets_.donut->setCenterSubtitle(_("running this session"));
 }
 
 // CSS Styling
