@@ -14,6 +14,43 @@ namespace {
 inline app::core::Logger& log() {
     return app::core::Application::instance().logger();
 }
+
+// KPI top strip targets + placeholder values + status tier
+// thresholds. Kept in one block so a future "make these configurable"
+// change has a single seam, and clang-tidy's magic-number lint stays
+// quiet.
+//
+// Targets are world-class industrial benchmarks (see Vorne / OEE
+// Industry Standards 2024):
+//   * OEE target 85%  -- "world class" threshold
+//   * Throughput placeholder 100 u/h -- demo-line nominal
+//   * Pass rate target 98% -- typical pharma / regulated industry
+constexpr double kOeeTargetPct           = 85.0;
+constexpr double kOeeInitialPct          = 85.0;  // shown before first sample
+constexpr double kThroughputPlaceholder  = 127.0; // demo value -- TODO Phase 8F real wiring
+constexpr double kThroughputTargetUph    = 100.0;
+constexpr double kPassRateTargetPct      = 98.0;
+
+// Pass-rate aggregate tier thresholds. Same brackets QualityCheckpoint-
+// Status uses per-checkpoint so the KPI strip's status colour matches
+// what the operator already learnt from the individual gauges:
+//   >= 98 OK   |   90 - 98 Warning   |   < 90 Critical
+constexpr double kPassRateOkThresholdPct      = 98.0;
+constexpr double kPassRateWarningThresholdPct = 90.0;
+
+// OEE-derived tier thresholds. Looser than pass-rate because OEE
+// compounds Availability x Performance x Quality and world-class
+// industrial sits at 85% (Vorne):
+//   >= 85 OK   |   80 - 85 Warning   |   < 80 Critical
+constexpr double kOeeOkThresholdPct      = 85.0;
+constexpr double kOeeWarningThresholdPct = 80.0;
+
+// Placeholder OEE formula derives a movement-with-quality value
+// from the aggregate pass rate; replaced by a real OEE model in
+// Phase 8F. Formula: oee = kOeeBaseline + (passRate - 90) * kOeeQualityWeight
+constexpr double kOeeFormulaBaseline      = 80.0;
+constexpr double kOeeFormulaPivotPct      = 90.0;
+constexpr double kOeeFormulaQualityWeight = 0.7;
 }  // namespace
 
 DashboardPage::DashboardPage(DialogManager& dialogManager)
@@ -236,8 +273,8 @@ void DashboardPage::buildUI() {
         kpiStripWidgets_.oeeCard = Gtk::make_managed<BigNumberCard>();
         kpiStripWidgets_.oeeCard->setLabel(_("OEE"));
         kpiStripWidgets_.oeeCard->setUnit("%");
-        kpiStripWidgets_.oeeCard->setValue(85.0, 1);
-        kpiStripWidgets_.oeeCard->setTarget(85.0);
+        kpiStripWidgets_.oeeCard->setValue(kOeeInitialPct, 1);
+        kpiStripWidgets_.oeeCard->setTarget(kOeeTargetPct);
         kpiStripWidgets_.oeeCard->setStatus(BigNumberCard::Status::Ok);
         kpiStripWidgets_.container->append(*kpiStripWidgets_.oeeCard);
 
@@ -247,8 +284,8 @@ void DashboardPage::buildUI() {
         // Placeholder demo value until the model layer surfaces a
         // real throughput counter (work units per hour). Tracked in
         // the action queue as Phase 8F.
-        kpiStripWidgets_.throughputCard->setValue(127.0, 0);
-        kpiStripWidgets_.throughputCard->setTarget(100.0);
+        kpiStripWidgets_.throughputCard->setValue(kThroughputPlaceholder, 0);
+        kpiStripWidgets_.throughputCard->setTarget(kThroughputTargetUph);
         kpiStripWidgets_.throughputCard->setStatus(BigNumberCard::Status::Ok);
         kpiStripWidgets_.container->append(*kpiStripWidgets_.throughputCard);
 
@@ -256,7 +293,7 @@ void DashboardPage::buildUI() {
         kpiStripWidgets_.passRateCard->setLabel(_("PASS RATE"));
         kpiStripWidgets_.passRateCard->setUnit("%");
         kpiStripWidgets_.passRateCard->setValue(0.0, 1);
-        kpiStripWidgets_.passRateCard->setTarget(98.0);
+        kpiStripWidgets_.passRateCard->setTarget(kPassRateTargetPct);
         kpiStripWidgets_.passRateCard->setStatus(BigNumberCard::Status::Ok);
         kpiStripWidgets_.container->append(*kpiStripWidgets_.passRateCard);
     }
@@ -620,13 +657,12 @@ void DashboardPage::updateTopMetrics() {
     const double avgPassRate = sum / count;
 
     // Status thresholds match the QualityCheckpointStatus tiers
-    // operators are already used to from the per-checkpoint cards:
-    //   >= 98     OK
-    //   90 - 98   Warning
-    //   < 90      Critical
+    // operators are already used to from the per-checkpoint cards
+    // (constants live in the anonymous-namespace block at the top
+    // of this file alongside the KPI targets).
     auto tierForPassRate = [](double v) {
-        if (v >= 98.0) return BigNumberCard::Status::Ok;
-        if (v >= 90.0) return BigNumberCard::Status::Warning;
+        if (v >= kPassRateOkThresholdPct)      return BigNumberCard::Status::Ok;
+        if (v >= kPassRateWarningThresholdPct) return BigNumberCard::Status::Warning;
         return BigNumberCard::Status::Critical;
     };
 
@@ -636,18 +672,23 @@ void DashboardPage::updateTopMetrics() {
     }
 
     // OEE -- placeholder formula until Phase 8F surfaces a real
-    // Availability + Performance + Quality breakdown. The current
+    // Availability * Performance * Quality breakdown. The current
     // approximation maps the aggregate pass rate to an 80-95 OEE
     // band so the card visibly moves with quality without claiming
     // a metric we don't actually compute. The target of 85% gives
     // the delta arrow something to flip against.
+    auto tierForOee = [](double v) {
+        if (v >= kOeeOkThresholdPct)      return BigNumberCard::Status::Ok;
+        if (v >= kOeeWarningThresholdPct) return BigNumberCard::Status::Warning;
+        return BigNumberCard::Status::Critical;
+    };
+
     if (kpiStripWidgets_.oeeCard != nullptr) {
-        const double oee = 80.0 + (avgPassRate - 90.0) * 0.7;
+        const double oee =
+            kOeeFormulaBaseline +
+            (avgPassRate - kOeeFormulaPivotPct) * kOeeFormulaQualityWeight;
         kpiStripWidgets_.oeeCard->setValue(oee, 1);
-        kpiStripWidgets_.oeeCard->setStatus(
-            oee >= 85.0 ? BigNumberCard::Status::Ok
-                        : (oee >= 80.0 ? BigNumberCard::Status::Warning
-                                       : BigNumberCard::Status::Critical));
+        kpiStripWidgets_.oeeCard->setStatus(tierForOee(oee));
     }
     // Throughput card is intentionally NOT updated here -- it stays
     // at the static placeholder set in buildUI until Phase 8F.
