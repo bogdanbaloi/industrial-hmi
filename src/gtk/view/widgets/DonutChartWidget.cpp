@@ -20,9 +20,16 @@ namespace {
 constexpr double kMarginRatio        = 0.06;   // outer margin
 constexpr double kRingThicknessRatio = 0.18;   // ring width relative to radius
 
-constexpr int kCenterTitleFontPt    = 28;
-constexpr int kCenterSubtitleFontPt = 11;
-constexpr double kCenterLabelGapPx  = 4.0;
+// Centre font sizes scale with the widget's shorter dimension so
+// the headline number reads at any donut size from compact inline
+// (110 px) to dedicated section (200 px+). Pivot dimension picked
+// at the default kMinContentWidth -- the donut renders as designed
+// at that size, then scales proportionally up or down.
+constexpr double kCenterTitleFontRatio    = 0.14;   // 200px -> 28pt
+constexpr double kCenterSubtitleFontRatio = 0.055;  // 200px -> 11pt
+constexpr int    kCenterTitleFontPtMin    = 12;
+constexpr int    kCenterSubtitleFontPtMin = 8;
+constexpr double kCenterLabelGapPx        = 4.0;
 
 constexpr Rgb kCenterTitleDarkMode  = {0.95, 0.95, 0.97};
 constexpr Rgb kCenterTitleLightMode = {0.12, 0.12, 0.15};
@@ -99,7 +106,7 @@ void DonutChartWidget::onDraw(const Cairo::RefPtr<Cairo::Context>& cr,
 
     const double cx     = static_cast<double>(width) / 2.0;
     const double cy     = static_cast<double>(height) / 2.0;
-    const double shorter = static_cast<double>(std::min(width, height));
+    const auto shorter = static_cast<double>(std::min(width, height));
     const double margin = shorter * kMarginRatio;
     const double outerRadius = (shorter / 2.0) - margin;
     if (outerRadius <= 0.0) return;
@@ -137,36 +144,48 @@ void DonutChartWidget::onDraw(const Cairo::RefPtr<Cairo::Context>& cr,
     const Rgb  titleColor = dark ? kCenterTitleDarkMode : kCenterTitleLightMode;
     const Rgb  subColor   = dark ? kCenterSubMutedDarkMode : kCenterSubMutedLightMode;
 
+    // Scale fonts with the widget's shorter dimension so the donut
+    // reads correctly at both inline-compact (110 px) and dedicated-
+    // section (200 px+) sizes. Floor at the *Min constants so very
+    // small slots still render legible text.
+    constexpr double kLineHeightFactor = 1.2;
+    const int titleFontPt = std::max(
+        kCenterTitleFontPtMin,
+        static_cast<int>(shorter * kCenterTitleFontRatio));
+    const int subFontPt   = std::max(
+        kCenterSubtitleFontPtMin,
+        static_cast<int>(shorter * kCenterSubtitleFontRatio));
+
     if (!centerTitle_.empty() && !centerSubtitle_.empty()) {
         const double titleHeight =
-            static_cast<double>(kCenterTitleFontPt) * 1.2;
+            static_cast<double>(titleFontPt) * kLineHeightFactor;
         const double subHeight =
-            static_cast<double>(kCenterSubtitleFontPt) * 1.2;
+            static_cast<double>(subFontPt) * kLineHeightFactor;
         const double blockHeight =
             titleHeight + kCenterLabelGapPx + subHeight;
         double y = cy - blockHeight / 2.0;
         setSource(cr, titleColor);
         const double drawnTitle =
             drawCenteredText(cr, centerTitle_, cx, y,
-                             kCenterTitleFontPt, /*bold=*/true);
+                             titleFontPt, /*bold=*/true);
         y += drawnTitle + kCenterLabelGapPx;
         setSource(cr, subColor);
         drawCenteredText(cr, centerSubtitle_, cx, y,
-                         kCenterSubtitleFontPt, /*bold=*/false);
+                         subFontPt, /*bold=*/false);
     } else if (!centerTitle_.empty()) {
         const double titleHeight =
-            static_cast<double>(kCenterTitleFontPt) * 1.2;
+            static_cast<double>(titleFontPt) * kLineHeightFactor;
         const double y = cy - titleHeight / 2.0;
         setSource(cr, titleColor);
         drawCenteredText(cr, centerTitle_, cx, y,
-                         kCenterTitleFontPt, /*bold=*/true);
+                         titleFontPt, /*bold=*/true);
     } else if (!centerSubtitle_.empty()) {
         const double subHeight =
-            static_cast<double>(kCenterSubtitleFontPt) * 1.2;
+            static_cast<double>(subFontPt) * kLineHeightFactor;
         const double y = cy - subHeight / 2.0;
         setSource(cr, subColor);
         drawCenteredText(cr, centerSubtitle_, cx, y,
-                         kCenterSubtitleFontPt, /*bold=*/false);
+                         subFontPt, /*bold=*/false);
     }
 }
 

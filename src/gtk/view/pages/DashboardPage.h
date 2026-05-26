@@ -194,6 +194,11 @@ private:
     /// transitions which is too sparse for an "uptime" view).
     sigc::connection uptimeRefreshConn_;
 
+    /// Build the inline session-uptime donut inside the Work Unit
+    /// card. Extracted out of buildUI so the latter stays under
+    /// the readability-function-size threshold.
+    void buildUptimeDonut(const Glib::RefPtr<Gtk::Builder>& builder);
+
     /// Called when the presenter signals a system-state change.
     /// Accumulates the current state's elapsed time before
     /// switching to the new one, then pushes a fresh segment list

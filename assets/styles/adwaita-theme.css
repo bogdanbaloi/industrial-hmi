@@ -260,22 +260,18 @@ button.destructive-action:hover {
     min-height: 130px;
 }
 
-/* Session uptime section (Phase 8C). The DonutChartWidget is
- * Cairo-drawn so it owns its own paint; the surrounding box just
- * provides a card-style surface matching the dashboard's other
- * sections. drawingarea kept transparent so the donut's own ring
- * shows through. */
-.uptime-section {
-    background: @surface_alt;
-    border: 1px solid @border_subtle;
-    border-radius: 8px;
-    padding: 12px;
+/* Session uptime donut (Phase 8C) sitting inline with the work-unit
+ * card on the right side. Container is transparent -- the donut
+ * sits visually inside the work-unit card frame rather than in its
+ * own surface, so the dashboard reads as one cohesive cockpit
+ * block (work unit + session telemetry) instead of stacked sections. */
+.work-unit-uptime {
+    background: transparent;
+    margin-left: 8px;
 }
 
-.uptime-section > drawingarea {
+.work-unit-uptime > drawingarea {
     background: transparent;
-    min-height: 200px;
-    min-width: 200px;
 }
 
 .card-content {

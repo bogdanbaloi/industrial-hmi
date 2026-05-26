@@ -406,19 +406,11 @@ void DashboardPage::buildUI() {
         qualityCards_.push_back(card);
     }
 
-    // Control panel
-    // Session uptime donut (Phase 8C). Container is defined in the
-    // .ui as an empty box; we inject the Cairo DonutChartWidget and
-    // seed the centre labels so the section reads as "no uptime yet"
-    // before the first state-change event lands.
-    uptimeWidgets_.container = builder->get_widget<Gtk::Box>("uptime_donut_container");
-    if (uptimeWidgets_.container) {
-        uptimeWidgets_.donut = Gtk::make_managed<DonutChartWidget>();
-        uptimeWidgets_.donut->setCenterTitle("--");
-        uptimeWidgets_.donut->setCenterSubtitle(_("session uptime"));
-        uptimeWidgets_.container->append(*uptimeWidgets_.donut);
-    }
+    // Session uptime donut (Phase 8C). Extracted to keep buildUI()
+    // below the readability-function-size threshold.
+    buildUptimeDonut(builder);
 
+    // Control panel
     controlPanelWidgets_.activeIndicator = builder->get_widget<Gtk::Label>("cp_indicator");
     controlPanelWidgets_.startButton = builder->get_widget<Gtk::Button>("cp_start");
     controlPanelWidgets_.stopButton = builder->get_widget<Gtk::Button>("cp_stop");
@@ -747,6 +739,27 @@ void DashboardPage::updateTopMetrics() {
 
 // Session-uptime tracking (Phase 8C donut)
 
+void DashboardPage::buildUptimeDonut(const Glib::RefPtr<Gtk::Builder>& builder) {
+    // Container lives inside the Work Unit card -- inline placement
+    // keeps the "what we're producing" + "how the session is going"
+    // information in one visual block instead of burning another
+    // vertical section. Compact size (110x110) fits beside the
+    // work-unit text without pushing the rest of the dashboard past
+    // the 1200 px height budget on a standard 1920x1080 industrial
+    // terminal.
+    uptimeWidgets_.container = builder->get_widget<Gtk::Box>("uptime_donut_container");
+    if (uptimeWidgets_.container == nullptr) return;
+
+    constexpr int kInlineDonutSize = 110;
+    uptimeWidgets_.donut = Gtk::make_managed<DonutChartWidget>();
+    uptimeWidgets_.donut->set_content_width(kInlineDonutSize);
+    uptimeWidgets_.donut->set_content_height(kInlineDonutSize);
+    uptimeWidgets_.donut->set_size_request(kInlineDonutSize, kInlineDonutSize);
+    uptimeWidgets_.donut->setCenterTitle("--");
+    uptimeWidgets_.donut->setCenterSubtitle(_("uptime"));
+    uptimeWidgets_.container->append(*uptimeWidgets_.donut);
+}
+
 void DashboardPage::onSystemStateChangedForUptime(int newState) {
     // Accumulate the time spent in the *previous* state before
     // switching the active slot. Bounds-checked so a new state
@@ -806,13 +819,13 @@ void DashboardPage::refreshUptimeDonut() {
     const double total = live[0] + live[1] + live[2] + live[3];
     if (total <= 0.0) {
         uptimeWidgets_.donut->setCenterTitle("--");
-        uptimeWidgets_.donut->setCenterSubtitle(_("session uptime"));
+        uptimeWidgets_.donut->setCenterSubtitle(_("uptime"));
         return;
     }
     const double runningShare = (live[1] / total) * kPercentScale;
     uptimeWidgets_.donut->setCenterTitle(
         std::vformat("{:.0f}%", std::make_format_args(runningShare)));
-    uptimeWidgets_.donut->setCenterSubtitle(_("running this session"));
+    uptimeWidgets_.donut->setCenterSubtitle(_("uptime"));
 }
 
 // CSS Styling
