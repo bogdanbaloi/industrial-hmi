@@ -872,6 +872,22 @@ add_test(NAME DashboardPageTest COMMAND test_dashboard_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(DashboardPageTest PROPERTIES LABELS "gui")
 
+# View: BigNumberCard widget (Phase 8A of the dashboard redesign).
+# Smoke + state tests only; pixel-level Cairo rendering is verified
+# manually until we wire a screenshot harness.
+add_executable(test_big_number_card
+    BigNumberCardTest.cpp
+    ViewTestMain.cpp          # gtkmm needs gtk_init() before any widget ctor
+)
+target_include_directories(test_big_number_card PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_big_number_card PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_big_number_card PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME BigNumberCardTest COMMAND test_big_number_card
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(BigNumberCardTest PROPERTIES LABELS "gui")
+
 # View: ProductsPage
 add_executable(test_products_page
     ProductsPageTest.cpp
@@ -931,6 +947,7 @@ if(WIN32)
     target_link_libraries(test_products_presenter_async  PRIVATE ws2_32)
     target_link_libraries(test_dashboard_presenter       PRIVATE ws2_32)
     target_link_libraries(test_dashboard_page            PRIVATE ws2_32)
+    target_link_libraries(test_big_number_card           PRIVATE ws2_32)
     target_link_libraries(test_products_page             PRIVATE ws2_32)
     target_link_libraries(test_settings_page             PRIVATE ws2_32)
     target_link_libraries(test_dialog_manager            PRIVATE ws2_32)
