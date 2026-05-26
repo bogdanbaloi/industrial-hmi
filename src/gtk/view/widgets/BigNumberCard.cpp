@@ -25,6 +25,17 @@ constexpr int    kValueFontPt        = 38;
 constexpr int    kUnitFontPt         = 20;
 constexpr int    kDeltaFontPt        = 12;
 
+// Line-height multipliers applied to the font point size when
+// advancing the cursor between rows. Standard typography ratios:
+//   * Label row uses a slightly looser leading (1.4) because the
+//     text sits at a small point size and benefits from extra
+//     vertical breathing room before the big value below.
+//   * Value row uses the tighter typographic default (1.25) so
+//     the optional delta line nestles close to the number without
+//     opening a vertical gap large enough to read as separation.
+constexpr double kLabelRowLineHeight = 1.4;
+constexpr double kValueRowLineHeight = 1.25;
+
 // Text colours -- the value/label/delta share theme-aware shades so
 // the card sits cleanly on light AND dark palettes. We pull the
 // existing chart-fg colours (defined in colors.h) for consistency
@@ -166,7 +177,7 @@ void BigNumberCard::onDraw(const Cairo::RefPtr<Cairo::Context>& cr,
     if (!label_.empty()) {
         setSource(cr, label);
         drawText(cr, label_, xStart, y, kLabelFontPt, /*bold=*/false);
-        y += static_cast<double>(kLabelFontPt) * 1.4 + kRowGapPx;
+        y += static_cast<double>(kLabelFontPt) * kLabelRowLineHeight + kRowGapPx;
     }
 
     // Row 2: huge value + unit.
@@ -187,7 +198,7 @@ void BigNumberCard::onDraw(const Cairo::RefPtr<Cairo::Context>& cr,
             setSource(cr, label);
             drawText(cr, unit_, unitX, unitY, kUnitFontPt, /*bold=*/false);
         }
-        y += static_cast<double>(kValueFontPt) * 1.25 + kRowGapPx;
+        y += static_cast<double>(kValueFontPt) * kValueRowLineHeight + kRowGapPx;
     }
 
     // Row 3: delta vs target -- skipped when no target has been set.
