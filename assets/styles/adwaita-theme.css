@@ -243,6 +243,23 @@ button.destructive-action:hover {
     margin-bottom: 12px;
 }
 
+/* KPI top strip -- container around the three BigNumberCard widgets
+ * mounted at the top of the dashboard. The cards are Cairo-drawn
+ * and own their internal padding; the strip just provides the
+ * card-style background so they sit on the same surface tone as
+ * the WORK UNIT / EQUIPMENT STATIONS sections below. */
+.kpi-strip {
+    background: @surface_alt;
+    border: 1px solid @border_subtle;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.kpi-strip > drawingarea {
+    background: transparent;
+    min-height: 130px;
+}
+
 .card-content {
     color: @text_secondary;
     line-height: 1.5;

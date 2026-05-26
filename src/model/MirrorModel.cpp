@@ -23,21 +23,39 @@ constexpr float kDefaultPassRate   = 100.0f;
 
 MirrorModel::MirrorModel(std::uint32_t equipmentCount,
                          std::uint32_t qualityCount) {
+    // IDs are 0-based to match SimulatedModel's id scheme. Bridge
+    // forwarders (PrimaryToSecondaryBridge) call setters by the primary
+    // model's equipmentId / checkpointId verbatim -- if the mirror used
+    // a different base, every forward would silently drop on the
+    // unordered_map::find() miss and the secondary dashboard would stay
+    // at defaults forever (this was a bug fixed in Phase 8E follow-up).
+    //
+    // Default checkpoint names match SimulatedModel's demo data so the
+    // secondary dashboard reads as a real station even before the bridge
+    // delivers its first forward (initial render uses defaults).
+    static constexpr const char* kDefaultCheckpointNames[] = {
+        "Weight Check", "Hardness Test", "Final Inspection",
+    };
+    static constexpr std::size_t kBuiltinNameCount =
+        sizeof(kDefaultCheckpointNames) / sizeof(kDefaultCheckpointNames[0]);
+
     for (std::uint32_t i = 0; i < equipmentCount; ++i) {
         EquipmentStatus eq;
-        eq.equipmentId = i + 1;
+        eq.equipmentId = i;
         eq.status      = kDefaultStatus;
         eq.supplyLevel = kDefaultSupplyLevel;
         equipment_.emplace(eq.equipmentId, eq);
     }
     for (std::uint32_t i = 0; i < qualityCount; ++i) {
         QualityCheckpoint qc;
-        qc.checkpointId    = i + 1;
-        qc.name            = "Checkpoint " + std::to_string(i + 1);
-        qc.status          = 0;
-        qc.unitsInspected  = 0;
-        qc.defectsFound    = 0;
-        qc.passRate        = kDefaultPassRate;
+        qc.checkpointId   = i;
+        qc.name           = i < kBuiltinNameCount
+            ? std::string(kDefaultCheckpointNames[i])
+            : "Checkpoint " + std::to_string(i + 1);
+        qc.status         = 0;
+        qc.unitsInspected = 0;
+        qc.defectsFound   = 0;
+        qc.passRate       = kDefaultPassRate;
         quality_.emplace(qc.checkpointId, qc);
     }
 }

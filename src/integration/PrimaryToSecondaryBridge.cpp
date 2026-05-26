@@ -28,6 +28,10 @@ void PrimaryToSecondaryBridge::start() {
             [this](const model::EquipmentStatus& status) {
                 onMasterEquipmentEvent(status);
             });
+        master_.onQualityCheckpointChanged(
+            [this](const model::QualityCheckpoint& checkpoint) {
+                onMasterQualityEvent(checkpoint);
+            });
     }
     running_.store(true, std::memory_order_release);
 }
@@ -103,6 +107,27 @@ void PrimaryToSecondaryBridge::onMasterEquipmentEvent(
     // cross-process follow-up.
     slave_.setEquipmentSupplyLevel(status.equipmentId,
                                    status.supplyLevel);
+
+    {
+        const std::lock_guard<std::mutex> lock(metricsMutex_);
+        lastForward_ = std::chrono::system_clock::now();
+    }
+    forwarded_.fetch_add(1, std::memory_order_acq_rel);
+}
+
+void PrimaryToSecondaryBridge::onMasterQualityEvent(
+        const model::QualityCheckpoint& checkpoint) {
+    if (!running_.load(std::memory_order_acquire)) {
+        return;
+    }
+
+    // Mirror the primary's pass rate onto the secondary's matching
+    // checkpoint id. As with the equipment supply level, this is the
+    // same setter every other ingest bridge uses (MQTT / Modbus /
+    // OPC-UA) so the secondary's behaviour stays indistinguishable
+    // from a real cross-process primary.
+    slave_.setQualityPassRate(checkpoint.checkpointId,
+                              checkpoint.passRate);
 
     {
         const std::lock_guard<std::mutex> lock(metricsMutex_);
