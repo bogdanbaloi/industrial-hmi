@@ -499,22 +499,29 @@ void registerMultiStation(
 }
 
 #ifndef CONSOLE_MODE
+/// Composition-root bundle passed to wireApplicationServices().
+/// Grouped into a struct (rather than a long parameter list) so the
+/// helper stays under the clang-tidy 8-parameter readability threshold.
+/// Every member references storage owned by main()'s stack frame; the
+/// helper writes through them but never takes ownership.
+struct CompositionRoot {
+    std::unique_ptr<app::historian::SqliteHistoryStore>&    historyStore;
+    std::unique_ptr<app::auth::AuthService>&                authService;
+    app::auth::Session&                                     authSession;
+    std::unique_ptr<app::auth::SqliteAuditLogger>&          auditLogger;
+    std::unique_ptr<app::model::MirrorModel>&               secondaryModel;
+    std::unique_ptr<app::auth::SqliteUserRepository>&       authRepo;
+    std::unique_ptr<app::auth::Argon2PasswordHasher>&       authHasher;
+    std::unique_ptr<app::presenter::UsersPresenter>&        usersPresenterOut;
+};
+
 /// Flow composition-root pointers into the Application singleton and
 /// build the (optional) UsersPresenter. Extracted from main() so the
 /// readability-function-size lint stays under the 150-line threshold.
-/// Every pointer source lives on main()'s stack frame; this helper
-/// just plumbs them in without taking ownership.
 void wireApplicationServices(
-        app::core::Application&                     app,
-        app::integration::IntegrationManager&       integration,
-        std::unique_ptr<app::historian::SqliteHistoryStore>& historyStore,
-        std::unique_ptr<app::auth::AuthService>&    authService,
-        app::auth::Session&                         authSession,
-        std::unique_ptr<app::auth::SqliteAuditLogger>& auditLogger,
-        std::unique_ptr<app::model::MirrorModel>&   secondaryModel,
-        std::unique_ptr<app::auth::SqliteUserRepository>& authRepo,
-        std::unique_ptr<app::auth::Argon2PasswordHasher>& authHasher,
-        std::unique_ptr<app::presenter::UsersPresenter>& usersPresenterOut) {
+        app::core::Application&               app,
+        app::integration::IntegrationManager& integration,
+        CompositionRoot&                      root) {
     // Inject the manager so MainWindow can mount the backend-
     // health bar in the sidebar. Pointer stays valid through
     // app.run() because `integration` lives on main()'s stack
@@ -523,29 +530,29 @@ void wireApplicationServices(
     // Historian read side is optional -- mounted only when the
     // store opened successfully above. Pointer (or null) flows
     // to MainWindow which decides whether to register the page.
-    app.setHistoryReader(historyStore.get());
+    app.setHistoryReader(root.historyStore.get());
     // Auth: when registerAuth() succeeded both pointers are non-
     // null and Application::run() will show the LoginDialog first.
     // When auth is disabled (or registration failed) the pointers
     // stay null and run() goes straight to MainWindow as before.
-    app.setAuth(authService.get(), &authSession);
-    app.setAuditLogger(auditLogger.get());
+    app.setAuth(root.authService.get(), &root.authSession);
+    app.setAuditLogger(root.auditLogger.get());
 
     // Multi-station secondary: when ui.multistation_enabled was true
     // the secondary MirrorModel was constructed above; flow the
     // pointer into Application so MainWindow can build a second
     // DashboardPresenter and swap the Dashboard tab for the
     // MultiStationDashboardPage.
-    app.setSecondaryProductionModel(secondaryModel.get());
+    app.setSecondaryProductionModel(root.secondaryModel.get());
 
     // Users management presenter -- wired only when the full auth
     // stack is up (repo + hasher + audit + session). MainWindow
     // gates UsersPage on `currentUser.role == Admin`; non-admins
     // never see the tab even though the presenter is alive.
-    if (authRepo && authHasher && auditLogger) {
-        usersPresenterOut = std::make_unique<app::presenter::UsersPresenter>(
-            *authRepo, *authHasher, authSession, *auditLogger);
-        app.setUsersPresenter(usersPresenterOut.get());
+    if (root.authRepo && root.authHasher && root.auditLogger) {
+        root.usersPresenterOut = std::make_unique<app::presenter::UsersPresenter>(
+            *root.authRepo, *root.authHasher, root.authSession, *root.auditLogger);
+        app.setUsersPresenter(root.usersPresenterOut.get());
     }
 }
 #endif  // !CONSOLE_MODE
@@ -666,10 +673,10 @@ int main(int argc, char* argv[]) {
 #else
         auto& app = app::core::Application::instance();
         std::unique_ptr<app::presenter::UsersPresenter> usersPresenter;
-        wireApplicationServices(app, integration, historyStore,
-                                authService, authSession, auditLogger,
-                                secondaryModel, authRepo, authHasher,
-                                usersPresenter);
+        CompositionRoot root{
+            historyStore, authService, authSession, auditLogger,
+            secondaryModel, authRepo, authHasher, usersPresenter};
+        wireApplicationServices(app, integration, root);
 
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure
 
