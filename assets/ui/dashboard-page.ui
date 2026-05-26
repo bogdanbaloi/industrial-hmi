@@ -167,7 +167,7 @@
         <property name="column-spacing">16</property>
         <property name="column-homogeneous">true</property>
 
-        <!-- A-LINE (column 0) -->
+        <!-- MIXER (column 0) -->
         <child>
           <object class="GtkBox" id="eq_card_0">
             <property name="orientation">vertical</property>
@@ -179,7 +179,7 @@
               <object class="GtkBox">
                 <property name="orientation">horizontal</property>
                 <property name="spacing">8</property>
-                <child><object class="GtkLabel"><property name="label">A-LINE</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel"><property name="label" translatable="yes">MIXER</property><property name="css-classes">card-title</property></object></child>
                 <child><object class="GtkLabel" id="eq_dot_0"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
               </object>
             </child>
@@ -189,7 +189,7 @@
           </object>
         </child>
 
-        <!-- B-LINE (column 1) -->
+        <!-- PRESS (column 1) -->
         <child>
           <object class="GtkBox" id="eq_card_1">
             <property name="orientation">vertical</property>
@@ -201,7 +201,7 @@
               <object class="GtkBox">
                 <property name="orientation">horizontal</property>
                 <property name="spacing">8</property>
-                <child><object class="GtkLabel"><property name="label">B-LINE</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel"><property name="label" translatable="yes">PRESS</property><property name="css-classes">card-title</property></object></child>
                 <child><object class="GtkLabel" id="eq_dot_1"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
               </object>
             </child>
@@ -211,7 +211,7 @@
           </object>
         </child>
 
-        <!-- C-LINE (column 2) -->
+        <!-- PACKAGING (column 2) -->
         <child>
           <object class="GtkBox" id="eq_card_2">
             <property name="orientation">vertical</property>
@@ -223,7 +223,7 @@
               <object class="GtkBox">
                 <property name="orientation">horizontal</property>
                 <property name="spacing">8</property>
-                <child><object class="GtkLabel"><property name="label">C-LINE</property><property name="css-classes">card-title</property></object></child>
+                <child><object class="GtkLabel"><property name="label" translatable="yes">PACKAGING</property><property name="css-classes">card-title</property></object></child>
                 <child><object class="GtkLabel" id="eq_dot_2"><property name="label">●</property><property name="css-classes">status-dot</property></object></child>
               </object>
             </child>
