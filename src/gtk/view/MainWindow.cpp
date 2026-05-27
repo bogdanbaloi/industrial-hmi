@@ -275,23 +275,15 @@ void MainWindow::buildSidebarWidgets() {
     if (backendHealthContainer_) {
         if (auto* manager =
                 app::core::Application::instance().integrationManager()) {
-            // Compact (dot + name, no verbose state pill) when there
-            // is no horizontal budget for the full pill: Blueprint
-            // top-bar host, and multi-station where the sidebar is
-            // hard-locked to 200 px (see chooseMainWindowUI + the
-            // .multistation-mode rules in sidebar.css). Full Sidebar
-            // card (name + word pill: CONNECTING / ONLINE / ...) on
-            // single-station deployments where the sidebar can grow
-            // to its natural width.
-            const bool isBlueprint =
+            // Compact strip on Blueprint (top-bar host has no vertical
+            // budget for a card); full sidebar card everywhere else.
+            // Multi-station reuses the full sidebar layout now too;
+            // see chooseMainWindowUI + ADR-0011.
+            const auto layout =
                 app::config::ConfigManager::instance().getPalette() ==
-                "blueprint";
-            const bool isMultistation =
-                app::core::Application::instance()
-                    .secondaryProductionModel() != nullptr;
-            const auto layout = (isBlueprint || isMultistation)
-                ? app::view::BackendHealthBar::Layout::Compact
-                : app::view::BackendHealthBar::Layout::Sidebar;
+                        "blueprint"
+                    ? app::view::BackendHealthBar::Layout::Compact
+                    : app::view::BackendHealthBar::Layout::Sidebar;
             backendHealthBar_ =
                 Gtk::make_managed<app::view::BackendHealthBar>(layout);
             backendHealthContainer_->append(*backendHealthBar_);
@@ -405,12 +397,6 @@ void MainWindow::createDashboardPages(app::core::Logger& logger,
     // See ADR-0011.
     auto* secondaryModel = app.secondaryProductionModel();
     if (secondaryModel != nullptr) {
-        // Tag the window so CSS can tighten the sidebar layout
-        // (hard-lock 200 px, shrink padding, ellipsize overflowing
-        // labels). Without this clamp the sidebar grows to its
-        // natural ~330 px and overflows the right edge of the
-        // window on anything below the 1920 px design width.
-        add_css_class("multistation-mode");
         // Multi-station path: build a SECOND DashboardPresenter for
         // the secondary and host both in a MultiStationDashboardPage.
         // Sidebar (E-STOP, status badge, alerts, I/O) stays bound to
