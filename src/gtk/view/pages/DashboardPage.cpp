@@ -113,6 +113,15 @@ void DashboardPage::initialize(std::shared_ptr<DashboardPresenter> presenter) {
     // state-change signal arrives.
     uptimeSegmentStart_ = std::chrono::steady_clock::now();
 
+    // Paint the donut once up front so it shows the empty ring +
+    // "--%" placeholder immediately. Without this the widget stays
+    // visually empty until the first state-change signal arrives
+    // (primary: ~instant via SimulatedModel) or the 5 s timer fires
+    // (secondary: MirrorModel is passive, state isn't bridged, so
+    // the user would otherwise see ~5 s of blank space where the
+    // donut belongs).
+    refreshUptimeDonut();
+
     // Presenter will send initial state after registration
 }
 
