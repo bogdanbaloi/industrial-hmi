@@ -1,4 +1,5 @@
-// Implements: REQ-DASHBOARD-004 (session uptime donut).
+// [utest->req~dashboard-004~1]
+// Covers REQ-DASHBOARD-004 (session uptime donut).
 //
 // Smoke + state tests for DonutChartWidget. Same approach as
 // BigNumberCardTest: we don't pixel-diff the Cairo output (no

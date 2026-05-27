@@ -552,6 +552,59 @@ jobs:
         echo "- Lines of code: $(find src -name '*.cpp' -o -name '*.h' -exec cat {} \; | wc -l)" >> $GITHUB_STEP_SUMMARY
         echo "- Commits: $(git rev-list --count HEAD)" >> $GITHUB_STEP_SUMMARY
 
+  traceability:
+    name: Requirements Traceability (OpenFastTrace)
+    runs-on: ubuntu-24.04
+
+    # Validates the bidirectional requirements traceability matrix:
+    #   1. Every MUST/SHOULD requirement in docs/requirements/REQUIREMENTS.md
+    #      that declares `Needs: utest` must have at least one matching
+    #      `// [utest->req~xxx-NNN~1]` tag in tests/.
+    #   2. Every coverage tag in tests/ must reference a real requirement.
+    #
+    # Format: OpenFastTrace (OFT) specobject Markdown + C/C++ tag comments.
+    # Discipline matches what ASPICE / IEC 61508 / ISO 26262 assessors expect
+    # from a SWE.4 / SWE.5 traceability artefact, scaled down for a portfolio
+    # codebase.
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Download OpenFastTrace
+      run: |
+        OFT_VERSION="4.1.0"
+        curl -fsSL -o oft.jar \
+          "https://github.com/itsallcode/openfasttrace/releases/download/${OFT_VERSION}/openfasttrace-${OFT_VERSION}.jar"
+        java -jar oft.jar --version
+
+    - name: Trace (HTML report)
+      run: |
+        java -jar oft.jar trace \
+          -o html \
+          -f build/traceability-report.html \
+          docs/requirements tests src || REPORT_EXIT=$?
+        echo "OFT report exit code: ${REPORT_EXIT:-0}"
+
+    - name: Trace (gate, fail on uncovered MUST/SHOULD)
+      run: |
+        java -jar oft.jar trace \
+          docs/requirements tests src
+
+    - name: Upload Traceability Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: traceability-report
+        path: build/traceability-report.html
+        retention-days: 30
+
   ml-integration:
     name: ML Integration (ONNX inference)
     runs-on: ubuntu-24.04
@@ -683,7 +736,7 @@ jobs:
   summary:
     name: Pipeline Summary
     runs-on: ubuntu-24.04
-    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, tsan, ml-integration, opcua-integration, documentation]
+    needs: [build-ubuntu, build-windows, code-quality, clang-tidy, coverage, sanitizers, tsan, ml-integration, opcua-integration, documentation, traceability]
     if: always()
 
     steps:
@@ -702,3 +755,4 @@ jobs:
         echo "| ML Integration | ${{ needs.ml-integration.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| OPC-UA Integration | ${{ needs.opcua-integration.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Traceability (OFT) | ${{ needs.traceability.result }} |" >> $GITHUB_STEP_SUMMARY

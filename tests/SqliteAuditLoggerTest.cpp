@@ -1,4 +1,5 @@
-// Implements: REQ-AUTH-003 (audit log for sensitive actions).
+// [utest->req~auth-003~1]
+// Covers REQ-AUTH-003 (audit log for sensitive actions).
 //
 // Tests for SqliteAuditLogger.
 //

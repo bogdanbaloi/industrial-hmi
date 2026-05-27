@@ -1,4 +1,5 @@
-// Implements: REQ-HISTORIAN-002 (batched writes).
+// [utest->req~historian-002~1]
+// Covers REQ-HISTORIAN-002 (batched writes).
 //
 // Tests for HistorianBridge.
 //

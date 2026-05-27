@@ -1,4 +1,5 @@
-// Implements: REQ-INTEGRATION-004 (OPC-UA server + client).
+// [utest->req~integration-004~1]
+// Covers REQ-INTEGRATION-004 (OPC-UA server + client).
 //
 // Tests for app::integration::opcua::OpcUaBackend.
 //

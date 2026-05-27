@@ -1,4 +1,5 @@
-// Implements: REQ-PRODUCTS-002 (async load + search filter).
+// [utest->req~products-002~1]
+// Covers REQ-PRODUCTS-002 (async load + search filter).
 //
 // Tests for ProductsPresenter's async CRUD paths (addProduct,
 // updateProduct, deleteProduct). These route through

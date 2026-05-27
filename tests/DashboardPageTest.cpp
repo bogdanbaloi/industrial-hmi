@@ -1,4 +1,5 @@
-// Implements: REQ-DASHBOARD-001 (equipment cards reflect live state),
+// [utest->req~dashboard-001~1]
+// Covers REQ-DASHBOARD-001 (equipment cards reflect live state),
 //             REQ-DASHBOARD-002 (quality checkpoint cards),
 //             REQ-DASHBOARD-005 (control panel role gating).
 //

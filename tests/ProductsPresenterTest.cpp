@@ -1,4 +1,5 @@
-// Implements: REQ-PRODUCTS-001 (product CRUD).
+// [utest->req~products-001~1]
+// Covers REQ-PRODUCTS-001 (product CRUD).
 //
 // Tests for app::ProductsPresenter
 // Drives the presenter with a MockProductsRepository so we can verify how

@@ -1,4 +1,5 @@
-// Implements: REQ-QUALITY-002 (alert center).
+// [utest->req~quality-002~1]
+// Covers REQ-QUALITY-002 (alert center).
 //
 // Tests for app::presenter::AlertCenter
 //

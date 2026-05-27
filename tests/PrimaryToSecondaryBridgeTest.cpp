@@ -1,4 +1,5 @@
-// Implements: REQ-MULTISTATION-003 (equipment supply forward),
+// [utest->req~multistation-003~1]
+// Covers REQ-MULTISTATION-003 (equipment supply forward),
 //             REQ-MULTISTATION-004 (quality pass-rate forward),
 //             REQ-MULTISTATION-005 (bridge metrics on BackendHealthBar).
 //

@@ -1,4 +1,5 @@
-// Implements: REQ-SETTINGS-001 (theme switch light/dark).
+// [utest->req~settings-001~1]
+// Covers REQ-SETTINGS-001 (theme switch light/dark).
 //
 // Tests for app::view::SettingsPage -- View layer.
 //

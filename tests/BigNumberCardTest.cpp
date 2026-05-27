@@ -1,4 +1,5 @@
-// Implements: REQ-DASHBOARD-003 (KPI top strip headline metrics).
+// [utest->req~dashboard-003~1]
+// Covers REQ-DASHBOARD-003 (KPI top strip headline metrics).
 //
 // Smoke + state tests for BigNumberCard. We don't exercise Cairo
 // rendering directly (would require pixel-diff harness) -- the

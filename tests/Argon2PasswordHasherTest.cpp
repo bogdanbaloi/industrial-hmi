@@ -1,4 +1,5 @@
-// Implements: REQ-AUTH-001 (password hashing via Argon2id).
+// [utest->req~auth-001~1]
+// Covers REQ-AUTH-001 (password hashing via Argon2id).
 //
 // Tests for Argon2PasswordHasher.
 //

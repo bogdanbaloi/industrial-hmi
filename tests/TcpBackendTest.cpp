@@ -1,4 +1,5 @@
-// Implements: REQ-INTEGRATION-001 (TCP backend).
+// [utest->req~integration-001~1]
+// Covers REQ-INTEGRATION-001 (TCP backend).
 //
 // Tests for app::integration::TcpBackend.
 //

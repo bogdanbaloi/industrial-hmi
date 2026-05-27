@@ -1,4 +1,5 @@
-// Implements: REQ-HISTORIAN-003 (automatic tier demotion).
+// [utest->req~historian-003~1]
+// Covers REQ-HISTORIAN-003 (automatic tier demotion).
 //
 // Tests for HistorianMaintenance.
 //
