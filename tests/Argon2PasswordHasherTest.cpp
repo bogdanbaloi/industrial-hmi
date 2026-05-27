@@ -1,3 +1,5 @@
+// Implements: REQ-AUTH-001 (password hashing via Argon2id).
+//
 // Tests for Argon2PasswordHasher.
 //
 // Argon2 is intentionally slow (~50 ms per hash on commodity hardware

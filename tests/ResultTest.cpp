@@ -1,3 +1,5 @@
+// Implements: REQ-CORE-001 (Result<T,E> for fallible operations).
+//
 // Tests for app::core::Result<T, E>
 // Covers Ok/Err construction, state inspection, unwrap semantics,
 // chaining via map/andThen, and errorMessage text mapping.

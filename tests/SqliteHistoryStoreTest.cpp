@@ -1,3 +1,5 @@
+// Implements: REQ-HISTORIAN-001 (SQLite 3-tier schema).
+//
 // Tests for SqliteHistoryStore.
 //
 // Everything runs against an in-memory database (`:memory:`) so the

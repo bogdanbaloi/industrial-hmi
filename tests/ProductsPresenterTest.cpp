@@ -1,3 +1,5 @@
+// Implements: REQ-PRODUCTS-001 (product CRUD).
+//
 // Tests for app::ProductsPresenter
 // Drives the presenter with a MockProductsRepository so we can verify how
 // it routes calls (load vs search), how it transforms domain Product rows

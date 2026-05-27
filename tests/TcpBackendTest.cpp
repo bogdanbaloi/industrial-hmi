@@ -1,3 +1,5 @@
+// Implements: REQ-INTEGRATION-001 (TCP backend).
+//
 // Tests for app::integration::TcpBackend.
 //
 // Boots the backend on an OS-assigned port (port=0), opens a real TCP

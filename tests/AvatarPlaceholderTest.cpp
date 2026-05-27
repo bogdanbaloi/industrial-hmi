@@ -1,3 +1,5 @@
+// Implements: REQ-AUTH-005 (avatar placeholder for users without an image).
+//
 // Tests for the avatar placeholder helpers -- the pure logic the
 // badge widget consults when a user has no uploaded photo.
 //

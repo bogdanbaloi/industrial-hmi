@@ -1,3 +1,6 @@
+// Implements: REQ-CORE-004 (config from JSON, validated),
+//             REQ-MULTISTATION-001 (multi-station opt-in via config).
+//
 // Tests for app::config::ConfigManager
 // Covers JSON load, getLanguage default, setLanguage in-memory + persistence.
 //

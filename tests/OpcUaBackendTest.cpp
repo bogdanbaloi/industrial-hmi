@@ -1,3 +1,5 @@
+// Implements: REQ-INTEGRATION-004 (OPC-UA server + client).
+//
 // Tests for app::integration::opcua::OpcUaBackend.
 //
 // The facade composes OpcUaServer + OpcUaNodeMap behind the

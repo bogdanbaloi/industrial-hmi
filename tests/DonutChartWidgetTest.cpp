@@ -1,3 +1,5 @@
+// Implements: REQ-DASHBOARD-004 (session uptime donut).
+//
 // Smoke + state tests for DonutChartWidget. Same approach as
 // BigNumberCardTest: we don't pixel-diff the Cairo output (no
 // screenshot harness wired in yet) but we cover construction,

@@ -1,3 +1,5 @@
+// Implements: REQ-HISTORIAN-002 (batched writes).
+//
 // Tests for HistorianBridge.
 //
 // The SimulatedModel singleton owns its callback list and has no

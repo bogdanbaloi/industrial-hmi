@@ -1,3 +1,5 @@
+// Implements: REQ-DASHBOARD-003 (KPI top strip headline metrics).
+//
 // Smoke + state tests for BigNumberCard. We don't exercise Cairo
 // rendering directly (would require pixel-diff harness) -- the
 // widget's correctness is verified by:

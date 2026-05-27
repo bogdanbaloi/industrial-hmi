@@ -1,3 +1,5 @@
+// Implements: REQ-SETTINGS-001 (theme switch light/dark).
+//
 // Tests for app::view::SettingsPage -- View layer.
 //
 // Exercises the private handler surface and verifies that the sigc::signal

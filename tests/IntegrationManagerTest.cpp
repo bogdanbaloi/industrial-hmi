@@ -1,3 +1,6 @@
+// Implements: REQ-ARCH-005 (IntegrationBackend uniformity),
+//             REQ-INTEGRATION-005 (backend health surfacing).
+//
 // Tests for app::integration::IntegrationManager.
 //
 // Pure C++ logic. Verifies the composition + lifecycle contract:
