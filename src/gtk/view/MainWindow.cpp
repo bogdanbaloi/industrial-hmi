@@ -397,6 +397,12 @@ void MainWindow::createDashboardPages(app::core::Logger& logger,
     // See ADR-0011.
     auto* secondaryModel = app.secondaryProductionModel();
     if (secondaryModel != nullptr) {
+        // Tag the window so CSS can tighten the sidebar layout
+        // (hard-lock 200 px, shrink padding, ellipsize overflowing
+        // labels). Without this clamp the sidebar grows to its
+        // natural ~330 px and overflows the right edge of the
+        // window on anything below the 1920 px design width.
+        add_css_class("multistation-mode");
         // Multi-station path: build a SECOND DashboardPresenter for
         // the secondary and host both in a MultiStationDashboardPage.
         // Sidebar (E-STOP, status badge, alerts, I/O) stays bound to
