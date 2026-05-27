@@ -1,3 +1,5 @@
+// Implements: REQ-PRODUCTS-002 (async load + search filter).
+//
 // Tests for ProductsPresenter's async CRUD paths (addProduct,
 // updateProduct, deleteProduct). These route through
 // DatabaseManager's async helpers, which post to the Boost.Asio I/O

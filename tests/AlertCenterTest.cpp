@@ -1,3 +1,5 @@
+// Implements: REQ-QUALITY-002 (alert center).
+//
 // Tests for app::presenter::AlertCenter
 //
 // AlertCenter is a tiny header-only service: raise/clear/snapshot + a

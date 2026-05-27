@@ -1,3 +1,7 @@
+// Implements: REQ-MULTISTATION-003 (equipment supply forward),
+//             REQ-MULTISTATION-004 (quality pass-rate forward),
+//             REQ-MULTISTATION-005 (bridge metrics on BackendHealthBar).
+//
 // Tests for app::integration::PrimaryToSecondaryBridge.
 //
 // The bridge has one job: forward equipment-status events from a

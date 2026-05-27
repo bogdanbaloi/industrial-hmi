@@ -1,3 +1,5 @@
+// Implements: REQ-INTEGRATION-003 (Modbus TCP master).
+//
 // Tests for app::integration::modbus::ModbusBackend.
 //
 // Lifecycle-only coverage: the four collaborators are exercised by

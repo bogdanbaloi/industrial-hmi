@@ -1,3 +1,5 @@
+// Implements: REQ-I18N-001 (gettext-backed translations).
+//
 // Tests for app::core::initI18n -- the GNU gettext adapter.
 //
 // i18n.cpp has three distinct paths we want to exercise:

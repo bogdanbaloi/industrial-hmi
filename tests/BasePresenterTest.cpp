@@ -1,3 +1,5 @@
+// Implements: REQ-ARCH-003 (observer pattern, no sigc in domain).
+//
 // Tests for app::BasePresenter
 // Covers observer registration, removal, duplicate-prevention, and the two
 // notifyAll overloads (member-function pointer + callable).

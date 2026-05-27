@@ -1,3 +1,6 @@
+// Implements: REQ-DASHBOARD-001 (equipment cards reflect live state),
+//             REQ-QUALITY-001 (pass-rate classification).
+//
 // Tests for app::DashboardPresenter
 //
 // Drives the presenter against a MockProductionModel so we can verify:

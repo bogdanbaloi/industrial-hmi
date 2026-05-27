@@ -1,3 +1,5 @@
+// Implements: REQ-HISTORIAN-003 (automatic tier demotion).
+//
 // Tests for HistorianMaintenance.
 //
 // We exercise the policy directly via `runOnce()` so the assertions

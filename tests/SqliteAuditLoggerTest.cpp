@@ -1,3 +1,5 @@
+// Implements: REQ-AUTH-003 (audit log for sensitive actions).
+//
 // Tests for SqliteAuditLogger.
 //
 // All cases run against `:memory:` so the suite is hermetic. The same

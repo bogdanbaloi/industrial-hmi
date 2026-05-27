@@ -1,3 +1,5 @@
+// Implements: REQ-CORE-002 (top-level exception guard).
+//
 // Tests for app::core::StandardExceptionHandler + safeExecute + ExceptionGuard.
 //
 // StandardExceptionHandler is the concrete ExceptionHandler implementation

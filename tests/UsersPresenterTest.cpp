@@ -1,3 +1,5 @@
+// Implements: REQ-AUTH-002 (three-tier RBAC).
+//
 // Tests for UsersPresenter.
 //
 // Strategy: exercise the presenter against a real SqliteUserRepository

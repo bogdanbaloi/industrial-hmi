@@ -1,3 +1,5 @@
+// Implements: REQ-INTEGRATION-002 (MQTT v3.1.1 / v5.0).
+//
 // Tests for app::integration::MqttClient.
 //
 // Brings up an in-process MockMqttBroker (a tiny Asio TCP server)

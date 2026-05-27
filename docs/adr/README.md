@@ -44,6 +44,7 @@ Each file has the following sections:
 | 0009 | [ML plugin gated by build-time flag](0009-ml-plugin-conditional-compile.md) | Accepted |
 | 0010 | [ConfigManager: policy / mechanism split](0010-config-policy-vs-mechanism.md) | Accepted |
 | 0011 | [Multi-station support (Primary/Secondary first instance)](0011-multi-station-support.md) | Accepted |
+| 0012 | [Requirements traceability — lightweight, not DOORS](0012-requirements-traceability.md) | Accepted |
 
 ## Adding a new ADR
 

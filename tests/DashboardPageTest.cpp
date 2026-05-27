@@ -1,3 +1,7 @@
+// Implements: REQ-DASHBOARD-001 (equipment cards reflect live state),
+//             REQ-DASHBOARD-002 (quality checkpoint cards),
+//             REQ-DASHBOARD-005 (control panel role gating).
+//
 // Tests for app::view::DashboardPage -- View layer.
 //
 // Verifies that button click handlers forward to the right presenter
