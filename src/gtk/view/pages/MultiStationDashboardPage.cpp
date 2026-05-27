@@ -10,8 +10,8 @@ namespace {
 // the per-pane "PRIMARY STATION" / "SECONDARY STATION" headers and
 // the dashboard-compact card chrome are enough visual separation
 // without a wide gutter.
-constexpr int kPaneSpacingPx   = 2;
-constexpr int kHeaderSpacingPx = 2;
+constexpr int kPaneSpacingPx   = 0;
+constexpr int kHeaderSpacingPx = 1;
 }  // namespace
 
 MultiStationDashboardPage::MultiStationDashboardPage(

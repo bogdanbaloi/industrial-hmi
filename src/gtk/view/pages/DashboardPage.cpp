@@ -179,7 +179,7 @@ void DashboardPage::setCompact(bool compact) {
     //     sparkline detail belongs in the dedicated History tab.
     //   * The .dashboard-compact CSS class on the page also shrinks
     //     paddings and font sizes (see adwaita-theme.css).
-    constexpr int kCompactGaugeSize     = 50;   // 100 -> 50
+    constexpr int kCompactGaugeSize     = 40;   // 100 -> 40
 
     for (auto& card : qualityCards_) {
         if (card.gauge != nullptr) {

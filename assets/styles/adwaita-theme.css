@@ -357,8 +357,8 @@ button.destructive-action:hover {
 .dashboard-compact .equipment-card,
 .dashboard-compact .quality-card,
 .dashboard-compact .work-unit-card {
-    padding: 6px;
-    margin: 2px;
+    padding: 4px;
+    margin: 1px;
     border-radius: 6px;
 }
 .dashboard-compact .equipment-title {
