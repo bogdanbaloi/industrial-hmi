@@ -98,6 +98,12 @@ void MirrorModel::stopProduction()   { publishSystemStateChange(SystemState::IDL
 void MirrorModel::resetSystem()      { publishSystemStateChange(SystemState::IDLE); }
 void MirrorModel::startCalibration() { publishSystemStateChange(SystemState::CALIBRATION); }
 
+void MirrorModel::loadProduct(const Product& /*product*/,
+                              const Recipe& /*recipe*/) {
+    // No-op: the secondary mirrors the primary and does not load
+    // recipes independently. See ADR-0011 + the class docstring.
+}
+
 void MirrorModel::setEquipmentEnabled(std::uint32_t equipmentId, bool enabled) {
     EquipmentStatus snapshot;
     {

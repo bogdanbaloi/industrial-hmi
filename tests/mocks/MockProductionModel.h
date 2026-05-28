@@ -25,6 +25,9 @@ public:
     MOCK_METHOD(void, resetSystem, (), (override));
     MOCK_METHOD(void, startCalibration, (), (override));
     MOCK_METHOD(void, setEquipmentEnabled, (uint32_t equipmentId, bool enabled), (override));
+    MOCK_METHOD(void, loadProduct,
+                (const model::Product& product, const model::Recipe& recipe),
+                (override));
     MOCK_METHOD(void, setEquipmentSupplyLevel,
                 (uint32_t equipmentId, int level), (override));
     MOCK_METHOD(void, setQualityPassRate,

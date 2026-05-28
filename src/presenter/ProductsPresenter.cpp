@@ -4,7 +4,9 @@
 #include "src/auth/Session.h"
 #include "src/auth/User.h"
 #include "src/model/DatabaseManager.h"
+#include "src/model/ProductionModel.h"
 #include "src/config/config_defaults.h"
+#include "src/core/i18n.h"
 
 #include <format>
 
@@ -248,6 +250,47 @@ void ProductsPresenter::exportProducts(
     LOG_IF(info,"Export products requested");
     auto& db = model::DatabaseManager::instance();
     db.getAllProductsAsync(std::move(callback));
+}
+
+void ProductsPresenter::loadRecipe(int productId) {
+    // Hookup absent (e.g. unit test, or production model not wired):
+    // fail gracefully with a message rather than dereferencing null.
+    if (recipes_ == nullptr || productionModel_ == nullptr) {
+        LOG_IF(warn, "loadRecipe({}) called but recipe-loading hookup is absent",
+               productId);
+        notifyAll([](ViewObserver* obs) {
+            obs->onRecipeLoaded(false, _("Recipe loading is not available."));
+        });
+        return;
+    }
+
+    const auto product = repository_.getProduct(productId);
+    if (product.id == config::defaults::kInvalidProductId) {
+        notifyAll([](ViewObserver* obs) {
+            obs->onRecipeLoaded(false, _("Product not found."));
+        });
+        return;
+    }
+
+    const auto recipe = recipes_->getRecipeByProductCode(product.productCode);
+    if (!recipe.has_value()) {
+        LOG_IF(info, "No recipe defined for product {}", product.productCode);
+        std::string code = product.productCode;
+        const std::string msg = std::vformat(
+            std::string{_("No recipe defined for {}.")},
+            std::make_format_args(code));
+        notifyAll([&msg](ViewObserver* obs) { obs->onRecipeLoaded(false, msg); });
+        return;
+    }
+
+    productionModel_->loadProduct(product, *recipe);
+    LOG_IF(info, "Loaded recipe for product {} onto the line",
+           product.productCode);
+    std::string name = product.name;
+    const std::string msg = std::vformat(
+        std::string{_("Loaded recipe for {}.")},
+        std::make_format_args(name));
+    notifyAll([&msg](ViewObserver* obs) { obs->onRecipeLoaded(true, msg); });
 }
 
 void ProductsPresenter::notifyProductsLoaded(const presenter::ProductsViewModel& vm) {

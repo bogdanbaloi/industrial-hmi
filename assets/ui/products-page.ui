@@ -117,6 +117,14 @@
             <property name="css-classes">toolbar-button</property>
           </object>
         </child>
+
+        <child>
+          <object class="GtkButton" id="btn_load_recipe">
+            <property name="label" translatable="yes">Load Recipe</property>
+            <property name="css-classes">toolbar-button</property>
+            <property name="tooltip-text" translatable="yes">Load this product's recipe onto the production line</property>
+          </object>
+        </child>
       </object>
     </child>
 

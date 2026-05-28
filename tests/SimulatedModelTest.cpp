@@ -1,9 +1,14 @@
+// [utest->req~products-003~1]
+// Covers REQ-PRODUCTS-003 (load product recipe onto the line).
+//
 // Tests for app::model::SimulatedModel
 // Covers init, state transitions, signal delivery, tick simulation,
 // and equipment enable/disable. No GTK dependency.
 
 #include "src/model/SimulatedModel.h"
 #include "src/model/ProductionTypes.h"
+#include "src/model/Product.h"
+#include "src/model/Recipe.h"
 
 #include <gtest/gtest.h>
 
@@ -236,3 +241,50 @@ TEST_F(SimulatedModelTest, SetQualityPassRateDropsUnknownId) {
 // above proves the dual contract (overridden ids stay frozen);
 // SensorIngestBridgeTest / ModbusIngestBridgeTest cover the drift
 // path on fresh per-test instances.
+
+// loadProduct (REQ-PRODUCTS-003) -- recipe drives the active work unit
+// and per-checkpoint targets. Self-contained: loadProduct sets every
+// asserted field explicitly, so it does not depend on test ordering
+// against the shared singleton.
+
+TEST_F(SimulatedModelTest, LoadProductSetsWorkUnitAndCheckpointTargets) {
+    app::model::Product product;
+    product.id = 7;
+    product.productCode = "PROD-007";
+    product.name = "Tablet X";
+
+    app::model::Recipe recipe;
+    recipe.productCode = "PROD-007";
+    recipe.totalOperations = 6;
+    recipe.checkpointTargets = {
+        {"Weight Check", 99.0f},
+        {"Hardness Test", 96.5f},
+    };
+
+    model().loadProduct(product, recipe);
+
+    auto wu = model().getWorkUnit();
+    EXPECT_EQ(wu.productId, "PROD-007");
+    EXPECT_EQ(wu.totalOperations, 6);
+    EXPECT_EQ(wu.completedOperations, 0);          // fresh batch
+    EXPECT_EQ(wu.workUnitId.rfind("WU-", 0), 0u);  // generated id
+
+    // Targets applied by name (not position).
+    EXPECT_FLOAT_EQ(model().getQualityCheckpoint(0).passRateTarget, 99.0f);
+    EXPECT_FLOAT_EQ(model().getQualityCheckpoint(1).passRateTarget, 96.5f);
+}
+
+TEST_F(SimulatedModelTest, LoadProductGeneratesDistinctWorkUnitIds) {
+    app::model::Product product;
+    product.productCode = "PROD-008";
+    product.name = "Tablet Y";
+    app::model::Recipe recipe;
+    recipe.totalOperations = 5;
+
+    model().loadProduct(product, recipe);
+    const auto first = model().getWorkUnit().workUnitId;
+    model().loadProduct(product, recipe);
+    const auto second = model().getWorkUnit().workUnitId;
+
+    EXPECT_NE(first, second);
+}

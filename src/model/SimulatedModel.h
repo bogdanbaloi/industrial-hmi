@@ -39,6 +39,8 @@ public:
     static constexpr int kEquipmentStatusOnline = 1;
     static constexpr int kEquipmentStatusOffline = 0;
     static constexpr std::uint_fast32_t kRngSeed = 42;
+    /// Base for generated work-unit sequence numbers (see workUnitSequence_).
+    static constexpr std::uint64_t kWorkUnitSeqBase = 2024000000ULL;
 
     static SimulatedModel& instance() {
         static SimulatedModel inst;
@@ -205,6 +207,53 @@ public:
                            checkpointId, clamped);
         }
         notifyQualityChange(checkpointId);
+    }
+
+    /// Load a product's recipe onto the line as the active work unit.
+    /// Mutates work-unit identity + per-checkpoint targets under the
+    /// lock; notifies observers outside it (matching the notify*
+    /// pattern). Only touches passRateTarget, not passRate, so an
+    /// external ingest bridge keeps ownership of the live pass-rate.
+    void loadProduct(const Product& product, const Recipe& recipe) override {
+        {
+            const std::scoped_lock lock(mutex_);
+
+            ++workUnitSequence_;
+            currentWorkUnit_.workUnitId =
+                "WU-" + std::to_string(workUnitSequence_);
+            currentWorkUnit_.productId = product.productCode;
+            currentWorkUnit_.description =
+                "Batch " + currentWorkUnit_.workUnitId + " | " + product.name;
+            currentWorkUnit_.totalOperations = recipe.totalOperations;
+            currentWorkUnit_.completedOperations = 0;  // fresh batch
+
+            // Fresh batch: zero inspection counters and apply each
+            // recipe target onto the matching checkpoint (by name, not
+            // position). Checkpoints without a recipe target keep their
+            // current target.
+            for (auto& [id, cp] : qualityCheckpoints_) {
+                cp.unitsInspected = 0;
+                cp.defectsFound = 0;
+                for (const auto& target : recipe.checkpointTargets) {
+                    if (target.checkpointName == cp.name) {
+                        cp.passRateTarget = target.passRateTarget;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (logger_) {
+            logger_->info("Model: loaded product {} -> {} ({} ops, {} targets)",
+                          product.productCode, currentWorkUnit_.workUnitId,
+                          recipe.totalOperations,
+                          recipe.checkpointTargets.size());
+        }
+
+        notifyWorkUnitChange();
+        for (const auto& [id, cp] : qualityCheckpoints_) {
+            notifyQualityChange(id);
+        }
     }
 
     [[nodiscard]] SystemState getState() const override { return currentState_; }
@@ -385,6 +434,11 @@ private:
     std::unordered_set<uint32_t> externalPassRateOverrides_;
     WorkUnit currentWorkUnit_;
     SystemState currentState_{SystemState::IDLE};
+
+    /// Monotonic sequence for generating a fresh work-unit id on each
+    /// loadProduct() call. Seeded above the demo batch number so the
+    /// first loaded batch reads as a plausible continuation.
+    uint64_t workUnitSequence_{kWorkUnitSeqBase};
     
     std::vector<EquipmentCallback> equipmentCallbacks_;
     std::vector<ActuatorCallback> actuatorCallbacks_;

@@ -1,6 +1,8 @@
 // [utest->req~products-001~1]
+// [utest->req~products-003~1]
 // [utest->req~arch-001~1]
-// Covers REQ-PRODUCTS-001 (product CRUD).
+// Covers REQ-PRODUCTS-001 (product CRUD),
+//        REQ-PRODUCTS-003 (load product recipe onto the line).
 //
 // Tests for app::ProductsPresenter
 // Drives the presenter with a MockProductsRepository so we can verify how
@@ -14,8 +16,11 @@
 #include "src/presenter/ProductsPresenter.h"
 #include "src/presenter/ViewObserver.h"
 #include "src/model/Product.h"
+#include "src/model/Recipe.h"
 #include "src/config/config_defaults.h"
 #include "mocks/MockProductsRepository.h"
+#include "mocks/MockRecipesRepository.h"
+#include "mocks/MockProductionModel.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -39,12 +44,18 @@ class CapturingObserver : public app::ViewObserver {
 public:
     std::optional<app::presenter::ProductsViewModel> products;
     std::optional<app::presenter::ViewProductDialogViewModel> productDetail;
+    std::optional<bool>        recipeLoadedSuccess;
+    std::optional<std::string> recipeLoadedMessage;
 
     void onProductsLoaded(const app::presenter::ProductsViewModel& vm) override {
         products = vm;
     }
     void onViewProductReady(const app::presenter::ViewProductDialogViewModel& vm) override {
         productDetail = vm;
+    }
+    void onRecipeLoaded(bool success, const std::string& message) override {
+        recipeLoadedSuccess = success;
+        recipeLoadedMessage = message;
     }
 };
 
@@ -187,4 +198,58 @@ TEST_F(ProductsPresenterTest, GetProductPassesThroughToRepository) {
     auto p = presenter->getProduct(11);
     EXPECT_EQ(p.id, 11);
     EXPECT_EQ(p.productCode, "PROD-011");
+}
+
+// loadRecipe (REQ-PRODUCTS-003)
+
+TEST_F(ProductsPresenterTest, LoadRecipeAppliesRecipeToModelAndNotifiesSuccess) {
+    app::test::MockRecipesRepository recipes;
+    app::test::MockProductionModel   prodModel;
+    presenter->setRecipeLoading(recipes, prodModel);
+
+    const auto product =
+        makeProduct(7, "PROD-007", "Tablet X", "Active", 500, 97.0f);
+    EXPECT_CALL(repo, getProduct(7)).WillOnce(Return(product));
+
+    app::model::Recipe recipe;
+    recipe.productCode = "PROD-007";
+    recipe.totalOperations = 6;
+    recipe.checkpointTargets = {{"Weight Check", 99.0f}};
+    EXPECT_CALL(recipes, getRecipeByProductCode("PROD-007"))
+        .WillOnce(Return(std::optional<app::model::Recipe>{recipe}));
+
+    // The product + recipe must be forwarded to the production model.
+    EXPECT_CALL(prodModel, loadProduct(_, _)).Times(1);
+
+    presenter->loadRecipe(7);
+
+    ASSERT_TRUE(observer.recipeLoadedSuccess.has_value());
+    EXPECT_TRUE(*observer.recipeLoadedSuccess);
+}
+
+TEST_F(ProductsPresenterTest, LoadRecipeMissingRecipeNotifiesFailureAndSkipsModel) {
+    app::test::MockRecipesRepository recipes;
+    app::test::MockProductionModel   prodModel;
+    presenter->setRecipeLoading(recipes, prodModel);
+
+    EXPECT_CALL(repo, getProduct(4))
+        .WillOnce(Return(makeProduct(4, "PROD-004", "No Recipe", "Inactive", 0, 0.0f)));
+    EXPECT_CALL(recipes, getRecipeByProductCode("PROD-004"))
+        .WillOnce(Return(std::nullopt));
+
+    // No recipe -> the model must NOT be loaded.
+    EXPECT_CALL(prodModel, loadProduct(_, _)).Times(0);
+
+    presenter->loadRecipe(4);
+
+    ASSERT_TRUE(observer.recipeLoadedSuccess.has_value());
+    EXPECT_FALSE(*observer.recipeLoadedSuccess);
+}
+
+TEST_F(ProductsPresenterTest, LoadRecipeWithoutHookupNotifiesFailure) {
+    // No setRecipeLoading() call -- presenter has no recipes repo / model.
+    presenter->loadRecipe(1);
+
+    ASSERT_TRUE(observer.recipeLoadedSuccess.has_value());
+    EXPECT_FALSE(*observer.recipeLoadedSuccess);
 }

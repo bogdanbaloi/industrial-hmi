@@ -11,6 +11,10 @@
 #include "src/config/config_defaults.h"
 #include "src/model/Product.h"
 #include "src/model/ProductsRepository.h"
+#include "src/model/Recipe.h"
+#include "src/model/RecipesRepository.h"
+
+#include <optional>
 
 namespace app::model {
 
@@ -22,9 +26,10 @@ namespace app::model {
 /// - Logging integration
 /// - Exception-safe
 ///
-/// Implements ProductsRepository so the presenter layer can depend on the
-/// abstraction (and tests can inject a mock).
-class DatabaseManager : public ProductsRepository {
+/// Implements ProductsRepository + RecipesRepository so the presenter
+/// layer can depend on the abstractions (and tests can inject mocks).
+class DatabaseManager : public ProductsRepository,
+                        public RecipesRepository {
 public:
     // Re-export at class scope so existing call sites that say
     // `DatabaseManager::Product` keep compiling unchanged.
@@ -53,7 +58,9 @@ public:
         
         createTables();
         populateDemoData();
-        
+        createRecipeTables();
+        populateRecipeDemoData();
+
         if (logger_) {
             logger_->info("Database initialized successfully");
         }
@@ -128,7 +135,51 @@ public:
 
         return products;
     }
-    
+
+    /// Look up a product's recipe (RecipesRepository). Returns nullopt
+    /// when the product has no recipe row, so the caller can surface a
+    /// "no recipe defined" message instead of loading a silent default.
+    [[nodiscard]] std::optional<Recipe>
+    getRecipeByProductCode(const std::string& productCode) override {
+        Recipe recipe;
+        recipe.productCode = productCode;
+        bool found = false;
+
+        const char* headSql =
+            "SELECT total_operations FROM recipes WHERE product_code = ?";
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, headSql, -1, &stmt, nullptr) == SQLITE_OK) {
+            sqlite3_bind_text(stmt, 1, productCode.c_str(), -1, SQLITE_TRANSIENT);
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                recipe.totalOperations = sqlite3_column_int(stmt, 0);
+                found = true;
+            }
+            sqlite3_finalize(stmt);
+        }
+        if (!found) {
+            return std::nullopt;
+        }
+
+        const char* targetsSql =
+            "SELECT checkpoint_name, pass_rate_target "
+            "FROM recipe_checkpoint_targets WHERE product_code = ? "
+            "ORDER BY checkpoint_name";
+        if (sqlite3_prepare_v2(db_, targetsSql, -1, &stmt, nullptr) == SQLITE_OK) {
+            sqlite3_bind_text(stmt, 1, productCode.c_str(), -1, SQLITE_TRANSIENT);
+            while (sqlite3_step(stmt) == SQLITE_ROW) {
+                CheckpointTarget t;
+                t.checkpointName =
+                    reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+                t.passRateTarget =
+                    static_cast<float>(sqlite3_column_double(stmt, 1));
+                recipe.checkpointTargets.push_back(std::move(t));
+            }
+            sqlite3_finalize(stmt);
+        }
+
+        return recipe;
+    }
+
     /// Add new product
     bool addProduct(const std::string& productCode, const std::string& name,
                     const std::string& status, int stock, float qualityRate) {
@@ -314,12 +365,75 @@ private:
             ('PROD-005', 'Product E', 'Active', 1200, 99.2),
             ('PROD-006', 'Product F', 'Active', 540, 96.8)
         )";
-        
+
         char* errMsg = nullptr;
         if (sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
             sqlite3_free(errMsg);
         }
 
+    }
+
+    /// Recipe schema. Normalised: one `recipes` row per product (the
+    /// operation count), plus N `recipe_checkpoint_targets` rows giving
+    /// each quality checkpoint its own pass-rate target. Targets are
+    /// matched onto live checkpoints by name (see ProductionModel::
+    /// loadProduct), so the join is by product_code + checkpoint_name.
+    void createRecipeTables() {
+        const char* sql = R"(
+            CREATE TABLE recipes (
+                product_code TEXT PRIMARY KEY,
+                total_operations INTEGER NOT NULL DEFAULT 5
+            );
+
+            CREATE TABLE recipe_checkpoint_targets (
+                product_code TEXT NOT NULL,
+                checkpoint_name TEXT NOT NULL,
+                pass_rate_target REAL NOT NULL,
+                PRIMARY KEY (product_code, checkpoint_name)
+            );
+        )";
+
+        char* errMsg = nullptr;
+        if (sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            sqlite3_free(errMsg);
+        }
+    }
+
+    /// Seed a recipe for each demo product. Operation counts and
+    /// per-checkpoint targets vary by product so loading different
+    /// products visibly changes the dashboard (progress denominator +
+    /// each quality card's target line).
+    void populateRecipeDemoData() {
+        const char* sql = R"(
+            INSERT INTO recipes (product_code, total_operations) VALUES
+            ('PROD-001', 5),
+            ('PROD-002', 4),
+            ('PROD-003', 6),
+            ('PROD-005', 5),
+            ('PROD-006', 7);
+
+            INSERT INTO recipe_checkpoint_targets (product_code, checkpoint_name, pass_rate_target) VALUES
+            ('PROD-001', 'Weight Check',     99.0),
+            ('PROD-001', 'Hardness Test',    97.0),
+            ('PROD-001', 'Final Inspection', 95.0),
+            ('PROD-002', 'Weight Check',     98.0),
+            ('PROD-002', 'Hardness Test',    96.0),
+            ('PROD-002', 'Final Inspection', 94.0),
+            ('PROD-003', 'Weight Check',     97.5),
+            ('PROD-003', 'Hardness Test',    95.0),
+            ('PROD-003', 'Final Inspection', 92.0),
+            ('PROD-005', 'Weight Check',     99.5),
+            ('PROD-005', 'Hardness Test',    98.0),
+            ('PROD-005', 'Final Inspection', 97.0),
+            ('PROD-006', 'Weight Check',     98.5),
+            ('PROD-006', 'Hardness Test',    96.5),
+            ('PROD-006', 'Final Inspection', 95.5)
+        )";
+
+        char* errMsg = nullptr;
+        if (sqlite3_exec(db_, sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            sqlite3_free(errMsg);
+        }
     }
 
     Product extractProduct(sqlite3_stmt* stmt) const {
