@@ -137,6 +137,13 @@ if [[ ${WANT_RUN} -eq 0 ]]; then
     exit 0
 fi
 
+# The app opens SQLite files under data/ (auth.sqlite, historian.sqlite)
+# and writes logs/app.log -- both relative to the working directory.
+# sqlite3_open does NOT create missing parent dirs, so without these
+# the --auth / --historian features silently disable at runtime with
+# "unable to open database file". Create them up front.
+mkdir -p "${BUILD_DIR}/data" "${BUILD_DIR}/logs"
+
 echo ">>> launching ${BUILD_DIR}/industrial-hmi.exe"
 cd "${BUILD_DIR}"
 exec ./industrial-hmi.exe
