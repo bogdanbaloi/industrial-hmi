@@ -5,6 +5,12 @@
 
 namespace app::model {
 
+/// Default quality-checkpoint pass-rate target (percent) before a
+/// product recipe is loaded. Matches config::defaults::kQualityPassThreshold
+/// but kept local so this lightweight types header pulls no config
+/// dependency.
+inline constexpr float kDefaultPassRateTarget = 95.0F;
+
 /// Snapshot of a single equipment line's runtime state.
 /// status uses the existing integer encoding: 0 offline, 1 online,
 /// 2 processing, 3 error. Kept as int (rather than an enum) so the wire
@@ -41,7 +47,7 @@ struct QualityCheckpoint {
     /// product's recipe (ProductionModel::loadProduct). Drives the
     /// "target N%" line the dashboard / alerts show. Default 95%
     /// matches the pre-recipe hardcoded expectation.
-    float passRateTarget{95.0f};
+    float passRateTarget{kDefaultPassRateTarget};
 };
 
 /// Snapshot of the work unit currently moving through the line.
