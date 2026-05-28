@@ -607,9 +607,20 @@ private:
                     size_t colonPos = line.find(":", keyEnd);
                     if (colonPos != std::string::npos) {
                         std::string value = line.substr(colonPos + 1);
-                        
-                        // Check if it's an object start
-                        if (value.find("{") != std::string::npos) {
+
+                        // Check if it's an object start. The value
+                        // (text after the colon), once trimmed, must
+                        // START with '{'. A bare find("{") is wrong:
+                        // string values such as
+                        //   "message_template": "Delete \"{product_name}\"?"
+                        // contain a brace without opening an object, and
+                        // would push a bogus path frame -- corrupting the
+                        // stack for every key that follows in the file.
+                        std::string trimmedValue = value;
+                        trimmedValue.erase(
+                            0, trimmedValue.find_first_not_of(" \t"));
+                        if (!trimmedValue.empty() &&
+                            trimmedValue.front() == '{') {
                             pathStack.push_back(key);
                         } else {
                             // Extract value
