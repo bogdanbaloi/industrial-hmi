@@ -360,6 +360,12 @@ button.destructive-action:hover {
     padding: 4px;
     margin: 1px;
     border-radius: 6px;
+    /* Allow the cards to shrink below their natural width so two
+       panes + the full 300px sidebar fit a 1920px window. Without
+       this each pane's minimum width (driven by the widest card)
+       stays ~870px, and 2*870 + 300 > 1920 forces GTK to clip the
+       (rightmost) sidebar. */
+    min-width: 0;
 }
 .dashboard-compact .equipment-title {
     font-size: 13px;

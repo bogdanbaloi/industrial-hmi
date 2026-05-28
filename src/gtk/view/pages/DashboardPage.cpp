@@ -61,6 +61,11 @@ constexpr Rgb kUptimeIdleColor = {0.42, 0.55, 0.78};
 // Percent scale -- used wherever a 0..1 share is converted to a
 // 0..100 percentage for display.
 constexpr double kPercentScale = 100.0;
+
+// Inline uptime-donut size in the Work Unit card. Full size in
+// single-station; setCompact() shrinks it for multi-station so two
+// panes + the full sidebar fit a 1920 px window.
+constexpr int kInlineDonutSizeDefault = 110;
 }  // namespace
 
 DashboardPage::DashboardPage(DialogManager& dialogManager)
@@ -208,6 +213,21 @@ void DashboardPage::setCompact(bool compact) {
     // without adding information. Single-station keeps the strip.
     if (kpiStripWidgets_.container != nullptr) {
         kpiStripWidgets_.container->set_visible(!compact);
+    }
+
+    // Shrink the inline uptime donut in compact mode. At 110 px it is
+    // one of the widest fixed-size elements in the work-unit card; two
+    // side-by-side panes plus the full sidebar overflow a 1920 px
+    // window, and the sidebar (rightmost, in the "right" palette) is
+    // what GTK clips. Dropping the donut to 72 px reclaims ~38 px per
+    // pane = ~76 px back to the sidebar.
+    if (uptimeWidgets_.donut != nullptr) {
+        constexpr int kCompactDonutSize = 72;   // 110 -> 72
+        const int size = compact ? kCompactDonutSize : kInlineDonutSizeDefault;
+        uptimeWidgets_.donut->set_content_width(size);
+        uptimeWidgets_.donut->set_content_height(size);
+        uptimeWidgets_.donut->set_size_request(size, size);
+        uptimeWidgets_.donut->queue_draw();
     }
 }
 
@@ -759,11 +779,11 @@ void DashboardPage::buildUptimeDonut(const Glib::RefPtr<Gtk::Builder>& builder) 
     uptimeWidgets_.container = builder->get_widget<Gtk::Box>("uptime_donut_container");
     if (uptimeWidgets_.container == nullptr) return;
 
-    constexpr int kInlineDonutSize = 110;
     uptimeWidgets_.donut = Gtk::make_managed<DonutChartWidget>();
-    uptimeWidgets_.donut->set_content_width(kInlineDonutSize);
-    uptimeWidgets_.donut->set_content_height(kInlineDonutSize);
-    uptimeWidgets_.donut->set_size_request(kInlineDonutSize, kInlineDonutSize);
+    uptimeWidgets_.donut->set_content_width(kInlineDonutSizeDefault);
+    uptimeWidgets_.donut->set_content_height(kInlineDonutSizeDefault);
+    uptimeWidgets_.donut->set_size_request(kInlineDonutSizeDefault,
+                                           kInlineDonutSizeDefault);
     uptimeWidgets_.donut->setCenterTitle("--");
     uptimeWidgets_.donut->setCenterSubtitle(_("uptime"));
     uptimeWidgets_.container->append(*uptimeWidgets_.donut);
