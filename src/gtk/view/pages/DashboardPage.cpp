@@ -184,7 +184,7 @@ void DashboardPage::setCompact(bool compact) {
     //     sparkline detail belongs in the dedicated History tab.
     //   * The .dashboard-compact CSS class on the page also shrinks
     //     paddings and font sizes (see adwaita-theme.css).
-    constexpr int kCompactGaugeSize     = 40;   // 100 -> 40
+    constexpr int kCompactGaugeSize     = 50;   // 100 -> 50
 
     for (auto& card : qualityCards_) {
         if (card.gauge != nullptr) {
@@ -215,19 +215,34 @@ void DashboardPage::setCompact(bool compact) {
         kpiStripWidgets_.container->set_visible(!compact);
     }
 
-    // Shrink the inline uptime donut in compact mode. At 110 px it is
-    // one of the widest fixed-size elements in the work-unit card; two
-    // side-by-side panes plus the full sidebar overflow a 1920 px
-    // window, and the sidebar (rightmost, in the "right" palette) is
-    // what GTK clips. Dropping the donut to 72 px reclaims ~38 px per
-    // pane = ~76 px back to the sidebar.
-    if (uptimeWidgets_.donut != nullptr) {
-        constexpr int kCompactDonutSize = 72;   // 110 -> 72
-        const int size = compact ? kCompactDonutSize : kInlineDonutSizeDefault;
-        uptimeWidgets_.donut->set_content_width(size);
-        uptimeWidgets_.donut->set_content_height(size);
-        uptimeWidgets_.donut->set_size_request(size, size);
-        uptimeWidgets_.donut->queue_draw();
+    // Hide the inline uptime donut in compact (multi-station) mode.
+    // The donut (Phase 8C) is a single-station nicety that lives in
+    // the Work Unit card; on two side-by-side panes it is the element
+    // that pushed the layout wide enough to clip the sidebar. Multi-
+    // station fit cleanly before the donut existed, so we simply drop
+    // it back out of the compact layout. Single-station keeps it.
+    if (uptimeWidgets_.container != nullptr) {
+        uptimeWidgets_.container->set_visible(!compact);
+    }
+
+    // Relax the control-panel button width in compact mode. The .ui
+    // pins each button to width-request 100; with the "CALIBRATION"
+    // label that makes the Control Panel frame the widest section of
+    // the pane (~790 px measured), which sets the whole pane's minimum
+    // width. Two such panes + the sidebar then overflow the window and
+    // the sidebar gets clipped. In compact we drop the fixed request
+    // (-1 = size to the label) so the panel shrinks to its natural
+    // width; single-station keeps the roomy 100 px buttons.
+    constexpr int kControlBtnHeight  = 40;
+    constexpr int kControlBtnWidthSS = 100;  // single-station .ui value
+    const int btnW = compact ? -1 : kControlBtnWidthSS;
+    for (Gtk::Button* btn : {controlPanelWidgets_.startButton,
+                             controlPanelWidgets_.stopButton,
+                             controlPanelWidgets_.resetButton,
+                             controlPanelWidgets_.calibrationButton}) {
+        if (btn != nullptr) {
+            btn->set_size_request(btnW, kControlBtnHeight);
+        }
     }
 }
 

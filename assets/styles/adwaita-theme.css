@@ -357,15 +357,9 @@ button.destructive-action:hover {
 .dashboard-compact .equipment-card,
 .dashboard-compact .quality-card,
 .dashboard-compact .work-unit-card {
-    padding: 4px;
-    margin: 1px;
+    padding: 8px;
+    margin: 6px;
     border-radius: 6px;
-    /* Allow the cards to shrink below their natural width so two
-       panes + the full 300px sidebar fit a 1920px window. Without
-       this each pane's minimum width (driven by the widest card)
-       stays ~870px, and 2*870 + 300 > 1920 forces GTK to clip the
-       (rightmost) sidebar. */
-    min-width: 0;
 }
 .dashboard-compact .equipment-title {
     font-size: 13px;
@@ -384,7 +378,12 @@ button.destructive-action:hover {
 }
 /* Pane control panel buttons -- shrink them too so the 4-button row
  * (Idle / Start / Stop / Reset / Calibration) doesn't push past the
- * compressed pane width. */
+ * compressed pane width. The base .control-button rule pins
+ * min-width: 120px + 4px side margins, which (x4 buttons) made the
+ * Control Panel frame the widest section of the pane (~790px) and so
+ * set the whole pane's minimum width -- starving the sidebar of room
+ * in multi-station. Drop the floor here so the buttons size to their
+ * labels; single-station keeps the roomy 120px buttons. */
 .dashboard-compact button {
     padding: 4px 10px;
     min-height: 28px;
