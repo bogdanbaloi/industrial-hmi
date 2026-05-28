@@ -37,6 +37,11 @@ struct QualityCheckpoint {
     int defectsFound{0};
     float passRate{100.0f};
     std::string lastDefect;
+    /// Target pass rate for this checkpoint, set from the active
+    /// product's recipe (ProductionModel::loadProduct). Drives the
+    /// "target N%" line the dashboard / alerts show. Default 95%
+    /// matches the pre-recipe hardcoded expectation.
+    float passRateTarget{95.0f};
 };
 
 /// Snapshot of the work unit currently moving through the line.

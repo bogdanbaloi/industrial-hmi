@@ -659,6 +659,25 @@ Verified by: ProductsPresenterAsyncTest.
 
 Needs: utest
 
+### REQ-PRODUCTS-003 (SHOULD) — Load product recipe onto the line
+
+`req~products-003~1`
+
+The operator **shall** be able to load a product's recipe from the
+Products page onto the production line. Loading a recipe **shall**
+make the product the active work unit (fresh work-unit id, reset
+progress + inspection counts, operation count from the recipe) and
+apply each recipe checkpoint target onto the matching quality
+checkpoint by name. A product with no recipe **shall** surface a
+"no recipe defined" message rather than loading a silent default.
+
+Verified by: ProductsPresenterTest (loadRecipe paths),
+SimulatedModelTest (loadProduct), DatabaseManager recipes seed.
+
+ADR: 0011 (Multi-station — secondary stays passive on load).
+
+Needs: utest
+
 ---
 
 ## QUALITY — Pass rate, alerts

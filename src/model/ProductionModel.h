@@ -1,6 +1,8 @@
 #pragma once
 
 #include "src/model/ProductionTypes.h"
+#include "src/model/Product.h"
+#include "src/model/Recipe.h"
 
 #include <cstdint>
 #include <functional>
@@ -41,6 +43,17 @@ public:
     virtual void resetSystem() = 0;
     virtual void startCalibration() = 0;
     virtual void setEquipmentEnabled(uint32_t equipmentId, bool enabled) = 0;
+
+    /// Load a product's recipe onto the line, making it the active work
+    /// unit. Replaces the work-unit identity (product code + a fresh
+    /// work-unit id), resets progress + inspection counts (a new batch
+    /// starts clean), sets `totalOperations` from the recipe, and applies
+    /// each recipe checkpoint target onto the matching quality checkpoint
+    /// (by name). Observers are notified of the work-unit and quality
+    /// changes. On the passive secondary (MirrorModel) this is a no-op --
+    /// the secondary mirrors the primary, it does not load recipes
+    /// independently (see ADR-0011).
+    virtual void loadProduct(const Product& product, const Recipe& recipe) = 0;
 
     /// Inbound analog setters. Used by ingest bridges (Modbus, MQTT,
     /// OPC-UA) that ship sensor data from external transports into

@@ -4,12 +4,17 @@
 #include "src/presenter/modelview/PlaceholderViewModels.h"
 #include "src/model/DatabaseManager.h"
 #include "src/model/ProductsRepository.h"
+#include "src/model/RecipesRepository.h"
 #include <string>
 #include <functional>
 
 namespace app::auth {
 class AuditLogger;
 class Session;
+}
+
+namespace app::model {
+class ProductionModel;
 }
 
 namespace app {
@@ -82,6 +87,23 @@ public:
         session_ = &session;
     }
 
+    /// Recipe-loading hookup. When both are set, the Products page's
+    /// "Load Recipe" action can fetch a product's recipe and load it
+    /// onto the production line. Optional + injected (mirrors setAudit)
+    /// so the repo-only test constructor and the headless build stay
+    /// unaffected. See REQ-PRODUCTS-003.
+    void setRecipeLoading(model::RecipesRepository& recipes,
+                          model::ProductionModel& productionModel) {
+        recipes_         = &recipes;
+        productionModel_ = &productionModel;
+    }
+
+    /// Look up the product's recipe and load it onto the production
+    /// line, making it the active work unit. Notifies observers via
+    /// onRecipeLoaded (success + message, or failure when the product
+    /// has no recipe / the hookup is absent).
+    void loadRecipe(int productId);
+
 private:
     /// Build ProductsViewModel from database results
     presenter::ProductsViewModel buildProductsViewModel();
@@ -106,6 +128,12 @@ private:
     /// presenter is exercised in a unit test.
     app::auth::AuditLogger* audit_{nullptr};
     app::auth::Session*     session_{nullptr};
+
+    /// Recipe-loading hookup -- both null unless setRecipeLoading was
+    /// called (production wiring). loadRecipe is a no-op-with-error
+    /// when absent.
+    model::RecipesRepository* recipes_{nullptr};
+    model::ProductionModel*   productionModel_{nullptr};
 };
 
 }  // namespace app

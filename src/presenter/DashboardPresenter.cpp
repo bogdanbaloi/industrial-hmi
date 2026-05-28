@@ -405,7 +405,11 @@ presenter::QualityCheckpointViewModel DashboardPresenter::buildQualityCheckpoint
     vm.unitsInspected = cp.unitsInspected;
     vm.defectsFound = cp.defectsFound;
     vm.passRate = cp.passRate;
-    vm.targetPassRate = config::defaults::kQualityPassThreshold;
+    // Target comes from the active product's recipe (set via
+    // ProductionModel::loadProduct, stored on the checkpoint). Falls
+    // back to the global default for checkpoints with no recipe loaded
+    // (passRateTarget defaults to that value on a fresh checkpoint).
+    vm.targetPassRate = cp.passRateTarget;
     vm.lastDefect = cp.lastDefect;
 
     // The quality enum is recomputed on every tick, so WARN/ERROR here

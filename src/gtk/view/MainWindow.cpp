@@ -490,6 +490,14 @@ void MainWindow::createAllPages() {
     if (audit != nullptr && session != nullptr) {
         productsPresenter_->setAudit(*audit, *session);
     }
+    // Recipe loading: the Products page "Load Recipe" action fetches a
+    // recipe (DatabaseManager) and loads it onto the primary production
+    // line (SimulatedModel singleton -- the same model the single-station
+    // dashboard observes), so the dashboard reflects the selected
+    // product. See REQ-PRODUCTS-003.
+    productsPresenter_->setRecipeLoading(
+        app::model::DatabaseManager::instance(),
+        app::model::SimulatedModel::instance());
     productsPage_ = Gtk::make_managed<app::view::ProductsPage>(*dialogManager_);
     productsPage_->initialize(productsPresenter_);
     registerPage(productsPage_);

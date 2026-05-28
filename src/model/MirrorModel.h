@@ -72,6 +72,11 @@ public:
     void startCalibration() override;
     void setEquipmentEnabled(std::uint32_t equipmentId, bool enabled) override;
 
+    /// No-op. The secondary station mirrors the primary; an operator
+    /// does not load a recipe independently onto it (see ADR-0011).
+    /// The primary's loadProduct propagates through the bridge.
+    void loadProduct(const Product& product, const Recipe& recipe) override;
+
     // ProductionModel: inbound setters (driven by the bridge)
     void setEquipmentSupplyLevel(std::uint32_t equipmentId, int level) override;
     void setQualityPassRate(std::uint32_t checkpointId, float rate) override;

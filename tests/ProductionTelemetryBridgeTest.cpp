@@ -77,6 +77,7 @@ public:
     void resetSystem() override {}
     void startCalibration() override {}
     void setEquipmentEnabled(uint32_t, bool) override {}
+    void loadProduct(const app::model::Product&, const app::model::Recipe&) override {}
     void setEquipmentSupplyLevel(uint32_t, int) override {}
     void setQualityPassRate(uint32_t, float) override {}
 

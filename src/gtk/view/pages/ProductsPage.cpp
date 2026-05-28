@@ -168,12 +168,16 @@ void ProductsPage::buildUI() {
     auto* editBtn = builder->get_widget<Gtk::Button>("btn_edit");
     auto* deleteBtn = builder->get_widget<Gtk::Button>("btn_delete");
 
+    auto* loadRecipeBtn = builder->get_widget<Gtk::Button>("btn_load_recipe");
+
     viewBtn->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onViewProductClicked));
     editBtn->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onEditProductClicked));
     deleteBtn->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onDeleteProductClicked));
+    loadRecipeBtn->signal_clicked().connect(
+        sigc::mem_fun(*this, &ProductsPage::onLoadRecipeClicked));
 }
 
 // Event Handlers
@@ -294,6 +298,34 @@ void ProductsPage::onEditProductClicked() {
             showEditProductDialog(product);
         }
     }
+}
+
+void ProductsPage::onLoadRecipeClicked() {
+    int productId = getSelectedProductId();
+    log().debug("ProductsPage: Load Recipe clicked (selected id={})", productId);
+    if (productId != config::defaults::kInvalidProductId && presenter_) {
+        presenter_->loadRecipe(productId);
+    }
+}
+
+void ProductsPage::onRecipeLoaded(bool success, const std::string& message) {
+    // Fired synchronously on the GTK thread (loadRecipe is called from
+    // this button handler), so it's safe to show a dialog directly --
+    // no Glib::signal_idle marshalling needed.
+    log().info("ProductsPage: recipe load {} -- {}",
+               success ? "ok" : "failed", message);
+    const auto type = success ? Gtk::MessageType::INFO
+                              : Gtk::MessageType::WARNING;
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    auto* dialog = parent
+        ? new Gtk::MessageDialog(*parent, message, false, type,
+                                 Gtk::ButtonsType::OK)
+        : new Gtk::MessageDialog(message, false, type,
+                                 Gtk::ButtonsType::OK);
+    dialog->set_modal(true);
+    dialog->signal_response().connect(
+        [dialog](int) { delete dialog; });
+    dialog->show();
 }
 
 int ProductsPage::getSelectedProductId() {

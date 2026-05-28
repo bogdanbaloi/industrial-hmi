@@ -40,6 +40,7 @@ public:
     // ViewObserver interface
     void onProductsLoaded(const presenter::ProductsViewModel& vm) override;
     void onViewProductReady(const presenter::ViewProductDialogViewModel& vm) override;
+    void onRecipeLoaded(bool success, const std::string& message) override;
 
 private:
     // UI construction -- loads layout from assets/ui/products-page.ui and
@@ -55,6 +56,7 @@ private:
     void onViewProductClicked();
     void onEditProductClicked();
     void onDeleteProductClicked();
+    void onLoadRecipeClicked();
     void onExportCsvClicked();
     void exportToCsv(const std::string& path,
                      const std::vector<model::Product>& products);

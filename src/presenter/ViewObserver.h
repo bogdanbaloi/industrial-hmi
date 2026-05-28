@@ -77,6 +77,12 @@ public:
     /// @param message Success or error message to display
     virtual void onProductReset(bool /*success*/, const std::string& /*message*/) {}
 
+    /// Called when a product's recipe is loaded onto the production line
+    /// (Products page "Load Recipe" action). The view shows a toast.
+    /// @param success True if a recipe was found and applied
+    /// @param message Success or "no recipe defined" message to display
+    virtual void onRecipeLoaded(bool /*success*/, const std::string& /*message*/) {}
+
     /// Called when equipment station status changes
     /// @param viewModel Equipment status data (supplies, connectivity, operational state)
     /// @note Can be called up to 10 times per second during active production
