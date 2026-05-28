@@ -1,4 +1,5 @@
 // [utest->req~auth-002~1]
+// [utest->req~auth-006~1]
 // Covers REQ-AUTH-002 (three-tier RBAC),
 //             REQ-AUTH-006 (session: generic bad-credentials feedback).
 //

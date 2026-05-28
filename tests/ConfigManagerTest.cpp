@@ -1,4 +1,5 @@
 // [utest->req~core-004~1]
+// [utest->req~multistation-001~1]
 // Covers REQ-CORE-004 (config from JSON, validated),
 //             REQ-MULTISTATION-001 (multi-station opt-in via config).
 //

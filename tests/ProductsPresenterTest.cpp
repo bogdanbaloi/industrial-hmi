@@ -1,4 +1,5 @@
 // [utest->req~products-001~1]
+// [utest->req~arch-001~1]
 // Covers REQ-PRODUCTS-001 (product CRUD).
 //
 // Tests for app::ProductsPresenter

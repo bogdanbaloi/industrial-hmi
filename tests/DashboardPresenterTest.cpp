@@ -1,4 +1,5 @@
 // [utest->req~dashboard-001~1]
+// [utest->req~quality-001~1]
 // Covers REQ-DASHBOARD-001 (equipment cards reflect live state),
 //             REQ-QUALITY-001 (pass-rate classification).
 //
