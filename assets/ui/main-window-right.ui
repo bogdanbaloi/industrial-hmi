@@ -60,7 +60,12 @@
     <child>
       <object class="GtkBox" id="sidebar">
         <property name="orientation">vertical</property>
-        <property name="width-request">200</property>
+        <!-- 300 px reserves the sidebar's natural content width so the
+             I/O backend pills ("Primary->Secondary" + ONLINE) are not
+             clipped when two dashboards sit beside it in multi-station
+             mode. GTK honours this as a hard minimum and shrinks the
+             hexpanding dashboard panes to fit the residual width. -->
+        <property name="width-request">300</property>
         <property name="css-classes">sidebar</property>
 
         <!-- Brand header: logo + app title + subtitle -->
