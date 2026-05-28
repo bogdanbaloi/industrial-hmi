@@ -582,7 +582,9 @@ jobs:
         OFT_VERSION="4.1.0"
         curl -fsSL -o oft.jar \
           "https://github.com/itsallcode/openfasttrace/releases/download/${OFT_VERSION}/openfasttrace-${OFT_VERSION}.jar"
-        java -jar oft.jar --version
+        # Sanity-check the jar runs (OFT has no --version flag; `help`
+        # prints usage and exits 0).
+        java -jar oft.jar help > /dev/null
 
     - name: Trace (HTML report)
       run: |
