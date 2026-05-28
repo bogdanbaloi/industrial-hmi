@@ -52,25 +52,25 @@ done
 cd "${REPO_ROOT}"
 
 if [[ ${WANT_CLEAN} -eq 1 ]]; then
-    echo ">>> wiping ${BUILD_DIR}"
+    echo "Wiping ${BUILD_DIR}"
     rm -rf "${BUILD_DIR}"
 fi
 
 if [[ ! -f "${BUILD_DIR}/CMakeCache.txt" ]]; then
-    echo ">>> configuring (preset: ${PRESET})"
+    echo "Configuring (preset: ${PRESET})"
     EXTRA=()
     [[ ${WANT_TESTS} -eq 1 ]] && EXTRA+=("-DBUILD_TESTS=ON")
     cmake --preset "${PRESET}" "${EXTRA[@]}"
 fi
 
-echo ">>> building"
+echo "Building"
 # Ninja defaults to one job per core when -j is omitted, which is
 # exactly what we want; passing "-- -j" without a number confuses
 # it (it interprets bare -j as a help request).
 cmake --build "${BUILD_DIR}"
 
 if [[ ${WANT_TESTS} -eq 1 ]]; then
-    echo ">>> running tests"
+    echo "Running tests"
     (cd "${BUILD_DIR}" && ctest --output-on-failure --no-tests=error)
 fi
 
@@ -116,19 +116,19 @@ if [[ ! -f "${CONFIG_FILE}" ]]; then
     echo "!!! ${CONFIG_FILE} not found -- skipping config flips"
 else
     if [[ ${WANT_MULTISTATION} -eq 1 ]]; then
-        echo ">>> enabling multistation"
+        echo "Enabling multistation"
         patch_json 'ui.multistation_enabled' '"true"'
     fi
     if [[ ${WANT_AUTH} -eq 1 ]]; then
-        echo ">>> enabling auth (login + Users tab + audit log)"
+        echo "Enabling auth (login + Users tab + audit log)"
         patch_json 'auth.enabled' 'true'
     fi
     if [[ ${WANT_HISTORIAN} -eq 1 ]]; then
-        echo ">>> enabling historian (SQLite store + History tab)"
+        echo "Enabling historian (SQLite store + History tab)"
         patch_json 'historian.enabled' 'true'
     fi
     if [[ ${WANT_MODBUS} -eq 1 ]]; then
-        echo ">>> enabling Modbus TCP master"
+        echo "Enabling Modbus TCP master"
         patch_json 'network.modbus.enabled' 'true'
     fi
 fi
@@ -144,6 +144,6 @@ fi
 # "unable to open database file". Create them up front.
 mkdir -p "${BUILD_DIR}/data" "${BUILD_DIR}/logs"
 
-echo ">>> launching ${BUILD_DIR}/industrial-hmi.exe"
+echo "Launching ${BUILD_DIR}/industrial-hmi.exe"
 cd "${BUILD_DIR}"
 exec ./industrial-hmi.exe

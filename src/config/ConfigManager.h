@@ -645,6 +645,22 @@ private:
                         }
                     }
                 }
+            } else if (line.find("{") != std::string::npos && !pathStack.empty()) {
+                // Anonymous object open -- a `{` on its own line, which
+                // happens for objects nested inside arrays (e.g. each
+                // element of dashboard.equipment_lines). It carries no
+                // key, so push a placeholder frame purely to balance the
+                // matching `}` pop below. Without this the pop runs
+                // unmatched and corrupts pathStack for every key that
+                // appears later in the file -- which is exactly what
+                // breaks once a formatter (JSON::PP, Prettier, ...)
+                // sorts keys so `ui` / `window` land after `dashboard`.
+                //
+                // The !pathStack.empty() guard skips the root object's
+                // opening `{` (first line, empty stack) -- pushing for
+                // that would prefix every top-level key with a stray
+                // ".".
+                pathStack.emplace_back("");
             } else if (line.find("}") != std::string::npos && !pathStack.empty()) {
                 pathStack.pop_back();
             }
