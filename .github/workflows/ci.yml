@@ -588,6 +588,11 @@ jobs:
 
     - name: Trace (HTML report)
       run: |
+        # This job is a fresh checkout with no configured build/ dir, so
+        # create it before pointing OFT's report there -- otherwise the
+        # write fails with NoSuchFileException and the artifact upload
+        # finds nothing.
+        mkdir -p build
         java -jar oft.jar trace \
           -o html \
           -f build/traceability-report.html \
