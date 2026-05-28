@@ -378,7 +378,12 @@ button.destructive-action:hover {
 }
 /* Pane control panel buttons -- shrink them too so the 4-button row
  * (Idle / Start / Stop / Reset / Calibration) doesn't push past the
- * compressed pane width. */
+ * compressed pane width. The base .control-button rule pins
+ * min-width: 120px + 4px side margins, which (x4 buttons) made the
+ * Control Panel frame the widest section of the pane (~790px) and so
+ * set the whole pane's minimum width -- starving the sidebar of room
+ * in multi-station. Drop the floor here so the buttons size to their
+ * labels; single-station keeps the roomy 120px buttons. */
 .dashboard-compact button {
     padding: 4px 10px;
     min-height: 28px;

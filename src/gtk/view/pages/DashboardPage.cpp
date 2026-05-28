@@ -61,6 +61,11 @@ constexpr Rgb kUptimeIdleColor = {0.42, 0.55, 0.78};
 // Percent scale -- used wherever a 0..1 share is converted to a
 // 0..100 percentage for display.
 constexpr double kPercentScale = 100.0;
+
+// Inline uptime-donut size in the Work Unit card. Full size in
+// single-station; setCompact() shrinks it for multi-station so two
+// panes + the full sidebar fit a 1920 px window.
+constexpr int kInlineDonutSizeDefault = 110;
 }  // namespace
 
 DashboardPage::DashboardPage(DialogManager& dialogManager)
@@ -112,6 +117,15 @@ void DashboardPage::initialize(std::shared_ptr<DashboardPresenter> presenter) {
     // accumulating immediately, even before the first explicit
     // state-change signal arrives.
     uptimeSegmentStart_ = std::chrono::steady_clock::now();
+
+    // Paint the donut once up front so it shows the empty ring +
+    // "--%" placeholder immediately. Without this the widget stays
+    // visually empty until the first state-change signal arrives
+    // (primary: ~instant via SimulatedModel) or the 5 s timer fires
+    // (secondary: MirrorModel is passive, state isn't bridged, so
+    // the user would otherwise see ~5 s of blank space where the
+    // donut belongs).
+    refreshUptimeDonut();
 
     // Presenter will send initial state after registration
 }
@@ -199,6 +213,36 @@ void DashboardPage::setCompact(bool compact) {
     // without adding information. Single-station keeps the strip.
     if (kpiStripWidgets_.container != nullptr) {
         kpiStripWidgets_.container->set_visible(!compact);
+    }
+
+    // Hide the inline uptime donut in compact (multi-station) mode.
+    // The donut (Phase 8C) is a single-station nicety that lives in
+    // the Work Unit card; on two side-by-side panes it is the element
+    // that pushed the layout wide enough to clip the sidebar. Multi-
+    // station fit cleanly before the donut existed, so we simply drop
+    // it back out of the compact layout. Single-station keeps it.
+    if (uptimeWidgets_.container != nullptr) {
+        uptimeWidgets_.container->set_visible(!compact);
+    }
+
+    // Relax the control-panel button width in compact mode. The .ui
+    // pins each button to width-request 100; with the "CALIBRATION"
+    // label that makes the Control Panel frame the widest section of
+    // the pane (~790 px measured), which sets the whole pane's minimum
+    // width. Two such panes + the sidebar then overflow the window and
+    // the sidebar gets clipped. In compact we drop the fixed request
+    // (-1 = size to the label) so the panel shrinks to its natural
+    // width; single-station keeps the roomy 100 px buttons.
+    constexpr int kControlBtnHeight  = 40;
+    constexpr int kControlBtnWidthSS = 100;  // single-station .ui value
+    const int btnW = compact ? -1 : kControlBtnWidthSS;
+    for (Gtk::Button* btn : {controlPanelWidgets_.startButton,
+                             controlPanelWidgets_.stopButton,
+                             controlPanelWidgets_.resetButton,
+                             controlPanelWidgets_.calibrationButton}) {
+        if (btn != nullptr) {
+            btn->set_size_request(btnW, kControlBtnHeight);
+        }
     }
 }
 
@@ -750,11 +794,11 @@ void DashboardPage::buildUptimeDonut(const Glib::RefPtr<Gtk::Builder>& builder) 
     uptimeWidgets_.container = builder->get_widget<Gtk::Box>("uptime_donut_container");
     if (uptimeWidgets_.container == nullptr) return;
 
-    constexpr int kInlineDonutSize = 110;
     uptimeWidgets_.donut = Gtk::make_managed<DonutChartWidget>();
-    uptimeWidgets_.donut->set_content_width(kInlineDonutSize);
-    uptimeWidgets_.donut->set_content_height(kInlineDonutSize);
-    uptimeWidgets_.donut->set_size_request(kInlineDonutSize, kInlineDonutSize);
+    uptimeWidgets_.donut->set_content_width(kInlineDonutSizeDefault);
+    uptimeWidgets_.donut->set_content_height(kInlineDonutSizeDefault);
+    uptimeWidgets_.donut->set_size_request(kInlineDonutSizeDefault,
+                                           kInlineDonutSizeDefault);
     uptimeWidgets_.donut->setCenterTitle("--");
     uptimeWidgets_.donut->setCenterSubtitle(_("uptime"));
     uptimeWidgets_.container->append(*uptimeWidgets_.donut);

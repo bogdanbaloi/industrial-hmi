@@ -130,3 +130,48 @@ TEST_F(DashboardPageTest, StopButtonCallsPresenterStop) {
     EXPECT_CALL(mockModel_, stopProduction()).Times(1);
     callStop(page_);
 }
+
+// Layout-budget regression guard (REQ-DASHBOARD-006).
+//
+// In multi-station mode two DashboardPage panes sit side by side
+// beside the sidebar. On the tightest supported viewport -- 1536
+// logical px (a 1920 panel at 125% OS scale) -- the sidebar needs
+// ~340px for its content (the "Primary->Secondary" I/O row + status
+// pill), leaving (1536 - 340) / 2 = 598px per pane. If a later change
+// (a new KPI card, a wider control button, a roomier gauge) pushes the
+// compact pane's MINIMUM width past this budget, the two panes plus the
+// sidebar overflow the window and the sidebar clips on the right.
+//
+// This test makes that failure loud and automatic instead of relying
+// on someone spotting a clipped sidebar in a screenshot.
+TEST_F(DashboardPageTest, CompactPaneFitsMultiStationWidthBudget) {
+    // Multi-station applies both the CSS class (drives .dashboard-compact
+    // rules) and the C++ compaction in setCompact().
+    page_->add_css_class("dashboard-compact");
+    page_->setCompact(true);
+
+    int minW = 0;
+    int natW = 0;
+    int ignoreBaselineMin = 0;
+    int ignoreBaselineNat = 0;
+    page_->measure(Gtk::Orientation::HORIZONTAL, -1,
+                   minW, natW, ignoreBaselineMin, ignoreBaselineNat);
+
+    constexpr int kCompactPaneWidthBudgetPx = 600;
+    RecordProperty("compact_pane_min_width_px", minW);
+    EXPECT_LE(minW, kCompactPaneWidthBudgetPx)
+        << "Compact dashboard pane minimum width " << minW
+        << "px exceeds the multi-station budget of "
+        << kCompactPaneWidthBudgetPx << "px. Two panes + the sidebar "
+        << "overflow a 1536 logical-px viewport (1920 @ 125% scale) "
+        << "and the sidebar clips.";
+
+    // Sanity floor: guard against a false pass where the stylesheet
+    // failed to load (CWD wrong), which would drop every CSS min-width
+    // and report an unrealistically small pane. A real compact pane is
+    // a few hundred px wide.
+    EXPECT_GE(minW, 300)
+        << "Compact pane min width " << minW << "px is implausibly small "
+        << "-- the dashboard stylesheet probably did not load (check the "
+        << "test working directory).";
+}

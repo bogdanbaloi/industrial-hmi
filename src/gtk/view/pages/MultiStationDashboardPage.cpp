@@ -5,10 +5,11 @@
 namespace app::view {
 
 namespace {
-// Horizontal split spacing between the two station panes. Kept tight
-// so each pane gets as much canvas as possible on a 1920x1080
-// terminal; the per-pane "MASTER" / "SLAVE" headers and the panes'
-// own padding provide enough visual separation.
+// Horizontal split spacing between the two station panes. Hugged
+// down to 2 px so every spare pixel goes to the panes themselves --
+// the per-pane "PRIMARY STATION" / "SECONDARY STATION" headers and
+// the dashboard-compact card chrome are enough visual separation
+// without a wide gutter.
 constexpr int kPaneSpacingPx   = 8;
 constexpr int kHeaderSpacingPx = 4;
 }  // namespace
