@@ -1,4 +1,5 @@
-// Implements: REQ-ARCH-004 (staged bootstrap),
+// [utest->req~arch-004~1]
+// Covers REQ-ARCH-004 (staged bootstrap),
 //             REQ-CORE-002 (top-level exception guard).
 //
 // Tests for app::core::StartupErrors -- the typed exception hierarchy

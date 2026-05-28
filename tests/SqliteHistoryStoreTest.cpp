@@ -1,4 +1,5 @@
-// Implements: REQ-HISTORIAN-001 (SQLite 3-tier schema).
+// [utest->req~historian-001~1]
+// Covers REQ-HISTORIAN-001 (SQLite 3-tier schema).
 //
 // Tests for SqliteHistoryStore.
 //

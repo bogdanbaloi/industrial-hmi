@@ -1,4 +1,6 @@
-// Implements: REQ-ARCH-005 (IntegrationBackend uniformity),
+// [utest->req~arch-005~1]
+// [utest->req~integration-005~1]
+// Covers REQ-ARCH-005 (IntegrationBackend uniformity),
 //             REQ-INTEGRATION-005 (backend health surfacing).
 //
 // Tests for app::integration::IntegrationManager.

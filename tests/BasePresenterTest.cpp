@@ -1,4 +1,5 @@
-// Implements: REQ-ARCH-003 (observer pattern, no sigc in domain).
+// [utest->req~arch-003~1]
+// Covers REQ-ARCH-003 (observer pattern, no sigc in domain).
 //
 // Tests for app::BasePresenter
 // Covers observer registration, removal, duplicate-prevention, and the two

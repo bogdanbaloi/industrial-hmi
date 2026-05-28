@@ -1,4 +1,5 @@
-// Implements: REQ-AUTH-004 (audit log CSV export -- RFC 4180 compliance),
+// [utest->req~auth-004~1]
+// Covers REQ-AUTH-004 (audit log CSV export -- RFC 4180 compliance),
 //             REQ-INTEGRATION-001 (TCP backend payload format).
 //
 // Tests for app::integration::CsvSerializer.

@@ -1,4 +1,5 @@
-// Implements: REQ-INTEGRATION-003 (Modbus TCP master).
+// [utest->req~integration-003~1]
+// Covers REQ-INTEGRATION-003 (Modbus TCP master).
 //
 // Tests for app::integration::modbus::ModbusBackend.
 //

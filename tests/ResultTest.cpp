@@ -1,4 +1,5 @@
-// Implements: REQ-CORE-001 (Result<T,E> for fallible operations).
+// [utest->req~core-001~1]
+// Covers REQ-CORE-001 (Result<T,E> for fallible operations).
 //
 // Tests for app::core::Result<T, E>
 // Covers Ok/Err construction, state inspection, unwrap semantics,

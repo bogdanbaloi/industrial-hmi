@@ -1,4 +1,5 @@
-// Implements: REQ-AUTH-002 (three-tier RBAC).
+// [utest->req~auth-002~1]
+// Covers REQ-AUTH-002 (three-tier RBAC).
 //
 // Tests for UsersPresenter.
 //

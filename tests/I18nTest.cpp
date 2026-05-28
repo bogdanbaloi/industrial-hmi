@@ -1,4 +1,5 @@
-// Implements: REQ-I18N-001 (gettext-backed translations).
+// [utest->req~i18n-001~1]
+// Covers REQ-I18N-001 (gettext-backed translations).
 //
 // Tests for app::core::initI18n -- the GNU gettext adapter.
 //

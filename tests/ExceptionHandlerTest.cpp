@@ -1,4 +1,5 @@
-// Implements: REQ-CORE-002 (top-level exception guard).
+// [utest->req~core-002~1]
+// Covers REQ-CORE-002 (top-level exception guard).
 //
 // Tests for app::core::StandardExceptionHandler + safeExecute + ExceptionGuard.
 //

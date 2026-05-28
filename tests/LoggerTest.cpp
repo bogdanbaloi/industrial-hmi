@@ -1,4 +1,5 @@
-// Implements: REQ-CORE-003 (configurable structured logging).
+// [utest->req~core-003~1]
+// Covers REQ-CORE-003 (configurable structured logging).
 //
 // Tests for app::core::Logger, ConsoleLogger, and helper functions.
 // Uses a custom CapturingLogger to intercept log output without I/O.

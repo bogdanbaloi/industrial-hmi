@@ -1,6 +1,12 @@
 # ADR-0012: Requirements Traceability — Lightweight, Not DOORS
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0013](0013-openfasttrace-adoption.md)
+  (2026-05-27). This ADR is preserved for the historical reasoning;
+  the lightweight markdown approach was the right *first* step but
+  was upgraded to OpenFastTrace within the same day to give the CI
+  gate industry-recognised tooling. The artefacts described here
+  (REQUIREMENTS.md, in-source tags) survive in upgraded form; the
+  `check-traceability.sh` script was removed.
 - **Date:** 2026-05-27
 - **Deciders:** Bogdan Baloi (maintainer)
 - **Context:** Phase 8 dashboard work is in main. Recording demo
