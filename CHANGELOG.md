@@ -32,6 +32,53 @@ are unaffected by default. See ADR-0011 and
 - ADR-0011 capturing the design + alternatives + roadmap for N-station,
   fleet view, and the cross-process MQTT-backed bridge replacement.
 
+### Product recipes drive the line (Phase 9)
+
+Each product can carry a *recipe* (process spec) persisted in SQLite.
+The operator hits **Load Recipe** on a product and
+`ProductionModel::loadProduct` pushes those values onto the dashboard:
+the work-unit operation count and every quality card's target line come
+from the recipe, matched onto live checkpoints by name (not position).
+
+#### Added
+
+- `Recipe` / `CheckpointTarget` domain types; `recipes` SQLite table +
+  `RecipesRepository`.
+- `ProductionModel::loadProduct` (interface + `SimulatedModel` +
+  `MirrorModel`); `QualityCheckpoint::passRateTarget` field.
+- `ProductsPresenter::loadRecipe` (DI setter) + a **Load Recipe** button
+  on the Products page.
+
+### Requirements traceability migrated to OpenFastTrace
+
+The homemade lightweight-markdown matrix is replaced by OpenFastTrace
+(OFT) specobjects + `[utest->req~...]` coverage tags, validated as a CI
+gate on every PR.
+
+#### Added / Changed
+
+- `docs/requirements/` in OFT specobject format (50 requirements with
+  `Needs: utest`); tests carry `// [utest->req~xxx~1]` tags.
+- CI `traceability` job: `oft trace` gate + click-through HTML report
+  artefact. OFT result: 109 total, 0 defects.
+- ADR-0013 (OFT adoption) supersedes ADR-0012 (lightweight markdown).
+
+### Test coverage expansion + layout-regression guard
+
+#### Added
+
+- Integration tests wiring **real** components (no mocks): ingest bridge
+  -> real model (MQTT + Modbus), model -> presenter -> AlertCenter,
+  recipe load -> SQLite -> model, historian round-trip.
+- Unit tests: `TimeFormat`, `MirrorModel`, historian degraded-open,
+  extracted dialog-helper headers (`PasswordValidation`, `AvatarMime`,
+  `UserEditValidation`), `Toast`, multi-station page.
+- `DashboardPageTest.CompactPaneFitsMultiStationWidthBudget` -- a
+  layout-budget guard that fails if a compact pane's minimum width
+  exceeds the multi-station budget (covers REQ-DASHBOARD-006), so the
+  recurring "clipped sidebar" regression is caught automatically.
+- Windows `ws2_32` linking for the new GUI/integration test targets.
+
 ## [1.2.0] - 2026-05-20
 
 ### User management + audit polish (B2.5)
