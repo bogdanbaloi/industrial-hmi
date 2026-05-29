@@ -25,12 +25,17 @@ class TimeFormatTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Force UTC so UTC-in == local-out and exact assertions are
-        // deterministic across CI runners. setenv/tzset are available
-        // on the Linux + MSYS2/CLANG64 build environments this project
-        // targets. Each test binary is its own process, so this does
-        // not leak into other suites.
+        // deterministic across CI runners. The env+tzset API differs
+        // between POSIX (Linux) and the MinGW/CLANG64 stdlib (Windows
+        // CI), so branch on the platform. Each test binary is its own
+        // process, so this does not leak into other suites.
+#ifdef _WIN32
+        ::_putenv_s("TZ", "UTC");
+        ::_tzset();
+#else
         ::setenv("TZ", "UTC", /*overwrite=*/1);
         ::tzset();
+#endif
     }
 };
 
