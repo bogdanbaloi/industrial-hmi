@@ -23,8 +23,6 @@ constexpr int kEntryWidthChars   = 24;
 // under their original unqualified names so the call sites below are
 // unchanged.
 using app::view::useredit::indexFromRole;
-using app::view::useredit::kRoleIndexAdmin;
-using app::view::useredit::kRoleIndexMaintenance;
 using app::view::useredit::kRoleIndexOperator;
 using app::view::useredit::roleFromIndex;
 using app::view::useredit::toLowerCanonical;
