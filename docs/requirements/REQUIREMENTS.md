@@ -402,8 +402,11 @@ When hosted in a narrow pane (multi-station mode), the dashboard
 **shall** shrink Cairo gauges, hide trend charts, and hide the
 KPI top strip to fit the reduced width budget.
 
-Verified by: DashboardPage::setCompact behaviour;
-MultiStationDashboardPage manual.
+Verified by: DashboardPageTest.CompactPaneFitsMultiStationWidthBudget
+(compact pane minimum width stays within the per-pane budget so two
+panes + the sidebar fit a 1536 logical-px viewport).
+
+Needs: utest
 
 ---
 
