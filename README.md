@@ -7,7 +7,7 @@ and a headless console binary, sharing one tested Model + Presenter
 core.
 
 [![CI](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml)
-![Coverage](https://img.shields.io/badge/coverage-68%25-green)
+![Coverage](https://img.shields.io/badge/coverage-67%25-green)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows-lightgrey)
 
@@ -20,14 +20,14 @@ core.
   `main.cpp` via `#ifdef CONSOLE_MODE`. The console binary links
   **zero gtkmm** -- concrete proof that the `ViewObserver` abstraction
   is a real View-swap seam, not just marketing.
-- **68% test coverage** verified by gcovr in CI on every PR, across
-  9,442 instrumented lines and **76 ctest targets**: scenario-based
+- **67% test coverage** verified by gcovr in CI on every PR, across
+  11,112 instrumented lines and **76 ctest targets**: scenario-based
   E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
   tests under real GTK via Xvfb, dialog dispatch via programmatic
   `response()`, plus integration tests that wire **real** components
   end-to-end (ingest bridge -> real model -> presenter -> AlertCenter;
   recipe load -> SQLite -> model) instead of mocks. Auth + presenter +
-  integration backends sit between 75% and 100%; GUI dialogs sit at 0%
+  integration backends sit between 70% and 100%; GUI dialogs sit at 0%
   by design (exercised via Xvfb smoke tests instead).
 - **Every module ships as a standalone library** -- 9 README.md
   files under `src/` (auth / integration / presenter / historian /
@@ -485,9 +485,9 @@ presenters as the GTK binary.
 ## Test Strategy
 
 Coverage is measured by **gcovr** on the Ubuntu CI job and posted at
-the top of every PR's Actions run. Currently **68% across 9,442
+the top of every PR's Actions run. Currently **67% across 11,112
 instrumented lines** (auth, presenter, and integration backends sit
-between 75% and 100%; GUI dialogs sit at 0% by design -- they're
+between 70% and 100%; GUI dialogs sit at 0% by design -- they're
 exercised via Xvfb-backed smoke tests instead), achieved by combining
 several testing styles instead of one monoculture:
 
