@@ -1159,6 +1159,13 @@ if(WIN32)
     target_link_libraries(test_history_page              PRIVATE ws2_32)
     target_link_libraries(test_users_presenter           PRIVATE ws2_32)
     target_link_libraries(test_users_page                PRIVATE ws2_32)
+    # New targets that link objectsView / objectsAppGtk (and thus
+    # Boost.Asio -> Winsock) transitively.
+    target_link_libraries(test_toast                          PRIVATE ws2_32)
+    target_link_libraries(test_multistation_dashboard_page    PRIVATE ws2_32)
+    target_link_libraries(test_recipe_load_integration        PRIVATE ws2_32)
+    target_link_libraries(test_dashboard_presenter_integration PRIVATE ws2_32)
+    target_link_libraries(test_alert_center_model_integration PRIVATE ws2_32)
 endif()
 
 # Console scenario tests -- end-to-end MVP regression suite
