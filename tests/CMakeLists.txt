@@ -100,6 +100,22 @@ target_link_libraries(test_sqlite_history_store PRIVATE
 )
 add_test(NAME SqliteHistoryStoreTest COMMAND test_sqlite_history_store)
 
+# Integration: HistorianBridge -> real SqliteHistoryStore round-trip.
+# A model telemetry change must batch through the bridge and become
+# queryable in the real in-memory SQLite store. Joins the batching
+# (HistorianBridgeTest, fake writer) and storage (SqliteHistoryStoreTest)
+# units. Links objectsHistorian (bridge + store + SQLite) + MirrorModel.
+add_executable(test_historian_roundtrip_integration
+    HistorianRoundTripIntegrationTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/model/MirrorModel.cpp)
+target_link_libraries(test_historian_roundtrip_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+)
+add_test(NAME HistorianRoundTripIntegrationTest
+         COMMAND test_historian_roundtrip_integration)
+
 # Historian: HistorianBridge
 # Drives the real SimulatedModel singleton (no model mocking) because
 # the bridge's whole point is to translate model signals correctly --
@@ -669,6 +685,18 @@ target_link_libraries(test_simulated_model PRIVATE
 )
 add_test(NAME SimulatedModelTest COMMAND test_simulated_model)
 
+# Integration: recipe load end-to-end. Real DatabaseManager (in-memory,
+# seeded recipes) read via the RecipesRepository interface + real
+# SimulatedModel.loadProduct. Closes the Phase 9 loop the mock-based
+# ProductsPresenterTest / SimulatedModelTest leave open.
+add_executable(test_recipe_load_integration RecipeLoadIntegrationTest.cpp)
+target_link_libraries(test_recipe_load_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsModel
+)
+add_test(NAME RecipeLoadIntegrationTest COMMAND test_recipe_load_integration)
+
 # Core: Logger (CapturingLogger + helpers)
 add_executable(test_logger LoggerTest.cpp)
 target_link_libraries(test_logger PRIVATE
@@ -832,6 +860,21 @@ target_link_libraries(test_dashboard_presenter PRIVATE
 )
 
 add_test(NAME DashboardPresenterTest COMMAND test_dashboard_presenter)
+
+# Integration: DashboardPresenter observing a REAL ProductionModel
+# (MirrorModel) with a real ViewObserver. A model setter must travel
+# through the model's real dispatch + the presenter's view-model
+# builder onto the observer -- the chain the mock-based test stubs out.
+add_executable(test_dashboard_presenter_integration
+    DashboardPresenterIntegrationTest.cpp)
+target_link_libraries(test_dashboard_presenter_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsModel
+)
+add_test(NAME DashboardPresenterIntegrationTest
+         COMMAND test_dashboard_presenter_integration)
 
 # View-layer tests (require GTK initialised via custom main)
 # These binaries use ViewTestMain.cpp instead of gtest_main, because
