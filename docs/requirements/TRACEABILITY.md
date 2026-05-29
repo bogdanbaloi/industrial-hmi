@@ -127,6 +127,7 @@ requirements may be smoke-tested.
 | REQ-PRODUCTS-001 | MUST | `src/presenter/ProductsPresenter.cpp`, `src/gtk/view/pages/ProductsPage.cpp` | ProductsPresenterTest, ProductsPageTest | -- |
 | REQ-PRODUCTS-002 | SHOULD | `src/presenter/ProductsPresenter.cpp` (async pipeline) | ProductsPresenterAsyncTest | -- |
 | REQ-PRODUCTS-003 | SHOULD | `src/model/Recipe.h`, `src/model/RecipesRepository.h`, `src/model/DatabaseManager.h` (recipes tables + getRecipeByProductCode), `src/model/SimulatedModel.h::loadProduct`, `src/presenter/ProductsPresenter.cpp::loadRecipe`, `src/gtk/view/pages/ProductsPage.cpp` (Load Recipe button) | ProductsPresenterTest (loadRecipe paths), SimulatedModelTest (loadProduct), RecipeLoadIntegrationTest (real DB + repo + model) | 0011 |
+| REQ-PRODUCTS-004 | SHOULD | `src/model/RecipesWriter.h`, `src/model/DatabaseManager.h::upsertRecipe`, `src/model/ProductionModel.h::getQualityCheckpoints`, `src/presenter/ProductsPresenter.cpp` (getRecipeForEditing + saveRecipe), `src/gtk/view/pages/ProductsPage.cpp` (Edit Recipe dialog) | ProductsPresenterTest (saveRecipe + getRecipeForEditing), RecipeWriteIntegrationTest (real DB upsert + replacement) | -- |
 
 ## QUALITY
 

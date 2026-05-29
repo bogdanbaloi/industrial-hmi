@@ -125,6 +125,14 @@
             <property name="tooltip-text" translatable="yes">Load this product's recipe onto the production line</property>
           </object>
         </child>
+
+        <child>
+          <object class="GtkButton" id="btn_edit_recipe">
+            <property name="label" translatable="yes">Edit Recipe</property>
+            <property name="css-classes">toolbar-button</property>
+            <property name="tooltip-text" translatable="yes">Create or edit this product's recipe (operations + quality targets)</property>
+          </object>
+        </child>
       </object>
     </child>
 

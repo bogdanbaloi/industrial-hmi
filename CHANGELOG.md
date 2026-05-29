@@ -70,6 +70,26 @@ from the recipe, matched onto live checkpoints by name (not position).
 - `ProductsPresenter::loadRecipe` (DI setter) + a **Load Recipe** button
   on the Products page.
 
+### Recipe editor -- create / edit recipes from the UI (REQ-PRODUCTS-004)
+
+Recipes were previously read-only (seed-only). The Products page now has
+an **Edit Recipe** button opening a dialog to set the operation count and
+a pass-rate target per quality checkpoint -- including for a product that
+has no recipe yet.
+
+#### Added
+
+- `RecipesWriter` interface (write side) + `DatabaseManager::upsertRecipe`
+  (one transaction: upsert the operation count, replace the checkpoint
+  targets wholesale). Mirrors the historian's reader/writer ISP split.
+- `ProductionModel::getQualityCheckpoints()` enumeration so the editor can
+  offer a field per known checkpoint without hard-coding names.
+- `ProductsPresenter::getRecipeForEditing` (merges stored values with the
+  model's checkpoints) + `saveRecipe` (validates ops >= 1 and targets
+  0..100, audits "RECIPE_SAVE") behind a `setRecipeEditing` DI setter.
+- `RecipeWriteIntegrationTest` (real DB round-trip + replacement) and
+  ProductsPresenterTest save/validation/merge cases.
+
 ### Requirements traceability migrated to OpenFastTrace
 
 The homemade lightweight-markdown matrix is replaced by OpenFastTrace

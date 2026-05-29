@@ -777,6 +777,17 @@ target_link_libraries(test_recipe_load_integration PRIVATE
 )
 add_test(NAME RecipeLoadIntegrationTest COMMAND test_recipe_load_integration)
 
+# Recipe WRITE round-trip: real DatabaseManager upsertRecipe (RecipesWriter)
+# read back via RecipesRepository, plus wholesale target replacement.
+# Backs REQ-PRODUCTS-004 alongside the mock-based ProductsPresenterTest.
+add_executable(test_recipe_write_integration RecipeWriteIntegrationTest.cpp)
+target_link_libraries(test_recipe_write_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsModel
+)
+add_test(NAME RecipeWriteIntegrationTest COMMAND test_recipe_write_integration)
+
 # Core: Logger (CapturingLogger + helpers)
 add_executable(test_logger LoggerTest.cpp)
 target_link_libraries(test_logger PRIVATE
@@ -1173,6 +1184,7 @@ if(WIN32)
     target_link_libraries(test_toast                          PRIVATE ws2_32)
     target_link_libraries(test_multistation_dashboard_page    PRIVATE ws2_32)
     target_link_libraries(test_recipe_load_integration        PRIVATE ws2_32)
+    target_link_libraries(test_recipe_write_integration       PRIVATE ws2_32)
     target_link_libraries(test_dashboard_presenter_integration PRIVATE ws2_32)
     target_link_libraries(test_alert_center_model_integration PRIVATE ws2_32)
 endif()

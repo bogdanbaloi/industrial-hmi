@@ -57,6 +57,7 @@ private:
     void onEditProductClicked();
     void onDeleteProductClicked();
     void onLoadRecipeClicked();
+    void onEditRecipeClicked();
     void onExportCsvClicked();
     void exportToCsv(const std::string& path,
                      const std::vector<model::Product>& products);
@@ -66,6 +67,7 @@ private:
     void showProductDetail(const presenter::ViewProductDialogViewModel& vm);
     void showAddProductDialog();
     void showEditProductDialog(const model::DatabaseManager::Product& product);
+    void showEditRecipeDialog(const model::DatabaseManager::Product& product);
     void showDeleteConfirmDialog(int productId, const std::string& productName);
     int getSelectedProductId();
 

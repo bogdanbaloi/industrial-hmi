@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <vector>
 
 namespace app::model {
 
@@ -75,6 +76,13 @@ public:
     // Queries
     [[nodiscard]] virtual SystemState getState() const = 0;
     [[nodiscard]] virtual QualityCheckpoint getQualityCheckpoint(uint32_t id) const = 0;
+
+    /// All quality checkpoints, ordered by id. Lets a caller discover the
+    /// canonical checkpoint names without knowing the ids -- used by the
+    /// recipe editor to offer one pass-rate-target field per checkpoint
+    /// even for a product that has no recipe yet.
+    [[nodiscard]] virtual std::vector<QualityCheckpoint> getQualityCheckpoints() const = 0;
+
     [[nodiscard]] virtual WorkUnit getWorkUnit() const = 0;
 };
 

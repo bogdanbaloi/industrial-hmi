@@ -5,6 +5,8 @@
 #include "src/model/DatabaseManager.h"
 #include "src/model/ProductsRepository.h"
 #include "src/model/RecipesRepository.h"
+#include "src/model/RecipesWriter.h"
+#include "src/model/Recipe.h"
 #include <string>
 #include <functional>
 
@@ -98,11 +100,36 @@ public:
         productionModel_ = &productionModel;
     }
 
+    /// Recipe-editing hookup. Separate from setRecipeLoading (read) so the
+    /// write dependency is injected only where editing is wired -- mirrors
+    /// the RecipesRepository / RecipesWriter ISP split. Optional: when
+    /// absent, saveRecipe is a no-op-with-false. See REQ-PRODUCTS-004.
+    void setRecipeEditing(model::RecipesWriter& recipesWriter) {
+        recipesWriter_ = &recipesWriter;
+    }
+
     /// Look up the product's recipe and load it onto the production
     /// line, making it the active work unit. Notifies observers via
     /// onRecipeLoaded (success + message, or failure when the product
     /// has no recipe / the hookup is absent).
     void loadRecipe(int productId);
+
+    /// Build the recipe to show in the editor for `productId`: the stored
+    /// recipe if one exists, otherwise a default (5 operations) seeded
+    /// with one target per known quality checkpoint. Either way the
+    /// result always carries a row for every model checkpoint (existing
+    /// values preserved, missing ones defaulted) so the editor can render
+    /// a complete form even for a product that has no recipe yet.
+    /// See REQ-PRODUCTS-004.
+    [[nodiscard]] model::Recipe getRecipeForEditing(int productId);
+
+    /// Persist a product's recipe (create or replace). Validates the
+    /// operation count + each pass-rate target, records an audit event,
+    /// and reports success/failure through `callback` on the GTK thread
+    /// (mirrors addProduct). No-op-with-false when the writer hookup is
+    /// absent or the operator lacks edit permission. See REQ-PRODUCTS-004.
+    void saveRecipe(int productId, const model::Recipe& recipe,
+                    std::function<void(bool)> callback);
 
 private:
     /// Build ProductsViewModel from database results
@@ -134,6 +161,7 @@ private:
     /// when absent.
     model::RecipesRepository* recipes_{nullptr};
     model::ProductionModel*   productionModel_{nullptr};
+    model::RecipesWriter*     recipesWriter_{nullptr};
 };
 
 }  // namespace app

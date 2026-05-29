@@ -1,8 +1,10 @@
 // [utest->req~products-001~1]
 // [utest->req~products-003~1]
+// [utest->req~products-004~1]
 // [utest->req~arch-001~1]
 // Covers REQ-PRODUCTS-001 (product CRUD),
-//        REQ-PRODUCTS-003 (load product recipe onto the line).
+//        REQ-PRODUCTS-003 (load product recipe onto the line),
+//        REQ-PRODUCTS-004 (create / edit a product's recipe).
 //
 // Tests for app::ProductsPresenter
 // Drives the presenter with a MockProductsRepository so we can verify how
@@ -20,6 +22,7 @@
 #include "src/config/config_defaults.h"
 #include "mocks/MockProductsRepository.h"
 #include "mocks/MockRecipesRepository.h"
+#include "mocks/MockRecipesWriter.h"
 #include "mocks/MockProductionModel.h"
 
 #include <gmock/gmock.h>
@@ -252,4 +255,115 @@ TEST_F(ProductsPresenterTest, LoadRecipeWithoutHookupNotifiesFailure) {
 
     ASSERT_TRUE(observer.recipeLoadedSuccess.has_value());
     EXPECT_FALSE(*observer.recipeLoadedSuccess);
+}
+
+// saveRecipe + getRecipeForEditing (REQ-PRODUCTS-004)
+
+TEST_F(ProductsPresenterTest, SaveRecipePersistsViaWriterAndReportsSuccess) {
+    app::test::MockRecipesWriter writer;
+    presenter->setRecipeEditing(writer);
+
+    app::model::Recipe recipe;
+    recipe.productCode     = "PROD-007";
+    recipe.totalOperations = 6;
+    recipe.checkpointTargets = {{"Weight Check", 99.0f},
+                                {"Final Inspection", 95.0f}};
+
+    app::model::Recipe captured;
+    EXPECT_CALL(writer, upsertRecipe(_))
+        .WillOnce(::testing::DoAll(::testing::SaveArg<0>(&captured),
+                                   Return(true)));
+
+    bool result = false;
+    presenter->saveRecipe(7, recipe, [&result](bool ok) { result = ok; });
+
+    EXPECT_TRUE(result);
+    EXPECT_EQ(captured.productCode, "PROD-007");
+    EXPECT_EQ(captured.totalOperations, 6);
+    ASSERT_EQ(captured.checkpointTargets.size(), 2u);
+}
+
+TEST_F(ProductsPresenterTest, SaveRecipeRejectsOutOfRangeTargetWithoutWriting) {
+    app::test::MockRecipesWriter writer;
+    presenter->setRecipeEditing(writer);
+
+    app::model::Recipe recipe;
+    recipe.productCode       = "PROD-007";
+    recipe.totalOperations   = 5;
+    recipe.checkpointTargets = {{"Weight Check", 150.0f}};  // > 100 -> invalid
+
+    // Validation must fail BEFORE touching storage.
+    EXPECT_CALL(writer, upsertRecipe(_)).Times(0);
+
+    bool result = true;
+    presenter->saveRecipe(7, recipe, [&result](bool ok) { result = ok; });
+    EXPECT_FALSE(result);
+}
+
+TEST_F(ProductsPresenterTest, SaveRecipeRejectsZeroOperationsWithoutWriting) {
+    app::test::MockRecipesWriter writer;
+    presenter->setRecipeEditing(writer);
+
+    app::model::Recipe recipe;
+    recipe.productCode     = "PROD-007";
+    recipe.totalOperations = 0;  // a work unit needs at least one operation
+
+    EXPECT_CALL(writer, upsertRecipe(_)).Times(0);
+
+    bool result = true;
+    presenter->saveRecipe(7, recipe, [&result](bool ok) { result = ok; });
+    EXPECT_FALSE(result);
+}
+
+TEST_F(ProductsPresenterTest, SaveRecipeWithoutHookupReportsFailure) {
+    // No setRecipeEditing() call -- writer is absent.
+    app::model::Recipe recipe;
+    recipe.productCode     = "PROD-007";
+    recipe.totalOperations = 5;
+
+    bool result = true;
+    presenter->saveRecipe(7, recipe, [&result](bool ok) { result = ok; });
+    EXPECT_FALSE(result);
+}
+
+TEST_F(ProductsPresenterTest, GetRecipeForEditingMergesStoredTargetsWithModelCheckpoints) {
+    app::test::MockRecipesRepository recipes;
+    app::test::MockProductionModel   prodModel;
+    presenter->setRecipeLoading(recipes, prodModel);
+
+    EXPECT_CALL(repo, getProduct(7))
+        .WillOnce(Return(makeProduct(7, "PROD-007", "Tablet X", "Active", 1, 97.0f)));
+
+    // Stored recipe defines only Weight Check; the other two checkpoints
+    // must come from the model with the default target.
+    app::model::Recipe stored;
+    stored.productCode       = "PROD-007";
+    stored.totalOperations   = 6;
+    stored.checkpointTargets = {{"Weight Check", 99.0f}};
+    EXPECT_CALL(recipes, getRecipeByProductCode("PROD-007"))
+        .WillOnce(Return(std::optional<app::model::Recipe>{stored}));
+
+    auto makeCp = [](std::uint32_t id, const char* name) {
+        app::model::QualityCheckpoint cp;
+        cp.checkpointId = id;
+        cp.name         = name;
+        return cp;
+    };
+    EXPECT_CALL(prodModel, getQualityCheckpoints())
+        .WillOnce(Return(std::vector<app::model::QualityCheckpoint>{
+            makeCp(0, "Weight Check"),
+            makeCp(1, "Hardness Test"),
+            makeCp(2, "Final Inspection")}));
+
+    const auto recipe = presenter->getRecipeForEditing(7);
+
+    EXPECT_EQ(recipe.productCode, "PROD-007");
+    EXPECT_EQ(recipe.totalOperations, 6);
+    ASSERT_EQ(recipe.checkpointTargets.size(), 3u);
+    // Stored value preserved; missing checkpoints defaulted.
+    EXPECT_EQ(recipe.checkpointTargets[0].checkpointName, "Weight Check");
+    EXPECT_FLOAT_EQ(recipe.checkpointTargets[0].passRateTarget, 99.0f);
+    EXPECT_EQ(recipe.checkpointTargets[1].checkpointName, "Hardness Test");
+    EXPECT_FLOAT_EQ(recipe.checkpointTargets[1].passRateTarget,
+                    app::model::kDefaultPassRateTarget);
 }

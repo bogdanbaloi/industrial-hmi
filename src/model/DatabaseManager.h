@@ -13,6 +13,7 @@
 #include "src/model/ProductsRepository.h"
 #include "src/model/Recipe.h"
 #include "src/model/RecipesRepository.h"
+#include "src/model/RecipesWriter.h"
 
 #include <optional>
 
@@ -26,10 +27,12 @@ namespace app::model {
 /// - Logging integration
 /// - Exception-safe
 ///
-/// Implements ProductsRepository + RecipesRepository so the presenter
-/// layer can depend on the abstractions (and tests can inject mocks).
+/// Implements ProductsRepository + RecipesRepository + RecipesWriter so
+/// the presenter layer can depend on the abstractions (and tests can
+/// inject mocks).
 class DatabaseManager : public ProductsRepository,
-                        public RecipesRepository {
+                        public RecipesRepository,
+                        public RecipesWriter {
 public:
     // Re-export at class scope so existing call sites that say
     // `DatabaseManager::Product` keep compiling unchanged.
@@ -178,6 +181,73 @@ public:
         }
 
         return recipe;
+    }
+
+    /// Create or replace a product's recipe (RecipesWriter). One
+    /// transaction: upsert the operation count, then replace that
+    /// product's checkpoint-target rows wholesale (DELETE + INSERT) so a
+    /// removed target does not linger. Returns false on any SQLite error
+    /// (the transaction is rolled back).
+    [[nodiscard]] bool upsertRecipe(const Recipe& recipe) override {
+        if (sqlite3_exec(db_, "BEGIN TRANSACTION", nullptr, nullptr, nullptr)
+            != SQLITE_OK) {
+            return false;
+        }
+
+        bool ok = true;
+
+        const char* headSql =
+            "INSERT OR REPLACE INTO recipes (product_code, total_operations) "
+            "VALUES (?, ?)";
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, headSql, -1, &stmt, nullptr) == SQLITE_OK) {
+            sqlite3_bind_text(stmt, 1, recipe.productCode.c_str(), -1,
+                              SQLITE_TRANSIENT);
+            sqlite3_bind_int(stmt, 2, recipe.totalOperations);
+            ok = (sqlite3_step(stmt) == SQLITE_DONE);
+            sqlite3_finalize(stmt);
+        } else {
+            ok = false;
+        }
+
+        if (ok) {
+            const char* delSql =
+                "DELETE FROM recipe_checkpoint_targets WHERE product_code = ?";
+            if (sqlite3_prepare_v2(db_, delSql, -1, &stmt, nullptr) == SQLITE_OK) {
+                sqlite3_bind_text(stmt, 1, recipe.productCode.c_str(), -1,
+                                  SQLITE_TRANSIENT);
+                ok = (sqlite3_step(stmt) == SQLITE_DONE);
+                sqlite3_finalize(stmt);
+            } else {
+                ok = false;
+            }
+        }
+
+        const char* insSql =
+            "INSERT INTO recipe_checkpoint_targets "
+            "(product_code, checkpoint_name, pass_rate_target) VALUES (?, ?, ?)";
+        for (const auto& target : recipe.checkpointTargets) {
+            if (!ok) break;
+            if (sqlite3_prepare_v2(db_, insSql, -1, &stmt, nullptr) == SQLITE_OK) {
+                sqlite3_bind_text(stmt, 1, recipe.productCode.c_str(), -1,
+                                  SQLITE_TRANSIENT);
+                sqlite3_bind_text(stmt, 2, target.checkpointName.c_str(), -1,
+                                  SQLITE_TRANSIENT);
+                sqlite3_bind_double(stmt, 3, target.passRateTarget);
+                ok = (sqlite3_step(stmt) == SQLITE_DONE);
+                sqlite3_finalize(stmt);
+            } else {
+                ok = false;
+            }
+        }
+
+        sqlite3_exec(db_, ok ? "COMMIT" : "ROLLBACK", nullptr, nullptr, nullptr);
+        if (logger_) {
+            logger_->info("DB: upsertRecipe({}) -> {} ({} targets)",
+                          recipe.productCode, ok ? "ok" : "failed",
+                          recipe.checkpointTargets.size());
+        }
+        return ok;
     }
 
     /// Add new product
