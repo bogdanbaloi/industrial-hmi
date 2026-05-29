@@ -721,6 +721,25 @@ target_link_libraries(test_mirror_model PRIVATE
 )
 add_test(NAME MirrorModelTest COMMAND test_mirror_model)
 
+# Dialog logic: pure username/role helpers extracted from UserEditDialog
+# (UserEditValidation.h) -- no GTK, header-only.
+add_executable(test_user_edit_validation UserEditValidationTest.cpp)
+target_link_libraries(test_user_edit_validation PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME UserEditValidationTest COMMAND test_user_edit_validation)
+
+# Dialog logic: shared password-pair validation (ResetPassword + Profile)
+# + avatar MIME-from-extension gating, extracted from the dialogs into
+# PasswordValidation.h / AvatarMime.h -- pure, no GTK.
+add_executable(test_dialog_helpers DialogHelpersTest.cpp)
+target_link_libraries(test_dialog_helpers PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME DialogHelpersTest COMMAND test_dialog_helpers)
+
 # Integration: recipe load end-to-end. Real DatabaseManager (in-memory,
 # seeded recipes) read via the RecipesRepository interface + real
 # SimulatedModel.loadProduct. Closes the Phase 9 loop the mock-based

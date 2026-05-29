@@ -1,5 +1,6 @@
 #include "src/gtk/view/dialogs/ResetPasswordDialog.h"
 
+#include "src/gtk/view/dialogs/PasswordValidation.h"
 #include "src/core/i18n.h"
 
 #include <format>
@@ -113,13 +114,16 @@ ResetPasswordDialog::Result ResetPasswordDialog::runModal() {
 void ResetPasswordDialog::onSubmit() {
     const auto pw      = newEntry_->get_text().raw();
     const auto confirm = confirmEntry_->get_text().raw();
-    if (pw.empty()) {
-        showError(_("New password is required."));
-        return;
-    }
-    if (pw != confirm) {
-        showError(_("Passwords do not match."));
-        return;
+    using app::view::pwvalidation::PasswordError;
+    switch (pwvalidation::validateNewPassword(pw, confirm)) {
+        case PasswordError::Empty:
+            showError(_("New password is required."));
+            return;
+        case PasswordError::Mismatch:
+            showError(_("Passwords do not match."));
+            return;
+        case PasswordError::None:
+            break;
     }
     newPassword_ = pw;
     result_      = Result::Submitted;
