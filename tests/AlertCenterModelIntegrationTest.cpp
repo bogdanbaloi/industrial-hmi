@@ -22,9 +22,10 @@ namespace {
 
 using app::DashboardPresenter;
 using app::model::MirrorModel;
+using app::presenter::AlarmState;
 using app::presenter::AlertCenter;
 
-TEST(AlertCenterModelIntegrationTest, EquipmentOfflineRaisesThenRecoveryClears) {
+TEST(AlertCenterModelIntegrationTest, EquipmentOfflineRaisesThenRecoveryThenAck) {
     MirrorModel     model;
     AlertCenter     alerts;
     DashboardPresenter presenter(model);
@@ -34,15 +35,25 @@ TEST(AlertCenterModelIntegrationTest, EquipmentOfflineRaisesThenRecoveryClears) 
     ASSERT_TRUE(alerts.snapshot().empty()) << "no alerts before any event";
 
     // Real state change: take equipment 0 offline -> presenter's real
-    // dispatch raises a keyed alert.
+    // dispatch raises a keyed alarm (unacknowledged).
     model.setEquipmentEnabled(0, false);
-    EXPECT_FALSE(alerts.snapshot().empty())
-        << "offline equipment must raise an alert";
+    auto raised = alerts.snapshot();
+    ASSERT_EQ(raised.size(), 1u) << "offline equipment must raise an alarm";
+    EXPECT_EQ(raised[0].state, AlarmState::UnackActive);
 
-    // Recovery: bring it back online -> the alert auto-clears.
+    // Recovery: bring it back online. ISA-18.2 -- an UNACKNOWLEDGED alarm
+    // returning to normal does NOT auto-disappear; it becomes RtnUnack and
+    // stays visible so the operator can't miss the transient fault.
     model.setEquipmentEnabled(0, true);
+    auto recovered = alerts.snapshot();
+    ASSERT_EQ(recovered.size(), 1u)
+        << "recovered-but-unacked alarm must stay visible";
+    EXPECT_EQ(recovered[0].state, AlarmState::RtnUnack);
+
+    // Operator acknowledges the returned alarm -> fully resolved.
+    alerts.acknowledge(recovered[0].key);
     EXPECT_TRUE(alerts.snapshot().empty())
-        << "recovered equipment must clear its alert";
+        << "acknowledging a returned alarm resolves it";
 }
 
 }  // namespace

@@ -124,8 +124,11 @@ void InitConsole::wireActions() {
         [ac]() -> std::vector<presenter::AlertViewModel> {
             return ac ? ac->snapshot() : std::vector<presenter::AlertViewModel>{};
         });
+    // ISA-18.2: the operator action is Acknowledge, not an unconditional
+    // remove. An acked-but-active alarm stays; a returned-to-normal one
+    // resolves to history.
     view_->onDismissAlert(
-        [ac](std::string_view key) { if (ac) ac->clear(key); });
+        [ac](std::string_view key) { if (ac) ac->acknowledge(key); });
 
     // Shutdown hook fires on `quit` so the tick thread can stop cleanly
     // before run() unblocks from waitForExit().

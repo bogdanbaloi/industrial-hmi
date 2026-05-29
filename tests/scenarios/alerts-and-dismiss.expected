@@ -14,13 +14,20 @@
  Type 'help' for commands, 'quit' to exit.
 ========================================
 --- ALERTS ---
-  [WARNING] key=equipment-2 Equipment 2 offline at <TIME>
+  [WARNING/UNACK] key=equipment-2 Equipment 2 offline at <TIME>
         Line unavailable for production.
-  [WARNING] key=quality-2 Final Inspection below target at <TIME>
+  [WARNING/UNACK] key=quality-2 Final Inspection below target at <TIME>
         Pass rate 93.0% (target 95%)
 --- END ---
 --- ALERTS ---
-  [WARNING] key=quality-2 Final Inspection below target at <TIME>
+  [WARNING/ACK] key=equipment-2 Equipment 2 offline at <TIME>
+        Line unavailable for production.
+  [WARNING/UNACK] key=quality-2 Final Inspection below target at <TIME>
+        Pass rate 93.0% (target 95%)
+--- END ---
+[EQUIPMENT] id=2 status=ONLINE enabled=true
+--- ALERTS ---
+  [WARNING/UNACK] key=quality-2 Final Inspection below target at <TIME>
         Pass rate 93.0% (target 95%)
 --- END ---
 [BYE      ] Shutting down.
