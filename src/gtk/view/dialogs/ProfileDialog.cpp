@@ -1,5 +1,6 @@
 #include "src/gtk/view/dialogs/ProfileDialog.h"
 
+#include "src/gtk/view/dialogs/AvatarMime.h"
 #include "src/core/i18n.h"
 #include "src/gtk/view/widgets/AvatarWidget.h"
 
@@ -42,20 +43,10 @@ std::vector<std::uint8_t> readSmallFile(const std::string& path) {
     return bytes;
 }
 
-/// Guess the avatar MIME from the file extension. Repository accepts
-/// only PNG / JPEG; anything else returns empty and the upload is
-/// refused at the presenter boundary.
-std::string mimeFromPath(const std::string& path) {
-    auto dot = path.find_last_of('.');
-    if (dot == std::string::npos) return {};
-    std::string ext = path.substr(dot + 1);
-    for (auto& c : ext) {
-        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    }
-    if (ext == "png")  return "image/png";
-    if (ext == "jpg" || ext == "jpeg") return "image/jpeg";
-    return {};
-}
+// mimeFromPath lives in AvatarMime.h (pure, unit-tested without a file
+// picker). Pulled in under its unqualified name so call sites below are
+// unchanged.
+using app::view::avatarmime::mimeFromPath;
 
 }  // namespace
 

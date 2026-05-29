@@ -64,6 +64,18 @@ target_link_libraries(test_result PRIVATE
 )
 add_test(NAME ResultTest COMMAND test_result)
 
+# core/TimeFormat -- pure ISO-8601 UTC -> local display helper. Compile
+# the .cpp directly (no deps beyond the stdlib) to avoid pulling
+# objectsCore -> Application -> GTK.
+add_executable(test_time_format
+    TimeFormatTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/TimeFormat.cpp)
+target_link_libraries(test_time_format PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME TimeFormatTest COMMAND test_time_format)
+
 # Config: ConfigManager
 # ConfigManager.h is header-only (pure std:: code) and config_defaults.h is a
 # plain constexpr header; neither needs GTK or the model layer.
@@ -99,6 +111,34 @@ target_link_libraries(test_sqlite_history_store PRIVATE
     objectsHistorian
 )
 add_test(NAME SqliteHistoryStoreTest COMMAND test_sqlite_history_store)
+
+# Historian degraded-open (REQ-HISTORIAN-004): a store opened on an
+# unopenable path must fail initialize() cleanly and leave every
+# read/write inert -- automates what was previously a manual check.
+add_executable(test_historian_degraded_open HistorianDegradedOpenTest.cpp)
+target_link_libraries(test_historian_degraded_open PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+)
+add_test(NAME HistorianDegradedOpenTest
+         COMMAND test_historian_degraded_open)
+
+# Integration: HistorianBridge -> real SqliteHistoryStore round-trip.
+# A model telemetry change must batch through the bridge and become
+# queryable in the real in-memory SQLite store. Joins the batching
+# (HistorianBridgeTest, fake writer) and storage (SqliteHistoryStoreTest)
+# units. Links objectsHistorian (bridge + store + SQLite) + MirrorModel.
+add_executable(test_historian_roundtrip_integration
+    HistorianRoundTripIntegrationTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/model/MirrorModel.cpp)
+target_link_libraries(test_historian_roundtrip_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+)
+add_test(NAME HistorianRoundTripIntegrationTest
+         COMMAND test_historian_roundtrip_integration)
 
 # Historian: HistorianBridge
 # Drives the real SimulatedModel singleton (no model mocking) because
@@ -164,6 +204,18 @@ target_link_libraries(test_auth_service PRIVATE
     objectsAuth
 )
 add_test(NAME AuthServiceTest COMMAND test_auth_service)
+
+# Auth: login -> audit integration (real repo + hasher + audit logger).
+# Asserts the rows AuthService persists and that "unknown user" vs
+# "wrong password" stay indistinguishable to the caller yet separable
+# in the audit trail. Links objectsAuth (same as the other auth tests).
+add_executable(test_auth_audit_integration AuthAuditIntegrationTest.cpp)
+target_link_libraries(test_auth_audit_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME AuthAuditIntegrationTest COMMAND test_auth_audit_integration)
 
 # Presenter: UsersPresenter (RBAC + audit, real repo + real hasher).
 # Links objectsModel because objectsPresenter's other TUs (Products)
@@ -308,6 +360,22 @@ target_link_libraries(test_primary_to_secondary_bridge PRIVATE
 add_test(NAME PrimaryToSecondaryBridgeTest
          COMMAND test_primary_to_secondary_bridge)
 
+# Integration: PrimaryToSecondaryBridge end-to-end with two REAL
+# MirrorModel instances (no mocks). Asserts a primary change travels
+# through the bridge's real observer plumbing onto the secondary's real
+# state -- the test that catches id-mapping / forwarding bugs the mock
+# test cannot see. Links the real MirrorModel + bridge sources.
+add_executable(test_primary_to_secondary_bridge_integration
+    PrimaryToSecondaryBridgeIntegrationTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/PrimaryToSecondaryBridge.cpp
+    ${CMAKE_SOURCE_DIR}/src/model/MirrorModel.cpp)
+target_link_libraries(test_primary_to_secondary_bridge_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME PrimaryToSecondaryBridgeIntegrationTest
+         COMMAND test_primary_to_secondary_bridge_integration)
+
 # Modbus: pure PDU codec -- encode/decode MBAP+PDU bytes. No socket,
 # no thread; the test compiles the .cpp directly rather than linking
 # objectsModbus so it stays runnable even when BUILD_MODBUS_BACKEND
@@ -352,6 +420,22 @@ if(BUILD_MODBUS_BACKEND)
         tests_includes
     )
     add_test(NAME ModbusIngestBridgeTest COMMAND test_modbus_ingest_bridge)
+
+    # Integration: both ingest bridges (MQTT SensorIngestBridge + Modbus
+    # ModbusIngestBridge) feeding a REAL MirrorModel -- asserts inbound
+    # values mutate real state + re-emit, vs the mock-model unit tests.
+    # Lives in the Modbus block since it links ModbusIngestBridge.
+    add_executable(test_ingest_bridge_real_model_integration
+        IngestBridgeRealModelIntegrationTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/SensorIngestBridge.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusIngestBridge.cpp
+        ${CMAKE_SOURCE_DIR}/src/model/MirrorModel.cpp)
+    target_link_libraries(test_ingest_bridge_real_model_integration PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+    )
+    add_test(NAME IngestBridgeRealModelIntegrationTest
+             COMMAND test_ingest_bridge_real_model_integration)
 
     # Modbus: poll loop -- jthread + cadence + dispatch. Uses a
     # FakeModbusReader (in-memory ModbusReader impl) so no socket,
@@ -641,6 +725,49 @@ target_link_libraries(test_simulated_model PRIVATE
 )
 add_test(NAME SimulatedModelTest COMMAND test_simulated_model)
 
+# model/MirrorModel -- dedicated unit test (the integration tests use it
+# as a fixture but never assert its setter clamping / id-drop / dedup
+# contract). Compiles MirrorModel.cpp directly (header-light, no DB/Boost).
+add_executable(test_mirror_model
+    MirrorModelTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/model/MirrorModel.cpp)
+target_link_libraries(test_mirror_model PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME MirrorModelTest COMMAND test_mirror_model)
+
+# Dialog logic: pure username/role helpers extracted from UserEditDialog
+# (UserEditValidation.h) -- no GTK, header-only.
+add_executable(test_user_edit_validation UserEditValidationTest.cpp)
+target_link_libraries(test_user_edit_validation PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME UserEditValidationTest COMMAND test_user_edit_validation)
+
+# Dialog logic: shared password-pair validation (ResetPassword + Profile)
+# + avatar MIME-from-extension gating, extracted from the dialogs into
+# PasswordValidation.h / AvatarMime.h -- pure, no GTK.
+add_executable(test_dialog_helpers DialogHelpersTest.cpp)
+target_link_libraries(test_dialog_helpers PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME DialogHelpersTest COMMAND test_dialog_helpers)
+
+# Integration: recipe load end-to-end. Real DatabaseManager (in-memory,
+# seeded recipes) read via the RecipesRepository interface + real
+# SimulatedModel.loadProduct. Closes the Phase 9 loop the mock-based
+# ProductsPresenterTest / SimulatedModelTest leave open.
+add_executable(test_recipe_load_integration RecipeLoadIntegrationTest.cpp)
+target_link_libraries(test_recipe_load_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsModel
+)
+add_test(NAME RecipeLoadIntegrationTest COMMAND test_recipe_load_integration)
+
 # Core: Logger (CapturingLogger + helpers)
 add_executable(test_logger LoggerTest.cpp)
 target_link_libraries(test_logger PRIVATE
@@ -805,6 +932,36 @@ target_link_libraries(test_dashboard_presenter PRIVATE
 
 add_test(NAME DashboardPresenterTest COMMAND test_dashboard_presenter)
 
+# Integration: DashboardPresenter observing a REAL ProductionModel
+# (MirrorModel) with a real ViewObserver. A model setter must travel
+# through the model's real dispatch + the presenter's view-model
+# builder onto the observer -- the chain the mock-based test stubs out.
+add_executable(test_dashboard_presenter_integration
+    DashboardPresenterIntegrationTest.cpp)
+target_link_libraries(test_dashboard_presenter_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsModel
+)
+add_test(NAME DashboardPresenterIntegrationTest
+         COMMAND test_dashboard_presenter_integration)
+
+# Integration: real MirrorModel -> real DashboardPresenter -> real
+# AlertCenter. A real equipment state change raises then auto-clears an
+# alert through the presenter's real dispatch (REQ-QUALITY-002), vs the
+# mock-callback alert path in DashboardPresenterTest.
+add_executable(test_alert_center_model_integration
+    AlertCenterModelIntegrationTest.cpp)
+target_link_libraries(test_alert_center_model_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsModel
+)
+add_test(NAME AlertCenterModelIntegrationTest
+         COMMAND test_alert_center_model_integration)
+
 # View-layer tests (require GTK initialised via custom main)
 # These binaries use ViewTestMain.cpp instead of gtest_main, because
 # gtk_init() must run before any widget is constructed. On Linux CI the
@@ -871,6 +1028,32 @@ target_link_libraries(test_dashboard_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME DashboardPageTest COMMAND test_dashboard_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(DashboardPageTest PROPERTIES LABELS "gui")
+
+# View: MultiStationDashboardPage -- dual-pane composition (REQ-MULTISTATION-002).
+add_executable(test_multistation_dashboard_page
+    MultiStationDashboardPageTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_multistation_dashboard_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_multistation_dashboard_page PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_multistation_dashboard_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME MultiStationDashboardPageTest COMMAND test_multistation_dashboard_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(MultiStationDashboardPageTest PROPERTIES LABELS "gui")
+
+# View: Toast banner -- position->alignment mapping + reveal/dismiss.
+add_executable(test_toast
+    ToastTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_toast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_toast PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_toast PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME ToastTest COMMAND test_toast
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(ToastTest PROPERTIES LABELS "gui")
 
 # View: BigNumberCard widget (Phase 8A of the dashboard redesign).
 # Smoke + state tests only; pixel-level Cairo rendering is verified
@@ -976,6 +1159,13 @@ if(WIN32)
     target_link_libraries(test_history_page              PRIVATE ws2_32)
     target_link_libraries(test_users_presenter           PRIVATE ws2_32)
     target_link_libraries(test_users_page                PRIVATE ws2_32)
+    # New targets that link objectsView / objectsAppGtk (and thus
+    # Boost.Asio -> Winsock) transitively.
+    target_link_libraries(test_toast                          PRIVATE ws2_32)
+    target_link_libraries(test_multistation_dashboard_page    PRIVATE ws2_32)
+    target_link_libraries(test_recipe_load_integration        PRIVATE ws2_32)
+    target_link_libraries(test_dashboard_presenter_integration PRIVATE ws2_32)
+    target_link_libraries(test_alert_center_model_integration PRIVATE ws2_32)
 endif()
 
 # Console scenario tests -- end-to-end MVP regression suite

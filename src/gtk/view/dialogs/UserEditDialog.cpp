@@ -1,9 +1,9 @@
 #include "src/gtk/view/dialogs/UserEditDialog.h"
 
+#include "src/gtk/view/dialogs/UserEditValidation.h"
 #include "src/core/i18n.h"
 
 #include <algorithm>
-#include <cctype>
 #include <string>
 
 namespace app::view {
@@ -18,41 +18,14 @@ constexpr int kRootSpacingPx     = 10;
 constexpr int kButtonRowSpacing  = 10;
 constexpr int kEntryWidthChars   = 24;
 
-// Role dropdown indices -- match the appendition order in buildUi().
-// Kept as named constants so the read code in onSubmit() doesn't dump
-// `2` straight into the role enum cast.
-constexpr int kRoleIndexOperator    = 0;
-constexpr int kRoleIndexMaintenance = 1;
-constexpr int kRoleIndexAdmin       = 2;
-
-std::string toLowerCanonical(std::string_view s) {
-    std::string out;
-    out.reserve(s.size());
-    for (char c : s) {
-        out.push_back(
-            static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-    }
-    return out;
-}
-
-app::auth::Role roleFromIndex(int idx) {
-    using app::auth::Role;
-    switch (idx) {
-        case kRoleIndexAdmin:       return Role::Admin;
-        case kRoleIndexMaintenance: return Role::Maintenance;
-        default:                    return Role::Operator;
-    }
-}
-
-int indexFromRole(app::auth::Role r) {
-    using app::auth::Role;
-    switch (r) {
-        case Role::Admin:       return kRoleIndexAdmin;
-        case Role::Maintenance: return kRoleIndexMaintenance;
-        case Role::Operator:    return kRoleIndexOperator;
-    }
-    return kRoleIndexOperator;
-}
+// Pure username / role-index helpers live in UserEditValidation.h so
+// they can be unit-tested without a GTK widget. Pull them into this TU
+// under their original unqualified names so the call sites below are
+// unchanged.
+using app::view::useredit::indexFromRole;
+using app::view::useredit::kRoleIndexOperator;
+using app::view::useredit::roleFromIndex;
+using app::view::useredit::toLowerCanonical;
 
 }  // namespace
 
