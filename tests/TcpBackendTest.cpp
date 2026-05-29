@@ -64,6 +64,8 @@ public:
     MOCK_METHOD(SystemState, getState, (), (const, override));
     MOCK_METHOD(app::model::QualityCheckpoint, getQualityCheckpoint,
                 (uint32_t), (const, override));
+    MOCK_METHOD((std::vector<app::model::QualityCheckpoint>),
+                getQualityCheckpoints, (), (const, override));
     MOCK_METHOD(app::model::WorkUnit, getWorkUnit, (), (const, override));
 };
 

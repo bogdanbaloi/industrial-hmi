@@ -10,6 +10,9 @@
 
 #include <format>
 #include <fstream>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace app::view {
 
@@ -169,6 +172,7 @@ void ProductsPage::buildUI() {
     auto* deleteBtn = builder->get_widget<Gtk::Button>("btn_delete");
 
     auto* loadRecipeBtn = builder->get_widget<Gtk::Button>("btn_load_recipe");
+    auto* editRecipeBtn = builder->get_widget<Gtk::Button>("btn_edit_recipe");
 
     viewBtn->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onViewProductClicked));
@@ -178,6 +182,8 @@ void ProductsPage::buildUI() {
         sigc::mem_fun(*this, &ProductsPage::onDeleteProductClicked));
     loadRecipeBtn->signal_clicked().connect(
         sigc::mem_fun(*this, &ProductsPage::onLoadRecipeClicked));
+    editRecipeBtn->signal_clicked().connect(
+        sigc::mem_fun(*this, &ProductsPage::onEditRecipeClicked));
 }
 
 // Event Handlers
@@ -326,6 +332,113 @@ void ProductsPage::onRecipeLoaded(bool success, const std::string& message) {
     dialog->signal_response().connect(
         [dialog](int) { delete dialog; });
     dialog->show();
+}
+
+void ProductsPage::onEditRecipeClicked() {
+    if (!app::auth::canEditProducts(role_)) {
+        log().warn("ProductsPage: edit recipe rejected -- role {} lacks permission",
+                   app::auth::roleName(role_));
+        return;
+    }
+    const int productId = getSelectedProductId();
+    log().debug("ProductsPage: Edit Recipe clicked (selected id={})", productId);
+    if (productId != config::defaults::kInvalidProductId && presenter_) {
+        auto product = presenter_->getProduct(productId);
+        if (product.id != config::defaults::kInvalidProductId) {
+            showEditRecipeDialog(product);
+        }
+    }
+}
+
+void ProductsPage::showEditRecipeDialog(
+    const model::DatabaseManager::Product& product) {
+    // Ask the presenter for the recipe to edit: the stored one if it
+    // exists, otherwise a default seeded with a row per known checkpoint.
+    const model::Recipe recipe = presenter_->getRecipeForEditing(product.id);
+
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+    const Glib::ustring title =
+        Glib::ustring(_("Edit Recipe")) + " -- " + product.name;
+    auto* dialog = parent ? new Gtk::Dialog(title, *parent)
+                          : new Gtk::Dialog(title);
+    dialog->set_default_size(kFormDialogWidth, kFormDialogHeight);
+    dialog->set_modal(true);
+    app::view::ThemeManager::instance().applyToDialog(dialog);
+
+    auto* grid = Gtk::make_managed<Gtk::Grid>();
+    grid->set_row_spacing(kSpacingMedium);
+    grid->set_column_spacing(kSpacingMedium);
+    grid->set_margin(kSpacingLarge);
+
+    int row = 0;
+
+    // Product code (read-only context).
+    auto* codeLabel = Gtk::make_managed<Gtk::Label>(_("Product Code:"));
+    codeLabel->set_xalign(0);
+    auto* codeDisplay = Gtk::make_managed<Gtk::Label>(product.productCode);
+    codeDisplay->set_xalign(0);
+    codeDisplay->add_css_class(css::kDimLabel);
+    grid->attach(*codeLabel, 0, row);
+    grid->attach(*codeDisplay, 1, row++);
+
+    // Operation count.
+    auto* opsLabel = Gtk::make_managed<Gtk::Label>(_("Operations:"));
+    opsLabel->set_xalign(0);
+    auto* opsSpin = Gtk::make_managed<Gtk::SpinButton>();
+    opsSpin->set_range(kRecipeOpsSpinMin, kRecipeOpsSpinMax);
+    opsSpin->set_increments(kRecipeOpsSpinStep, kRecipeOpsSpinStep);
+    opsSpin->set_value(recipe.totalOperations);
+    opsSpin->set_hexpand(true);
+    grid->attach(*opsLabel, 0, row);
+    grid->attach(*opsSpin, 1, row++);
+
+    // One pass-rate-target spin per checkpoint. Capture the (name, spin)
+    // pairs so the response handler can read them back into a Recipe.
+    auto targetSpins =
+        std::make_shared<std::vector<std::pair<std::string, Gtk::SpinButton*>>>();
+    for (const auto& target : recipe.checkpointTargets) {
+        auto* nameLabel = Gtk::make_managed<Gtk::Label>(
+            Glib::ustring(target.checkpointName) + " (%):");
+        nameLabel->set_xalign(0);
+        auto* targetSpin = Gtk::make_managed<Gtk::SpinButton>();
+        targetSpin->set_range(kQualitySpinMin, kQualitySpinMax);
+        targetSpin->set_digits(1);
+        targetSpin->set_increments(kQualitySpinStep, 1.0);
+        targetSpin->set_value(target.passRateTarget);
+        targetSpin->set_hexpand(true);
+        grid->attach(*nameLabel, 0, row);
+        grid->attach(*targetSpin, 1, row++);
+        targetSpins->emplace_back(target.checkpointName, targetSpin);
+    }
+
+    dialog->get_content_area()->append(*grid);
+    dialog->add_button(_("Cancel"), Gtk::ResponseType::CANCEL);
+    dialog->add_button(_("Save"), Gtk::ResponseType::OK);
+
+    const int productId   = product.id;
+    const std::string code = product.productCode;
+    dialog->signal_response().connect(
+        [this, dialog, productId, code, opsSpin, targetSpins](int response) {
+            if (response == Gtk::ResponseType::OK && presenter_) {
+                model::Recipe edited;
+                edited.productCode    = code;
+                edited.totalOperations = opsSpin->get_value_as_int();
+                for (const auto& [name, spin] : *targetSpins) {
+                    edited.checkpointTargets.push_back(
+                        {name, static_cast<float>(spin->get_value())});
+                }
+                presenter_->saveRecipe(productId, edited, [this](bool success) {
+                    if (!success) {
+                        auto* win = dynamic_cast<Gtk::Window*>(get_root());
+                        dialogManager_.showError(
+                            _("Error"), _("Failed to save recipe."), win);
+                    }
+                });
+            }
+            delete dialog;
+        });
+
+    dialog->present();
 }
 
 int ProductsPage::getSelectedProductId() {

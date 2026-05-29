@@ -36,6 +36,7 @@ public:
     // Queries
     MOCK_METHOD(model::SystemState, getState, (), (const, override));
     MOCK_METHOD(model::QualityCheckpoint, getQualityCheckpoint, (uint32_t id), (const, override));
+    MOCK_METHOD((std::vector<model::QualityCheckpoint>), getQualityCheckpoints, (), (const, override));
     MOCK_METHOD(model::WorkUnit, getWorkUnit, (), (const, override));
 };
 

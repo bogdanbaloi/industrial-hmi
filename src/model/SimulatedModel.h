@@ -272,6 +272,17 @@ public:
         return qualityCheckpoints_.at(id);
     }
 
+    [[nodiscard]] std::vector<QualityCheckpoint> getQualityCheckpoints() const override {
+        const std::scoped_lock lock(mutex_);
+        std::vector<QualityCheckpoint> out;
+        out.reserve(qualityCheckpoints_.size());
+        // std::map iterates in ascending key (id) order.
+        for (const auto& [id, cp] : qualityCheckpoints_) {
+            out.push_back(cp);
+        }
+        return out;
+    }
+
     [[nodiscard]] WorkUnit getWorkUnit() const override { return currentWorkUnit_; }
 
     /// Advance simulation by one tick (called by auto refresh timer)

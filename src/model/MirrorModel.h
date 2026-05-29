@@ -84,6 +84,7 @@ public:
     // ProductionModel: queries
     [[nodiscard]] SystemState getState() const override;
     [[nodiscard]] QualityCheckpoint getQualityCheckpoint(std::uint32_t id) const override;
+    [[nodiscard]] std::vector<QualityCheckpoint> getQualityCheckpoints() const override;
     [[nodiscard]] WorkUnit getWorkUnit() const override;
 
 private:

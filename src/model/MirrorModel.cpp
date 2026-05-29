@@ -168,6 +168,22 @@ QualityCheckpoint MirrorModel::getQualityCheckpoint(std::uint32_t id) const {
     return it != quality_.end() ? it->second : QualityCheckpoint{};
 }
 
+std::vector<QualityCheckpoint> MirrorModel::getQualityCheckpoints() const {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<QualityCheckpoint> out;
+    out.reserve(quality_.size());
+    for (const auto& [id, cp] : quality_) {
+        out.push_back(cp);
+    }
+    // quality_ is an unordered_map; present checkpoints in stable id order
+    // so the recipe editor lists them deterministically.
+    std::sort(out.begin(), out.end(),
+              [](const QualityCheckpoint& a, const QualityCheckpoint& b) {
+                  return a.checkpointId < b.checkpointId;
+              });
+    return out;
+}
+
 WorkUnit MirrorModel::getWorkUnit() const {
     const std::lock_guard<std::mutex> lock(mutex_);
     return workUnit_;

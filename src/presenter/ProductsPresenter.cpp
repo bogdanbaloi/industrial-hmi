@@ -61,6 +61,14 @@ bool checkEditPermission(app::auth::AuditLogger* audit,
     return false;
 }
 
+// Recipe validation bounds. A work unit needs at least one operation;
+// the upper bound is a sanity cap so a fat-fingered spinner value can't
+// store an absurd batch size. Pass-rate targets are percentages.
+constexpr int   kMinOperations = 1;
+constexpr int   kMaxOperations = 100;
+constexpr float kMinPassRate   = 0.0F;
+constexpr float kMaxPassRate   = 100.0F;
+
 }  // namespace
 
 ProductsPresenter::ProductsPresenter()
@@ -291,6 +299,96 @@ void ProductsPresenter::loadRecipe(int productId) {
         std::string{_("Loaded recipe for {}.")},
         std::make_format_args(name));
     notifyAll([&msg](ViewObserver* obs) { obs->onRecipeLoaded(true, msg); });
+}
+
+model::Recipe ProductsPresenter::getRecipeForEditing(int productId) {
+    model::Recipe recipe;
+    const auto product = repository_.getProduct(productId);
+    recipe.productCode = product.productCode;
+
+    // Start from the stored recipe (operation count) if one exists.
+    std::optional<model::Recipe> stored;
+    if (recipes_ != nullptr) {
+        stored = recipes_->getRecipeByProductCode(product.productCode);
+    }
+    if (stored.has_value()) {
+        recipe.totalOperations = stored->totalOperations;
+    }
+
+    // Build one target row per known quality checkpoint: keep the stored
+    // value where present, default the rest. This lets the editor render
+    // a complete form even for a product with no recipe yet.
+    std::vector<model::QualityCheckpoint> checkpoints;
+    if (productionModel_ != nullptr) {
+        checkpoints = productionModel_->getQualityCheckpoints();
+    }
+    if (checkpoints.empty()) {
+        // No model to enumerate (e.g. headless / unit test): fall back to
+        // whatever the stored recipe carried.
+        if (stored.has_value()) {
+            recipe.checkpointTargets = stored->checkpointTargets;
+        }
+        return recipe;
+    }
+    for (const auto& cp : checkpoints) {
+        model::CheckpointTarget target;
+        target.checkpointName = cp.name;
+        target.passRateTarget = model::kDefaultPassRateTarget;
+        if (stored.has_value()) {
+            for (const auto& st : stored->checkpointTargets) {
+                if (st.checkpointName == cp.name) {
+                    target.passRateTarget = st.passRateTarget;
+                    break;
+                }
+            }
+        }
+        recipe.checkpointTargets.push_back(std::move(target));
+    }
+    return recipe;
+}
+
+void ProductsPresenter::saveRecipe(int productId, const model::Recipe& recipe,
+                                   std::function<void(bool)> callback) {
+    if (recipesWriter_ == nullptr) {
+        LOG_IF(warn, "saveRecipe({}) called but recipe-writer hookup is absent",
+               productId);
+        callback(false);
+        return;
+    }
+    if (!checkEditPermission(audit_, session_, logger_, "RECIPE_SAVE",
+                             std::format("code={}", recipe.productCode))) {
+        callback(false);
+        return;
+    }
+    // Validate before touching storage: operation count in range, every
+    // pass-rate target a sane percentage.
+    if (recipe.totalOperations < kMinOperations ||
+        recipe.totalOperations > kMaxOperations) {
+        LOG_IF(warn, "saveRecipe: rejected totalOperations={}",
+               recipe.totalOperations);
+        callback(false);
+        return;
+    }
+    for (const auto& target : recipe.checkpointTargets) {
+        if (target.passRateTarget < kMinPassRate ||
+            target.passRateTarget > kMaxPassRate) {
+            LOG_IF(warn, "saveRecipe: rejected target {}={} (out of 0..100)",
+                   target.checkpointName, target.passRateTarget);
+            callback(false);
+            return;
+        }
+    }
+
+    // Single small operator-initiated transaction -- run it synchronously
+    // through the injected writer (testable with a mock) rather than the
+    // async product path.
+    const bool success = recipesWriter_->upsertRecipe(recipe);
+    emitAudit(audit_, session_, "RECIPE_SAVE",
+              std::format("code={}", recipe.productCode),
+              success ? app::auth::result::kSuccess : app::auth::result::kFailure);
+    LOG_IF(info, "saveRecipe({}) -> {}", recipe.productCode,
+           success ? "ok" : "failed");
+    callback(success);
 }
 
 void ProductsPresenter::notifyProductsLoaded(const presenter::ProductsViewModel& vm) {

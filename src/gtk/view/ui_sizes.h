@@ -54,6 +54,12 @@ inline constexpr double kQualitySpinMin  = 0.0;
 inline constexpr double kQualitySpinMax  = 100.0;
 inline constexpr double kQualitySpinStep = 0.1;
 
+// Operation-count spinner for the recipe editor (a work unit needs at
+// least one operation; the upper bound is a sanity cap).
+inline constexpr int kRecipeOpsSpinMin  = 1;
+inline constexpr int kRecipeOpsSpinMax  = 100;
+inline constexpr int kRecipeOpsSpinStep = 1;
+
 // Format buffer guidance (we now use std::vformat which returns std::string,
 // so these are advisory for legacy read-only sites if any remain).
 inline constexpr int kSmallFormatBuffer = 16;

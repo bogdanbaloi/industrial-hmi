@@ -498,6 +498,10 @@ void MainWindow::createAllPages() {
     productsPresenter_->setRecipeLoading(
         app::model::DatabaseManager::instance(),
         app::model::SimulatedModel::instance());
+    // Recipe editor write-path (REQ-PRODUCTS-004): same DatabaseManager,
+    // injected through the separate RecipesWriter seam.
+    productsPresenter_->setRecipeEditing(
+        app::model::DatabaseManager::instance());
     productsPage_ = Gtk::make_managed<app::view::ProductsPage>(*dialogManager_);
     productsPage_->initialize(productsPresenter_);
     registerPage(productsPage_);

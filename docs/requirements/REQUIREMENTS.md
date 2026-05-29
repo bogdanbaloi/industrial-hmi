@@ -703,6 +703,27 @@ ADR: 0011 (Multi-station — secondary stays passive on load).
 
 Needs: utest
 
+### REQ-PRODUCTS-004 (SHOULD) — Create / edit a product recipe
+
+`req~products-004~1`
+
+The operator **shall** be able to create or edit a product's recipe from
+the Products page: the operation count and a pass-rate target per quality
+checkpoint. The editor **shall** present a field for every known
+checkpoint even when the product has no recipe yet (existing values
+preserved, missing ones defaulted). Saving **shall** validate the
+operation count (>= 1) and each pass-rate target (0..100), persist the
+recipe (replacing any prior checkpoint targets wholesale), and record an
+audit event. Editing **shall** require product-edit permission.
+
+Verified by: ProductsPresenterTest (saveRecipe validation + writer
+routing, getRecipeForEditing merge), RecipeWriteIntegrationTest (real DB
+upsert round-trip + wholesale target replacement).
+
+ADR: 0011 (Multi-station — secondary stays passive on load).
+
+Needs: utest
+
 ---
 
 ## QUALITY — Pass rate, alerts

@@ -87,6 +87,8 @@ public:
     }
     [[nodiscard]] QualityCheckpoint
         getQualityCheckpoint(uint32_t) const override { return {}; }
+    [[nodiscard]] std::vector<QualityCheckpoint>
+        getQualityCheckpoints() const override { return {}; }
     [[nodiscard]] app::model::WorkUnit getWorkUnit() const override {
         return {};
     }
