@@ -421,6 +421,22 @@ if(BUILD_MODBUS_BACKEND)
     )
     add_test(NAME ModbusIngestBridgeTest COMMAND test_modbus_ingest_bridge)
 
+    # Integration: both ingest bridges (MQTT SensorIngestBridge + Modbus
+    # ModbusIngestBridge) feeding a REAL MirrorModel -- asserts inbound
+    # values mutate real state + re-emit, vs the mock-model unit tests.
+    # Lives in the Modbus block since it links ModbusIngestBridge.
+    add_executable(test_ingest_bridge_real_model_integration
+        IngestBridgeRealModelIntegrationTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/SensorIngestBridge.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/modbus/ModbusIngestBridge.cpp
+        ${CMAKE_SOURCE_DIR}/src/model/MirrorModel.cpp)
+    target_link_libraries(test_ingest_bridge_real_model_integration PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+    )
+    add_test(NAME IngestBridgeRealModelIntegrationTest
+             COMMAND test_ingest_bridge_real_model_integration)
+
     # Modbus: poll loop -- jthread + cadence + dispatch. Uses a
     # FakeModbusReader (in-memory ModbusReader impl) so no socket,
     # no FakeModbusSlave required. start/stop sanity tests use a
@@ -930,6 +946,21 @@ target_link_libraries(test_dashboard_presenter_integration PRIVATE
 )
 add_test(NAME DashboardPresenterIntegrationTest
          COMMAND test_dashboard_presenter_integration)
+
+# Integration: real MirrorModel -> real DashboardPresenter -> real
+# AlertCenter. A real equipment state change raises then auto-clears an
+# alert through the presenter's real dispatch (REQ-QUALITY-002), vs the
+# mock-callback alert path in DashboardPresenterTest.
+add_executable(test_alert_center_model_integration
+    AlertCenterModelIntegrationTest.cpp)
+target_link_libraries(test_alert_center_model_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsPresenter
+    objectsModel
+)
+add_test(NAME AlertCenterModelIntegrationTest
+         COMMAND test_alert_center_model_integration)
 
 # View-layer tests (require GTK initialised via custom main)
 # These binaries use ViewTestMain.cpp instead of gtest_main, because
