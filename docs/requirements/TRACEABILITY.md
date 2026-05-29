@@ -75,7 +75,8 @@ requirements may be smoke-tested.
 | REQ-DASHBOARD-003 | SHOULD | `src/gtk/view/widgets/BigNumberCard.h/.cpp`, `src/gtk/view/pages/DashboardPage.cpp::updateTopMetrics` | BigNumberCardTest + manual | -- |
 | REQ-DASHBOARD-004 | SHOULD | `src/gtk/view/widgets/DonutChartWidget.h/.cpp`, `src/gtk/view/pages/DashboardPage.cpp::refreshUptimeDonut` | DonutChartWidgetTest + manual | -- |
 | REQ-DASHBOARD-005 | MUST | `src/gtk/view/pages/DashboardPage.cpp::applyRole`, `src/auth/Role.h::canCalibrate/canResetSystem` | DashboardPageTest (role-gating cases) | -- |
-| REQ-DASHBOARD-006 | NICE | `src/gtk/view/pages/DashboardPage.cpp::setCompact` | manual + REQ-MULTISTATION-002 integration | -- |
+| REQ-DASHBOARD-006 | NICE | `src/gtk/view/pages/DashboardPage.cpp::setCompact` | DashboardPageTest.CompactPaneFitsMultiStationWidthBudget (layout-budget guard) | -- |
+| REQ-DASHBOARD-007 | NICE | `src/model/ThroughputMeter.h`, `src/model/SimulatedModel.h::tickSimulation` (records completions), `src/presenter/DashboardPresenter.cpp::buildWorkUnitVM`, `src/gtk/view/pages/DashboardPage.cpp::updateWorkUnitWidgets` (THROUGHPUT card) | ThroughputMeterTest + DashboardPresenterTest.ForwardsModelThroughputIntoViewModel | -- |
 
 ## HISTORIAN
 
@@ -125,7 +126,7 @@ requirements may be smoke-tested.
 |---|---|---|---|---|
 | REQ-PRODUCTS-001 | MUST | `src/presenter/ProductsPresenter.cpp`, `src/gtk/view/pages/ProductsPage.cpp` | ProductsPresenterTest, ProductsPageTest | -- |
 | REQ-PRODUCTS-002 | SHOULD | `src/presenter/ProductsPresenter.cpp` (async pipeline) | ProductsPresenterAsyncTest | -- |
-| REQ-PRODUCTS-003 | SHOULD | `src/model/Recipe.h`, `src/model/RecipesRepository.h`, `src/model/DatabaseManager.h` (recipes tables + getRecipeByProductCode), `src/model/SimulatedModel.h::loadProduct`, `src/presenter/ProductsPresenter.cpp::loadRecipe`, `src/gtk/view/pages/ProductsPage.cpp` (Load Recipe button) | ProductsPresenterTest (loadRecipe paths), SimulatedModelTest (loadProduct) | 0011 |
+| REQ-PRODUCTS-003 | SHOULD | `src/model/Recipe.h`, `src/model/RecipesRepository.h`, `src/model/DatabaseManager.h` (recipes tables + getRecipeByProductCode), `src/model/SimulatedModel.h::loadProduct`, `src/presenter/ProductsPresenter.cpp::loadRecipe`, `src/gtk/view/pages/ProductsPage.cpp` (Load Recipe button) | ProductsPresenterTest (loadRecipe paths), SimulatedModelTest (loadProduct), RecipeLoadIntegrationTest (real DB + repo + model) | 0011 |
 
 ## QUALITY
 

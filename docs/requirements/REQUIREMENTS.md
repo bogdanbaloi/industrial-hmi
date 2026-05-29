@@ -408,6 +408,22 @@ panes + the sidebar fit a 1536 logical-px viewport).
 
 Needs: utest
 
+### REQ-DASHBOARD-007 (NICE) — Live throughput KPI
+
+`req~dashboard-007~1`
+
+The dashboard THROUGHPUT KPI **shall** display the live production rate
+(completed work units per hour) measured by the model from recent
+work-unit completions, not a static placeholder. The rate **shall**
+decay toward zero when the line stalls and reset when a new batch is
+loaded.
+
+Verified by: ThroughputMeterTest (rate computation, window eviction,
+reset) + DashboardPresenterTest.ForwardsModelThroughputIntoViewModel
+(model rate reaches the view's ViewModel unchanged).
+
+Needs: utest
+
 ---
 
 ## HISTORIAN — Time-series persistence

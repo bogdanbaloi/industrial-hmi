@@ -322,6 +322,7 @@ presenter::WorkUnitViewModel DashboardPresenter::buildWorkUnitVM(const std::stri
     vm.productDescription = wu.description;
     vm.completedOperations = wu.completedOperations;
     vm.totalOperations = wu.totalOperations;
+    vm.throughputUph = wu.throughputUnitsPerHour;
     vm.progress = wu.totalOperations > 0
         ? static_cast<float>(wu.completedOperations) / wu.totalOperations
         : 0.0f;
