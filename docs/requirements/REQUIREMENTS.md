@@ -746,10 +746,37 @@ Needs: utest
 
 Persistent alerts (equipment offline, checkpoint below target)
 **shall** appear in the sidebar AlertsPanel with timestamp +
-dismissible chrome. Resolved conditions **shall** clear their
-alert automatically.
+acknowledge chrome. Resolved conditions **shall** be driven through
+the alarm lifecycle (see REQ-ALARM-001), not silently dropped.
 
 Verified by: AlertCenterTest.
+
+Needs: utest
+
+---
+
+## ALARMS — ISA-18.2 alarm management
+
+### REQ-ALARM-001 (SHOULD) — Alarm lifecycle (ISA-18.2 / IEC 62682)
+
+`req~alarm-001~1`
+
+Alarms **shall** follow a lifecycle distinguishing the process
+condition (active / returned-to-normal) from operator acknowledgement.
+A first occurrence **shall** be Unacknowledged-Active; the operator
+acknowledging it **shall** make it Acknowledged-Active (still shown
+while the condition holds). A condition returning to normal while
+unacknowledged **shall** transition to Returned-to-Normal-Unacknowledged
+and **shall remain visible** until acknowledged (a transient fault must
+not vanish unseen); acknowledging it then resolves the alarm to history.
+A re-activating condition **shall** re-alarm (back to
+Unacknowledged-Active).
+
+Verified by: AlertCenterTest (lifecycle state-machine cases),
+AlertCenterModelIntegrationTest (model -> presenter -> AlertCenter
+offline -> recovery -> acknowledge).
+
+ADR: standards basis ANSI/ISA-18.2-2016, IEC 62682.
 
 Needs: utest
 

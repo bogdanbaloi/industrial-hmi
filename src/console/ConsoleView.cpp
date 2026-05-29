@@ -91,6 +91,17 @@ constexpr std::string_view alertSeverityTag(presenter::AlertSeverity s) {
     return "UNKNOWN";
 }
 
+// ISA-18.2 lifecycle tag shown alongside severity in the alerts listing.
+constexpr std::string_view alarmStateTag(presenter::AlarmState st) {
+    using St = presenter::AlarmState;
+    switch (st) {
+    case St::UnackActive: return "UNACK";
+    case St::AckActive:   return "ACK";
+    case St::RtnUnack:    return "RTN";
+    }
+    return "UNKNOWN";
+}
+
 }  // namespace
 
 // Lifecycle
@@ -280,7 +291,7 @@ void ConsoleView::printHelp() {
          << "  calibrate, cal, c     Run calibration routine\n"
          << "  eq <id> on|off        Toggle equipment enable (id: 0..2)\n"
          << "  alerts                List active alerts\n"
-         << "  dismiss <key>         Dismiss an alert by key\n"
+         << "  dismiss <key>         Acknowledge an alarm by key (ISA-18.2)\n"
          << "  products              List products from database\n"
          << "  view <id>             Show product detail\n"
          << "  quit, q, exit         Exit the application\n";
@@ -297,8 +308,9 @@ void ConsoleView::printAlerts() {
         out_ << "  (none)\n";
     } else {
         for (const auto& a : active) {
-            out_ << std::format("  [{}] key={} {} at {}\n",
+            out_ << std::format("  [{}/{}] key={} {} at {}\n",
                                 alertSeverityTag(a.severity),
+                                alarmStateTag(a.state),
                                 a.key,
                                 a.title,
                                 a.timestamp);

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ISA-18.2 alarm lifecycle (Phase 1) (REQ-ALARM-001)
+
+Alarms now follow an ISA-18.2 / IEC 62682 lifecycle instead of a plain
+raise/clear store. The safety-relevant change: a condition returning to
+normal while **unacknowledged** no longer disappears -- it becomes
+Returned-to-Normal-Unacknowledged and stays visible until the operator
+acknowledges it, so a transient fault can't be missed.
+
+#### Added
+
+- `AlarmState` (UnackActive / AckActive / RtnUnack) on `AlertViewModel`;
+  `AlertCenter::acknowledge(key)` operator action + hand-rolled state
+  machine over the existing raise/clear condition inputs.
+- AlertsPanel shows a lifecycle badge (UNACK / ACK / RTN); the per-alarm
+  button is now **Acknowledge** (was an immediate dismiss).
+- AlertCenter state-machine unit tests + updated model integration test
+  (offline -> recovery -> acknowledge).
+
+#### Changed
+
+- `clear(key)` is now a *condition-inactive* input: it resolves an
+  acknowledged alarm but moves an unacknowledged one to RtnUnack.
+  Producers (DashboardPresenter) are unchanged.
+
 ### Live throughput KPI (Phase 8F)
 
 The dashboard THROUGHPUT card now shows a real, model-measured production

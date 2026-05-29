@@ -22,7 +22,7 @@ Commands:
   calibrate, cal, c     Run calibration routine
   eq <id> on|off        Toggle equipment enable (id: 0..2)
   alerts                List active alerts
-  dismiss <key>         Dismiss an alert by key
+  dismiss <key>         Acknowledge an alarm by key (ISA-18.2)
   products              List products from database
   view <id>             Show product detail
   quit, q, exit         Exit the application
@@ -35,7 +35,7 @@ Commands:
   calibrate, cal, c     Run calibration routine
   eq <id> on|off        Toggle equipment enable (id: 0..2)
   alerts                List active alerts
-  dismiss <key>         Dismiss an alert by key
+  dismiss <key>         Acknowledge an alarm by key (ISA-18.2)
   products              List products from database
   view <id>             Show product detail
   quit, q, exit         Exit the application
@@ -48,7 +48,7 @@ Commands:
   calibrate, cal, c     Run calibration routine
   eq <id> on|off        Toggle equipment enable (id: 0..2)
   alerts                List active alerts
-  dismiss <key>         Dismiss an alert by key
+  dismiss <key>         Acknowledge an alarm by key (ISA-18.2)
   products              List products from database
   view <id>             Show product detail
   quit, q, exit         Exit the application

@@ -13,6 +13,19 @@ enum class AlertSeverity {
     Critical
 };
 
+/// ISA-18.2 alarm lifecycle state (Phase 1 subset). The producer reports
+/// the underlying condition via AlertCenter::raise / clear; the operator
+/// advances the state via AlertCenter::acknowledge. The defining
+/// behaviour: a condition that returns to normal while still
+/// UNACKNOWLEDGED does NOT silently disappear -- it becomes RtnUnack and
+/// stays visible until the operator acknowledges it, so a transient fault
+/// can't be missed. (Shelved / Suppressed / OutOfService arrive later.)
+enum class AlarmState {
+    UnackActive,  ///< condition active, not yet acknowledged
+    AckActive,    ///< condition active, acknowledged by the operator
+    RtnUnack      ///< condition cleared, awaiting acknowledgement
+};
+
 /// ViewModel for a single alert card.
 ///
 /// @design
@@ -33,6 +46,12 @@ struct AlertViewModel {
     std::string   title;
     std::string   message;
     std::string   timestamp;
+
+    /// Lifecycle state, set by AlertCenter (the producer leaves it at the
+    /// default; AlertCenter assigns UnackActive on first raise and
+    /// advances it). Drives the state badge + the Acknowledge affordance
+    /// in the AlertsPanel.
+    AlarmState    state{AlarmState::UnackActive};
 
     /// Optional. When set, AlertCenter::retranslate() calls this on the
     /// alert to refresh `title`/`message` from the current locale. The

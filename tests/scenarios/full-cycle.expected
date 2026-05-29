@@ -43,10 +43,12 @@
 [EQUIPMENT] id=1 status=OFFLINE enabled=false
 [EQUIPMENT] id=1 status=ONLINE enabled=true
 --- ALERTS ---
-  [WARNING] key=equipment-2 Equipment 2 offline at <TIME>
+  [WARNING/UNACK] key=equipment-2 Equipment 2 offline at <TIME>
         Line unavailable for production.
-  [WARNING] key=quality-2 Final Inspection below target at <TIME>
+  [WARNING/UNACK] key=quality-2 Final Inspection below target at <TIME>
         Pass rate 93.0% (target 95%)
+  [WARNING/RTN] key=equipment-1 Equipment 1 offline at <TIME>
+        Line unavailable for production.
 --- END ---
 [PRODUCTS ] loaded count=6
 --- PRODUCTS ---

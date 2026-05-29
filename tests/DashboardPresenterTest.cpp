@@ -440,22 +440,34 @@ TEST_F(DashboardPresenterAlertsTest, EquipmentErrorRaisesCriticalAlert) {
     EXPECT_EQ(snap[0].severity, app::presenter::AlertSeverity::Critical);
 }
 
-TEST_F(DashboardPresenterAlertsTest, EquipmentRecoveryClearsAlert) {
+TEST_F(DashboardPresenterAlertsTest, EquipmentRecoveryLeavesRtnUnackThenAckResolves) {
     initializeAndCaptureCallbacks();
     equipmentCb_(EquipmentStatus{1, 0, 0, ""});    // Offline -- raise
     ASSERT_EQ(alerts.snapshot().size(), 1u);
 
-    equipmentCb_(EquipmentStatus{1, 1, 85, ""});   // Online -- clear
+    // Recovery clears the CONDITION, but the unacked alarm stays as
+    // RtnUnack (ISA-18.2) until the operator acknowledges it.
+    equipmentCb_(EquipmentStatus{1, 1, 85, ""});   // Online
+    auto snap = alerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].state, app::presenter::AlarmState::RtnUnack);
+
+    alerts.acknowledge("equipment-1");
     EXPECT_TRUE(alerts.snapshot().empty());
 }
 
-TEST_F(DashboardPresenterAlertsTest, EquipmentProcessingClearsAlert) {
-    // Status 2 (Processing) is also a non-fault state -- must clear.
+TEST_F(DashboardPresenterAlertsTest, EquipmentProcessingLeavesRtnUnackThenAckResolves) {
+    // Status 2 (Processing) is also a non-fault state -- clears condition.
     initializeAndCaptureCallbacks();
     equipmentCb_(EquipmentStatus{2, 3, 12, ""});   // Error -- raise
     ASSERT_EQ(alerts.snapshot().size(), 1u);
 
-    equipmentCb_(EquipmentStatus{2, 2, 60, ""});   // Processing -- clear
+    equipmentCb_(EquipmentStatus{2, 2, 60, ""});   // Processing -- condition clears
+    auto snap = alerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].state, app::presenter::AlarmState::RtnUnack);
+
+    alerts.acknowledge("equipment-2");
     EXPECT_TRUE(alerts.snapshot().empty());
 }
 
@@ -509,7 +521,7 @@ TEST_F(DashboardPresenterAlertsTest, QualityWarningRaisesWarningAlert) {
     EXPECT_EQ(snap[0].severity, app::presenter::AlertSeverity::Warning);
 }
 
-TEST_F(DashboardPresenterAlertsTest, QualityPassingClearsAlert) {
+TEST_F(DashboardPresenterAlertsTest, QualityPassingLeavesRtnUnackThenAckResolves) {
     initializeAndCaptureCallbacks();
 
     // First drop below threshold -- raise.
@@ -521,9 +533,14 @@ TEST_F(DashboardPresenterAlertsTest, QualityPassingClearsAlert) {
     qualityCb_(low);
     ASSERT_EQ(alerts.snapshot().size(), 1u);
 
-    // Now recover -- clear.
+    // Recover above threshold -- condition clears, alarm goes RtnUnack.
     QualityCheckpoint ok{0, "Weight Check", 0, 100, 2, 98.0f, ""};
     qualityCb_(ok);
+    auto snap = alerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].state, app::presenter::AlarmState::RtnUnack);
+
+    alerts.acknowledge("quality-0");
     EXPECT_TRUE(alerts.snapshot().empty());
 }
 

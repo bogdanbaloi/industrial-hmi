@@ -136,6 +136,12 @@ requirements may be smoke-tested.
 | REQ-QUALITY-001 | MUST | `src/presenter/DashboardPresenter.cpp::classifyPassRate` | DashboardPresenterTest, DashboardPageTest | -- |
 | REQ-QUALITY-002 | SHOULD | `src/presenter/AlertCenter.cpp`, `src/gtk/view/widgets/AlertsPanel.h` | AlertCenterTest | -- |
 
+## ALARMS
+
+| REQ-ID | Priority | Implementation | Verification | ADR |
+|---|---|---|---|---|
+| REQ-ALARM-001 | SHOULD | `src/presenter/AlertCenter.h` (lifecycle state machine: raise/clear/acknowledge), `src/presenter/modelview/AlertViewModel.h` (AlarmState), `src/gtk/view/widgets/AlertsPanel.h` (state badge + Acknowledge) | AlertCenterTest (state-machine cases), AlertCenterModelIntegrationTest | ISA-18.2 / IEC 62682 |
+
 ## SETTINGS
 
 | REQ-ID | Priority | Implementation | Verification | ADR |

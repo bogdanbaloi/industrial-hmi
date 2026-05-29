@@ -1,5 +1,7 @@
 // [utest->req~quality-002~1]
-// Covers REQ-QUALITY-002 (alert center).
+// [utest->req~alarm-001~1]
+// Covers REQ-QUALITY-002 (alert center) + REQ-ALARM-001 (ISA-18.2 alarm
+// lifecycle: UnackActive / AckActive / RtnUnack + acknowledge).
 //
 // Tests for app::presenter::AlertCenter
 //
@@ -19,8 +21,10 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <string>
 
+using app::presenter::AlarmState;
 using app::presenter::AlertCenter;
 using app::presenter::AlertSeverity;
 using app::presenter::AlertViewModel;
@@ -101,10 +105,27 @@ TEST(AlertCenter, RaisePreservesExplicitTimestamp) {
 
 // clear() / clearAll()
 
-TEST(AlertCenter, ClearRemovesByKey) {
+// ISA-18.2: a condition returning to normal while UNACKNOWLEDGED does not
+// remove the alarm -- it transitions to RtnUnack and stays visible.
+TEST(AlertCenter, ClearOnUnackBecomesRtnUnackAndStaysVisible) {
     AlertCenter c;
     c.raise(makeAlert("k1"));
     c.raise(makeAlert("k2"));
+    c.clear("k1");
+    const auto snap = c.snapshot();
+    ASSERT_EQ(snap.size(), 2u) << "RtnUnack alarm must stay in the list";
+    const auto k1 = std::find_if(snap.begin(), snap.end(),
+        [](const AlertViewModel& a) { return a.key == "k1"; });
+    ASSERT_NE(k1, snap.end());
+    EXPECT_EQ(k1->state, app::presenter::AlarmState::RtnUnack);
+}
+
+// An ACKNOWLEDGED alarm whose condition then clears is fully resolved.
+TEST(AlertCenter, ClearOnAckedAlarmRemovesIt) {
+    AlertCenter c;
+    c.raise(makeAlert("k1"));
+    c.raise(makeAlert("k2"));
+    c.acknowledge("k1");
     c.clear("k1");
     const auto snap = c.snapshot();
     ASSERT_EQ(snap.size(), 1u);
@@ -216,16 +237,19 @@ TEST(AlertCenter, RaiseDoesNotTouchHistory) {
     EXPECT_TRUE(c.history().empty());
 }
 
-TEST(AlertCenter, ClearPushesAlertToHistory) {
+TEST(AlertCenter, ResolvedAlarmGoesToHistory) {
     AlertCenter c;
     c.raise(makeAlert("k1", AlertSeverity::Warning, "tee", "em"));
-    c.clear("k1");
+    c.clear("k1");        // -> RtnUnack (still active, not yet in history)
+    EXPECT_TRUE(c.history().empty());
+    c.acknowledge("k1");  // RtnUnack + ack -> resolved -> history
 
     const auto hist = c.history();
     ASSERT_EQ(hist.size(), 1u);
     EXPECT_EQ(hist[0].alert.key, "k1");
     EXPECT_EQ(hist[0].alert.title, "tee");
     EXPECT_FALSE(hist[0].resolvedAt.empty());  // HH:MM:SS stamp
+    EXPECT_TRUE(c.snapshot().empty());
 }
 
 TEST(AlertCenter, ClearMissingKeyDoesNotTouchHistory) {
@@ -237,12 +261,12 @@ TEST(AlertCenter, ClearMissingKeyDoesNotTouchHistory) {
 
 TEST(AlertCenter, HistoryIsNewestFirst) {
     AlertCenter c;
-    c.raise(makeAlert("k1"));
-    c.raise(makeAlert("k2"));
-    c.raise(makeAlert("k3"));
-    c.clear("k1");
-    c.clear("k2");
-    c.clear("k3");
+    // Acknowledge-then-clear fully resolves each alarm into history.
+    for (const auto* k : {"k1", "k2", "k3"}) {
+        c.raise(makeAlert(k));
+        c.acknowledge(k);
+        c.clear(k);
+    }
 
     const auto hist = c.history();
     ASSERT_EQ(hist.size(), 3u);
@@ -267,6 +291,7 @@ TEST(AlertCenter, HistoryIsBoundedByCapacity) {
     for (std::size_t i = 0; i < over; ++i) {
         const auto key = "k" + std::to_string(i);
         c.raise(makeAlert(key));
+        c.acknowledge(key);  // ack-then-clear resolves into history
         c.clear(key);
     }
     EXPECT_EQ(c.history().size(), AlertCenter::kHistoryCapacity);
@@ -279,6 +304,7 @@ TEST(AlertCenter, HistoryIsBoundedByCapacity) {
 TEST(AlertCenter, ClearHistoryWipesList) {
     AlertCenter c;
     c.raise(makeAlert("k1"));
+    c.acknowledge("k1");
     c.clear("k1");
     ASSERT_EQ(c.history().size(), 1u);
 
@@ -293,11 +319,12 @@ TEST(AlertCenter, ClearHistoryOnEmptyIsNoOpSignal) {
     EXPECT_EQ(h.count, 0);
 }
 
-TEST(AlertCenter, ClearEmitsHistorySignal) {
+TEST(AlertCenter, ResolvingAlarmEmitsHistorySignal) {
     AlertCenter c;
     c.raise(makeAlert("k1"));
+    c.acknowledge("k1");
     HistorySignalCounter h{c};
-    c.clear("k1");
+    c.clear("k1");  // AckActive + clear -> resolved -> history
     EXPECT_EQ(h.count, 1);
 }
 
@@ -314,8 +341,69 @@ TEST(AlertCenter, ClearAllEmitsHistorySignalOncePerCall) {
 TEST(AlertCenter, ClearHistoryEmitsHistorySignalOnce) {
     AlertCenter c;
     c.raise(makeAlert("a"));
+    c.acknowledge("a");
     c.clear("a");
     HistorySignalCounter h{c};
     c.clearHistory();
     EXPECT_EQ(h.count, 1);
+}
+
+// ISA-18.2 alarm lifecycle (REQ-ALARM-001)
+
+namespace {
+// Convenience: state of the single alarm with `key` in the snapshot.
+AlarmState stateOf(const AlertCenter& c, const std::string& key) {
+    const auto snap = c.snapshot();
+    const auto it = std::find_if(snap.begin(), snap.end(),
+        [&](const AlertViewModel& a) { return a.key == key; });
+    return it != snap.end() ? it->state : AlarmState::RtnUnack;
+}
+}  // namespace
+
+TEST(AlertCenter, RaiseStartsUnacknowledged) {
+    AlertCenter c;
+    c.raise(makeAlert("k1"));
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::UnackActive);
+}
+
+TEST(AlertCenter, AcknowledgeActiveAlarmBecomesAckedAndStaysVisible) {
+    AlertCenter c;
+    c.raise(makeAlert("k1"));
+    c.acknowledge("k1");
+    ASSERT_EQ(c.snapshot().size(), 1u) << "an acked-but-active alarm stays";
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::AckActive);
+}
+
+TEST(AlertCenter, AcknowledgeRtnUnackResolvesToHistory) {
+    AlertCenter c;
+    c.raise(makeAlert("k1"));
+    c.clear("k1");                 // -> RtnUnack (still visible)
+    ASSERT_EQ(stateOf(c, "k1"), AlarmState::RtnUnack);
+    c.acknowledge("k1");           // RtnUnack + ack -> resolved
+    EXPECT_TRUE(c.snapshot().empty());
+    EXPECT_EQ(c.history().size(), 1u);
+}
+
+TEST(AlertCenter, ConditionReactivatingFromRtnUnackReAlarms) {
+    AlertCenter c;
+    c.raise(makeAlert("k1"));
+    c.clear("k1");                 // -> RtnUnack
+    c.raise(makeAlert("k1"));      // condition active again -> re-alarm
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::UnackActive);
+    EXPECT_TRUE(c.history().empty()) << "re-alarm is not a resolution";
+}
+
+TEST(AlertCenter, RaiseDoesNotDowngradeAnAcknowledgedAlarm) {
+    AlertCenter c;
+    c.raise(makeAlert("k1"));
+    c.acknowledge("k1");
+    c.raise(makeAlert("k1", AlertSeverity::Critical, "still firing"));
+    // A still-firing acknowledged alarm must not bounce back to UNACK.
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::AckActive);
+}
+
+TEST(AlertCenter, AcknowledgeMissingKeyIsNoOp) {
+    AlertCenter c;
+    c.acknowledge("nope");  // must not crash
+    EXPECT_TRUE(c.snapshot().empty());
 }

@@ -265,6 +265,15 @@ private:
         title->add_css_class("alert-title");
         top->append(*title);
 
+        // ISA-18.2 lifecycle badge (active mode only): UNACK / ACK / RTN.
+        if (!historyMode) {
+            auto* badge = Gtk::make_managed<Gtk::Label>(stateBadge(a.state));
+            badge->add_css_class("alert-state-badge");
+            badge->set_valign(Gtk::Align::CENTER);
+            badge->set_tooltip_text(stateTooltip(a.state));
+            top->append(*badge);
+        }
+
         // In history mode surface when the alert resolved; in active
         // mode show when it was raised.
         auto* ts = Gtk::make_managed<Gtk::Label>(
@@ -274,19 +283,21 @@ private:
         top->append(*ts);
 
         if (!historyMode) {
-            // Per-alert dismiss. Calls clear(key) -- if the underlying
-            // condition still holds, the next presenter tick will re-raise
-            // the alert, which matches typical HMI "acknowledge" semantics.
-            auto* dismiss = Gtk::make_managed<Gtk::Button>();
-            dismiss->set_icon_name("window-close-symbolic");
-            dismiss->set_has_frame(false);
-            dismiss->set_valign(Gtk::Align::CENTER);
-            dismiss->add_css_class("alert-dismiss");
-            dismiss->set_tooltip_text(_("Dismiss"));
+            // Per-alarm Acknowledge (ISA-18.2). An unacknowledged active
+            // alarm becomes acknowledged but stays visible until its
+            // condition clears; an alarm that already returned to normal
+            // (RtnUnack) is fully resolved and moves to history. The
+            // operator can't make a transient fault vanish unseen.
+            auto* ack = Gtk::make_managed<Gtk::Button>();
+            ack->set_icon_name("emblem-ok-symbolic");
+            ack->set_has_frame(false);
+            ack->set_valign(Gtk::Align::CENTER);
+            ack->add_css_class("alert-dismiss");
+            ack->set_tooltip_text(_("Acknowledge"));
             const std::string key = a.key;
-            dismiss->signal_clicked().connect(
-                [this, key]() { alertCenter_.clear(key); });
-            top->append(*dismiss);
+            ack->signal_clicked().connect(
+                [this, key]() { alertCenter_.acknowledge(key); });
+            top->append(*ack);
         }
 
         card->append(*top);
@@ -309,6 +320,28 @@ private:
             case presenter::AlertSeverity::Critical: return "alert-critical";
         }
         return "alert-info";
+    }
+
+    // Short ISA-18.2 lifecycle badge shown on active alarm cards.
+    static Glib::ustring stateBadge(presenter::AlarmState st) {
+        switch (st) {
+            case presenter::AlarmState::UnackActive: return _("UNACK");
+            case presenter::AlarmState::AckActive:   return _("ACK");
+            case presenter::AlarmState::RtnUnack:    return _("RTN");
+        }
+        return {};
+    }
+
+    static Glib::ustring stateTooltip(presenter::AlarmState st) {
+        switch (st) {
+            case presenter::AlarmState::UnackActive:
+                return _("Active, unacknowledged");
+            case presenter::AlarmState::AckActive:
+                return _("Active, acknowledged");
+            case presenter::AlarmState::RtnUnack:
+                return _("Returned to normal, awaiting acknowledgement");
+        }
+        return {};
     }
 
     presenter::AlertCenter& alertCenter_;
