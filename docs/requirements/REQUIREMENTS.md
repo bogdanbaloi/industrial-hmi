@@ -451,7 +451,11 @@ If the historian DB fails to open (read-only filesystem,
 corruption), the rest of the application **shall** keep running
 without the History tab. A log warning **shall** explain why.
 
+Verified by: HistorianDegradedOpenTest (failed init -> inert store).
+
 ADR: 0007 (Historian Degraded Open).
+
+Needs: utest
 
 ---
 
@@ -592,8 +596,10 @@ DashboardPage instances side by side, one for the primary
 SimulatedModel and one for the secondary MirrorModel, each with
 its own DashboardPresenter.
 
-Verified by: MultiStationDashboardPage instantiation in
-MainWindow; manual smoke.
+Verified by: MultiStationDashboardPageTest (two station columns +
+title), MirrorModelTest (secondary model contract).
+
+Needs: utest
 
 ### REQ-MULTISTATION-003 (MUST) — PrimaryToSecondaryBridge forwards equipment supply
 

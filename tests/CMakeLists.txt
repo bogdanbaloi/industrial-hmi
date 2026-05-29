@@ -64,6 +64,18 @@ target_link_libraries(test_result PRIVATE
 )
 add_test(NAME ResultTest COMMAND test_result)
 
+# core/TimeFormat -- pure ISO-8601 UTC -> local display helper. Compile
+# the .cpp directly (no deps beyond the stdlib) to avoid pulling
+# objectsCore -> Application -> GTK.
+add_executable(test_time_format
+    TimeFormatTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/TimeFormat.cpp)
+target_link_libraries(test_time_format PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME TimeFormatTest COMMAND test_time_format)
+
 # Config: ConfigManager
 # ConfigManager.h is header-only (pure std:: code) and config_defaults.h is a
 # plain constexpr header; neither needs GTK or the model layer.
@@ -99,6 +111,18 @@ target_link_libraries(test_sqlite_history_store PRIVATE
     objectsHistorian
 )
 add_test(NAME SqliteHistoryStoreTest COMMAND test_sqlite_history_store)
+
+# Historian degraded-open (REQ-HISTORIAN-004): a store opened on an
+# unopenable path must fail initialize() cleanly and leave every
+# read/write inert -- automates what was previously a manual check.
+add_executable(test_historian_degraded_open HistorianDegradedOpenTest.cpp)
+target_link_libraries(test_historian_degraded_open PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHistorian
+)
+add_test(NAME HistorianDegradedOpenTest
+         COMMAND test_historian_degraded_open)
 
 # Integration: HistorianBridge -> real SqliteHistoryStore round-trip.
 # A model telemetry change must batch through the bridge and become
@@ -685,6 +709,18 @@ target_link_libraries(test_simulated_model PRIVATE
 )
 add_test(NAME SimulatedModelTest COMMAND test_simulated_model)
 
+# model/MirrorModel -- dedicated unit test (the integration tests use it
+# as a fixture but never assert its setter clamping / id-drop / dedup
+# contract). Compiles MirrorModel.cpp directly (header-light, no DB/Boost).
+add_executable(test_mirror_model
+    MirrorModelTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/model/MirrorModel.cpp)
+target_link_libraries(test_mirror_model PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME MirrorModelTest COMMAND test_mirror_model)
+
 # Integration: recipe load end-to-end. Real DatabaseManager (in-memory,
 # seeded recipes) read via the RecipesRepository interface + real
 # SimulatedModel.loadProduct. Closes the Phase 9 loop the mock-based
@@ -942,6 +978,32 @@ target_link_libraries(test_dashboard_page PRIVATE GTest::gtest GTest::gmock)
 add_test(NAME DashboardPageTest COMMAND test_dashboard_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(DashboardPageTest PROPERTIES LABELS "gui")
+
+# View: MultiStationDashboardPage -- dual-pane composition (REQ-MULTISTATION-002).
+add_executable(test_multistation_dashboard_page
+    MultiStationDashboardPageTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_multistation_dashboard_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_multistation_dashboard_page PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_multistation_dashboard_page PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME MultiStationDashboardPageTest COMMAND test_multistation_dashboard_page
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(MultiStationDashboardPageTest PROPERTIES LABELS "gui")
+
+# View: Toast banner -- position->alignment mapping + reveal/dismiss.
+add_executable(test_toast
+    ToastTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_toast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_toast PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_toast PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME ToastTest COMMAND test_toast
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(ToastTest PROPERTIES LABELS "gui")
 
 # View: BigNumberCard widget (Phase 8A of the dashboard redesign).
 # Smoke + state tests only; pixel-level Cairo rendering is verified
