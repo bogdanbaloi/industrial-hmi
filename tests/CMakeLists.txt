@@ -165,6 +165,18 @@ target_link_libraries(test_auth_service PRIVATE
 )
 add_test(NAME AuthServiceTest COMMAND test_auth_service)
 
+# Auth: login -> audit integration (real repo + hasher + audit logger).
+# Asserts the rows AuthService persists and that "unknown user" vs
+# "wrong password" stay indistinguishable to the caller yet separable
+# in the audit trail. Links objectsAuth (same as the other auth tests).
+add_executable(test_auth_audit_integration AuthAuditIntegrationTest.cpp)
+target_link_libraries(test_auth_audit_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsAuth
+)
+add_test(NAME AuthAuditIntegrationTest COMMAND test_auth_audit_integration)
+
 # Presenter: UsersPresenter (RBAC + audit, real repo + real hasher).
 # Links objectsModel because objectsPresenter's other TUs (Products)
 # pull DatabaseManager's async API symbols at link time even though
@@ -307,6 +319,22 @@ target_link_libraries(test_primary_to_secondary_bridge PRIVATE
 )
 add_test(NAME PrimaryToSecondaryBridgeTest
          COMMAND test_primary_to_secondary_bridge)
+
+# Integration: PrimaryToSecondaryBridge end-to-end with two REAL
+# MirrorModel instances (no mocks). Asserts a primary change travels
+# through the bridge's real observer plumbing onto the secondary's real
+# state -- the test that catches id-mapping / forwarding bugs the mock
+# test cannot see. Links the real MirrorModel + bridge sources.
+add_executable(test_primary_to_secondary_bridge_integration
+    PrimaryToSecondaryBridgeIntegrationTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/PrimaryToSecondaryBridge.cpp
+    ${CMAKE_SOURCE_DIR}/src/model/MirrorModel.cpp)
+target_link_libraries(test_primary_to_secondary_bridge_integration PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME PrimaryToSecondaryBridgeIntegrationTest
+         COMMAND test_primary_to_secondary_bridge_integration)
 
 # Modbus: pure PDU codec -- encode/decode MBAP+PDU bytes. No socket,
 # no thread; the test compiles the .cpp directly rather than linking
