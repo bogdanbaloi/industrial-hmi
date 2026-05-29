@@ -76,6 +76,7 @@ requirements may be smoke-tested.
 | REQ-DASHBOARD-004 | SHOULD | `src/gtk/view/widgets/DonutChartWidget.h/.cpp`, `src/gtk/view/pages/DashboardPage.cpp::refreshUptimeDonut` | DonutChartWidgetTest + manual | -- |
 | REQ-DASHBOARD-005 | MUST | `src/gtk/view/pages/DashboardPage.cpp::applyRole`, `src/auth/Role.h::canCalibrate/canResetSystem` | DashboardPageTest (role-gating cases) | -- |
 | REQ-DASHBOARD-006 | NICE | `src/gtk/view/pages/DashboardPage.cpp::setCompact` | DashboardPageTest.CompactPaneFitsMultiStationWidthBudget (layout-budget guard) | -- |
+| REQ-DASHBOARD-007 | NICE | `src/model/ThroughputMeter.h`, `src/model/SimulatedModel.h::tickSimulation` (records completions), `src/presenter/DashboardPresenter.cpp::buildWorkUnitVM`, `src/gtk/view/pages/DashboardPage.cpp::updateWorkUnitWidgets` (THROUGHPUT card) | ThroughputMeterTest + DashboardPresenterTest.ForwardsModelThroughputIntoViewModel | -- |
 
 ## HISTORIAN
 

@@ -40,6 +40,11 @@ struct WorkUnitViewModel {
     /// Number of operations already completed successfully
     uint32_t completedOperations{0};
 
+    /// Live production throughput in completed work units per hour, as
+    /// measured by the model. 0 until the line has produced enough to
+    /// measure a rate. Drives the THROUGHPUT KPI card.
+    double throughputUph{0.0};
+
     /// Current operation status message
     /// @examples "Processing", "Work unit complete", "Waiting for equipment"
     std::string statusMessage;
@@ -59,6 +64,7 @@ struct WorkUnitViewModel {
             || productId != other.productId
             || progress != other.progress
             || completedOperations != other.completedOperations
+            || throughputUph != other.throughputUph
             || statusMessage != other.statusMessage
             || hasErrors != other.hasErrors;
     }

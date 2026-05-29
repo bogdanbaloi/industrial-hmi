@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Live throughput KPI (Phase 8F)
+
+The dashboard THROUGHPUT card now shows a real, model-measured production
+rate (completed work units per hour) instead of a hardcoded placeholder.
+
+#### Added
+
+- `ThroughputMeter` (pure, clock-injected): computes units/hour from a
+  trailing time-window of completion timestamps; decays toward 0 on a
+  stall. `WorkUnit::throughputUnitsPerHour` carries the value through the
+  existing `onWorkUnitChanged` seam to `WorkUnitViewModel::throughputUph`.
+
+#### Changed
+
+- `SimulatedModel` records a completion on each genuine work-unit rollover
+  and recomputes the rate every tick; the meter is cleared on
+  `resetSystem` / `loadProduct` (a reset is not a completion).
+- `DashboardPage` updates the THROUGHPUT card from the work-unit ViewModel
+  (Ok at/above the nominal target, Warning below); the static
+  `kThroughputPlaceholder` is gone. Covers REQ-DASHBOARD-007.
+
 ### Multi-station support (Primary/Secondary first instance)
 
 Opt-in via `ui.multistation_enabled` in config. When enabled the HMI

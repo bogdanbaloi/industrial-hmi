@@ -57,6 +57,12 @@ struct WorkUnit {
     std::string description;
     int completedOperations{0};
     int totalOperations{5};
+    /// Live production rate in completed work units per hour, computed by
+    /// the model from recent work-unit completions (0 until at least two
+    /// completions fall inside the meter's window; decays toward 0 when
+    /// the line stalls). Primary line only -- the passive secondary
+    /// (MirrorModel) does not compute throughput, so it stays 0 there.
+    double throughputUnitsPerHour{0.0};
 };
 
 /// Top-level state of the production system.

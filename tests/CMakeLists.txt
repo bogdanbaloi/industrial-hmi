@@ -76,6 +76,15 @@ target_link_libraries(test_time_format PRIVATE
 )
 add_test(NAME TimeFormatTest COMMAND test_time_format)
 
+# model/ThroughputMeter -- pure units-per-hour rate computation. Header-
+# only (chrono + deque), no model/GTK deps, so compile the test alone.
+add_executable(test_throughput_meter ThroughputMeterTest.cpp)
+target_link_libraries(test_throughput_meter PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME ThroughputMeterTest COMMAND test_throughput_meter)
+
 # Config: ConfigManager
 # ConfigManager.h is header-only (pure std:: code) and config_defaults.h is a
 # plain constexpr header; neither needs GTK or the model layer.

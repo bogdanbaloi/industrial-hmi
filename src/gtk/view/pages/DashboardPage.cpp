@@ -23,11 +23,10 @@ inline app::core::Logger& log() {
 // Targets are world-class industrial benchmarks (see Vorne / OEE
 // Industry Standards 2024):
 //   * OEE target 85%  -- "world class" threshold
-//   * Throughput placeholder 100 u/h -- demo-line nominal
+//   * Throughput target 100 u/h -- demo-line nominal
 //   * Pass rate target 98% -- typical pharma / regulated industry
 constexpr double kOeeTargetPct           = 85.0;
 constexpr double kOeeInitialPct          = 85.0;  // shown before first sample
-constexpr double kThroughputPlaceholder  = 127.0; // demo value -- TODO Phase 8F real wiring
 constexpr double kThroughputTargetUph    = 100.0;
 constexpr double kPassRateTargetPct      = 98.0;
 
@@ -364,12 +363,12 @@ void DashboardPage::buildUI() {
         kpiStripWidgets_.throughputCard = Gtk::make_managed<BigNumberCard>();
         kpiStripWidgets_.throughputCard->setLabel(_("THROUGHPUT"));
         kpiStripWidgets_.throughputCard->setUnit(_("u/h"));
-        // Placeholder demo value until the model layer surfaces a
-        // real throughput counter (work units per hour). Tracked in
-        // the action queue as Phase 8F.
-        kpiStripWidgets_.throughputCard->setValue(kThroughputPlaceholder, 0);
+        // Starts at 0 u/h -- the line hasn't produced anything yet. The
+        // real measured rate streams in via updateWorkUnitWidgets as work
+        // units complete (model-computed, no fake value).
+        kpiStripWidgets_.throughputCard->setValue(0.0, 0);
         kpiStripWidgets_.throughputCard->setTarget(kThroughputTargetUph);
-        kpiStripWidgets_.throughputCard->setStatus(BigNumberCard::Status::Ok);
+        kpiStripWidgets_.throughputCard->setStatus(BigNumberCard::Status::Warning);
         kpiStripWidgets_.container->append(*kpiStripWidgets_.throughputCard);
 
         kpiStripWidgets_.passRateCard = Gtk::make_managed<BigNumberCard>();
@@ -561,6 +560,20 @@ void DashboardPage::updateWorkUnitWidgets(const presenter::WorkUnitViewModel& vm
         workUnitWidgets_.statusLabel->add_css_class(css::kErrorStatus);
     } else {
         workUnitWidgets_.statusLabel->remove_css_class(css::kErrorStatus);
+    }
+
+    // THROUGHPUT KPI card -- driven by the model's measured completion
+    // rate (units/hour), which arrives on the same work-unit VM. The
+    // card is part of the single-station KPI strip (hidden in compact
+    // multi-station mode), but updating a hidden widget is harmless.
+    // At/above the nominal target it reads Ok, below it Warning -- the
+    // line is producing slower than planned (or not at all).
+    if (kpiStripWidgets_.throughputCard != nullptr) {
+        kpiStripWidgets_.throughputCard->setValue(vm.throughputUph, 0);
+        kpiStripWidgets_.throughputCard->setStatus(
+            vm.throughputUph >= kThroughputTargetUph
+                ? BigNumberCard::Status::Ok
+                : BigNumberCard::Status::Warning);
     }
 }
 
@@ -777,8 +790,8 @@ void DashboardPage::updateTopMetrics() {
         kpiStripWidgets_.oeeCard->setValue(oee, 1);
         kpiStripWidgets_.oeeCard->setStatus(tierForOee(oee));
     }
-    // Throughput card is intentionally NOT updated here -- it stays
-    // at the static placeholder set in buildUI until Phase 8F.
+    // Throughput is work-unit driven (completion rate), not quality
+    // driven, so it is updated in updateWorkUnitWidgets rather than here.
 }
 
 // Session-uptime tracking (Phase 8C donut)

@@ -295,6 +295,23 @@ TEST_F(DashboardPresenterWorkUnitTest, FullProgressShowsCompleteMessage) {
     EXPECT_EQ(observer.workUnit->statusMessage, "Complete");
 }
 
+// [utest->req~dashboard-007~1]
+// The model-measured throughput rate must reach the view's VM unchanged
+// -- the presenter forwards it, it does not recompute (the THROUGHPUT KPI
+// card is no longer a hardcoded placeholder).
+TEST_F(DashboardPresenterWorkUnitTest, ForwardsModelThroughputIntoViewModel) {
+    initializeAndCaptureWorkUnitCallback();
+
+    WorkUnit wu{"WU-1", "PROD-001", "demo batch", 3, 5};
+    wu.throughputUnitsPerHour = 142.5;
+    EXPECT_CALL(model, getWorkUnit()).WillOnce(Return(wu));
+
+    workUnitCb_(wu);
+
+    ASSERT_TRUE(observer.workUnit.has_value());
+    EXPECT_DOUBLE_EQ(observer.workUnit->throughputUph, 142.5);
+}
+
 // System state signal -> ControlPanelViewModel button availability
 
 class DashboardPresenterStateTest : public DashboardPresenterTest {

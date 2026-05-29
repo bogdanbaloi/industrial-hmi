@@ -2,6 +2,7 @@
 
 #include "src/model/ProductionModel.h"
 #include "src/model/ProductionTypes.h"
+#include "src/model/ThroughputMeter.h"
 #include "src/core/LoggerBase.h"
 
 #include <string>
@@ -117,6 +118,10 @@ public:
         if (logger_) logger_->info("Model: reset system - clearing work unit progress");
         currentState_ = SystemState::IDLE;
         currentWorkUnit_.completedOperations = 0;
+        // A reset is not a completion; drop the rate history so the card
+        // zeroes immediately instead of decaying from a stale value.
+        throughputMeter_.clear();
+        currentWorkUnit_.throughputUnitsPerHour = 0.0;
         notifyStateChange();
         notifyWorkUnitChange();
     }
@@ -226,6 +231,11 @@ public:
                 "Batch " + currentWorkUnit_.workUnitId + " | " + product.name;
             currentWorkUnit_.totalOperations = recipe.totalOperations;
             currentWorkUnit_.completedOperations = 0;  // fresh batch
+            // New batch: the previous product's completion history no
+            // longer describes this one, so start the rate measurement
+            // clean (it climbs again as this batch completes units).
+            throughputMeter_.clear();
+            currentWorkUnit_.throughputUnitsPerHour = 0.0;
 
             // Fresh batch: zero inspection counters and apply each
             // recipe target onto the matching checkpoint (by name, not
@@ -285,11 +295,22 @@ public:
                 cp.unitsInspected += unitDist(rng_);
             }
 
+            const auto now = ThroughputMeter::Clock::now();
             if (currentWorkUnit_.completedOperations < currentWorkUnit_.totalOperations) {
                 currentWorkUnit_.completedOperations++;
             } else {
+                // Genuine production rollover: the unit finished its last
+                // operation, so a fresh one starts. This is the only place
+                // a completion is counted -- reset/loadProduct also zero
+                // completedOperations but clear the meter explicitly, so
+                // they are never mistaken for throughput.
                 currentWorkUnit_.completedOperations = 0;
+                throughputMeter_.recordCompletion(now);
             }
+            // Recompute every tick (not just on completion) so the rate
+            // decays toward 0 when the line stalls between completions.
+            currentWorkUnit_.throughputUnitsPerHour =
+                throughputMeter_.unitsPerHour(now);
         }
 
         for (const auto& [id, cp] : qualityCheckpoints_) {
@@ -434,6 +455,11 @@ private:
     std::unordered_set<uint32_t> externalPassRateOverrides_;
     WorkUnit currentWorkUnit_;
     SystemState currentState_{SystemState::IDLE};
+
+    /// Measures the live work-units-per-hour rate from completion
+    /// timestamps. Fed steady_clock::now() on every genuine rollover in
+    /// tickSimulation; cleared on reset / loadProduct (a new batch).
+    ThroughputMeter throughputMeter_;
 
     /// Monotonic sequence for generating a fresh work-unit id on each
     /// loadProduct() call. Seeded above the demo batch number so the
