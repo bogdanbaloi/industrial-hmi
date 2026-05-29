@@ -21,12 +21,14 @@ core.
   **zero gtkmm** -- concrete proof that the `ViewObserver` abstraction
   is a real View-swap seam, not just marketing.
 - **68% test coverage** verified by gcovr in CI on every PR, across
-  9,442 instrumented lines and **62 ctest targets**: scenario-based
+  9,442 instrumented lines and **76 ctest targets**: scenario-based
   E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
   tests under real GTK via Xvfb, dialog dispatch via programmatic
-  `response()`. Auth + presenter + integration backends sit between
-  75% and 100%; GUI dialogs sit at 0% by design (exercised via Xvfb
-  smoke tests instead).
+  `response()`, plus integration tests that wire **real** components
+  end-to-end (ingest bridge -> real model -> presenter -> AlertCenter;
+  recipe load -> SQLite -> model) instead of mocks. Auth + presenter +
+  integration backends sit between 75% and 100%; GUI dialogs sit at 0%
+  by design (exercised via Xvfb smoke tests instead).
 - **Every module ships as a standalone library** -- 9 README.md
   files under `src/` (auth / integration / presenter / historian /
   ml / gtk-view / model / core / config), each with API surface,
@@ -54,6 +56,14 @@ core.
   `MultiStationDashboardPage`. First instance of the multi-station
   architecture; extends to N-station and to cross-process MQTT-backed
   bridges without view or presenter changes. See ADR-0011.
+- **Product recipes drive the line** -- each product can carry a
+  *recipe* (process spec) persisted in SQLite: how many operations a
+  work unit completes plus a per-checkpoint pass-rate target. The
+  operator hits **Load Recipe** on a product and `ProductionModel::
+  loadProduct` pushes those values onto the dashboard -- the work-unit
+  operation count and every quality card's target line come from the
+  recipe, matched onto live checkpoints by name (not position) so the
+  recipe is decoupled from checkpoint creation order.
 - **11 UI languages** via gettext, runtime switch (no restart) -- the
   page tree is rebuilt so every `_()` and every `translatable="yes"`
   re-resolves against the new catalog.
@@ -319,7 +329,7 @@ scripts/
 po/                     gettext catalogs (11 languages)
 config/                 app-config.json
 cmake/                  FindOnnxRuntime.cmake
-tests/                  62 ctest targets (see Testing section)
+tests/                  76 ctest targets (see Testing section)
 ```
 
 ## Extensibility -- how to add X
@@ -486,9 +496,11 @@ several testing styles instead of one monoculture:
 | **Unit tests** | Pure C++ logic, no GTK | `ResultTest`, `LoggerImplTest`, `I18nTest`, `DatabaseManagerTest` |
 | **Presenter tests** | Presenter <-> Model contracts via gmock | `DashboardPresenterTest`, `ProductsPresenterTest` |
 | **Async presenter tests** | Boost.Asio `io_context` -> `signal_idle` marshaling | `ProductsPresenterAsyncTest` (drives a `Glib::MainLoop`) |
-| **View-layer tests** | Real GTK widget tree under Xvfb | `DashboardPageTest`, `ProductsPageTest`, `SettingsPageTest` |
+| **View-layer tests** | Real GTK widget tree under Xvfb | `DashboardPageTest`, `ProductsPageTest`, `SettingsPageTest`, `MultiStationDashboardPageTest`, `ToastTest` |
+| **Real-component integration** | Several real classes wired together, no mocks | `IngestBridgeRealModelIntegrationTest`, `AlertCenterModelIntegrationTest`, `RecipeLoadIntegrationTest` |
+| **Layout-regression guard** | Measured widget min-width vs. a budget | `DashboardPageTest.CompactPaneFitsMultiStationWidthBudget` (multi-station sidebar can't re-clip) |
 | **Dialog dispatch tests** | DialogManager API via programmatic `response()` | `DialogManagerTest` (11 cases) |
-| **Refactor-driven tests** | Logic extracted from GTK glue for pure testing | `MainWindowKeyDispatchTest` |
+| **Refactor-driven tests** | Logic extracted from GTK glue for pure testing | `MainWindowKeyDispatchTest`, `DialogHelpersTest`, `UserEditValidationTest` |
 | **Scenario tests** | Full Model -> Presenter -> View pipeline via stdin/stdout | 10 scenarios piping commands through the console binary |
 
 The **coverage CI job** also boots the GTK binary briefly under Xvfb,
@@ -516,7 +528,7 @@ cmake --build build/debug
 cd build/debug && xvfb-run ctest --output-on-failure
 ```
 
-On Linux all 31 targets are green; on Windows MSYS2 we run the same
+On Linux all 76 targets are green; on Windows MSYS2 we run the same
 suite minus a few view-layer tests that need a live `Gtk::Application`
 context (skipped via runtime check, not silenced).
 
@@ -1028,7 +1040,7 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled client (full duplex, no paho dep) + OPC-UA via open62541 |
 | Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros) |
-| Testing | GoogleTest + gmock (40+ ctest targets) |
+| Testing | GoogleTest + gmock (76 ctest targets) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |
