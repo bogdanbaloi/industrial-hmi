@@ -269,6 +269,54 @@ public:
         return stateMachine_.lastFaultReason();
     }
 
+    /// OEE = Availability * Performance * Quality (Vorne / OEE Industry
+    /// Standards). All three components derived from live model state so
+    /// the dashboard's OEE card is auditable, not a Phase-8F placeholder.
+    [[nodiscard]] OeeMetrics oeeSnapshot() const override {
+        const std::scoped_lock lock(mutex_);
+        OeeMetrics m;
+
+        // Availability -- fraction of equipment in a running state
+        // (Online or Processing). Offline / Error counts as unavailable.
+        if (!equipmentStatuses_.empty()) {
+            std::size_t available = 0;
+            for (const auto& [id, eq] : equipmentStatuses_) {
+                if (eq.status == kEquipmentStatusOnline ||
+                    eq.status == kEquipmentStatusProcessing) {
+                    ++available;
+                }
+            }
+            m.availabilityPct =
+                static_cast<float>(available) * 100.0F /
+                static_cast<float>(equipmentStatuses_.size());
+        }
+
+        // Performance -- actual throughput vs the nominal target,
+        // clamped to 100% (running ahead of target shouldn't inflate OEE
+        // past 1.0; ISA-95 convention).
+        const double throughput = currentWorkUnit_.throughputUnitsPerHour;
+        const double perfRatio  = throughput > 0.0
+                                      ? throughput / kPerformanceTargetUph
+                                      : 0.0;
+        m.performancePct =
+            static_cast<float>(std::min(perfRatio, 1.0) * 100.0);
+
+        // Quality -- average checkpoint pass rate.
+        if (!qualityCheckpoints_.empty()) {
+            float sum = 0.0F;
+            for (const auto& [id, cp] : qualityCheckpoints_) {
+                sum += cp.passRate;
+            }
+            m.qualityPct =
+                sum / static_cast<float>(qualityCheckpoints_.size());
+        }
+
+        m.oeePct = (m.availabilityPct / 100.0F) *
+                   (m.performancePct  / 100.0F) *
+                   (m.qualityPct      / 100.0F) * 100.0F;
+        return m;
+    }
+
     /// Concrete (non-virtual) trigger for the safe-state path. Wired to a
     /// console command + (future) a GUI control so the demo can exercise
     /// the Fault -> ERROR lock-out flow without modifying the

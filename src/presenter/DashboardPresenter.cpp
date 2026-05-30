@@ -353,6 +353,7 @@ presenter::WorkUnitViewModel DashboardPresenter::buildWorkUnitVM(const std::stri
     vm.completedOperations = wu.completedOperations;
     vm.totalOperations = wu.totalOperations;
     vm.throughputUph = wu.throughputUnitsPerHour;
+    vm.oeePct = model_.oeeSnapshot().oeePct;
     vm.progress = wu.totalOperations > 0
         ? static_cast<float>(wu.completedOperations) / wu.totalOperations
         : 0.0f;

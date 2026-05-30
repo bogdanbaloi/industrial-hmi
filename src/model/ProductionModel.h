@@ -91,6 +91,14 @@ public:
     /// ISA-18.2 alarm carrying this string when the state machine
     /// transitions into ERROR.
     [[nodiscard]] virtual std::string lastFaultReason() const = 0;
+
+    /// Snapshot of the live OEE breakdown (Availability * Performance *
+    /// Quality + the composite). Computed from real model signals --
+    /// equipment statuses for A, work-unit throughput for P, average
+    /// checkpoint pass rate for Q. Drives the dashboard OEE card so the
+    /// figure is no longer a Phase-8F placeholder. The passive secondary
+    /// (MirrorModel) returns zeros (it doesn't own the source signals).
+    [[nodiscard]] virtual OeeMetrics oeeSnapshot() const = 0;
 };
 
 }  // namespace app::model

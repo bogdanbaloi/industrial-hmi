@@ -312,6 +312,31 @@ TEST_F(DashboardPresenterWorkUnitTest, ForwardsModelThroughputIntoViewModel) {
     EXPECT_DOUBLE_EQ(observer.workUnit->throughputUph, 142.5);
 }
 
+// [utest->req~dashboard-008~1]
+// REQ-DASHBOARD-008 -- the OEE KPI must reflect the model-computed
+// Availability * Performance * Quality breakdown, NOT a view-side
+// placeholder formula. The presenter forwards the OEE composite (and
+// the throughput) on every work-unit notify.
+TEST_F(DashboardPresenterWorkUnitTest, ForwardsModelOeeIntoViewModel) {
+    initializeAndCaptureWorkUnitCallback();
+
+    WorkUnit wu{"WU-1", "PROD-001", "demo batch", 1, 5};
+    EXPECT_CALL(model, getWorkUnit()).WillOnce(Return(wu));
+
+    app::model::OeeMetrics m;
+    m.availabilityPct = 90.0f;
+    m.performancePct  = 80.0f;
+    m.qualityPct      = 95.0f;
+    m.oeePct          = (90.0f / 100.0f) * (80.0f / 100.0f) *
+                        (95.0f / 100.0f) * 100.0f;  // ~68.4
+    EXPECT_CALL(model, oeeSnapshot()).WillOnce(Return(m));
+
+    workUnitCb_(wu);
+
+    ASSERT_TRUE(observer.workUnit.has_value());
+    EXPECT_FLOAT_EQ(observer.workUnit->oeePct, m.oeePct);
+}
+
 // System state signal -> ControlPanelViewModel button availability
 
 class DashboardPresenterStateTest : public DashboardPresenterTest {

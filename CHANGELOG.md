@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Real OEE KPI (closes Phase 8F) (REQ-DASHBOARD-008)
+
+The dashboard OEE card was the last KPI carrying a fake formula
+(`baseline + (passRate - pivot) * weight` -- pass-rate only, no real
+Availability or Performance). Replace it with the industrial-standard
+Vorne / OEE composite, computed in the model from live signals.
+
+#### Added
+
+- `ProductionTypes::OeeMetrics` (availability, performance, quality,
+  composite) + `kPerformanceTargetUph` + `kOeeWorldClassPct` constants.
+- `ProductionModel::oeeSnapshot()` virtual; `SimulatedModel` computes
+  Availability from the fraction of equipment in a running state,
+  Performance from `throughputUnitsPerHour / kPerformanceTargetUph`
+  (clamped to 100%), Quality from the average checkpoint pass rate;
+  composite is `A * P * Q`. `MirrorModel` returns zeros (the passive
+  secondary doesn't own the source signals).
+- `WorkUnitViewModel::oeePct` carries the composite; the presenter
+  forwards it on every work-unit notify.
+
+#### Changed
+
+- `DashboardPage` no longer computes OEE itself. The KPI strip card is
+  updated in `updateWorkUnitWidgets` from the VM, mirroring how
+  THROUGHPUT was already wired. The placeholder constants
+  (`kOeeFormulaBaseline / Pivot / QualityWeight / kOeeInitialPct`) and
+  the "Phase 8F" comment are gone.
+
 ### SystemState FSM Phase 2 + 3 -- safe-state on Fault (REQ-STATE-002, -003)
 
 The Boost.SML state machine introduced in Phase 1 now enforces a proper

@@ -73,4 +73,29 @@ enum class SystemState {
     CALIBRATION,
 };
 
+/// Nominal performance target for the demo line, in completed work units
+/// per hour. The model uses this as the denominator of the Performance
+/// component of OEE so `Performance = clamp(throughput / target, 0..1)`.
+/// Matches the dashboard's THROUGHPUT card target so the two KPIs read
+/// consistently.
+inline constexpr double kPerformanceTargetUph = 100.0;
+
+/// World-class OEE benchmark (Vorne / OEE Industry Standards). Used as
+/// the dashboard's OEE-card target line so the tier (Ok/Warning) is
+/// computed against the same number industry literature uses.
+inline constexpr double kOeeWorldClassPct = 85.0;
+
+/// Decomposition of OEE = Availability * Performance * Quality, each
+/// expressed as a percentage in [0, 100]. The model computes this from
+/// live signals (equipment status, work-unit throughput, checkpoint pass
+/// rates); the view just renders the result instead of inventing its own
+/// formula. Mirrors the industrial-standard OEE breakdown so the figure
+/// is auditable, not a Phase-8F placeholder.
+struct OeeMetrics {
+    float availabilityPct{0.0F};
+    float performancePct{0.0F};
+    float qualityPct{0.0F};
+    float oeePct{0.0F};
+};
+
 }  // namespace app::model
