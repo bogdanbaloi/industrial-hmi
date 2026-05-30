@@ -84,6 +84,9 @@ public:
     // ProductionModel: queries
     [[nodiscard]] SystemState getState() const override;
     [[nodiscard]] std::string lastFaultReason() const override { return {}; }
+    // The passive secondary doesn't own A/P/Q sources; OEE is meaningful
+    // only on the primary.
+    [[nodiscard]] OeeMetrics oeeSnapshot() const override { return {}; }
     [[nodiscard]] QualityCheckpoint getQualityCheckpoint(std::uint32_t id) const override;
     [[nodiscard]] std::vector<QualityCheckpoint> getQualityCheckpoints() const override;
     [[nodiscard]] WorkUnit getWorkUnit() const override;

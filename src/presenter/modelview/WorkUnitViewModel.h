@@ -45,6 +45,11 @@ struct WorkUnitViewModel {
     /// measure a rate. Drives the THROUGHPUT KPI card.
     double throughputUph{0.0};
 
+    /// Composite OEE (Availability * Performance * Quality, as a
+    /// percentage). Computed by the model from real signals; the View
+    /// just renders it, replacing the Phase-8F pass-rate-only placeholder.
+    float oeePct{0.0f};
+
     /// Current operation status message
     /// @examples "Processing", "Work unit complete", "Waiting for equipment"
     std::string statusMessage;
@@ -65,6 +70,7 @@ struct WorkUnitViewModel {
             || progress != other.progress
             || completedOperations != other.completedOperations
             || throughputUph != other.throughputUph
+            || oeePct != other.oeePct
             || statusMessage != other.statusMessage
             || hasErrors != other.hasErrors;
     }

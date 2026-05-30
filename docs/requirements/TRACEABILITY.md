@@ -77,6 +77,7 @@ requirements may be smoke-tested.
 | REQ-DASHBOARD-005 | MUST | `src/gtk/view/pages/DashboardPage.cpp::applyRole`, `src/auth/Role.h::canCalibrate/canResetSystem` | DashboardPageTest (role-gating cases) | -- |
 | REQ-DASHBOARD-006 | NICE | `src/gtk/view/pages/DashboardPage.cpp::setCompact` | DashboardPageTest.CompactPaneFitsMultiStationWidthBudget (layout-budget guard) | -- |
 | REQ-DASHBOARD-007 | NICE | `src/model/ThroughputMeter.h`, `src/model/SimulatedModel.h::tickSimulation` (records completions), `src/presenter/DashboardPresenter.cpp::buildWorkUnitVM`, `src/gtk/view/pages/DashboardPage.cpp::updateWorkUnitWidgets` (THROUGHPUT card) | ThroughputMeterTest + DashboardPresenterTest.ForwardsModelThroughputIntoViewModel | -- |
+| REQ-DASHBOARD-008 | NICE | `src/model/ProductionTypes.h::OeeMetrics`, `src/model/SimulatedModel.h::oeeSnapshot` (A * P * Q from real signals), `src/presenter/modelview/WorkUnitViewModel.h::oeePct`, `src/presenter/DashboardPresenter.cpp::buildWorkUnitVM`, `src/gtk/view/pages/DashboardPage.cpp::updateWorkUnitWidgets` (OEE card) | DashboardPresenterTest.ForwardsModelOeeIntoViewModel | -- |
 
 ## HISTORIAN
 
