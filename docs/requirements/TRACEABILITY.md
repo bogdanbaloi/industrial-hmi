@@ -142,6 +142,14 @@ requirements may be smoke-tested.
 |---|---|---|---|---|
 | REQ-ALARM-001 | SHOULD | `src/presenter/AlertCenter.h` (lifecycle state machine: raise/clear/acknowledge), `src/presenter/modelview/AlertViewModel.h` (AlarmState), `src/gtk/view/widgets/AlertsPanel.h` (state badge + Acknowledge) | AlertCenterTest (state-machine cases), AlertCenterModelIntegrationTest | ISA-18.2 / IEC 62682 |
 
+## STATE
+
+| REQ-ID | Priority | Implementation | Verification | ADR |
+|---|---|---|---|---|
+| REQ-STATE-001 | SHOULD | `src/model/SystemStateMachine.h/.cpp` (Boost.SML transition table, PIMPL), `src/model/SimulatedModel.h` (dispatch through the SM) | SystemStateMachineTest | -- |
+| REQ-STATE-002 | SHOULD | `src/model/SystemStateMachine.cpp` (Phase 2 transition table -- permissive transitions dropped) | SystemStateMachineTest (invalid-drop cases) | -- |
+| REQ-STATE-003 | SHOULD | `src/model/SystemStateMachine.h/.cpp` (Fault event + lastFaultReason + ERROR lock-out), `src/model/SimulatedModel.h::triggerFault`, `src/presenter/DashboardPresenter.cpp::handleSystemStateChanged` (raise/clear system-error alarm) | SystemStateMachineTest (Fault + lock-out + reset clears reason), DashboardPresenterTest.ErrorStateRaisesSystemErrorAlarmWithReason | -- |
+
 ## SETTINGS
 
 | REQ-ID | Priority | Implementation | Verification | ADR |

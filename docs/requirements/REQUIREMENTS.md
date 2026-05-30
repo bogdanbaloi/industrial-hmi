@@ -782,6 +782,68 @@ Needs: utest
 
 ---
 
+## STATE — Production lifecycle state machine
+
+### REQ-STATE-001 (SHOULD) — Formal SystemState transition table
+
+`req~state-001~1`
+
+The production system top-level lifecycle (`SystemState::{IDLE, RUNNING,
+ERROR, CALIBRATION}`) **shall** be expressed as a formal transition table
+rather than ad-hoc state assignments scattered across command bodies.
+Producer commands (`startProduction`, `stopProduction`, `resetSystem`,
+`startCalibration`) **shall** route through the table so the transitions
+are a single auditable artefact. State-change observers
+(`onSystemStateChanged`) **shall** fire only on real transitions; an
+idempotent command (e.g. `start` from `RUNNING`) **shall not** produce a
+phantom view refresh.
+
+Verified by: SystemStateMachineTest (transition + observer cases).
+
+ADR: state machine implemented with Boost.SML (boost-ext/sml v1.1.11,
+header-only, PIMPL so the template explosion stays in the .cpp).
+
+Needs: utest
+
+### REQ-STATE-002 (SHOULD) — Invalid transitions are dropped, not applied
+
+`req~state-002~1`
+
+Commands issued from a state with no matching transition (e.g.
+`startCalibration` from RUNNING) **shall** be silently dropped: the
+state machine **shall not** advance, and downstream observers
+**shall not** fire. This replaces the Phase 1 permissive behaviour
+where every command unconditionally re-assigned `currentState_`.
+
+Verified by: SystemStateMachineTest (invalid-transition drop cases:
+calibrate-from-running, start-from-calibration, start-from-error).
+
+Needs: utest
+
+### REQ-STATE-003 (SHOULD) — Safe-state on fault locks production out
+
+`req~state-003~1`
+
+A `Fault(reason)` event **shall** drive the state machine to ERROR from
+any state and record the reason. While in ERROR, the only command that
+**shall** advance the state is `reset()`; every other producer event
+**shall** be dropped. The reason **shall** be exposed via
+`lastFaultReason()` so consumers can carry it into operator-facing
+surfaces, and **shall** be cleared when the SM leaves ERROR via reset.
+
+The presenter **shall** raise a Critical ISA-18.2 alarm (see
+REQ-ALARM-001) keyed `system-error` carrying the fault reason when the
+state transitions into ERROR, and clear the alarm condition when it
+leaves ERROR.
+
+Verified by: SystemStateMachineTest (Fault entry + lock-out + reason
+exposure + reset clears reason), DashboardPresenterTest
+(`ErrorStateRaisesSystemErrorAlarmWithReason`).
+
+Needs: utest
+
+---
+
 ## SETTINGS — Runtime preferences
 
 ### REQ-SETTINGS-001 (SHOULD) — Theme switch (light / dark)

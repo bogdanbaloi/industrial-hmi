@@ -37,7 +37,6 @@
   control    start=false stop=true reset=false calib=false
 --- END ---
 [CONTROL  ] start=true stop=false reset=true calib=true
-[CONTROL  ] start=true stop=false reset=true calib=true
 [WORK_UNIT] id=WU-2024-001234 product=TAB-200 progress=0/5
 [CONTROL  ] start=false stop=true reset=false calib=false
 [EQUIPMENT] id=1 status=OFFLINE enabled=false

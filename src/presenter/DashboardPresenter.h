@@ -125,7 +125,7 @@ private:
     
     /// Called when system state changes
     /// @param newState New state from state machine
-    void handleSystemStateChanged(/* State enum */ int newState);
+    void handleSystemStateChanged(model::SystemState newState);
     
     // ViewModel builders (transform Model data -> ViewModels)
     
@@ -195,6 +195,11 @@ private:
     /// Optional AlertCenter (null when tests instantiate the presenter
     /// without the full application wiring).
     presenter::AlertCenter* alertCenter_{nullptr};
+
+    /// Tracks the previous SystemState so handleSystemStateChanged can
+    /// raise/clear the safe-state alarm on edge transitions only (REQ-
+    /// STATE-003). Starts at IDLE to match the model's initial state.
+    model::SystemState prevSystemState_{model::SystemState::IDLE};
 
     /// Audit hookup -- both pointers set together via setAudit().
     /// Null when the presenter runs in a test or when the binary

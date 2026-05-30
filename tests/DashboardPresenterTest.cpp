@@ -556,6 +556,39 @@ TEST_F(DashboardPresenterAlertsTest, QualityAndEquipmentAlertsCoexist) {
     EXPECT_EQ(alerts.snapshot().size(), 2u);
 }
 
+// REQ-STATE-003 / REQ-ALARM-001 wire-up: entering ERROR raises a Critical
+// "system-error" alarm carrying the model's lastFaultReason; leaving
+// ERROR (Reset) transitions the alarm to RtnUnack per ISA-18.2.
+TEST_F(DashboardPresenterTest, ErrorStateRaisesSystemErrorAlarmWithReason) {
+    app::presenter::AlertCenter localAlerts;
+    presenter->setAlertCenter(localAlerts);
+
+    MockProductionModel::StateCallback stateCb;
+    EXPECT_CALL(model, onEquipmentStatusChanged(_)).Times(1);
+    EXPECT_CALL(model, onActuatorStatusChanged(_)).Times(1);
+    EXPECT_CALL(model, onQualityCheckpointChanged(_)).Times(1);
+    EXPECT_CALL(model, onWorkUnitChanged(_)).Times(1);
+    EXPECT_CALL(model, onSystemStateChanged(_)).WillOnce(SaveArg<0>(&stateCb));
+    presenter->initialize();
+    ASSERT_TRUE(stateCb);
+
+    EXPECT_CALL(model, lastFaultReason()).WillRepeatedly(Return("brownout"));
+
+    stateCb(SystemState::ERROR);
+    auto snap = localAlerts.snapshot();
+    ASSERT_EQ(snap.size(), 1u);
+    EXPECT_EQ(snap[0].key, "system-error");
+    EXPECT_EQ(snap[0].severity, app::presenter::AlertSeverity::Critical);
+    EXPECT_THAT(snap[0].message, ::testing::HasSubstr("brownout"));
+
+    // Recovery (Reset) leaves the active alarm as RtnUnack -- ISA-18.2
+    // ack lifecycle keeps the card visible until the operator confirms.
+    stateCb(SystemState::IDLE);
+    auto post = localAlerts.snapshot();
+    ASSERT_EQ(post.size(), 1u);
+    EXPECT_EQ(post[0].state, app::presenter::AlarmState::RtnUnack);
+}
+
 // When no AlertCenter is injected the presenter must silently skip alert
 // bookkeeping -- this is the production vs test wiring difference.
 TEST_F(DashboardPresenterTest, NoAlertCenterMeansNoCrashOnEquipmentSignal) {

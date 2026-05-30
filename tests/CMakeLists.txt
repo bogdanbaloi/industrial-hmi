@@ -85,6 +85,21 @@ target_link_libraries(test_throughput_meter PRIVATE
 )
 add_test(NAME ThroughputMeterTest COMMAND test_throughput_meter)
 
+# model/SystemStateMachine -- formal SystemState FSM via Boost.SML. The
+# .cpp is self-contained (only depends on boost/sml.hpp), so compile it
+# directly into the test target instead of linking objectsModel; that
+# keeps this binary tiny and clear of the Asio/Winsock chain other model
+# tests need ws2_32 for.
+add_executable(test_system_state_machine
+    SystemStateMachineTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/model/SystemStateMachine.cpp)
+target_link_libraries(test_system_state_machine PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    boost_sml_headers
+)
+add_test(NAME SystemStateMachineTest COMMAND test_system_state_machine)
+
 # Config: ConfigManager
 # ConfigManager.h is header-only (pure std:: code) and config_defaults.h is a
 # plain constexpr header; neither needs GTK or the model layer.
@@ -727,10 +742,16 @@ if(BUILD_ML_CLASSIFIER)
 endif()
 
 # Model: SimulatedModel (singleton, no GTK)
-add_executable(test_simulated_model SimulatedModelTest.cpp)
+add_executable(test_simulated_model
+    SimulatedModelTest.cpp
+    # SimulatedModel.h now dispatches through SystemStateMachine, whose
+    # SML implementation lives in a .cpp -- compile it in directly so this
+    # tiny target doesn't need objectsModel (and its Asio/Winsock chain).
+    ${CMAKE_SOURCE_DIR}/src/model/SystemStateMachine.cpp)
 target_link_libraries(test_simulated_model PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes
+    boost_sml_headers
 )
 add_test(NAME SimulatedModelTest COMMAND test_simulated_model)
 
