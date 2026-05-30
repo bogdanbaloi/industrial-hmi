@@ -125,7 +125,7 @@ private:
     
     /// Called when system state changes
     /// @param newState New state from state machine
-    void handleSystemStateChanged(/* State enum */ int newState);
+    void handleSystemStateChanged(model::SystemState newState);
     
     // ViewModel builders (transform Model data -> ViewModels)
     

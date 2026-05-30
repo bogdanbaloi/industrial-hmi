@@ -82,7 +82,7 @@ void DashboardPresenter::initialize() {
     });
 
     model_.onSystemStateChanged([this](model::SystemState state) {
-        handleSystemStateChanged(static_cast<int>(state));
+        handleSystemStateChanged(state);
     });
 }
 
@@ -305,8 +305,9 @@ void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, in
     }
 }
 
-void DashboardPresenter::handleSystemStateChanged(int newState) {
-    LOG_IF(debug, "Model event: system state -> {}", systemStateName(newState));
+void DashboardPresenter::handleSystemStateChanged(model::SystemState newState) {
+    const int newStateInt = static_cast<int>(newState);
+    LOG_IF(debug, "Model event: system state -> {}", systemStateName(newStateInt));
 
     // ISA-18.2 wire-up for the safe-state path (REQ-STATE-003 + REQ-ALARM-001).
     // Entering ERROR raises a Critical "system-error" alarm carrying the
@@ -314,8 +315,7 @@ void DashboardPresenter::handleSystemStateChanged(int newState) {
     // alarm. The alarm uses the same key on every entry so re-faulting
     // updates the existing card rather than stacking duplicates.
     if (alertCenter_ != nullptr) {
-        const auto current = static_cast<model::SystemState>(newState);
-        const bool nowError  = (current == model::SystemState::ERROR);
+        const bool nowError  = (newState == model::SystemState::ERROR);
         const bool wasError  = (prevSystemState_ == model::SystemState::ERROR);
         constexpr std::string_view kSystemErrorKey = "system-error";
         if (nowError && !wasError) {
@@ -334,12 +334,12 @@ void DashboardPresenter::handleSystemStateChanged(int newState) {
         } else if (!nowError && wasError) {
             alertCenter_->clear(kSystemErrorKey);
         }
-        prevSystemState_ = current;
+        prevSystemState_ = newState;
     }
 
     auto vm = buildControlPanelVM();
     notifyControlPanelChanged(vm);
-    signalSystemStateChanged_.emit(newState);
+    signalSystemStateChanged_.emit(newStateInt);
 }
 
 // ViewModel builders
