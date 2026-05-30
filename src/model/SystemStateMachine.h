@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 
 namespace app::model {
 
@@ -42,18 +43,29 @@ public:
     SystemStateMachine(SystemStateMachine&&)                 = delete;
     SystemStateMachine& operator=(SystemStateMachine&&)      = delete;
 
-    // Producer-facing commands -- map onto SML events. The internal
-    // transition table decides whether (and to which state) the SM
-    // advances; a command issued from a state with no matching
-    // transition is silently dropped (Phase 1 -- guards arrive in
-    // Phase 2 and will additionally log + audit invalid attempts).
+    // Producer-facing commands -- map onto SML events. Phase 2 tightens
+    // the transition table so an invalid combination (e.g. Calibrate from
+    // RUNNING) is dropped at the SM level. The Phase 1 permissive
+    // transitions are gone; producers must respect the lifecycle.
     void start();
     void stop();
     void reset();
     void calibrate();
     void calibrationDone();
 
+    /// Phase 3 (safe-state). Force the SM into ERROR from any state and
+    /// record the reason for downstream consumers (presenter raises an
+    /// ISA-18.2 alarm carrying this string). Only `reset()` can leave
+    /// ERROR, mirroring the lock-out behaviour an operator expects on a
+    /// safety stop -- they must explicitly clear the fault before
+    /// production can restart.
+    void fault(const std::string& reason);
+
     [[nodiscard]] SystemState state() const;
+
+    /// Reason supplied to the most recent `fault()` call. Cleared (returns
+    /// empty) once the SM leaves ERROR via `reset()`.
+    [[nodiscard]] const std::string& lastFaultReason() const;
 
     /// Append a state-change observer. Fires exactly once per real
     /// transition (no spurious notify for idempotent events). Callbacks

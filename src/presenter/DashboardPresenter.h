@@ -196,6 +196,11 @@ private:
     /// without the full application wiring).
     presenter::AlertCenter* alertCenter_{nullptr};
 
+    /// Tracks the previous SystemState so handleSystemStateChanged can
+    /// raise/clear the safe-state alarm on edge transitions only (REQ-
+    /// STATE-003). Starts at IDLE to match the model's initial state.
+    model::SystemState prevSystemState_{model::SystemState::IDLE};
+
     /// Audit hookup -- both pointers set together via setAudit().
     /// Null when the presenter runs in a test or when the binary
     /// was built without auth/audit support.

@@ -307,6 +307,36 @@ void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, in
 
 void DashboardPresenter::handleSystemStateChanged(int newState) {
     LOG_IF(debug, "Model event: system state -> {}", systemStateName(newState));
+
+    // ISA-18.2 wire-up for the safe-state path (REQ-STATE-003 + REQ-ALARM-001).
+    // Entering ERROR raises a Critical "system-error" alarm carrying the
+    // fault reason from the model; leaving ERROR (via Reset) clears the
+    // alarm. The alarm uses the same key on every entry so re-faulting
+    // updates the existing card rather than stacking duplicates.
+    if (alertCenter_ != nullptr) {
+        const auto current = static_cast<model::SystemState>(newState);
+        const bool nowError  = (current == model::SystemState::ERROR);
+        const bool wasError  = (prevSystemState_ == model::SystemState::ERROR);
+        constexpr std::string_view kSystemErrorKey = "system-error";
+        if (nowError && !wasError) {
+            presenter::AlertViewModel a;
+            a.key      = std::string(kSystemErrorKey);
+            a.severity = presenter::AlertSeverity::Critical;
+            std::string reason = model_.lastFaultReason();
+            a.retranslate = [reason](presenter::AlertViewModel& vm) {
+                vm.title   = _("System fault");
+                vm.message = reason.empty()
+                                 ? std::string{_("Production locked out.")}
+                                 : reason;
+            };
+            a.retranslate(a);
+            alertCenter_->raise(a);
+        } else if (!nowError && wasError) {
+            alertCenter_->clear(kSystemErrorKey);
+        }
+        prevSystemState_ = current;
+    }
+
     auto vm = buildControlPanelVM();
     notifyControlPanelChanged(vm);
     signalSystemStateChanged_.emit(newState);

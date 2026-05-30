@@ -107,6 +107,12 @@ TEST_F(SimulatedModelTest, SetEquipmentDisabledSetsOffline) {
 // Signal delivery (callbacks fire on subscribe)
 
 TEST_F(SimulatedModelTest, StateCallbackFiresOnTransition) {
+    // The simulated model is a singleton; an earlier test may have left
+    // the SM in RUNNING. Phase 2's tightened transition table drops
+    // startProduction() from RUNNING (idempotent), so we'd see only one
+    // observer hit. Reset to IDLE first so Start -> Stop produces two.
+    model().resetSystem();
+
     // shared_ptr so the vector outlives the test -- callback persists in singleton
     auto states = std::make_shared<std::vector<SystemState>>();
     model().onSystemStateChanged([states](SystemState s) { states->push_back(s); });

@@ -265,6 +265,20 @@ public:
 
     [[nodiscard]] SystemState getState() const override { return stateMachine_.state(); }
 
+    [[nodiscard]] std::string lastFaultReason() const override {
+        return stateMachine_.lastFaultReason();
+    }
+
+    /// Concrete (non-virtual) trigger for the safe-state path. Wired to a
+    /// console command + (future) a GUI control so the demo can exercise
+    /// the Fault -> ERROR lock-out flow without modifying the
+    /// ProductionModel interface (faults originate inside the model in a
+    /// real deployment; this knob is for the simulator only).
+    void triggerFault(const std::string& reason) {
+        if (logger_) logger_->warn("Model: dispatch Fault ({})", reason);
+        stateMachine_.fault(reason);
+    }
+
     [[nodiscard]] QualityCheckpoint getQualityCheckpoint(uint32_t id) const override {
         return qualityCheckpoints_.at(id);
     }

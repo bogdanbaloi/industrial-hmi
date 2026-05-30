@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace app::model {
@@ -84,6 +85,12 @@ public:
     [[nodiscard]] virtual std::vector<QualityCheckpoint> getQualityCheckpoints() const = 0;
 
     [[nodiscard]] virtual WorkUnit getWorkUnit() const = 0;
+
+    /// Most recent fault reason (REQ-STATE-003). Returns empty when the
+    /// SM is not in ERROR or has been Reset. The presenter raises an
+    /// ISA-18.2 alarm carrying this string when the state machine
+    /// transitions into ERROR.
+    [[nodiscard]] virtual std::string lastFaultReason() const = 0;
 };
 
 }  // namespace app::model

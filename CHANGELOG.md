@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### SystemState FSM Phase 2 + 3 -- safe-state on Fault (REQ-STATE-002, -003)
+
+The Boost.SML state machine introduced in Phase 1 now enforces a proper
+lifecycle and ships the safety story:
+
+#### Phase 2 (REQ-STATE-002)
+
+- Transition table tightened: the Phase 1 permissive transitions
+  (`RUNNING+Calibrate`, `CALIBRATION+Start`, `ERROR+Start/Stop`) are
+  gone. Invalid commands are silently dropped by SML -- state stays
+  put, observers do not fire.
+
+#### Phase 3 -- safe-state (REQ-STATE-003 + wire to REQ-ALARM-001)
+
+- `SystemStateMachine::fault(reason)` event drives the SM to ERROR from
+  any state and records the reason. Once in ERROR, only `reset()` can
+  leave; every other command is dropped (operator-visible lock-out).
+- `SystemStateMachine::lastFaultReason()` exposes the recorded reason;
+  reset clears it.
+- `ProductionModel::lastFaultReason()` virtual added; `SimulatedModel`
+  forwards from the SM, `MirrorModel` returns empty (mirror, never
+  faults locally). `SimulatedModel::triggerFault(reason)` is a concrete
+  (non-virtual) hook for simulator + demo.
+- `DashboardPresenter::handleSystemStateChanged` raises a Critical
+  ISA-18.2 alarm keyed `system-error` carrying the reason when the
+  state transitions into ERROR; recovery (Reset) clears the alarm
+  condition, which moves it to `RtnUnack` per the existing alarm
+  lifecycle until the operator acknowledges it.
+
 ### Formal SystemState FSM via Boost.SML, Phase 1 (REQ-STATE-001)
 
 The production-line top-level lifecycle (IDLE / RUNNING / ERROR /

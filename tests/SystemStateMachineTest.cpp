@@ -1,12 +1,16 @@
 // [utest->req~state-001~1]
-// Covers REQ-STATE-001 (formal SystemState transition table).
+// [utest->req~state-002~1]
+// [utest->req~state-003~1]
+// Covers REQ-STATE-001 (formal SystemState transition table),
+//        REQ-STATE-002 (Phase 2: invalid transitions are dropped),
+//        REQ-STATE-003 (Phase 3: safe-state Fault -> ERROR, only Reset
+//        leaves it, lastFaultReason exposed + cleared on Reset).
 //
 // SystemStateMachine wraps a Boost.SML transition table for the
-// production-line lifecycle. These tests pin the Phase 1 contract: the
-// transitions currently in use map to the same target states the legacy
-// code produced, AND the observer fires only on real transitions (no
-// phantom refresh on an idempotent command). Guards / invalid-rejection /
-// Fault arrive in later phases and will land alongside their own tests.
+// production-line lifecycle. These tests pin the contract end-to-end:
+// the observer fires only on real transitions (no phantom refresh),
+// invalid combinations are silently dropped, and the SM locks out
+// every command except Reset once it enters ERROR.
 
 #include "src/model/SystemStateMachine.h"
 
@@ -82,9 +86,72 @@ TEST(SystemStateMachineTest, RunningPlusStartStaysRunningWithoutPhantomNotify) {
     EXPECT_EQ(last, SystemState::IDLE);
 }
 
-TEST(SystemStateMachineTest, CalibrateFromRunningEntersCalibration) {
+// Phase 2 -- invalid-transition drops (REQ-STATE-002)
+
+TEST(SystemStateMachineTest, CalibrateFromRunningIsDropped) {
+    // Phase 1 permissively allowed Calibrate from RUNNING; Phase 2
+    // requires Stop first. The SM must silently stay in RUNNING.
     SystemStateMachine sm;
     sm.start();
     sm.calibrate();
+    EXPECT_EQ(sm.state(), SystemState::RUNNING);
+}
+
+TEST(SystemStateMachineTest, StartFromCalibrationIsDropped) {
+    SystemStateMachine sm;
+    sm.calibrate();
+    sm.start();  // Phase 2: must Reset / CalibrationDone first
     EXPECT_EQ(sm.state(), SystemState::CALIBRATION);
+}
+
+TEST(SystemStateMachineTest, StartFromErrorIsDropped) {
+    SystemStateMachine sm;
+    sm.fault("test fault");
+    sm.start();
+    EXPECT_EQ(sm.state(), SystemState::ERROR);
+}
+
+// Phase 3 -- safe-state on Fault (REQ-STATE-003)
+
+TEST(SystemStateMachineTest, FaultFromIdleEntersErrorAndExposesReason) {
+    SystemStateMachine sm;
+    sm.fault("equipment-0 over-temperature");
+    EXPECT_EQ(sm.state(), SystemState::ERROR);
+    EXPECT_EQ(sm.lastFaultReason(), "equipment-0 over-temperature");
+}
+
+TEST(SystemStateMachineTest, FaultFromRunningEntersError) {
+    SystemStateMachine sm;
+    sm.start();
+    sm.fault("disk full");
+    EXPECT_EQ(sm.state(), SystemState::ERROR);
+    EXPECT_EQ(sm.lastFaultReason(), "disk full");
+}
+
+TEST(SystemStateMachineTest, FaultFromCalibrationEntersError) {
+    SystemStateMachine sm;
+    sm.calibrate();
+    sm.fault("calibration sensor offline");
+    EXPECT_EQ(sm.state(), SystemState::ERROR);
+}
+
+TEST(SystemStateMachineTest, ErrorLocksOutAllCommandsExceptReset) {
+    SystemStateMachine sm;
+    sm.fault("disk full");
+
+    sm.start();             EXPECT_EQ(sm.state(), SystemState::ERROR);
+    sm.stop();              EXPECT_EQ(sm.state(), SystemState::ERROR);
+    sm.calibrate();         EXPECT_EQ(sm.state(), SystemState::ERROR);
+    sm.calibrationDone();   EXPECT_EQ(sm.state(), SystemState::ERROR);
+
+    sm.reset();
+    EXPECT_EQ(sm.state(), SystemState::IDLE);
+}
+
+TEST(SystemStateMachineTest, ResetClearsLastFaultReason) {
+    SystemStateMachine sm;
+    sm.fault("brownout");
+    ASSERT_FALSE(sm.lastFaultReason().empty());
+    sm.reset();
+    EXPECT_TRUE(sm.lastFaultReason().empty());
 }

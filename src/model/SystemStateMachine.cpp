@@ -16,43 +16,46 @@ struct StopEvt {};
 struct ResetEvt {};
 struct CalibrateEvt {};
 struct CalibrationDoneEvt {};
+struct FaultEvt {};   // Phase 3 -- safe-state entry; reason is stored on Impl.
 
-/// The formal Phase 1 transition table.
+/// The formal Phase 2 + 3 transition table.
 ///
 /// States: idle (initial *), running, calibration, error.
-/// In Phase 1 every command currently in use is accepted from every
-/// state in which the legacy code accepted it -- the goal of this phase
-/// is *no behavioural change on valid paths*, only routing the
-/// transition through SML so the table is a single auditable artefact.
-/// Guards + invalid-transition rejection arrive in Phase 2; Fault /
-/// Acknowledge / Recover for safe-state on error arrive in Phase 3.
+/// Phase 2 tightens the table so invalid combinations are dropped at the
+/// SML level (no matching transition -> SML silently ignores the event).
+/// Phase 3 adds the Fault entry (*-> error) and locks error so only
+/// Reset can clear it -- an operator must explicitly recover.
 struct SystemStateTable {
     auto operator()() const {
         using namespace sml;
         return make_transition_table(
-            // From idle:
-            *"idle"_s + event<StartEvt>            = "running"_s,
-             "idle"_s + event<CalibrateEvt>        = "calibration"_s,
-             "idle"_s + event<StopEvt>             = "idle"_s,
-             "idle"_s + event<ResetEvt>            = "idle"_s,
+            // ---- from idle ----------------------------------------
+            *"idle"_s + event<StartEvt>     = "running"_s,
+             "idle"_s + event<CalibrateEvt> = "calibration"_s,
+             "idle"_s + event<ResetEvt>     = "idle"_s,   // idempotent
 
-            // From running:
-             "running"_s + event<StopEvt>          = "idle"_s,
-             "running"_s + event<ResetEvt>         = "idle"_s,
-             "running"_s + event<CalibrateEvt>     = "calibration"_s,
-             "running"_s + event<StartEvt>         = "running"_s,
+            // ---- from running -------------------------------------
+             "running"_s + event<StopEvt>   = "idle"_s,
+             "running"_s + event<ResetEvt>  = "idle"_s,
+             "running"_s + event<StartEvt>  = "running"_s,  // idempotent
 
-            // From calibration:
+            // ---- from calibration ---------------------------------
              "calibration"_s + event<CalibrationDoneEvt> = "idle"_s,
              "calibration"_s + event<StopEvt>            = "idle"_s,
              "calibration"_s + event<ResetEvt>           = "idle"_s,
-             "calibration"_s + event<StartEvt>           = "running"_s,
-             "calibration"_s + event<CalibrateEvt>       = "calibration"_s,
 
-            // From error (no entry path defined in Phase 1; transitions
-            // kept so Phase 3's safe-state work can drop straight in):
-             "error"_s + event<ResetEvt>           = "idle"_s,
-             "error"_s + event<StopEvt>            = "idle"_s
+            // ---- safe-state (Phase 3) -----------------------------
+            // Fault from ANY state -> ERROR. Once in ERROR only Reset
+            // can leave it; every other command is dropped, mirroring
+            // the lock-out behaviour an operator expects on a fault.
+             "idle"_s        + event<FaultEvt> = "error"_s,
+             "running"_s     + event<FaultEvt> = "error"_s,
+             "calibration"_s + event<FaultEvt> = "error"_s,
+             "error"_s       + event<ResetEvt> = "idle"_s
+
+            // NOTE: previously permissive transitions deliberately
+            // OMITTED in Phase 2: RUNNING+Calibrate (stop first),
+            // CALIBRATION+Start (reset first), ERROR+Start, ERROR+Stop.
         );
     }
 };
@@ -73,6 +76,7 @@ struct SystemStateMachine::Impl {
     sml::sm<SystemStateTable>  sm;
     std::vector<StateCallback> observers;
     SystemState                lastNotified{SystemState::IDLE};
+    std::string                lastFaultReason;  ///< empty unless in ERROR
 
     [[nodiscard]] SystemState currentState() const {
         using namespace sml;
@@ -110,7 +114,15 @@ void SystemStateMachine::stop() {
 }
 
 void SystemStateMachine::reset() {
+    // Reset clears the lock-out: the recorded fault reason goes with it.
+    impl_->lastFaultReason.clear();
     impl_->sm.process_event(ResetEvt{});
+    impl_->afterDispatch();
+}
+
+void SystemStateMachine::fault(const std::string& reason) {
+    impl_->lastFaultReason = reason;
+    impl_->sm.process_event(FaultEvt{});
     impl_->afterDispatch();
 }
 
@@ -126,6 +138,10 @@ void SystemStateMachine::calibrationDone() {
 
 SystemState SystemStateMachine::state() const {
     return impl_->currentState();
+}
+
+const std::string& SystemStateMachine::lastFaultReason() const {
+    return impl_->lastFaultReason;
 }
 
 void SystemStateMachine::onStateChanged(StateCallback callback) {

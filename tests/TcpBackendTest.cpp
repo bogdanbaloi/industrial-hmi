@@ -67,6 +67,7 @@ public:
     MOCK_METHOD((std::vector<app::model::QualityCheckpoint>),
                 getQualityCheckpoints, (), (const, override));
     MOCK_METHOD(app::model::WorkUnit, getWorkUnit, (), (const, override));
+    MOCK_METHOD(std::string, lastFaultReason, (), (const, override));
 };
 
 class MockProductsRepository : public ProductsRepository {
