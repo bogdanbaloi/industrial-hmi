@@ -782,6 +782,31 @@ Needs: utest
 
 ---
 
+## STATE — Production lifecycle state machine
+
+### REQ-STATE-001 (SHOULD) — Formal SystemState transition table
+
+`req~state-001~1`
+
+The production system top-level lifecycle (`SystemState::{IDLE, RUNNING,
+ERROR, CALIBRATION}`) **shall** be expressed as a formal transition table
+rather than ad-hoc state assignments scattered across command bodies.
+Producer commands (`startProduction`, `stopProduction`, `resetSystem`,
+`startCalibration`) **shall** route through the table so the transitions
+are a single auditable artefact. State-change observers
+(`onSystemStateChanged`) **shall** fire only on real transitions; an
+idempotent command (e.g. `start` from `RUNNING`) **shall not** produce a
+phantom view refresh.
+
+Verified by: SystemStateMachineTest (transition + observer cases).
+
+ADR: state machine implemented with Boost.SML (boost-ext/sml v1.1.11,
+header-only, PIMPL so the template explosion stays in the .cpp).
+
+Needs: utest
+
+---
+
 ## SETTINGS — Runtime preferences
 
 ### REQ-SETTINGS-001 (SHOULD) — Theme switch (light / dark)

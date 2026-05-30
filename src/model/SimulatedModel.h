@@ -2,6 +2,7 @@
 
 #include "src/model/ProductionModel.h"
 #include "src/model/ProductionTypes.h"
+#include "src/model/SystemStateMachine.h"
 #include "src/model/ThroughputMeter.h"
 #include "src/core/LoggerBase.h"
 
@@ -102,34 +103,30 @@ public:
 
     // User commands
     void startProduction() override {
-        if (logger_) logger_->info("Model: state IDLE -> RUNNING (production started)");
-        currentState_ = SystemState::RUNNING;
-        notifyStateChange();
+        if (logger_) logger_->info("Model: dispatch Start (production started)");
+        stateMachine_.start();           // SM observer fires notifyStateChange
         simulateProductionCycle();
     }
 
     void stopProduction() override {
-        if (logger_) logger_->info("Model: state -> IDLE (production stopped)");
-        currentState_ = SystemState::IDLE;
-        notifyStateChange();
+        if (logger_) logger_->info("Model: dispatch Stop (production stopped)");
+        stateMachine_.stop();
     }
 
     void resetSystem() override {
-        if (logger_) logger_->info("Model: reset system - clearing work unit progress");
-        currentState_ = SystemState::IDLE;
+        if (logger_) logger_->info("Model: dispatch Reset (clearing work unit progress)");
+        stateMachine_.reset();           // -> IDLE; SM observer notifies
         currentWorkUnit_.completedOperations = 0;
         // A reset is not a completion; drop the rate history so the card
         // zeroes immediately instead of decaying from a stale value.
         throughputMeter_.clear();
         currentWorkUnit_.throughputUnitsPerHour = 0.0;
-        notifyStateChange();
         notifyWorkUnitChange();
     }
 
     void startCalibration() override {
-        if (logger_) logger_->info("Model: state -> CALIBRATION");
-        currentState_ = SystemState::CALIBRATION;
-        notifyStateChange();
+        if (logger_) logger_->info("Model: dispatch Calibrate");
+        stateMachine_.calibrate();
     }
 
     void setEquipmentEnabled(uint32_t equipmentId, bool enabled) override {
@@ -266,7 +263,7 @@ public:
         }
     }
 
-    [[nodiscard]] SystemState getState() const override { return currentState_; }
+    [[nodiscard]] SystemState getState() const override { return stateMachine_.state(); }
 
     [[nodiscard]] QualityCheckpoint getQualityCheckpoint(uint32_t id) const override {
         return qualityCheckpoints_.at(id);
@@ -384,8 +381,9 @@ public:
             5
         };
         
-        currentState_ = SystemState::IDLE;
-        
+        // Drive the SM to IDLE for a clean fixture (no-op when fresh).
+        stateMachine_.reset();
+
         // Notify initial state
         for (const auto& [id, status] : equipmentStatuses_) {
             notifyEquipmentChange(id);
@@ -407,7 +405,14 @@ public:
     SimulatedModel& operator=(SimulatedModel&&) = delete;
 
 private:
-    SimulatedModel() = default;
+    SimulatedModel() {
+        // The formal state machine fires notifyStateChange() automatically
+        // on every real transition, so the command bodies below stay free
+        // of explicit notify calls and idempotent commands (e.g. `start`
+        // from RUNNING) no longer produce phantom view refreshes.
+        stateMachine_.onStateChanged(
+            [this](SystemState) { notifyStateChange(); });
+    }
 
     void notifyEquipmentChange(uint32_t equipmentId) {
         std::vector<EquipmentCallback> cbs;
@@ -435,12 +440,11 @@ private:
 
     void notifyStateChange() {
         std::vector<StateCallback> cbs;
-        SystemState state;
         {
             const std::scoped_lock lock(mutex_);
             cbs = stateCallbacks_;
-            state = currentState_;
         }
+        const SystemState state = stateMachine_.state();
         for (auto& cb : cbs) { cb(state); }
     }
     
@@ -465,7 +469,10 @@ private:
     /// update for these so the bridge's last writer stays sticky.
     std::unordered_set<uint32_t> externalPassRateOverrides_;
     WorkUnit currentWorkUnit_;
-    SystemState currentState_{SystemState::IDLE};
+
+    /// Top-level production lifecycle. The formal SML transition table
+    /// lives in SystemStateMachine.cpp; here we just dispatch commands.
+    SystemStateMachine stateMachine_;
 
     /// Measures the live work-units-per-hour rate from completion
     /// timestamps. Fed steady_clock::now() on every genuine rollover in

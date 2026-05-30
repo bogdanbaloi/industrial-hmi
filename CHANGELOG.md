@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Formal SystemState FSM via Boost.SML, Phase 1 (REQ-STATE-001)
+
+The production-line top-level lifecycle (IDLE / RUNNING / ERROR /
+CALIBRATION) now routes through a formal Boost.SML transition table
+instead of ad-hoc `currentState_` assignments scattered across command
+bodies. ASPICE-friendly artefact: a single auditable transition table.
+
+#### Added
+
+- Boost.SML (boost-ext/sml v1.1.11) via FetchContent, pinned + routed
+  into `_deps/sml-vendor/` so clang-tidy's `src/.*` header filter doesn't
+  match the vendored header. SYSTEM include keeps third-party
+  diagnostics out of our gates.
+- `src/model/SystemStateMachine.{h,cpp}` -- PIMPL wrapper so the SML
+  template explosion stays in the .cpp. Thin header API
+  (start/stop/reset/calibrate/calibrationDone + state() + onStateChanged).
+- `SystemStateMachineTest` covering basic transitions + the
+  observer-fires-only-on-real-transitions contract.
+
+#### Changed
+
+- `SimulatedModel` no longer mutates a raw `SystemState currentState_`;
+  it dispatches through the SM and the SM's observer fires
+  `notifyStateChange()`. Idempotent commands (e.g. `start` from
+  RUNNING) no longer trigger phantom view refreshes.
+
+Phase 2 (guards + invalid-transition policy) and Phase 3
+(Fault/Acknowledge/Recover + safe-state wired to AlertCenter) are next.
+
 ### ISA-18.2 alarm lifecycle (Phase 1) (REQ-ALARM-001)
 
 Alarms now follow an ISA-18.2 / IEC 62682 lifecycle instead of a plain

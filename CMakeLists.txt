@@ -218,6 +218,26 @@ FetchContent_Declare(stb_image
 )
 FetchContent_MakeAvailable(stb_image)
 
+# Boost.SML (boost-ext/sml) -- header-only C++ state-machine DSL (Boost 1.0
+# licence). Used by src/model/SystemStateMachine.cpp to express the
+# production-line lifecycle as a declarative transition table (ASPICE-style
+# verifiable state model). Heavy template metaprogramming, so the include
+# is confined to the SystemStateMachine .cpp (PIMPL) and exposed to the
+# rest of the model only through SystemStateMachine.h. Routed into
+# `_deps/sml-vendor/` away from the default `_deps/sml-src/` so clang-tidy's
+# `src/.*` header filter doesn't match the vendored header. The SYSTEM
+# include further suppresses third-party diagnostics.
+FetchContent_Declare(boost_sml
+    GIT_REPOSITORY https://github.com/boost-ext/sml.git
+    GIT_TAG        v1.1.11
+    GIT_SHALLOW    TRUE
+    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/sml-vendor
+)
+FetchContent_MakeAvailable(boost_sml)
+add_library(boost_sml_headers INTERFACE)
+target_include_directories(boost_sml_headers SYSTEM INTERFACE
+    ${CMAKE_BINARY_DIR}/_deps/sml-vendor/include)
+
 # open62541 -- OPC-UA stack (MPL 2.0). Industrial protocol used by the
 # OPC-UA server backend (src/integration/opcua/). Default OFF so the
 # baseline build stays small; CI turns this ON for the integration job.
@@ -294,6 +314,7 @@ target_sources(objectsModel
     PRIVATE
         src/model/DatabaseManager.cpp
         src/model/MirrorModel.cpp
+        src/model/SystemStateMachine.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -305,11 +326,14 @@ target_sources(objectsModel
             src/model/ProductsRepository.h
             src/model/ProductionTypes.h
             src/model/ProductionModel.h
+            src/model/SystemStateMachine.h
 )
 target_link_libraries(objectsModel
     PUBLIC
         ${GTKMM_LIBRARIES}
         ${SQLITE_LIBRARIES}
+    PRIVATE
+        boost_sml_headers
 )
 target_include_directories(objectsModel
     PUBLIC
