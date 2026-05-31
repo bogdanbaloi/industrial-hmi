@@ -574,13 +574,14 @@ void DashboardPage::updateWorkUnitWidgets(const presenter::WorkUnitViewModel& vm
     // Replaces the Phase-8F pass-rate-only placeholder formula. The
     // value moves on every tick because each component is rebuilt from
     // live signals on the work-unit notify.
+    auto tierForOee = [](double v) {
+        if (v >= kOeeOkThresholdPct)      return BigNumberCard::Status::Ok;
+        if (v >= kOeeWarningThresholdPct) return BigNumberCard::Status::Warning;
+        return BigNumberCard::Status::Critical;
+    };
     if (kpiStripWidgets_.oeeCard != nullptr) {
         kpiStripWidgets_.oeeCard->setValue(vm.oeePct, 1);
-        kpiStripWidgets_.oeeCard->setStatus(
-            vm.oeePct >= kOeeOkThresholdPct ? BigNumberCard::Status::Ok
-            : vm.oeePct >= kOeeWarningThresholdPct
-                ? BigNumberCard::Status::Warning
-                : BigNumberCard::Status::Critical);
+        kpiStripWidgets_.oeeCard->setStatus(tierForOee(vm.oeePct));
     }
 }
 
