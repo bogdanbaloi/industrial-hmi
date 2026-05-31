@@ -6,6 +6,7 @@
 #include "src/gtk/view/ui_sizes.h"
 
 #include <gtkmm.h>
+#include <chrono>
 #include <string>
 
 namespace app::view {
@@ -265,7 +266,17 @@ private:
         title->add_css_class("alert-title");
         top->append(*title);
 
-        // ISA-18.2 lifecycle badge (active mode only): UNACK / ACK / RTN.
+        // ISA-18.2 priority badge (P1..P4) -- distinct from severity, so
+        // the operator can scan urgency at a glance regardless of colour.
+        if (!historyMode) {
+            auto* pbadge = Gtk::make_managed<Gtk::Label>(priorityBadge(a.priority));
+            pbadge->add_css_class("alert-priority-badge");
+            pbadge->set_valign(Gtk::Align::CENTER);
+            pbadge->set_tooltip_text(_("ISA-18.2 priority (1 = most urgent)"));
+            top->append(*pbadge);
+        }
+
+        // ISA-18.2 lifecycle badge (active mode only): UNACK / ACK / RTN / SHELVED.
         if (!historyMode) {
             auto* badge = Gtk::make_managed<Gtk::Label>(stateBadge(a.state));
             badge->add_css_class("alert-state-badge");
@@ -283,6 +294,35 @@ private:
         top->append(*ts);
 
         if (!historyMode) {
+            const std::string key = a.key;
+
+            // Shelve: only meaningful for an actively-shown alarm. A
+            // shelved row offers Unshelve instead so the operator can
+            // pull it back before the deadline.
+            if (a.state != presenter::AlarmState::Shelved) {
+                auto* shelve = Gtk::make_managed<Gtk::Button>();
+                shelve->set_icon_name("appointment-soon-symbolic");
+                shelve->set_has_frame(false);
+                shelve->set_valign(Gtk::Align::CENTER);
+                shelve->add_css_class("alert-dismiss");
+                shelve->set_tooltip_text(_("Shelve (auto-unshelves after 5 min)"));
+                shelve->signal_clicked().connect(
+                    [this, key]() {
+                        alertCenter_.shelve(key, kDefaultShelveDuration);
+                    });
+                top->append(*shelve);
+            } else {
+                auto* unshelve = Gtk::make_managed<Gtk::Button>();
+                unshelve->set_icon_name("edit-undo-symbolic");
+                unshelve->set_has_frame(false);
+                unshelve->set_valign(Gtk::Align::CENTER);
+                unshelve->add_css_class("alert-dismiss");
+                unshelve->set_tooltip_text(_("Unshelve"));
+                unshelve->signal_clicked().connect(
+                    [this, key]() { alertCenter_.unshelve(key); });
+                top->append(*unshelve);
+            }
+
             // Per-alarm Acknowledge (ISA-18.2). An unacknowledged active
             // alarm becomes acknowledged but stays visible until its
             // condition clears; an alarm that already returned to normal
@@ -294,7 +334,6 @@ private:
             ack->set_valign(Gtk::Align::CENTER);
             ack->add_css_class("alert-dismiss");
             ack->set_tooltip_text(_("Acknowledge"));
-            const std::string key = a.key;
             ack->signal_clicked().connect(
                 [this, key]() { alertCenter_.acknowledge(key); });
             top->append(*ack);
@@ -328,6 +367,7 @@ private:
             case presenter::AlarmState::UnackActive: return _("UNACK");
             case presenter::AlarmState::AckActive:   return _("ACK");
             case presenter::AlarmState::RtnUnack:    return _("RTN");
+            case presenter::AlarmState::Shelved:     return _("SHELVED");
         }
         return {};
     }
@@ -340,9 +380,23 @@ private:
                 return _("Active, acknowledged");
             case presenter::AlarmState::RtnUnack:
                 return _("Returned to normal, awaiting acknowledgement");
+            case presenter::AlarmState::Shelved:
+                return _("Shelved (auto-unshelves at deadline)");
         }
         return {};
     }
+
+    // ISA-18.2 priority badge text. Lower numbers = more urgent.
+    static Glib::ustring priorityBadge(int p) {
+        return Glib::ustring("P") + std::to_string(p);
+    }
+
+    /// Default shelve duration when the operator clicks the Shelve button.
+    /// 5 min is a typical ISA-18.2 "give me a moment" reset window; long
+    /// enough that the operator can dispatch the actual fix, short enough
+    /// that a forgotten shelf doesn't suppress a real condition for the
+    /// whole shift.
+    static constexpr std::chrono::seconds kDefaultShelveDuration{300};
 
     presenter::AlertCenter& alertCenter_;
 
