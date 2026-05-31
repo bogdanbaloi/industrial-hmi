@@ -6,11 +6,13 @@
 #include <algorithm>
 #include <chrono>
 #include <ctime>
+#include <functional>
 #include <iomanip>
 #include <mutex>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace app::presenter {
@@ -59,6 +61,22 @@ class AlertCenter {
 public:
     /// Maximum entries kept in the resolved-alarm history ring.
     static constexpr std::size_t kHistoryCapacity = 50;
+
+    /// Wall-clock type used for shelve deadlines. Steady_clock would be
+    /// more correct for durations (monotonic), but we display deadlines
+    /// to the operator + carry them across log rotations -- system_clock
+    /// matches the existing AlertViewModel::timestamp convention.
+    using Clock     = std::chrono::system_clock;
+    using TimePoint = Clock::time_point;
+    using NowFn     = std::function<TimePoint()>;
+
+    /// Default ctor wires the real wall clock.
+    AlertCenter()
+        : now_([] { return Clock::now(); }) {}
+
+    /// DI ctor for tests: pass a controlled clock so shelve auto-expiry
+    /// cases are deterministic without sleeping.
+    explicit AlertCenter(NowFn now) : now_(std::move(now)) {}
 
     /// Report that an alarm's underlying condition is ACTIVE. Inserts a
     /// new UnackActive alarm, or refreshes an existing one's presentation
@@ -140,6 +158,68 @@ public:
         if (historyChanged) signalHistoryChanged_.emit();
     }
 
+    /// Operator temporarily suppresses an alarm for `duration`. The
+    /// alarm transitions to Shelved (hidden from the active urgency
+    /// ranking but still tracked); `tick()` auto-unshelves it once the
+    /// deadline passes, restoring UnackActive or RtnUnack based on
+    /// whether the underlying condition is still active. The producer
+    /// can keep raising/clearing meanwhile -- the condition flag is
+    /// updated silently so the restored state is correct.
+    void shelve(std::string_view key, std::chrono::seconds duration) {
+        bool activeChanged = false;
+        {
+            const std::scoped_lock lock(mutex_);
+            auto it = findByKey(key);
+            if (it == alarms_.end()) return;
+            it->vm.state     = AlarmState::Shelved;
+            it->shelvedUntil = now_() + duration;
+            activeChanged = true;
+        }
+        if (activeChanged) signalAlertsChanged_.emit();
+    }
+
+    /// Operator releases a shelved alarm before its deadline. Restores
+    /// UnackActive (condition still active) or RtnUnack (condition has
+    /// cleared while shelved). No-op when the alarm isn't shelved.
+    void unshelve(std::string_view key) {
+        bool activeChanged = false;
+        {
+            const std::scoped_lock lock(mutex_);
+            auto it = findByKey(key);
+            if (it == alarms_.end() ||
+                it->vm.state != AlarmState::Shelved) return;
+            it->vm.state = it->conditionActive
+                               ? AlarmState::UnackActive
+                               : AlarmState::RtnUnack;
+            it->shelvedUntil = {};
+            activeChanged = true;
+        }
+        if (activeChanged) signalAlertsChanged_.emit();
+    }
+
+    /// Drives shelf auto-expiry: any shelved alarm whose deadline has
+    /// passed transitions back to UnackActive / RtnUnack. The GUI calls
+    /// this on every model tick so no Glib timer is needed; tests inject
+    /// a controlled clock and call tick() directly.
+    void tick() {
+        bool activeChanged = false;
+        {
+            const std::scoped_lock lock(mutex_);
+            const TimePoint now = now_();
+            for (auto& alarm : alarms_) {
+                if (alarm.vm.state == AlarmState::Shelved &&
+                    now >= alarm.shelvedUntil) {
+                    alarm.vm.state = alarm.conditionActive
+                                         ? AlarmState::UnackActive
+                                         : AlarmState::RtnUnack;
+                    alarm.shelvedUntil = {};
+                    activeChanged = true;
+                }
+            }
+        }
+        if (activeChanged) signalAlertsChanged_.emit();
+    }
+
     /// Operator force-resolves every alarm regardless of state (the
     /// "Clear all" button). Each is appended to history.
     void clearAll() {
@@ -158,7 +238,10 @@ public:
     }
 
     /// Thread-safe snapshot of the active alarms (any non-resolved state),
-    /// projected to view models the panel can render directly.
+    /// projected to view models the panel can render directly. Ordered
+    /// by ISA-18.2 priority ascending (most urgent first); ties keep
+    /// insertion order so a steady stream of equal-priority alarms shows
+    /// the operator the newest at the bottom.
     [[nodiscard]] std::vector<AlertViewModel> snapshot() const {
         const std::scoped_lock lock(mutex_);
         std::vector<AlertViewModel> out;
@@ -166,6 +249,10 @@ public:
         for (const auto& alarm : alarms_) {
             out.push_back(alarm.vm);
         }
+        std::stable_sort(out.begin(), out.end(),
+            [](const AlertViewModel& a, const AlertViewModel& b) {
+                return a.priority < b.priority;
+            });
         return out;
     }
 
@@ -224,9 +311,12 @@ public:
 private:
     /// One tracked alarm: its presentation view model (carrying the
     /// lifecycle state) plus whether the underlying condition is active.
+    /// `shelvedUntil` is the wall-clock deadline at which the alarm auto-
+    /// unshelves; only meaningful while state == Shelved.
     struct Alarm {
         AlertViewModel vm;
         bool           conditionActive{true};
+        TimePoint      shelvedUntil{};
     };
 
     static std::string formatNow() {
@@ -264,6 +354,7 @@ private:
     std::vector<AlertHistoryEntry>  history_;
     sigc::signal<void()>            signalAlertsChanged_;
     sigc::signal<void()>            signalHistoryChanged_;
+    NowFn                           now_;
 };
 
 }  // namespace app::presenter

@@ -98,6 +98,7 @@ constexpr std::string_view alarmStateTag(presenter::AlarmState st) {
     case St::UnackActive: return "UNACK";
     case St::AckActive:   return "ACK";
     case St::RtnUnack:    return "RTN";
+    case St::Shelved:     return "SHELVED";
     }
     return "UNKNOWN";
 }

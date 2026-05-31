@@ -213,6 +213,11 @@ void DashboardPresenter::onEquipmentToggled(uint32_t equipmentId, bool enabled) 
 // Model signal handlers
 void DashboardPresenter::handleNewWorkUnit(const std::string& workUnitId) {
     LOG_IF(trace,"Model event: work unit changed ({})", workUnitId);
+    // REQ-ALARM-002: drive shelf auto-expiry off the existing model tick
+    // (work-unit notify fires every simulation cycle) instead of standing
+    // up a Glib timer. Shelved alarms whose deadline has passed return
+    // to the appropriate active state here.
+    if (alertCenter_ != nullptr) alertCenter_->tick();
     auto vm = buildWorkUnitVM(workUnitId);
     notifyWorkUnitChanged(vm);
 }
@@ -233,6 +238,12 @@ void DashboardPresenter::handleEquipmentStatusUpdate(uint32_t equipmentId, int s
             a.severity = (status == 3)
                              ? presenter::AlertSeverity::Critical
                              : presenter::AlertSeverity::Warning;
+            // ISA-18.2 priority: an Error condition demands prompt action
+            // (High); an Offline line is informational but actionable
+            // (Medium). REQ-ALARM-003.
+            a.priority = (status == 3)
+                             ? presenter::kAlarmPriorityHigh
+                             : presenter::kAlarmPriorityMedium;
             // Install a retranslate callback that captures the raw id
             // and the status-kind flag, so a later language switch can
             // re-render the title in the new locale (including for rows
@@ -282,6 +293,11 @@ void DashboardPresenter::handleQualityCheckpointUpdate(uint32_t checkpointId, in
             a.severity = (vm.status == Status::Critical)
                              ? presenter::AlertSeverity::Critical
                              : presenter::AlertSeverity::Warning;
+            // Quality below target is process-side, lower urgency than an
+            // equipment fault: High for Critical, Medium for Warning.
+            a.priority = (vm.status == Status::Critical)
+                             ? presenter::kAlarmPriorityHigh
+                             : presenter::kAlarmPriorityMedium;
             // Capture the raw numbers + checkpoint name so the callback
             // can re-render in any future locale (and for history rows).
             const bool isCritical     = (vm.status == Status::Critical);
@@ -322,6 +338,8 @@ void DashboardPresenter::handleSystemStateChanged(model::SystemState newState) {
             presenter::AlertViewModel a;
             a.key      = std::string(kSystemErrorKey);
             a.severity = presenter::AlertSeverity::Critical;
+            // Safe-state lock-out is the highest urgency on the line.
+            a.priority = presenter::kAlarmPriorityEmergency;
             std::string reason = model_.lastFaultReason();
             a.retranslate = [reason](presenter::AlertViewModel& vm) {
                 vm.title   = _("System fault");

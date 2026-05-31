@@ -799,6 +799,47 @@ ADR: standards basis ANSI/ISA-18.2-2016, IEC 62682.
 
 Needs: utest
 
+### REQ-ALARM-002 (SHOULD) — Shelve with auto-expiry
+
+`req~alarm-002~1`
+
+The operator **shall** be able to temporarily shelve an alarm for a
+specified duration. Shelving **shall** transition the alarm to the
+Shelved state; the underlying process condition **shall** continue to
+be tracked silently (raise / clear update an internal flag without
+changing the visible state). When the deadline expires (driven by the
+existing model tick, not a separate timer), the alarm **shall** auto-
+unshelve, restoring UnackActive when the condition is still active or
+RtnUnack when it cleared while shelved. The operator **shall** also be
+able to release a shelved alarm manually before the deadline.
+
+Verified by: AlertCenterTest (shelve / unshelve / auto-expiry /
+condition-tracking-while-shelved cases). The shelve clock is injected
+via a constructor parameter so the tests are deterministic without
+sleeps.
+
+ADR: standards basis ANSI/ISA-18.2-2016 (alarm shelving).
+
+Needs: utest
+
+### REQ-ALARM-003 (SHOULD) — Priority distinct from severity
+
+`req~alarm-003~1`
+
+Each alarm **shall** carry an ISA-18.2 priority (1 = Emergency, 4 = Low)
+set by the producer at raise time, distinct from severity (which
+describes the condition's badness rather than the operator's required
+response speed). The active alarms list in the UI **shall** be ordered
+by priority ascending (most urgent first), with ties keeping insertion
+order. The presenter **shall** assign priority by alarm semantics:
+system-fault Emergency, equipment-error / quality-critical High,
+equipment-offline / quality-warning Medium, default Low.
+
+Verified by: AlertCenterTest (`SnapshotIsOrderedByPriorityAscending`,
+`EqualPrioritiesKeepInsertionOrder`).
+
+Needs: utest
+
 ---
 
 ## STATE — Production lifecycle state machine

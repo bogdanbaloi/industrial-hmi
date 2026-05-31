@@ -23,8 +23,23 @@ enum class AlertSeverity {
 enum class AlarmState {
     UnackActive,  ///< condition active, not yet acknowledged
     AckActive,    ///< condition active, acknowledged by the operator
-    RtnUnack      ///< condition cleared, awaiting acknowledgement
+    RtnUnack,     ///< condition cleared, awaiting acknowledgement
+    Shelved       ///< Phase 2 -- operator-suppressed, auto-unshelve at deadline
 };
+
+/// ISA-18.2 operator-facing alarm priority. Distinct from severity:
+/// severity is "how bad is the condition", priority is "how urgently
+/// must the operator respond". Lower numbers = more urgent. Defaults to
+/// the lowest (Low) so a producer that doesn't set it cannot accidentally
+/// promote a noisy alarm above a real safety event.
+///   1  Emergency  -- immediate operator action required (safe-state)
+///   2  High       -- prompt action required (e.g. equipment fault)
+///   3  Medium     -- timely action required (quality below threshold)
+///   4  Low        -- informational / status (default)
+inline constexpr int kAlarmPriorityEmergency = 1;
+inline constexpr int kAlarmPriorityHigh      = 2;
+inline constexpr int kAlarmPriorityMedium    = 3;
+inline constexpr int kAlarmPriorityLow       = 4;
 
 /// ViewModel for a single alert card.
 ///
@@ -52,6 +67,12 @@ struct AlertViewModel {
     /// advances it). Drives the state badge + the Acknowledge affordance
     /// in the AlertsPanel.
     AlarmState    state{AlarmState::UnackActive};
+
+    /// ISA-18.2 priority (1 = Emergency, 4 = Low). The producer sets it
+    /// at raise() time; AlertCenter preserves it across state transitions.
+    /// The AlertsPanel orders the active list by priority ascending so the
+    /// most urgent alarm sits at the top regardless of arrival order.
+    int           priority{kAlarmPriorityLow};
 
     /// Optional. When set, AlertCenter::retranslate() calls this on the
     /// alert to refresh `title`/`message` from the current locale. The

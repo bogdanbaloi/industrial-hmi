@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ISA-18.2 alarms Phase 2 -- shelve + priority (REQ-ALARM-002, -003)
+
+Extends the Phase 1 alarm lifecycle with the two ISA-18.2 affordances
+that turn a working alarm panel into a managed one.
+
+#### Added
+
+- `AlarmState::Shelved` + `AlertCenter::shelve(key, duration)` /
+  `unshelve(key)` / `tick()`. The shelve clock is constructor-injected
+  (`std::function<TimePoint()>`) so tests are deterministic without
+  sleeps; the GUI drives `tick()` from the existing model-tick path in
+  `DashboardPresenter::handleNewWorkUnit` (no Glib timer).
+- `priority` field on `AlertViewModel` + `kAlarmPriority{Emergency,High,
+  Medium,Low}` constants. `AlertCenter::snapshot()` returns the active
+  list ordered by priority ascending (stable for ties).
+- AlertsPanel: priority badge (P1..P4), state badge picks up the new
+  SHELVED label, per-alarm Shelve / Unshelve buttons (5-min default
+  shelve duration -- typical ISA-18.2 "give me a moment" window).
+- DashboardPresenter assigns priority by alarm kind on raise: system
+  fault Emergency, equipment-error / quality-critical High,
+  equipment-offline / quality-warning Medium, default Low.
+
 ### Real OEE KPI (closes Phase 8F) (REQ-DASHBOARD-008)
 
 The dashboard OEE card was the last KPI carrying a fake formula
