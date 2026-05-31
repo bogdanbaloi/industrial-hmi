@@ -26,7 +26,6 @@ inline app::core::Logger& log() {
 //   * Throughput target 100 u/h -- demo-line nominal
 //   * Pass rate target 98% -- typical pharma / regulated industry
 constexpr double kOeeTargetPct           = 85.0;
-constexpr double kOeeInitialPct          = 85.0;  // shown before first sample
 constexpr double kThroughputTargetUph    = 100.0;
 constexpr double kPassRateTargetPct      = 98.0;
 
@@ -43,13 +42,6 @@ constexpr double kPassRateWarningThresholdPct = 90.0;
 //   >= 85 OK   |   80 - 85 Warning   |   < 80 Critical
 constexpr double kOeeOkThresholdPct      = 85.0;
 constexpr double kOeeWarningThresholdPct = 80.0;
-
-// Placeholder OEE formula derives a movement-with-quality value
-// from the aggregate pass rate; replaced by a real OEE model in
-// Phase 8F. Formula: oee = kOeeBaseline + (passRate - 90) * kOeeQualityWeight
-constexpr double kOeeFormulaBaseline      = 80.0;
-constexpr double kOeeFormulaPivotPct      = 90.0;
-constexpr double kOeeFormulaQualityWeight = 0.7;
 
 // Session-uptime donut palette (Phase 8C). Idle gets a calmer
 // neutral blue since it is neither good nor bad on its own; the
@@ -355,9 +347,11 @@ void DashboardPage::buildUI() {
         kpiStripWidgets_.oeeCard = Gtk::make_managed<BigNumberCard>();
         kpiStripWidgets_.oeeCard->setLabel(_("OEE"));
         kpiStripWidgets_.oeeCard->setUnit("%");
-        kpiStripWidgets_.oeeCard->setValue(kOeeInitialPct, 1);
+        // Starts at 0 -- the real value streams in via updateWorkUnitWidgets
+        // (model-computed A * P * Q) on the first work-unit notify.
+        kpiStripWidgets_.oeeCard->setValue(0.0, 1);
         kpiStripWidgets_.oeeCard->setTarget(kOeeTargetPct);
-        kpiStripWidgets_.oeeCard->setStatus(BigNumberCard::Status::Ok);
+        kpiStripWidgets_.oeeCard->setStatus(BigNumberCard::Status::Warning);
         kpiStripWidgets_.container->append(*kpiStripWidgets_.oeeCard);
 
         kpiStripWidgets_.throughputCard = Gtk::make_managed<BigNumberCard>();
@@ -575,6 +569,20 @@ void DashboardPage::updateWorkUnitWidgets(const presenter::WorkUnitViewModel& vm
                 ? BigNumberCard::Status::Ok
                 : BigNumberCard::Status::Warning);
     }
+
+    // OEE card -- model-computed Availability * Performance * Quality.
+    // Replaces the Phase-8F pass-rate-only placeholder formula. The
+    // value moves on every tick because each component is rebuilt from
+    // live signals on the work-unit notify.
+    auto tierForOee = [](double v) {
+        if (v >= kOeeOkThresholdPct)      return BigNumberCard::Status::Ok;
+        if (v >= kOeeWarningThresholdPct) return BigNumberCard::Status::Warning;
+        return BigNumberCard::Status::Critical;
+    };
+    if (kpiStripWidgets_.oeeCard != nullptr) {
+        kpiStripWidgets_.oeeCard->setValue(vm.oeePct, 1);
+        kpiStripWidgets_.oeeCard->setStatus(tierForOee(vm.oeePct));
+    }
 }
 
 void DashboardPage::updateEquipmentCard(const presenter::EquipmentCardViewModel& vm) {
@@ -771,27 +779,9 @@ void DashboardPage::updateTopMetrics() {
         kpiStripWidgets_.passRateCard->setStatus(tierForPassRate(avgPassRate));
     }
 
-    // OEE -- placeholder formula until Phase 8F surfaces a real
-    // Availability * Performance * Quality breakdown. The current
-    // approximation maps the aggregate pass rate to an 80-95 OEE
-    // band so the card visibly moves with quality without claiming
-    // a metric we don't actually compute. The target of 85% gives
-    // the delta arrow something to flip against.
-    auto tierForOee = [](double v) {
-        if (v >= kOeeOkThresholdPct)      return BigNumberCard::Status::Ok;
-        if (v >= kOeeWarningThresholdPct) return BigNumberCard::Status::Warning;
-        return BigNumberCard::Status::Critical;
-    };
-
-    if (kpiStripWidgets_.oeeCard != nullptr) {
-        const double oee =
-            kOeeFormulaBaseline +
-            (avgPassRate - kOeeFormulaPivotPct) * kOeeFormulaQualityWeight;
-        kpiStripWidgets_.oeeCard->setValue(oee, 1);
-        kpiStripWidgets_.oeeCard->setStatus(tierForOee(oee));
-    }
-    // Throughput is work-unit driven (completion rate), not quality
-    // driven, so it is updated in updateWorkUnitWidgets rather than here.
+    // OEE is now model-computed (Availability * Performance * Quality);
+    // it rides on the work-unit ViewModel and is updated in
+    // updateWorkUnitWidgets rather than here. Likewise THROUGHPUT.
 }
 
 // Session-uptime tracking (Phase 8C donut)

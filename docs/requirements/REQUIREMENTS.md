@@ -424,6 +424,25 @@ reset) + DashboardPresenterTest.ForwardsModelThroughputIntoViewModel
 
 Needs: utest
 
+### REQ-DASHBOARD-008 (NICE) — Real OEE composite (A * P * Q)
+
+`req~dashboard-008~1`
+
+The dashboard OEE KPI **shall** display the live OEE composite
+(Availability * Performance * Quality, the Vorne / OEE Industry
+Standards formulation), each component derived from real model signals:
+Availability from the fraction of equipment in a running state,
+Performance from the live throughput vs the nominal target, Quality
+from the average checkpoint pass rate. The view **shall not** compute
+the formula itself; the model exposes the decomposition through
+`ProductionModel::oeeSnapshot()` and the presenter forwards the
+composite onto `WorkUnitViewModel::oeePct` so the figure is auditable.
+
+Verified by: DashboardPresenterTest.ForwardsModelOeeIntoViewModel
+(model OEE composite reaches the view's ViewModel unchanged).
+
+Needs: utest
+
 ---
 
 ## HISTORIAN — Time-series persistence

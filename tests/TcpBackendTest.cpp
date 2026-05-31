@@ -68,6 +68,7 @@ public:
                 getQualityCheckpoints, (), (const, override));
     MOCK_METHOD(app::model::WorkUnit, getWorkUnit, (), (const, override));
     MOCK_METHOD(std::string, lastFaultReason, (), (const, override));
+    MOCK_METHOD(app::model::OeeMetrics, oeeSnapshot, (), (const, override));
 };
 
 class MockProductsRepository : public ProductsRepository {

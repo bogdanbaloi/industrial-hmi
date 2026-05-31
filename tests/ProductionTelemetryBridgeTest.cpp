@@ -93,6 +93,7 @@ public:
         return {};
     }
     [[nodiscard]] std::string lastFaultReason() const override { return {}; }
+    [[nodiscard]] app::model::OeeMetrics oeeSnapshot() const override { return {}; }
 
     // Test fire helpers
     void fireSystemState(SystemState s) { if (stateCb_) stateCb_(s); }

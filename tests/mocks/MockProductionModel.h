@@ -39,6 +39,7 @@ public:
     MOCK_METHOD((std::vector<model::QualityCheckpoint>), getQualityCheckpoints, (), (const, override));
     MOCK_METHOD(model::WorkUnit, getWorkUnit, (), (const, override));
     MOCK_METHOD(std::string, lastFaultReason, (), (const, override));
+    MOCK_METHOD(model::OeeMetrics, oeeSnapshot, (), (const, override));
 };
 
 }  // namespace app::test
