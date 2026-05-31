@@ -46,6 +46,7 @@ Each file has the following sections:
 | 0011 | [Multi-station support (Primary/Secondary first instance)](0011-multi-station-support.md) | Accepted |
 | 0012 | [Requirements traceability — lightweight, not DOORS](0012-requirements-traceability.md) | Superseded by 0013 |
 | 0013 | [Adopt OpenFastTrace for requirements traceability](0013-openfasttrace-adoption.md) | Accepted |
+| 0014 | [`Result<T, E>` at boundaries, not everywhere](0014-result-at-boundaries-not-everywhere.md) | Accepted |
 
 ## Adding a new ADR
 
