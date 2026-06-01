@@ -1,3 +1,6 @@
+// [utest->req~perf-001~1]
+// Covers REQ-PERF-001 (reproducible microbenchmarks on hot paths).
+//
 // Benchmark: Modbus TCP PDU codec.
 //
 // Why this matters: a Modbus master polling N slaves at 100ms cycle

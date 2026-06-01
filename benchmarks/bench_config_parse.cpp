@@ -1,3 +1,6 @@
+// [utest->req~perf-001~1]
+// Covers REQ-PERF-001 (reproducible microbenchmarks on hot paths).
+//
 // Benchmark: ConfigManager cold-start parse.
 //
 // Why this matters: the parser swap in ADR-0015 (hand-rolled flat parser

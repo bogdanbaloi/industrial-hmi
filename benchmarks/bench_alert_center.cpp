@@ -1,3 +1,6 @@
+// [utest->req~perf-001~1]
+// Covers REQ-PERF-001 (reproducible microbenchmarks on hot paths).
+//
 // Benchmark: AlertCenter lifecycle operations under ISA-18.2 alarm-storm
 // conditions.
 //
