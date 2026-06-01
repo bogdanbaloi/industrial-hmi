@@ -20,8 +20,66 @@ core.
   `main.cpp` via `#ifdef CONSOLE_MODE`. The console binary links
   **zero gtkmm** -- concrete proof that the `ViewObserver` abstraction
   is a real View-swap seam, not just marketing.
+- **ISA-18.2 / IEC 62682 alarm lifecycle** -- UnackActive / AckActive
+  / RtnUnack states + operator acknowledge + shelve with auto-expiry
+  + priority (P1..P4 distinct from severity) + audit journal of every
+  transition (RAISE / ACK / RTN / RESOLVE / SHELVE / UNSHELVE /
+  EXPIRE / REALARM). The defining ISA-18.2 invariant -- a transient
+  fault that returns to normal while still UNACKNOWLEDGED stays
+  visible until the operator acknowledges it -- is mechanised in
+  `AlertCenter`, not commentary. See REQ-ALARM-001..004.
+- **Formal SystemState FSM via Boost.SML** -- the production lifecycle
+  (Idle / Running / Calibration / Error) lives as a declarative
+  transition table; invalid commands are silently dropped, not
+  applied. Fault events drive the model to a safe-state Error
+  regardless of source state and lock the line out until reset.
+  ASPICE-style verifiable state model in ~30 LOC. See REQ-STATE-001..003
+  + ADR-0011 + `src/model/SystemStateMachine.cpp`.
+- **Real OEE composite** (Availability * Performance * Quality, Vorne
+  formula) computed in the model from live signals -- not a UI
+  placeholder. Availability from the fraction of equipment in a
+  running state, Performance from throughput / target UPH (clamped to
+  100%), Quality from the average checkpoint pass rate. See
+  REQ-DASHBOARD-008.
+- **Requirements traceability (OpenFastTrace)** -- 15 ADRs + 62
+  functional requirements in `docs/requirements/REQUIREMENTS.md`,
+  cross-checked on every PR against `// [utest->req~xxx~1]`
+  coverage tags in source. Bidirectional matrix: every MUST/SHOULD
+  requirement must have a covering test, every coverage tag must
+  point at a real requirement. ASPICE / IEC 61508 / ISO 26262 SWE.4
+  / SWE.5 discipline scaled down for a portfolio codebase. CI job
+  `traceability` is load-bearing; PRs that introduce a REQ without
+  a test fail.
+- **Reproducible perf budgets** -- google/benchmark harnesses under
+  `benchmarks/` (`bench_alert_center`, `bench_modbus_pdu`,
+  `bench_config_parse`) report p50 / p90 / p99 because tail latency
+  is the operator-budget contract, not the mean. Baseline numbers
+  captured on AMD Ryzen 7 5800X / WSL Ubuntu 24.04 / GCC 13.3
+  (e.g. `AlertCenter::snapshot` at N=1000 active alarms: ~195us p50,
+  leaving 99% of a 100ms render budget). See REQ-PERF-001 + ADR-0015.
+  Build with `-DBUILD_BENCHMARKS=ON`.
+- **Adversarial-input safety on wire parsers (libFuzzer)** -- under
+  `fuzzers/`, three harnesses (`fuzz_modbus_decode`,
+  `fuzz_mqtt_publish`, `fuzz_mqtt_remaining_length`) drive arbitrary
+  bytes through the parsers a misbehaving PLC / broker / MITM could
+  emit. Property under test, identical across targets: any error
+  code is acceptable; corrupting the host process is not. Sanitizer
+  instrumentation (ASan + UBSan) layered with libFuzzer coverage.
+  Smoke run on the reference machine: ~880k exec/s on Modbus, ~27k
+  on MQTT PUBLISH, zero crashes. See REQ-INTEGRATION-006. Build with
+  `-DBUILD_FUZZERS=ON` (Clang required).
+- **Config schema + semantic validator** -- `nlohmann/json` parser
+  (ADR-0015) replaces a hand-rolled flat-key parser that had two
+  known correctness bugs (brace-in-string desync, formatter-driven
+  key-order corruption); both are now impossible at the tokeniser
+  level. Beyond syntactic JSON, `ConfigValidator` enforces semantic
+  rules (log-level / language-code enums, positive durations / counts
+  / sizes, ports 1..65535 when the owning backend is enabled) and
+  raises a distinct `ConfigInvalidError` listing every violation in
+  one pass. The auditable spec lives in `schemas/app-config.schema.json`
+  (JSON Schema draft-07). See REQ-CORE-005.
 - **67% test coverage** verified by gcovr in CI on every PR, across
-  11,112 instrumented lines and **79 ctest targets**: scenario-based
+  11,112 instrumented lines and **80 ctest targets**: scenario-based
   E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
   tests under real GTK via Xvfb, dialog dispatch via programmatic
   `response()`, plus integration tests that wire **real** components
@@ -101,7 +159,14 @@ core.
   six trend charts side by side (range picker: 1h / 24h / 7d).
   Off by default; opt-in via `historian.enabled` in `app-config.json`.
 - **Cross-platform CI** on Ubuntu 24.04 (GCC 13 + pkg-config) and
-  Windows MSYS2 CLANG64; clang-tidy + cppcheck gates every PR.
+  Windows MSYS2 CLANG64. Every PR gated by **AddressSanitizer +
+  UndefinedBehaviorSanitizer + ThreadSanitizer + Valgrind Memcheck +
+  clang-tidy (WarningsAsErrors) + cppcheck + OpenFastTrace
+  requirements traceability**. The clang-tidy gate treats every
+  diagnostic as a hard error; the OFT gate treats an uncovered
+  MUST/SHOULD requirement as a hard error. Tagged releases auto-publish
+  Linux `.tar.gz` and Windows `.zip` artifacts with the full GTK
+  runtime bundled.
 
 ## Quick Start
 
@@ -221,7 +286,7 @@ you're evaluating the codebase:
   audit trail (Argon2id, three-role permission model, SQLite audit
   log with CSV export).
 - **[`src/integration/`](src/integration/README.md)** -- Four
-  network backends (TCP, MQTT 3.1.1/5.0, Modbus TCP, OPC-UA) +
+  network backends (TCP, MQTT 3.1.1, Modbus TCP, OPC-UA) +
   telemetry bridges + serializers.
 - **[`src/presenter/`](src/presenter/README.md)** -- MVP backbone,
   ViewObserver pattern, RBAC integration, six concrete presenters.
@@ -329,7 +394,10 @@ scripts/
 po/                     gettext catalogs (11 languages)
 config/                 app-config.json
 cmake/                  FindOnnxRuntime.cmake
-tests/                  79 ctest targets (see Testing section)
+tests/                  80 ctest targets (see Testing section)
+benchmarks/             google/benchmark p50/p90/p99 harnesses (opt-in via BUILD_BENCHMARKS=ON)
+fuzzers/                libFuzzer harnesses on wire parsers (opt-in via BUILD_FUZZERS=ON)
+schemas/                JSON Schema spec for app-config.json (draft-07)
 ```
 
 ## Extensibility -- how to add X
@@ -528,7 +596,7 @@ cmake --build build/debug
 cd build/debug && xvfb-run ctest --output-on-failure
 ```
 
-On Linux all 76 targets are green; on Windows MSYS2 we run the same
+On Linux all 80 targets are green; on Windows MSYS2 we run the same
 suite minus a few view-layer tests that need a live `Gtk::Application`
 context (skipped via runtime check, not silenced).
 
@@ -1040,7 +1108,7 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled client (full duplex, no paho dep) + OPC-UA via open62541 |
 | Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros) |
-| Testing | GoogleTest + gmock (79 ctest targets) |
+| Testing | GoogleTest + gmock (80 ctest targets) + google/benchmark (p50/p90/p99 hot-path microbenchmarks) + libFuzzer (wire-parser fuzz harnesses) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |
