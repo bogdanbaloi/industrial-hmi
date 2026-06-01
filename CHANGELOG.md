@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fuzz the wire parsers (REQ-INTEGRATION-006)
+
+Continuous-coverage fuzzing of the parsers that turn untrusted bytes off
+a socket into application state. Pairs with the existing ASan / UBSan /
+TSan / clang-tidy gates -- those run on hand-chosen inputs, libFuzzer
+drives orders of magnitude more inputs through the same sanitizer
+instrumentation.
+
+The property under test, identical across all targets:
+> A misbehaving peer sending arbitrary bytes must not crash the HMI,
+> leak memory, or trip undefined behaviour. Any error code is
+> acceptable; corrupting the host process is not.
+
+#### Added
+
+- `fuzzers/fuzz_modbus_decode.cpp` -- Modbus MBAP/PDU decoder
+  (`decodeReadResponse`). Synthesises `ResponseContext` from the first
+  5 input bytes so the fuzzer drives the TransactionIdMismatch /
+  UnitIdMismatch / FunctionCodeMismatch branches without scripting a
+  state machine.
+- `fuzzers/fuzz_mqtt_publish.cpp` -- MQTT 3.1.1 PUBLISH parser
+  (`parsePublish`). Inbound subscriber path; the harness catches and
+  ignores std exceptions because the production caller already does --
+  the bug we're hunting is a SILENT memory defect, not a thrown one.
+- `fuzzers/fuzz_mqtt_remaining_length.cpp` -- variable-byte length
+  decoder. Smallest-surface, highest-frequency parser in the codebase
+  (every MQTT packet hits it first), so it gets its own harness.
+- `fuzzers/corpus/<target>/` -- minimal seed corpora (2-3 valid frames
+  per target, including an exception-response Modbus PDU).
+- `fuzzers/README.md` with running protocol, smoke-run baseline numbers
+  (Ryzen 7 5800X, WSL Ubuntu 24.04, Clang 18.1: ~880k exec/s on Modbus,
+  ~27k on MQTT PUBLISH, ~65k on MQTT remaining-length), libFuzzer vs
+  AFL++ trade-off rationale, and what we explicitly do NOT fuzz (JSON
+  parse, OPC-UA stack, encoders, internal algorithms).
+- REQ-INTEGRATION-006 in `REQUIREMENTS.md` + `TRACEABILITY.md` row.
+
+#### Build system
+
+- `BUILD_FUZZERS` CMake option (default OFF). Auto-skips with a STATUS
+  message on non-Clang toolchains so the flag can stay ON in a preset
+  for mixed-compiler dev teams.
+- Sanitizer + libFuzzer flags applied per-target
+  (`-fsanitize=fuzzer,address,undefined`) so the rest of the build tree
+  is untouched when BUILD_FUZZERS is the only opt-in.
+
+#### Smoke-run findings
+
+Zero crashes in a 4-second per-target smoke run on the seed corpora
+under ASan + UBSan + libFuzzer coverage. Targets are ready for
+long-running campaigns; CI integration tracked separately.
+
 ### Reproducible microbenchmarks on hot paths (REQ-PERF-001)
 
 Adds google/benchmark v1.9.0 (vendored via FetchContent, default OFF behind

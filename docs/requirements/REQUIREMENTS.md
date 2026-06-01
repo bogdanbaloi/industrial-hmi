@@ -633,6 +633,30 @@ Verified by: BackendHealthPresenterTest, IntegrationManagerTest.
 
 Needs: utest
 
+### REQ-INTEGRATION-006 (MUST) — Wire parsers robust to adversarial input
+
+`req~integration-006~1`
+
+The wire parsers that consume bytes off the network -- Modbus MBAP/PDU
+decoder, MQTT PUBLISH parser, MQTT variable-byte length decoder --
+**shall** be continuously fuzz-tested under sanitizer instrumentation
+(AddressSanitizer + UndefinedBehaviorSanitizer + libFuzzer coverage).
+
+A misbehaving peer (PLC, broker, man-in-the-middle) sending arbitrary
+bytes **shall not** crash the HMI, leak memory, or trip undefined
+behaviour. Returning any error code is acceptable; corrupting the host
+process is not.
+
+Harnesses live in `fuzzers/`, opt-in behind `BUILD_FUZZERS=ON` (Clang
+required; CMake auto-skips with a STATUS message on GCC). Seed corpora
+under `fuzzers/corpus/<target>/`. See `fuzzers/README.md` for the
+running protocol + smoke-run baseline numbers.
+
+Verified by: `fuzz_modbus_decode`, `fuzz_mqtt_publish`,
+`fuzz_mqtt_remaining_length` (built under `-DBUILD_FUZZERS=ON`).
+
+Needs: utest
+
 ---
 
 ## PERF — Performance budgets

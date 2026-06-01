@@ -1268,6 +1268,35 @@ if(BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 
+# Fuzzers (only when BUILD_FUZZERS=ON, AND the compiler is Clang). The
+# fuzz harness relies on libFuzzer's `-fsanitize=fuzzer` mode, which is
+# Clang-only -- GCC has no equivalent. When the flag is on but the
+# compiler isn't Clang, we emit a status message and skip rather than
+# failing the configure, so a developer can leave BUILD_FUZZERS=ON in a
+# preset without breaking GCC builds.
+#
+# Why libFuzzer and not AFL++:
+#   - In-process, no fork-server -- runs at full instrumentation speed
+#     without OS-level overhead per iteration.
+#   - Same instrumentation toolchain as the existing AddressSanitizer +
+#     UndefinedBehaviorSanitizer + ThreadSanitizer gates (Clang).
+#   - Standard `LLVMFuzzerTestOneInput` entry point keeps each fuzz
+#     harness ~30 LOC, no glue.
+#   - CI just needs to compile-and-run; no separate fuzz orchestrator.
+option(BUILD_FUZZERS
+       "Build the fuzzers/ tree (libFuzzer, Clang-only)" OFF)
+if(BUILD_FUZZERS)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+       OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+        add_subdirectory(fuzzers)
+    else()
+        message(STATUS
+            "BUILD_FUZZERS=ON but CXX compiler is "
+            "${CMAKE_CXX_COMPILER_ID} (not Clang) -- skipping fuzzers/. "
+            "Re-configure with CC=clang CXX=clang++ to enable.")
+    endif()
+endif()
+
 # CPack - Package Generation (Windows Installer / Linux Package)
 
 set(CPACK_PACKAGE_NAME "IndustrialHMI")
