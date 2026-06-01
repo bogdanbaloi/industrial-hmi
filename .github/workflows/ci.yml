@@ -596,13 +596,13 @@ jobs:
         java -jar oft.jar trace \
           -o html \
           -f build/traceability-report.html \
-          docs/requirements tests src || REPORT_EXIT=$?
+          docs/requirements tests src benchmarks || REPORT_EXIT=$?
         echo "OFT report exit code: ${REPORT_EXIT:-0}"
 
     - name: Trace (gate, fail on uncovered MUST/SHOULD)
       run: |
         java -jar oft.jar trace \
-          docs/requirements tests src
+          docs/requirements tests src benchmarks
 
     - name: Upload Traceability Report
       if: always()

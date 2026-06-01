@@ -46,6 +46,7 @@ lowercase canonical form.
 | `inspection` | Edge AI quality inspection (ONNX runtime) |
 | `integration` | Backend protocols (TCP, MQTT, Modbus, OPC-UA) |
 | `multistation` | Primary / secondary deployment + bridge |
+| `perf` | Performance budgets + microbenchmark coverage |
 | `products` | Product catalogue + CRUD |
 | `quality` | Quality checkpoints, pass rate, alerts |
 | `settings` | Runtime preferences (theme, palette, log panel) |
@@ -629,6 +630,38 @@ Every active backend **shall** report its connection state
 sidebar BackendHealthBar can colour-code each row.
 
 Verified by: BackendHealthPresenterTest, IntegrationManagerTest.
+
+Needs: utest
+
+---
+
+## PERF — Performance budgets
+
+### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths
+
+`req~perf-001~1`
+
+Hot paths the operator-visible budget depends on **shall** carry
+reproducible microbenchmarks under `benchmarks/`, built behind an
+opt-in `BUILD_BENCHMARKS=ON` flag using
+[google/benchmark](https://github.com/google/benchmark) v1.9.0
+(vendored via FetchContent).
+
+The initial coverage is:
+- `bench_alert_center` — `raise()`, `acknowledge()`, `snapshot()` at
+  N=10/100/1000 active alarms (ISA-18.2 alarm-storm path)
+- `bench_modbus_pdu` — `encodeReadRequest` / `decodeReadResponse` at
+  qty=1/10/125 (master poll-loop path)
+- `bench_config_parse` — cold-start `ConfigManager::initialize()` on
+  a realistic config (ADR-0015 parser-swap accounting)
+
+Reporting **shall** include p50 / p90 / p99 (not just mean / stddev)
+because tail latency is the operator-budget contract; means hide the
+worst-1% case behind the bulk of the distribution. The captured
+baseline numbers live in `benchmarks/README.md`.
+
+Verified by: `benchmarks/bench_alert_center`, `bench_modbus_pdu`,
+`bench_config_parse` (built when `BUILD_BENCHMARKS=ON`).
 
 Needs: utest
 
