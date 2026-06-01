@@ -8,7 +8,10 @@
 #include "src/gtk/view/ThemeManager.h"
 #include "src/auth/AuthService.h"
 #include "src/auth/Role.h"
+#include "src/auth/AuditEvent.h"
+#include "src/auth/AuditLogger.h"
 #include "src/auth/Session.h"
+#include "src/auth/User.h"
 #include "src/gtk/view/pages/Page.h"
 #include "src/gtk/view/pages/AuditLogPage.h"
 #include "src/gtk/view/pages/UsersPage.h"
@@ -387,6 +390,27 @@ void MainWindow::createDashboardPages(app::core::Logger& logger,
     }
     if (audit != nullptr && session != nullptr) {
         dashboardPresenter_->setAudit(*audit, *session);
+        // REQ-ALARM-004: wire AlertCenter lifecycle events into the audit
+        // log under the ALERT category. AlertCenter stays decoupled from
+        // auth/* -- the composition root supplies a callback that
+        // translates (action, key) into an AuditEvent.
+        if (alertCenter_) {
+            auto* a = audit;
+            auto* s = session;
+            alertCenter_->setAuditCallback(
+                [a, s](std::string_view action, std::string_view key) {
+                    const auto userOpt = s->currentUser();
+                    const auto user    = userOpt.value_or(app::auth::User{});
+                    app::auth::AuditEvent e;
+                    e.username = user.username;
+                    e.role     = app::auth::roleName(user.role);
+                    e.category = app::auth::category::kAlert;
+                    e.action   = action;
+                    e.details  = std::string{"key="} + std::string(key);
+                    e.result   = app::auth::result::kSuccess;
+                    a->record(e);
+                });
+        }
     }
 
     // Multi-station: when a secondary model is wired in, replace

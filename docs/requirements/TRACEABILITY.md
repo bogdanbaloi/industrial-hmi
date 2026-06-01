@@ -144,6 +144,7 @@ requirements may be smoke-tested.
 | REQ-ALARM-001 | SHOULD | `src/presenter/AlertCenter.h` (lifecycle state machine: raise/clear/acknowledge), `src/presenter/modelview/AlertViewModel.h` (AlarmState), `src/gtk/view/widgets/AlertsPanel.h` (state badge + Acknowledge) | AlertCenterTest (state-machine cases), AlertCenterModelIntegrationTest | ISA-18.2 / IEC 62682 |
 | REQ-ALARM-002 | SHOULD | `src/presenter/AlertCenter.h` (Shelved state + shelve/unshelve/tick + injected clock), `src/presenter/DashboardPresenter.cpp::handleNewWorkUnit` (drives tick from the model tick), `src/gtk/view/widgets/AlertsPanel.h` (Shelve / Unshelve buttons) | AlertCenterTest (shelve / unshelve / auto-expiry / condition-tracking-while-shelved) | ISA-18.2 |
 | REQ-ALARM-003 | SHOULD | `src/presenter/modelview/AlertViewModel.h` (priority field + ISA-18.2 priority constants), `src/presenter/AlertCenter.h::snapshot` (stable sort by priority ascending), `src/presenter/DashboardPresenter.cpp` (assigns priority per alarm kind), `src/gtk/view/widgets/AlertsPanel.h` (priority badge) | AlertCenterTest (priority ordering + tie stability) | ISA-18.2 |
+| REQ-ALARM-004 | SHOULD | `src/presenter/AlertCenter.h` (`AuditFn` callback + `emitAudit` in every mutator), `src/gtk/view/MainWindow.cpp` (wires the callback to AuditLogger under `category::kAlert`) | AlertCenterTest (RAISE/ACK/RESOLVE/RTN/REALARM/SHELVE/UNSHELVE/EXPIRE + no-journal-on-refresh) | ISA-18.2 |
 
 ## STATE
 
