@@ -33,6 +33,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -42,10 +43,20 @@ namespace {
 
 using ordered_json = nlohmann::ordered_json;
 
-/// Recursively flatten a JSON value into a flat map of dot-joined paths
-/// to string-rendered scalars. Mirrors the leaf shape the legacy
+/// Flatten a JSON value into a flat map of dot-joined paths to
+/// string-rendered scalars. Mirrors the leaf shape the legacy
 /// hand-rolled parser produced, so every getValue/getInt/getFloat call
 /// site keeps working unchanged.
+///
+/// Implemented with an explicit std::vector frame stack rather than a
+/// natural recursive DFS. The recursive form is more idiomatic for a
+/// tree traversal, but our clang-tidy config gates `misc-no-recursion`
+/// as an error (CI WarningsAsErrors), and a NOLINT suppression on a
+/// function that calls ITSELF didn't take -- the diagnostic fires on
+/// both the function and the call-site frame. Explicit stack removes
+/// the warning structurally and bounds the maximum depth by std::vector
+/// heap capacity (well above any realistic nesting; nlohmann already
+/// rejects DOMs nested past 1000 frames at parse time).
 ///
 /// Encoding rules per JSON scalar type, chosen to match the legacy
 /// parser exactly:
@@ -58,57 +69,72 @@ using ordered_json = nlohmann::ordered_json;
 /// Arrays use numeric indices as path segments
 /// ("dashboard.equipment_lines.0.name").
 ///
-/// NOLINTNEXTLINE(misc-no-recursion) -- DFS over a JSON DOM is the
-/// natural idiom; converting to an explicit stack would obscure the
-/// shape without bounding any practically-reachable depth (our
-/// app-config nests 3-4 levels; nlohmann itself imposes a 1000-frame
-/// limit at parse time, which we inherit).
-void flatten(const ordered_json& node,
-             const std::string& prefix,
+/// Traversal order is reverse vs the recursive form (LIFO pop order
+/// from the stack), but `out` is a std::map so insertion order does
+/// not affect lookup -- all existing call sites are key-based.
+void flatten(const ordered_json& root,
              std::map<std::string, std::string>& out) {
-    if (node.is_object()) {
-        for (auto it = node.begin(); it != node.end(); ++it) {
-            const std::string nextKey =
-                prefix.empty() ? it.key() : prefix + "." + it.key();
-            flatten(it.value(), nextKey, out);
+    struct Frame {
+        const ordered_json* node;
+        std::string prefix;
+    };
+    std::vector<Frame> stack;
+    stack.push_back({&root, std::string{}});
+
+    while (!stack.empty()) {
+        Frame frame = std::move(stack.back());
+        stack.pop_back();
+        const ordered_json& node = *frame.node;
+        const std::string& prefix = frame.prefix;
+
+        if (node.is_object()) {
+            for (auto it = node.begin(); it != node.end(); ++it) {
+                std::string nextKey =
+                    prefix.empty() ? it.key()
+                                   : prefix + "." + it.key();
+                stack.push_back({&it.value(), std::move(nextKey)});
+            }
+            continue;
         }
-        return;
-    }
-    if (node.is_array()) {
-        for (std::size_t i = 0; i < node.size(); ++i) {
-            const std::string nextKey =
-                prefix.empty() ? std::to_string(i)
-                               : prefix + "." + std::to_string(i);
-            flatten(node[i], nextKey, out);
+        if (node.is_array()) {
+            for (std::size_t i = 0; i < node.size(); ++i) {
+                std::string nextKey =
+                    prefix.empty()
+                        ? std::to_string(i)
+                        : prefix + "." + std::to_string(i);
+                stack.push_back({&node[i], std::move(nextKey)});
+            }
+            continue;
         }
-        return;
-    }
-    if (prefix.empty()) {
-        // A top-level scalar config (i.e. the file is just `42` or
-        // `"foo"`) -- nothing meaningful to bind it to. Skip rather
-        // than insert under an empty key.
-        return;
-    }
-    if (node.is_string()) {
-        out[prefix] = node.get<std::string>();
-    } else if (node.is_boolean()) {
-        out[prefix] = node.get<bool>() ? "true" : "false";
-    } else if (node.is_number_integer()) {
-        // Fixed-width int types (google-runtime-int): cstdint typedefs
-        // are mandated by the project's clang-tidy config, and pin the
-        // serialised range explicitly to 64 bits regardless of the
-        // platform's `long long` width.
-        out[prefix] = std::to_string(node.get<std::int64_t>());
-    } else if (node.is_number_unsigned()) {
-        out[prefix] = std::to_string(node.get<std::uint64_t>());
-    } else if (node.is_number_float()) {
-        // nlohmann's dump() emits the shortest round-trip representation
-        // for doubles -- exactly what std::stof / std::stoi consume on
-        // the way out.
-        out[prefix] = node.dump();
-    } else {
-        // null or unknown -- empty string matches legacy behaviour.
-        out[prefix] = "";
+
+        // Scalar leaf.
+        if (prefix.empty()) {
+            // Top-level scalar config (file is just `42` or `"foo"`).
+            // Nothing meaningful to bind it to; skip rather than insert
+            // under an empty key.
+            continue;
+        }
+        if (node.is_string()) {
+            out[prefix] = node.get<std::string>();
+        } else if (node.is_boolean()) {
+            out[prefix] = node.get<bool>() ? "true" : "false";
+        } else if (node.is_number_integer()) {
+            // Fixed-width int types (google-runtime-int): cstdint
+            // typedefs are mandated by the project's clang-tidy config
+            // and pin the serialised range explicitly to 64 bits
+            // regardless of the platform's `long long` width.
+            out[prefix] = std::to_string(node.get<std::int64_t>());
+        } else if (node.is_number_unsigned()) {
+            out[prefix] = std::to_string(node.get<std::uint64_t>());
+        } else if (node.is_number_float()) {
+            // nlohmann's dump() emits the shortest round-trip
+            // representation for doubles -- exactly what std::stof /
+            // std::stoi consume on the way out.
+            out[prefix] = node.dump();
+        } else {
+            // null or unknown -- empty string matches legacy behaviour.
+            out[prefix] = "";
+        }
     }
 }
 
@@ -530,7 +556,7 @@ bool ConfigManager::loadConfig() {
     }
 
     config_.clear();
-    flatten(root, /*prefix=*/std::string{}, config_);
+    flatten(root, config_);
     return true;
 }
 
