@@ -330,6 +330,33 @@ Needs: utest
 
 ---
 
+### REQ-CORE-005 (SHOULD) — Semantic validation of configuration
+
+`req~core-005~1`
+
+Beyond JSON syntactic validity (REQ-CORE-004), the configuration
+**shall** be validated against a documented semantic contract before
+the rest of startup commits to its values. The contract covers
+enumerations (log level, language code), positive-only durations /
+counts / sizes, integer port ranges (1..65535) when their owning
+backend is enabled, and required-when-enabled fields.
+
+The runtime enforcement lives in `src/config/ConfigValidator.cpp`.
+The auditable spec lives at `schemas/app-config.schema.json`
+(JSON Schema draft-07). Drift between the two is caught by code
+review and by the validator's own unit tests.
+
+When validation fails, startup **shall** raise
+`ConfigInvalidError` (distinct from `ConfigCorruptError`) listing
+every violation in a single error so the operator can fix all
+issues in one round-trip. See ADR-0015.
+
+Verified by: ConfigValidatorTest.
+
+Needs: utest
+
+---
+
 ## DASHBOARD — Single-station surface
 
 ### REQ-DASHBOARD-001 (MUST) — Equipment cards reflect live state

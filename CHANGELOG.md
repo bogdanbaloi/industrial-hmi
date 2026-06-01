@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Config JSON schema + validator (REQ-CORE-005, ADR-0015)
+
+Replaces the hand-rolled flat-key JSON parser in `ConfigManager` with
+`nlohmann/json` (v3.11.3, vendored via FetchContent), and adds a
+semantic-validation pass between "config parsed" and "the rest of
+startup uses it". The public ConfigManager accessor API is unchanged
+-- every existing call site compiles and runs without modification.
+
+#### Added
+
+- `nlohmann/json` v3.11.3 via FetchContent at
+  `_deps/json-vendor/include/`, SYSTEM include so clang-tidy ignores
+  the ~25k-line single header. Mirrors the Boost.SML vendor-routing
+  pattern from ADR-0009.
+- `src/config/ConfigValidator.h/.cpp` -- runtime semantic check on
+  the parsed ConfigManager. Rules cover log-level / language-code
+  enums, positive-only durations / counts / sizes, integer port
+  ranges (1..65535) gated on the owning backend being enabled, and
+  cross-field invariants. Returns every violation in one pass so the
+  operator sees all problems in a single round-trip.
+- `schemas/app-config.schema.json` -- JSON Schema draft-07 spec
+  documenting the same contract for IDE / tooling consumers.
+- `StartupErrorCode::ConfigInvalid` + `ConfigInvalidError` -- distinct
+  from `ConfigCorruptError` so the failure dialog can phrase
+  "bad values" (edit the file) instead of "broken file" (reinstall).
+- Bootstrap stage 2.5 runs the validator after `ConfigManager::initialize`
+  and raises `ConfigInvalidError` with every violation joined.
+- ConfigValidatorTest (9 cases): minimal-valid config accepted, unknown
+  log level rejected, unknown language code rejected, "auto" language
+  accepted, non-positive window dimensions rejected (both collected),
+  out-of-range TCP port rejected when backend enabled, same port
+  ignored when backend disabled, historian batch_size=0 rejected when
+  enabled, multi-violation collection.
+- ADR-0015 documents the two-pronged decision: nlohmann for parsing,
+  C++ validator + JSON Schema as the audited spec.
+
+#### Changed
+
+- `ConfigManager` becomes `.h` + `.cpp` (was header-only). The heavy
+  `nlohmann/json.hpp` include is confined to `ConfigManager.cpp` via
+  PIMPL -- the rest of the codebase pays zero compile-time cost for
+  the parser swap.
+- `objectsConfig` is now a STATIC library (was INTERFACE). STATIC
+  rather than OBJECT so symbols propagate transitively through the
+  `objectsCore -> objectsConfig` consumer chain without per-target
+  `target_link_libraries` plumbing.
+- README / CHANGELOG number reconciliation folded into this entry:
+  79 ctest targets (was 76), 60 requirements (was 50), 131 OFT
+  specobjects (was 109). The numbers had drifted as alarms Phase 1-3,
+  SystemState SML, real OEE, and recipe management landed without
+  these aggregate counters being updated.
+
+#### Fixed
+
+- Two long-standing parser bugs are now impossible at the tokeniser
+  level (instead of being patched around): brace-in-string-value
+  desync, and key-order sensitivity when a JSON formatter sorted
+  top-level keys.
+
 ### ISA-18.2 alarms Phase 3 -- audit journal (REQ-ALARM-004)
 
 Wire alarm lifecycle transitions into the existing audit log so a
@@ -251,10 +310,10 @@ gate on every PR.
 
 #### Added / Changed
 
-- `docs/requirements/` in OFT specobject format (50 requirements with
+- `docs/requirements/` in OFT specobject format (60 requirements with
   `Needs: utest`); tests carry `// [utest->req~xxx~1]` tags.
 - CI `traceability` job: `oft trace` gate + click-through HTML report
-  artefact. OFT result: 109 total, 0 defects.
+  artefact. OFT result: 131 total, 0 defects.
 - ADR-0013 (OFT adoption) supersedes ADR-0012 (lightweight markdown).
 
 ### Test coverage expansion + layout-regression guard

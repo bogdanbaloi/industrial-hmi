@@ -64,7 +64,8 @@ requirements may be smoke-tested.
 | REQ-CORE-001 | MUST | `src/core/Result.h`, `src/core/ErrorHandling.h` | ResultTest | -- |
 | REQ-CORE-002 | MUST | `src/main.cpp` (top-level try/catch + exit codes), `src/core/ExceptionHandler.cpp` | StartupErrorsTest, ExceptionHandlerTest | -- |
 | REQ-CORE-003 | SHOULD | `src/core/Logger.cpp`, `src/core/LoggerImpl.h` | LoggerTest, LoggerImplTest | -- |
-| REQ-CORE-004 | SHOULD | `src/config/ConfigManager.h`, `config/app-config.json` | ConfigManagerTest | -- |
+| REQ-CORE-004 | SHOULD | `src/config/ConfigManager.h`, `src/config/ConfigManager.cpp`, `config/app-config.json` | ConfigManagerTest | ADR-0015 |
+| REQ-CORE-005 | SHOULD | `src/config/ConfigValidator.cpp`, `src/core/Bootstrap.cpp` (stage 2.5), `schemas/app-config.schema.json` | ConfigValidatorTest | ADR-0015 |
 
 ## DASHBOARD
 
