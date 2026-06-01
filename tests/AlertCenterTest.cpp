@@ -2,11 +2,13 @@
 // [utest->req~alarm-001~1]
 // [utest->req~alarm-002~1]
 // [utest->req~alarm-003~1]
+// [utest->req~alarm-004~1]
 // Covers REQ-QUALITY-002 (alert center),
 //        REQ-ALARM-001 (ISA-18.2 alarm lifecycle: UnackActive /
 //        AckActive / RtnUnack + acknowledge),
 //        REQ-ALARM-002 (Phase 2: shelve / unshelve / auto-expiry on tick),
-//        REQ-ALARM-003 (Phase 2: priority distinct from severity).
+//        REQ-ALARM-003 (Phase 2: priority distinct from severity),
+//        REQ-ALARM-004 (Phase 3: audit journal of lifecycle transitions).
 //
 // Tests for app::presenter::AlertCenter
 //
@@ -525,4 +527,108 @@ TEST(AlertCenter, EqualPrioritiesKeepInsertionOrder) {
     ASSERT_EQ(snap.size(), 2u);
     EXPECT_EQ(snap[0].key, "first");
     EXPECT_EQ(snap[1].key, "second");
+}
+
+// ISA-18.2 Phase 3 -- audit journal (REQ-ALARM-004)
+
+namespace {
+struct AuditRecord {
+    std::string action;
+    std::string key;
+};
+
+// Convenience: build a recording audit callback and a vector it appends
+// into. The shared_ptr lets the lambda outlive its local capture.
+auto makeRecordingAudit(std::shared_ptr<std::vector<AuditRecord>> log) {
+    return [log](std::string_view a, std::string_view k) {
+        log->push_back({std::string(a), std::string(k)});
+    };
+}
+}  // namespace
+
+TEST(AlertCenter, AuditEmitsRaiseAckResolveOnHappyPath) {
+    auto log = std::make_shared<std::vector<AuditRecord>>();
+    AlertCenter c;
+    c.setAuditCallback(makeRecordingAudit(log));
+
+    c.raise(makeAlert("k1"));   // -> RAISE
+    c.acknowledge("k1");        // -> ACK
+    c.clear("k1");              // -> RESOLVE (AckActive + clear)
+
+    ASSERT_EQ(log->size(), 3u);
+    EXPECT_EQ((*log)[0].action, "RAISE");
+    EXPECT_EQ((*log)[0].key,    "k1");
+    EXPECT_EQ((*log)[1].action, "ACK");
+    EXPECT_EQ((*log)[2].action, "RESOLVE");
+}
+
+TEST(AlertCenter, AuditEmitsRtnThenResolveWhenAckAfterReturn) {
+    auto log = std::make_shared<std::vector<AuditRecord>>();
+    AlertCenter c;
+    c.setAuditCallback(makeRecordingAudit(log));
+
+    c.raise(makeAlert("k1"));   // RAISE
+    c.clear("k1");              // RTN (UnackActive + clear -> RtnUnack)
+    c.acknowledge("k1");        // RESOLVE (RtnUnack + ack)
+
+    ASSERT_EQ(log->size(), 3u);
+    EXPECT_EQ((*log)[1].action, "RTN");
+    EXPECT_EQ((*log)[2].action, "RESOLVE");
+}
+
+TEST(AlertCenter, AuditEmitsRealarmOnReactivation) {
+    auto log = std::make_shared<std::vector<AuditRecord>>();
+    AlertCenter c;
+    c.setAuditCallback(makeRecordingAudit(log));
+
+    c.raise(makeAlert("k1"));   // RAISE
+    c.clear("k1");              // RTN
+    c.raise(makeAlert("k1"));   // REALARM (RtnUnack + raise)
+
+    ASSERT_EQ(log->size(), 3u);
+    EXPECT_EQ((*log)[2].action, "REALARM");
+}
+
+TEST(AlertCenter, AuditEmitsShelveUnshelve) {
+    auto log = std::make_shared<std::vector<AuditRecord>>();
+    AlertCenter c;
+    c.setAuditCallback(makeRecordingAudit(log));
+
+    c.raise(makeAlert("k1"));
+    c.shelve("k1", std::chrono::seconds{60});
+    c.unshelve("k1");
+
+    ASSERT_EQ(log->size(), 3u);
+    EXPECT_EQ((*log)[1].action, "SHELVE");
+    EXPECT_EQ((*log)[2].action, "UNSHELVE");
+}
+
+TEST(AlertCenter, AuditEmitsExpireOnAutoUnshelve) {
+    auto clock = std::make_shared<FakeClock>();
+    auto log = std::make_shared<std::vector<AuditRecord>>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.setAuditCallback(makeRecordingAudit(log));
+
+    c.raise(makeAlert("k1"));
+    c.shelve("k1", std::chrono::seconds{60});
+    clock->now += std::chrono::seconds{61};
+    c.tick();
+
+    ASSERT_EQ(log->size(), 3u);
+    EXPECT_EQ((*log)[2].action, "EXPIRE");
+    EXPECT_EQ((*log)[2].key,    "k1");
+}
+
+TEST(AlertCenter, AuditDoesNotFireOnRefreshOfActiveAlarm) {
+    auto log = std::make_shared<std::vector<AuditRecord>>();
+    AlertCenter c;
+    c.setAuditCallback(makeRecordingAudit(log));
+
+    c.raise(makeAlert("k1"));
+    c.raise(makeAlert("k1", AlertSeverity::Critical, "louder"));
+
+    // A refresh of an already-active alarm is not a lifecycle transition
+    // and must NOT pollute the audit log.
+    ASSERT_EQ(log->size(), 1u);
+    EXPECT_EQ((*log)[0].action, "RAISE");
 }

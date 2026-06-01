@@ -840,6 +840,28 @@ Verified by: AlertCenterTest (`SnapshotIsOrderedByPriorityAscending`,
 
 Needs: utest
 
+### REQ-ALARM-004 (SHOULD) — Alarm lifecycle audit journal
+
+`req~alarm-004~1`
+
+Every alarm lifecycle transition (RAISE, ACK, RTN, RESOLVE, SHELVE,
+UNSHELVE, EXPIRE, REALARM) **shall** be journalled to the existing audit
+log under the `ALERT` category when audit is wired. A refresh of an
+already-active alarm (producer re-raises while state is unchanged)
+**shall NOT** be journalled -- only genuine lifecycle transitions
+matter. `AlertCenter` **shall** stay decoupled from `auth/*`: the
+composition root supplies a `(action, key)` callback that translates
+into an `AuditEvent`. The hook **shall** be optional so headless builds
+and unit tests stay clean.
+
+Verified by: AlertCenterTest (happy-path RAISE/ACK/RESOLVE, RTN-then-
+ack, REALARM, SHELVE/UNSHELVE, EXPIRE auto-unshelve, no-journal-on-
+refresh).
+
+ADR: standards basis ANSI/ISA-18.2-2016 (alarm history / journal).
+
+Needs: utest
+
 ---
 
 ## STATE — Production lifecycle state machine
