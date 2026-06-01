@@ -78,6 +78,17 @@ public:
     /// cases are deterministic without sleeping.
     explicit AlertCenter(NowFn now) : now_(std::move(now)) {}
 
+    /// Audit hook (REQ-ALARM-004). When set, every lifecycle transition
+    /// (raise/ack/rtn/resolve/shelve/unshelve/expire/re-alarm) invokes
+    /// the callback. AlertCenter stays decoupled from auth/* -- the
+    /// composition root (MainWindow) wires a lambda that captures the
+    /// AuditLogger + Session and translates into an AuditEvent with the
+    /// `category::kAlert` bucket. Optional: tests + headless builds can
+    /// leave it unset and lifecycle events are not journalled.
+    using AuditFn = std::function<void(std::string_view action,
+                                       std::string_view details)>;
+    void setAuditCallback(AuditFn fn) { auditFn_ = std::move(fn); }
+
     /// Report that an alarm's underlying condition is ACTIVE. Inserts a
     /// new UnackActive alarm, or refreshes an existing one's presentation
     /// fields + timestamp. A condition re-activating after it had returned
@@ -88,24 +99,34 @@ public:
         if (stamped.timestamp.empty()) {
             stamped.timestamp = formatNow();
         }
+        // Capture the key before potentially moving stamped into storage,
+        // so the post-lock audit hook can still see it.
+        const std::string key = stamped.key;
+        std::string_view auditAction;  // empty -> no audit emit
         {
             const std::scoped_lock lock(mutex_);
             auto it = findByKey(stamped.key);
             if (it == alarms_.end()) {
                 stamped.state = AlarmState::UnackActive;
                 alarms_.push_back(Alarm{std::move(stamped), /*active=*/true});
+                auditAction = "RAISE";
             } else {
                 // Preserve the lifecycle state across a refresh, except a
                 // returned alarm re-firing escalates back to unacked.
-                AlarmState next = it->vm.state == AlarmState::RtnUnack
-                                      ? AlarmState::UnackActive
-                                      : it->vm.state;
+                const bool wasReturned =
+                    it->vm.state == AlarmState::RtnUnack;
+                AlarmState next = wasReturned ? AlarmState::UnackActive
+                                              : it->vm.state;
                 stamped.state        = next;
                 it->vm               = std::move(stamped);
                 it->conditionActive  = true;
+                if (wasReturned) auditAction = "REALARM";
+                // else: a refresh of an existing active alarm is not a
+                // lifecycle transition and is intentionally NOT audited.
             }
         }
         signalAlertsChanged_.emit();
+        if (!auditAction.empty()) emitAudit(auditAction, key);
     }
 
     /// Report that an alarm's underlying condition RETURNED TO NORMAL.
@@ -115,6 +136,8 @@ public:
     void clear(std::string_view key) {
         bool activeChanged  = false;
         bool historyChanged = false;
+        std::string_view auditAction;
+        const std::string keyCopy(key);
         {
             const std::scoped_lock lock(mutex_);
             auto it = findByKey(key);
@@ -124,14 +147,18 @@ public:
                 pushHistoryUnlocked(it->vm);
                 alarms_.erase(it);
                 activeChanged = historyChanged = true;
+                auditAction = "RESOLVE";
             } else if (it->vm.state == AlarmState::UnackActive) {
                 it->vm.state  = AlarmState::RtnUnack;
                 activeChanged = true;
+                auditAction = "RTN";
             }
-            // RtnUnack + clear -> nothing changes (still awaiting ack).
+            // RtnUnack / Shelved + clear -> conditionActive updated above
+            // but no visible state change; intentionally NOT audited.
         }
         if (activeChanged)  signalAlertsChanged_.emit();
         if (historyChanged) signalHistoryChanged_.emit();
+        if (!auditAction.empty()) emitAudit(auditAction, keyCopy);
     }
 
     /// Operator acknowledges an alarm. An active alarm becomes AckActive
@@ -141,6 +168,8 @@ public:
     void acknowledge(std::string_view key) {
         bool activeChanged  = false;
         bool historyChanged = false;
+        std::string_view auditAction;
+        const std::string keyCopy(key);
         {
             const std::scoped_lock lock(mutex_);
             auto it = findByKey(key);
@@ -148,14 +177,17 @@ public:
             if (it->vm.state == AlarmState::UnackActive) {
                 it->vm.state  = AlarmState::AckActive;
                 activeChanged = true;
+                auditAction = "ACK";
             } else if (it->vm.state == AlarmState::RtnUnack) {
                 pushHistoryUnlocked(it->vm);
                 alarms_.erase(it);
                 activeChanged = historyChanged = true;
+                auditAction = "RESOLVE";
             }
         }
         if (activeChanged)  signalAlertsChanged_.emit();
         if (historyChanged) signalHistoryChanged_.emit();
+        if (!auditAction.empty()) emitAudit(auditAction, keyCopy);
     }
 
     /// Operator temporarily suppresses an alarm for `duration`. The
@@ -167,6 +199,7 @@ public:
     /// updated silently so the restored state is correct.
     void shelve(std::string_view key, std::chrono::seconds duration) {
         bool activeChanged = false;
+        const std::string keyCopy(key);
         {
             const std::scoped_lock lock(mutex_);
             auto it = findByKey(key);
@@ -175,7 +208,10 @@ public:
             it->shelvedUntil = now_() + duration;
             activeChanged = true;
         }
-        if (activeChanged) signalAlertsChanged_.emit();
+        if (activeChanged) {
+            signalAlertsChanged_.emit();
+            emitAudit("SHELVE", keyCopy);
+        }
     }
 
     /// Operator releases a shelved alarm before its deadline. Restores
@@ -183,6 +219,7 @@ public:
     /// cleared while shelved). No-op when the alarm isn't shelved.
     void unshelve(std::string_view key) {
         bool activeChanged = false;
+        const std::string keyCopy(key);
         {
             const std::scoped_lock lock(mutex_);
             auto it = findByKey(key);
@@ -194,7 +231,10 @@ public:
             it->shelvedUntil = {};
             activeChanged = true;
         }
-        if (activeChanged) signalAlertsChanged_.emit();
+        if (activeChanged) {
+            signalAlertsChanged_.emit();
+            emitAudit("UNSHELVE", keyCopy);
+        }
     }
 
     /// Drives shelf auto-expiry: any shelved alarm whose deadline has
@@ -203,6 +243,7 @@ public:
     /// a controlled clock and call tick() directly.
     void tick() {
         bool activeChanged = false;
+        std::vector<std::string> expiredKeys;
         {
             const std::scoped_lock lock(mutex_);
             const TimePoint now = now_();
@@ -214,27 +255,32 @@ public:
                                          : AlarmState::RtnUnack;
                     alarm.shelvedUntil = {};
                     activeChanged = true;
+                    expiredKeys.push_back(alarm.vm.key);
                 }
             }
         }
         if (activeChanged) signalAlertsChanged_.emit();
+        for (const auto& k : expiredKeys) emitAudit("EXPIRE", k);
     }
 
     /// Operator force-resolves every alarm regardless of state (the
     /// "Clear all" button). Each is appended to history.
     void clearAll() {
         bool historyChanged = false;
+        std::vector<std::string> resolvedKeys;
         {
             const std::scoped_lock lock(mutex_);
             if (alarms_.empty()) return;
             for (const auto& alarm : alarms_) {
                 pushHistoryUnlocked(alarm.vm);
+                resolvedKeys.push_back(alarm.vm.key);
                 historyChanged = true;
             }
             alarms_.clear();
         }
         signalAlertsChanged_.emit();
         if (historyChanged) signalHistoryChanged_.emit();
+        for (const auto& k : resolvedKeys) emitAudit("RESOLVE", k);
     }
 
     /// Thread-safe snapshot of the active alarms (any non-resolved state),
@@ -355,6 +401,13 @@ private:
     sigc::signal<void()>            signalAlertsChanged_;
     sigc::signal<void()>            signalHistoryChanged_;
     NowFn                           now_;
+    AuditFn                         auditFn_;
+
+    /// Invoke the audit callback if set. Centralised so every mutator
+    /// uses the same one-liner.
+    void emitAudit(std::string_view action, std::string_view key) const {
+        if (auditFn_) auditFn_(action, key);
+    }
 };
 
 }  // namespace app::presenter

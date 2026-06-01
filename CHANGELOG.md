@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ISA-18.2 alarms Phase 3 -- audit journal (REQ-ALARM-004)
+
+Wire alarm lifecycle transitions into the existing audit log so a
+forensic auditor can reconstruct every operator interaction with an
+alarm: when it fired, when it was acknowledged, when it was shelved (and
+by whom), when the condition returned to normal, when it auto-expired
+off the shelf, and when it was finally resolved.
+
+#### Added
+
+- `AlertCenter::setAuditCallback(AuditFn)` -- a `(action, key)` callback
+  invoked from every mutator on a genuine lifecycle transition (RAISE,
+  ACK, RTN, RESOLVE, SHELVE, UNSHELVE, EXPIRE, REALARM). A refresh of an
+  already-active alarm is intentionally NOT journalled.
+- `MainWindow` wires the callback to the existing `AuditLogger` under
+  `category::kAlert` when auth is enabled; the producer (DashboardPresenter)
+  doesn't change. AlertCenter stays decoupled from `auth/*` -- the
+  composition root owns the translation into an `AuditEvent`.
+- AlertCenterTest covers every transition + the no-journal-on-refresh
+  invariant; uses a recording callback (no FakeAuditLogger needed).
+
 ### ISA-18.2 alarms Phase 2 -- shelve + priority (REQ-ALARM-002, -003)
 
 Extends the Phase 1 alarm lifecycle with the two ISA-18.2 affordances
