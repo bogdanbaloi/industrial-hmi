@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Reproducible microbenchmarks on hot paths (REQ-PERF-001)
+
+Adds google/benchmark v1.9.0 (vendored via FetchContent, default OFF behind
+`BUILD_BENCHMARKS=ON`) and three benchmark binaries that turn the
+portfolio's perf claims from hand-wave into numbers a recruiter can run.
+
+#### Added
+
+- `benchmarks/bench_alert_center.cpp` -- AlertCenter `raise()` /
+  `acknowledge()` / `snapshot()` at N=10/100/1000 active alarms. Reports
+  p50 / p90 / p99 via custom `ComputeStatistics` reducers; tail latency
+  is the operator-budget contract, not the mean.
+- `benchmarks/bench_modbus_pdu.cpp` -- `encodeReadRequest` (unchecked +
+  checked) and `decodeReadResponse` at qty=1/10/125. Quantifies the
+  `~1ns` bounds-check overhead recommended on config-driven entry points.
+- `benchmarks/bench_config_parse.cpp` -- cold-start
+  `ConfigManager::initialize()` on a realistic ~30-key config. Numbers
+  for the ADR-0015 parser-swap accounting.
+- `benchmarks/README.md` with baseline p50 numbers captured on
+  AMD Ryzen 7 5800X / WSL Ubuntu 24.04 / GCC 13.3, the scaling contract
+  per operation (O(1) / O(N) / O(N log N)), and instructions for
+  capturing a per-machine baseline JSON for regression comparison.
+- REQ-PERF-001 in `REQUIREMENTS.md` + new `perf` category +
+  `TRACEABILITY.md` row.
+
+#### Notes on the captured numbers (Ryzen 7 5800X reference)
+
+- `AlertCenter::snapshot()` at N=1000 active alarms: ~195us p50, leaving
+  >99% of a 100ms render budget.
+- `AlertCenter::raise()` refresh, N=1000: ~2.9us; O(N) linear scan on
+  key dedupe.
+- `encodeReadRequestChecked` vs unchecked: +1ns (rounding error vs
+  ~50us socket RTT). Conclusion: always use the checked variant on
+  config-driven entry points.
+- `decodeReadResponse` at qty=125 (spec max): 161ns, 8 orders below
+  the 250ms default poll interval.
+- `ConfigManager::initialize` on realistic config: 42us p50 -- in the
+  noise vs ~tens-of-ms GTK context creation during bootstrap.
+
 ### Config JSON schema + validator (REQ-CORE-005, ADR-0015)
 
 Replaces the hand-rolled flat-key JSON parser in `ConfigManager` with

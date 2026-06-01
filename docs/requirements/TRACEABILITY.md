@@ -112,6 +112,12 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-004 | MUST | `src/integration/opcua/OpcUaBackend.cpp`, `src/integration/opcua/OpcUaIngestBridge.cpp`, `src/integration/opcua/FactoryCommandSink.cpp`, `src/integration/opcua/FactoryNodeMap.cpp` | OpcUaBackendTest, Open62541ServerIntegrationTest, Open62541ClientIntegrationTest, Open62541ServerControlIntegrationTest, OpcUaIngestBridgeTest, FactoryCommandSinkTest, FactoryNodeMapTest | -- |
 | REQ-INTEGRATION-005 | SHOULD | `src/presenter/BackendHealthPresenter.cpp`, `src/integration/IntegrationManager.cpp::metricsSnapshot` | BackendHealthPresenterTest, IntegrationManagerTest | -- |
 
+## PERF
+
+| REQ-ID | Priority | Implementation | Verification | ADR |
+|---|---|---|---|---|
+| REQ-PERF-001 | SHOULD | `benchmarks/bench_alert_center.cpp`, `benchmarks/bench_modbus_pdu.cpp`, `benchmarks/bench_config_parse.cpp`, `benchmarks/README.md` (baseline numbers + scaling contract) | google/benchmark suites (built under `-DBUILD_BENCHMARKS=ON`) | -- |
+
 ## MULTISTATION
 
 | REQ-ID | Priority | Implementation | Verification | ADR |

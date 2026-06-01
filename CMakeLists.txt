@@ -259,6 +259,39 @@ add_library(nlohmann_json_headers INTERFACE)
 target_include_directories(nlohmann_json_headers SYSTEM INTERFACE
     ${CMAKE_BINARY_DIR}/_deps/json-vendor/include)
 
+# Google Benchmark (google/benchmark) -- microbenchmark harness with
+# statistical reporting (Apache 2.0). Used by the `benchmarks/`
+# tree to give the portfolio reproducible p50 / p90 / p99 numbers
+# on hot paths (AlertCenter, Modbus PDU codec, ConfigManager parse).
+#
+# Default OFF so the baseline build stays fast -- benchmarks are an
+# explicit opt-in via `-DBUILD_BENCHMARKS=ON`. CI builds the
+# benchmarks job only on demand because Google Benchmark's own
+# CMake compiles its testing surface and adds non-trivial time
+# (~30s) to a full configure.
+#
+# Vendor-routed to `_deps/gbench-vendor/` so clang-tidy's `src/.*`
+# header filter ignores the library headers; SYSTEM include
+# suppresses third-party diagnostics on top of that.
+option(BUILD_BENCHMARKS
+       "Build the benchmarks/ tree (google/benchmark)" OFF)
+if(BUILD_BENCHMARKS)
+    FetchContent_Declare(google_benchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG        v1.9.0
+        GIT_SHALLOW    TRUE
+        SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/gbench-vendor
+    )
+    # Skip Google Benchmark's own tests + Google Test dep -- we have
+    # our own (GoogleTest) wired up elsewhere; pulling a second copy
+    # via gbench would cause ODR / target-name clashes.
+    set(BENCHMARK_ENABLE_TESTING        OFF CACHE INTERNAL "")
+    set(BENCHMARK_ENABLE_GTEST_TESTS    OFF CACHE INTERNAL "")
+    set(BENCHMARK_ENABLE_INSTALL        OFF CACHE INTERNAL "")
+    set(BENCHMARK_DOWNLOAD_DEPENDENCIES OFF CACHE INTERNAL "")
+    FetchContent_MakeAvailable(google_benchmark)
+endif()
+
 # open62541 -- OPC-UA stack (MPL 2.0). Industrial protocol used by the
 # OPC-UA server backend (src/integration/opcua/). Default OFF so the
 # baseline build stays small; CI turns this ON for the integration job.
@@ -1226,6 +1259,13 @@ endif()
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+# Benchmarks (only when BUILD_BENCHMARKS=ON). See benchmarks/README.md for
+# the rationale on reporting p50/p90/p99 rather than means, and for the
+# baseline numbers captured on the reference workstation.
+if(BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif()
 
 # CPack - Package Generation (Windows Installer / Linux Package)
