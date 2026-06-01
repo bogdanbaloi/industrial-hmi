@@ -101,16 +101,30 @@ target_link_libraries(test_system_state_machine PRIVATE
 add_test(NAME SystemStateMachineTest COMMAND test_system_state_machine)
 
 # Config: ConfigManager
-# ConfigManager.h is header-only (pure std:: code) and config_defaults.h is a
-# plain constexpr header; neither needs GTK or the model layer.
+# ConfigManager carries a .cpp since the nlohmann/json switch (ADR-0015) --
+# link the object lib so the test resolves ConfigManager::initialize / parse
+# symbols. config_defaults.h is still a plain constexpr header.
 add_executable(test_config_manager ConfigManagerTest.cpp)
 target_link_libraries(test_config_manager PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes
+    objectsConfig
 )
 # Tests write temp config files; run with the source dir as working dir
 # so fixtures can place files relative to CMAKE_BINARY_DIR without surprises.
 add_test(NAME ConfigManagerTest COMMAND test_config_manager
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+# ConfigValidator -- semantic rules on top of the parsed config.
+# Pure data-in / data-out, so no GTK / model deps. Shares the objectsConfig
+# static archive with the manager itself.
+add_executable(test_config_validator ConfigValidatorTest.cpp)
+target_link_libraries(test_config_validator PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsConfig
+)
+add_test(NAME ConfigValidatorTest COMMAND test_config_validator
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 # Model: DatabaseManager

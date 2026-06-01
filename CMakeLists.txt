@@ -238,6 +238,27 @@ add_library(boost_sml_headers INTERFACE)
 target_include_directories(boost_sml_headers SYSTEM INTERFACE
     ${CMAKE_BINARY_DIR}/_deps/sml-vendor/include)
 
+# nlohmann/json -- header-only JSON parser (MIT licence). Used by
+# src/config/ConfigManager.cpp to replace a hand-rolled flat-key parser
+# that had known edge-case bugs (brace inside string literals, key-order
+# sensitivity once a formatter sorted the file). The single header is
+# heavy (~25k lines, ~1MB), so it is included ONLY from ConfigManager.cpp
+# (PIMPL) and never from a public header. Routed into `_deps/json-vendor/`
+# so clang-tidy's `src/.*` header filter ignores the vendored source.
+# SYSTEM include further suppresses third-party diagnostics.
+FetchContent_Declare(nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.11.3
+    GIT_SHALLOW    TRUE
+    SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/json-vendor
+)
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
+FetchContent_MakeAvailable(nlohmann_json)
+add_library(nlohmann_json_headers INTERFACE)
+target_include_directories(nlohmann_json_headers SYSTEM INTERFACE
+    ${CMAKE_BINARY_DIR}/_deps/json-vendor/include)
+
 # open62541 -- OPC-UA stack (MPL 2.0). Industrial protocol used by the
 # OPC-UA server backend (src/integration/opcua/). Default OFF so the
 # baseline build stays small; CI turns this ON for the integration job.
@@ -346,14 +367,50 @@ target_compile_options(objectsModel
 )
 
 # Config Layer - JSON configuration management
-add_library(objectsConfig INTERFACE)
+#
+# Used to be INTERFACE (header-only) when the parser was hand-rolled.
+# Switched to STATIC once nlohmann/json was adopted -- the json.hpp
+# single header is heavy (~25k lines, ~1MB), so confining it to
+# ConfigManager.cpp via PIMPL keeps the include cost off every TU that
+# touches a configuration accessor. STATIC (rather than OBJECT) so that
+# consumers two levels removed (e.g. test_opcua_backend -> objectsCore ->
+# objectsConfig) get the symbols pulled in via the standard transitive
+# link rules. OBJECT-libs don't propagate their objects through an
+# intermediate OBJECT-lib in CMake < 3.21.
+add_library(objectsConfig STATIC)
 target_sources(objectsConfig
-    INTERFACE
+    PRIVATE
+        src/config/ConfigManager.cpp
+        src/config/ConfigValidator.cpp
+    PUBLIC
         FILE_SET HEADERS
         FILES
             src/config/ConfigManager.h
+            src/config/ConfigValidator.h
             src/config/config_defaults.h
 )
+target_link_libraries(objectsConfig
+    PRIVATE
+        nlohmann_json_headers
+)
+# Header search root for the absolute "src/core/LoggerBase.h" + "src/core/i18n.h"
+# includes inside ConfigManager.h (objectsCore can't be linked because that
+# would invert the existing objectsCore -> objectsConfig dependency).
+target_include_directories(objectsConfig
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}
+)
+# libintl is required on MSYS2 CLANG64: nlohmann/json.hpp transitively pulls
+# <printf.h>, and gettext on that toolchain overrides snprintf with
+# libintl_snprintf -- without the libintl link line, ConfigManager.cpp leaves
+# an unresolved symbol that surfaces in every consumer. We propagate the
+# dependency PUBLICly so direct consumers (test_config_manager,
+# test_config_validator) don't need to repeat the Intl_FOUND guard.
+# On Linux Intl is part of glibc so Intl_FOUND is typically false; the guard
+# keeps the link line clean there.
+if(Intl_FOUND)
+    target_link_libraries(objectsConfig PUBLIC ${Intl_LIBRARIES})
+endif()
 
 # Core Layer - GTK-free utilities: Logger, i18n mechanism, Result, CsvSerializer
 # Bootstrap orchestrates staged startup (logger -> config -> i18n) and is

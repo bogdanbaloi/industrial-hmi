@@ -1,13 +1,11 @@
 #ifndef CONFIG_MANAGER_H
 #define CONFIG_MANAGER_H
 
-#include <string>
-#include <map>
-#include <vector>
-#include <fstream>
-#include <iostream>
-#include <sstream>
+#include <cstddef>
 #include <cstdio>
+#include <map>
+#include <string>
+
 #include "config_defaults.h"
 #include "src/core/LoggerBase.h"
 #include "src/core/i18n.h"
@@ -16,60 +14,54 @@ namespace app::config {
 
 /**
  * ConfigManager - JSON Configuration Management
- * 
+ *
  * Loads application configuration from config/app-config.json
- * Provides access to dialogs, assets, UI paths, and application settings
- * 
- * Pattern: Singleton (appropriate for global app configuration)
- * Thread-safe: Read-only after initialization
- * 
- * Usage:
- *   auto& config = ConfigManager::instance();
- *   std::string title = config.getDialogTitle("errors", "product_add_failed");
- *   std::string icon = config.getAssetPath("icons", "app_icon");
+ * Provides access to dialogs, assets, UI paths, and application settings.
+ *
+ * Pattern: Singleton (appropriate for global app configuration).
+ * Thread-safe: Read-only after initialization.
+ *
+ * Architecture (since v0.13):
+ *   - Hand-rolled flat-key JSON parser replaced with nlohmann/json
+ *     (vendored via FetchContent; see ADR-0015).
+ *   - PIMPL boundary: nlohmann/json.hpp is included ONLY from
+ *     ConfigManager.cpp so its ~25k-line single header doesn't leak
+ *     into every TU touching a config accessor.
+ *   - Public API still surfaces a flat dot-joined key -> string map,
+ *     so the 100+ call sites in the codebase didn't need to change.
  */
 class ConfigManager {
 public:
-    static ConfigManager& instance() {
-        static ConfigManager inst;
-        return inst;
-    }
-    
-    /**
-     * Initialize - Load configuration from JSON file
-     *
-     * @param configPath Path to app-config.json
-     * @return true if loaded successfully
-     */
-    [[nodiscard]] bool initialize(const std::string& configPath = defaults::kConfigPath) {
-        configPath_ = configPath;
-        initialized_ = loadConfig();
-        return initialized_;
-    }
+    static ConfigManager& instance();
 
     /**
-     * Inject a logger so subsequent policy methods (applyI18n, future
-     * applyTheme, etc.) can report degraded-config warnings through the
-     * normal log pipeline. When no logger is injected, those methods
-     * fall back to stderr, so the bootstrap sequence is safe even before
-     * the logger has been configured.
+     * Initialize - Load configuration from JSON file.
+     * @return true if the file was opened and parsed successfully.
      */
-    void setLogger(app::core::Logger& logger) {
-        logger_ = &logger;
-    }
+    [[nodiscard]] bool initialize(
+        const std::string& configPath = defaults::kConfigPath);
+
+    /**
+     * Inject a logger so degraded-config policy methods (applyI18n, future
+     * applyTheme) can report through the normal log pipeline. Without a
+     * logger they fall back to stderr.
+     */
+    void setLogger(app::core::Logger& logger);
 
     /**
      * Apply the configured language to the i18n subsystem.
      *
-     * Policy owner: decides which language to request given the current
-     * config state. Delegates the actual gettext binding to the
-     * mechanism in app::core::initI18n().
+     *   - Config loaded OK   -> use getLanguage() (explicit code or "auto")
+     *   - Config unavailable -> "auto" + warning
      *
-     *   - Config loaded OK  -> use getLanguage() (explicit code or "auto")
-     *   - Config unavailable -> "auto", log a warning
+     * Always succeeds: worst case gettext falls back to source strings.
      *
-     * Always succeeds: worst case, gettext falls back to source strings
-     * (English) and the UI is still usable.
+     * Defined inline so the call to app::core::initI18n() lives in
+     * whichever TU invokes applyI18n() (Bootstrap, etc.) rather than in
+     * ConfigManager.cpp. This keeps the objectsConfig static archive
+     * free of an external initI18n reference, so test executables that
+     * link objectsConfig without objectsCore (e.g. test_argon2_password_hasher)
+     * still resolve at link time.
      */
     void applyI18n() {
         std::string language;
@@ -81,7 +73,8 @@ public:
                 logger_->warn(
                     "Config unavailable - falling back to OS locale for i18n");
             } else {
-                std::fprintf(stderr,
+                std::fprintf(
+                    stderr,
                     "[warn] Config unavailable - falling back to OS locale\n");
             }
         }
@@ -89,663 +82,175 @@ public:
     }
 
     /**
-     * Reset in-memory configuration.
-     *
-     * The JSON parser appends to the key map, so reloading a second file
-     * leaves stale keys behind. Tests call this between runs to get a clean
-     * baseline; production code shouldn't need it.
+     * Reset in-memory configuration. Tests call this between runs to get
+     * a clean baseline; production code shouldn't need it.
      */
-    void clear() {
-        config_.clear();
-        configPath_.clear();
-    }
-    
-    // Asset Paths
-    
-    std::string getAssetPath(const std::string& category, const std::string& name) const {
-        auto key = "assets." + category + "." + name;
-        auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : "";
-    }
-    
-    std::string getAppIcon() const {
-        return getAssetPath("icons", "app_icon");
-    }
-    
-    std::string getWindowIconName() const {
-        return getAssetPath("icons", "window_icon_name");
-    }
-    
-    std::string getUIFile(const std::string& name) const {
-        return getAssetPath("ui_files", name);
-    }
-    
-    // Dialog Configuration
-    
-    std::string getDialogTitle(const std::string& category, const std::string& name) const {
-        auto key = "dialogs." + category + "." + name + ".title";
-        auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : defaults::kDialogTitle;
-    }
-    
-    std::string getDialogMessage(const std::string& category, const std::string& name) const {
-        auto key = "dialogs." + category + "." + name + ".message";
-        auto it = config_.find(key);
-        if (it != config_.end()) {
-            return it->second;
-        }
-        
-        // Try message_template
-        key = "dialogs." + category + "." + name + ".message_template";
-        it = config_.find(key);
-        return (it != config_.end()) ? it->second : "";
-    }
-    
-    std::string getDialogIcon(const std::string& category, const std::string& name) const {
-        auto key = "dialogs." + category + "." + name + ".icon";
-        auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : defaults::kDialogIcon;
-    }
-    
-    std::string getConfirmButton(const std::string& dialogName) const {
-        auto key = "dialogs.confirmations." + dialogName + ".confirm_button";
-        auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : defaults::kConfirmButton;
-    }
-    
-    std::string getCancelButton(const std::string& dialogName) const {
-        auto key = "dialogs.confirmations." + dialogName + ".cancel_button";
-        auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : defaults::kCancelButton;
-    }
-    
-    // Application Settings
-    
-    std::string getAppName() const {
-        return getValue("application.name", defaults::kAppName);
-    }
-    
-    std::string getAppVersion() const {
-        return getValue("application.version", defaults::kAppVersion);
-    }
-    
-    std::string getWindowTitle() const {
-        return getValue("window.title", defaults::kWindowTitle);
-    }
-    
-    int getWindowWidth() const {
-        return getInt("window.default_width", defaults::kWindowWidth);
-    }
+    void clear();
 
-    int getWindowHeight() const {
-        return getInt("window.default_height", defaults::kWindowHeight);
-    }
-    
-    std::string getDefaultTheme() const {
-        return getValue("theme.default", defaults::kDefaultTheme);
-    }
+    // Asset Paths
+
+    std::string getAssetPath(const std::string& category,
+                             const std::string& name) const;
+    std::string getAppIcon() const;
+    std::string getWindowIconName() const;
+    std::string getUIFile(const std::string& name) const;
+
+    // Dialog Configuration
+
+    std::string getDialogTitle(const std::string& category,
+                               const std::string& name) const;
+    std::string getDialogMessage(const std::string& category,
+                                 const std::string& name) const;
+    std::string getDialogIcon(const std::string& category,
+                              const std::string& name) const;
+    std::string getConfirmButton(const std::string& dialogName) const;
+    std::string getCancelButton(const std::string& dialogName) const;
+
+    // Application Settings
+
+    std::string getAppName() const;
+    std::string getAppVersion() const;
+    std::string getWindowTitle() const;
+    int getWindowWidth() const;
+    int getWindowHeight() const;
+    std::string getDefaultTheme() const;
 
     // i18n
 
-    std::string getLanguage() const {
-        return getValue("i18n.language", defaults::kDefaultLanguage);
-    }
-
+    std::string getLanguage() const;
     /**
      * Persist language selection to disk and update in-memory value.
-     *
-     * Rewrites the "i18n.language" field in the JSON config file.
-     * If the i18n section is missing, inserts one.
-     *
-     * @param language One of "auto" or a LINGUAS code (e.g. "it", "de")
-     * @return true on success, false if the config file cannot be written
+     * @param language One of "auto" or a LINGUAS code (e.g. "it", "de").
      */
-    [[nodiscard]] bool setLanguage(const std::string& language) {
-        // Update in-memory first so subsequent getLanguage() reflects the change
-        config_["i18n.language"] = language;
-        return persistLanguage(language);
-    }
+    [[nodiscard]] bool setLanguage(const std::string& language);
 
-    // UI palette (CSS theme on top of dark/light)
+    // UI palette
 
-    /// Current palette id. Empty string = baseline "industrial" look
-    /// (no extra CSS provider, same as a fresh install).
-    std::string getPalette() const {
-        return getValue("ui.palette", "");
-    }
+    std::string getPalette() const;
+    [[nodiscard]] bool setPalette(const std::string& palette);
 
-    /// Persist a palette choice. Empty string clears it (back to
-    /// baseline). Any other id maps to `assets/styles/themes/<id>.css`.
-    [[nodiscard]] bool setPalette(const std::string& palette) {
-        config_["ui.palette"] = palette;
-        return persistPalette(palette);
-    }
+    // Logging
 
-    // Logging Configuration
+    std::string getLogLevel() const;
+    std::string getLogFilePath() const;
+    std::size_t getLogMaxFileSize() const;
+    int getLogMaxFiles() const;
+    bool getLogConsoleEnabled() const;
 
-    std::string getLogLevel() const {
-        return getValue("logging.level", defaults::kLogLevel);
-    }
+    // Integration backends - TCP
 
-    std::string getLogFilePath() const {
-        return getValue("logging.file", defaults::kLogFile);
-    }
+    [[nodiscard]] bool isTcpBackendEnabled() const;
+    [[nodiscard]] int getTcpBackendPort() const;
 
-    std::size_t getLogMaxFileSize() const {
-        auto mb = getInt("logging.max_file_size_mb",
-                         static_cast<int>(defaults::kLogMaxFileSizeMB));
-        return static_cast<std::size_t>(mb) * defaults::kBytesPerMegabyte;
-    }
+    // Auth
 
-    int getLogMaxFiles() const {
-        return getInt("logging.max_files", defaults::kLogMaxFiles);
-    }
+    [[nodiscard]] bool isAuthEnabled() const;
+    [[nodiscard]] std::string getAuthDbPath() const;
 
-    bool getLogConsoleEnabled() const {
-        return getValue("logging.console", "true") == "true";
-    }
+    // Multi-station
 
-    // Integration backends
-    //
-    // Both default to disabled so a fresh install never opens a port or
-    // dials out to a broker -- network exposure is opt-in per deployment.
+    [[nodiscard]] bool isMultiStationEnabled() const;
 
-    [[nodiscard]] bool isTcpBackendEnabled() const {
-        return getValue("network.tcp.enabled", "false") == "true";
-    }
+    // Historian
 
-    // Auth: SQLite-backed user store + Argon2id passwords. Off by
-    // default so existing deployments keep their no-login UX until
-    // they opt in.
-    [[nodiscard]] bool isAuthEnabled() const {
-        return getValue("auth.enabled", "false") == "true";
-    }
+    [[nodiscard]] bool isHistorianEnabled() const;
+    [[nodiscard]] std::string getHistorianDbPath() const;
+    [[nodiscard]] int getHistorianBatchSize() const;
+    [[nodiscard]] int getHistorianBatchAgeMs() const;
+    [[nodiscard]] int getHistorianSweepIntervalMs() const;
+    [[nodiscard]] int getHistorianRawRetentionMs() const;
+    [[nodiscard]] int getHistorianMinuteRetentionMs() const;
 
-    [[nodiscard]] std::string getAuthDbPath() const {
-        return getValue("auth.db_path", defaults::kAuthDbPath);
-    }
+    // MQTT
 
-    // Multi-station mode. When true, main() instantiates a second
-    // ProductionModel (MirrorModel) for the SLAVE role, registers a
-    // PrimaryToSecondaryBridge between the two models with the
-    // IntegrationManager, and MainWindow swaps the regular Dashboard
-    // tab for the MultiStationDashboardPage which renders both
-    // stations side by side. Default off so single-station deployments
-    // are unaffected. See ADR-0011 + docs/design/multi-station-primary-secondary.md
-    [[nodiscard]] bool isMultiStationEnabled() const {
-        return getValue("ui.multistation_enabled", "false") == "true";
-    }
+    [[nodiscard]] bool isMqttBackendEnabled() const;
+    [[nodiscard]] std::string getMqttBrokerHost() const;
+    [[nodiscard]] int getMqttBrokerPort() const;
+    [[nodiscard]] std::string getMqttClientId() const;
+    [[nodiscard]] std::string getMqttTopicPrefix() const;
+    [[nodiscard]] bool isMqttEmitPlainText() const;
+    [[nodiscard]] bool isMqttEmitJson() const;
+    [[nodiscard]] bool isMqttSubscriberEnabled() const;
+    [[nodiscard]] std::string getMqttSensorTopicPrefix() const;
 
-    // Historian time-series persistence. Off by default -- enabling it
-    // creates a SQLite file at `historian.db_path` and starts batching
-    // scalar telemetry. See HistorianBridge for the batching contract.
-    [[nodiscard]] bool isHistorianEnabled() const {
-        return getValue("historian.enabled", "false") == "true";
-    }
+    // Modbus
 
-    [[nodiscard]] std::string getHistorianDbPath() const {
-        return getValue("historian.db_path", defaults::kHistorianDbPath);
-    }
+    [[nodiscard]] bool isModbusBackendEnabled() const;
+    [[nodiscard]] std::string getModbusHost() const;
+    [[nodiscard]] int getModbusPort() const;
+    [[nodiscard]] int getModbusPollIntervalMs() const;
+    [[nodiscard]] int getModbusConnectTimeoutMs() const;
+    [[nodiscard]] int getModbusRequestTimeoutMs() const;
+    [[nodiscard]] int getModbusSlaveId() const;
+    [[nodiscard]] int getModbusEquipmentBaseAddress() const;
+    [[nodiscard]] int getModbusEquipmentCount() const;
+    [[nodiscard]] int getModbusSupplyBaseAddress() const;
+    [[nodiscard]] float getModbusSupplyScale() const;
+    [[nodiscard]] int getModbusQualityBaseAddress() const;
+    [[nodiscard]] float getModbusQualityScale() const;
+    [[nodiscard]] int getModbusQualityCount() const;
 
-    [[nodiscard]] int getHistorianBatchSize() const {
-        return getInt("historian.batch_size",
-                      defaults::kHistorianBatchSize);
-    }
+    // OPC-UA
 
-    [[nodiscard]] int getHistorianBatchAgeMs() const {
-        return getInt("historian.batch_age_ms",
-                      defaults::kHistorianBatchAgeMs);
-    }
-
-    [[nodiscard]] int getHistorianSweepIntervalMs() const {
-        return getInt("historian.sweep_interval_ms",
-                      defaults::kHistorianSweepIntervalMs);
-    }
-
-    [[nodiscard]] int getHistorianRawRetentionMs() const {
-        return getInt("historian.raw_retention_ms",
-                      defaults::kHistorianRawRetentionMs);
-    }
-
-    [[nodiscard]] int getHistorianMinuteRetentionMs() const {
-        return getInt("historian.minute_retention_ms",
-                      defaults::kHistorianMinuteRetentionMs);
-    }
-
-    [[nodiscard]] int getTcpBackendPort() const {
-        return getInt("network.tcp.port", defaults::kTcpBackendPort);
-    }
-
-    [[nodiscard]] bool isMqttBackendEnabled() const {
-        return getValue("network.mqtt.enabled", "false") == "true";
-    }
-
-    [[nodiscard]] std::string getMqttBrokerHost() const {
-        return getValue("network.mqtt.broker_host", defaults::kMqttBrokerHost);
-    }
-
-    [[nodiscard]] int getMqttBrokerPort() const {
-        return getInt("network.mqtt.broker_port", defaults::kMqttBrokerPort);
-    }
-
-    [[nodiscard]] std::string getMqttClientId() const {
-        return getValue("network.mqtt.client_id", defaults::kMqttClientId);
-    }
-
-    [[nodiscard]] std::string getMqttTopicPrefix() const {
-        return getValue("network.mqtt.topic_prefix",
-                        defaults::kMqttTopicPrefix);
-    }
-
-    // Wire-format flags for the outbound telemetry bridge. Both
-    // default to the historical wire shape (plain text on per-field
-    // topics) -- enabling JSON is opt-in for deployments that have a
-    // SCADA / DCS subscriber wanting consolidated documents.
-    [[nodiscard]] bool isMqttEmitPlainText() const {
-        return getValue("network.mqtt.emit_plain_text", "true") == "true";
-    }
-
-    [[nodiscard]] bool isMqttEmitJson() const {
-        return getValue("network.mqtt.emit_json", "false") == "true";
-    }
-
-    // Modbus master backend (polls a remote slave / PLC). Off by
-    // default like every other backend; opt in per deployment.
-    [[nodiscard]] bool isModbusBackendEnabled() const {
-        return getValue("network.modbus.enabled", "false") == "true";
-    }
-    [[nodiscard]] std::string getModbusHost() const {
-        return getValue("network.modbus.host", defaults::kModbusHost);
-    }
-    [[nodiscard]] int getModbusPort() const {
-        return getInt("network.modbus.port", defaults::kModbusPort);
-    }
-    [[nodiscard]] int getModbusPollIntervalMs() const {
-        return getInt("network.modbus.poll_interval_ms",
-                      defaults::kModbusPollIntervalMs);
-    }
-    [[nodiscard]] int getModbusConnectTimeoutMs() const {
-        return getInt("network.modbus.connect_timeout_ms",
-                      defaults::kModbusConnectTimeoutMs);
-    }
-    [[nodiscard]] int getModbusRequestTimeoutMs() const {
-        return getInt("network.modbus.request_timeout_ms",
-                      defaults::kModbusRequestTimeoutMs);
-    }
-    /// Slave unit ID the demo polls. PLCs typically use 1; multi-
-    /// slave deployments override per register in the future. For
-    /// the MVP a single unit covers the simulator end-to-end.
-    [[nodiscard]] int getModbusSlaveId() const {
-        return getInt("network.modbus.slave_id", 1);
-    }
-    /// First holding-register address that maps to equipment 0's
-    /// enabled bit. Equipment N reads from `kBase + N`. Keeps the
-    /// JSON tiny while still giving operators one knob to relocate
-    /// the block.
-    [[nodiscard]] int getModbusEquipmentBaseAddress() const {
-        return getInt("network.modbus.equipment_base_address", 0);
-    }
-    /// How many equipment slots the bridge ingests over Modbus.
-    /// Matches SimulatedModel's three lines (A/B/C) by default.
-    [[nodiscard]] int getModbusEquipmentCount() const {
-        return getInt("network.modbus.equipment_count", 3);
-    }
-
-    /// Analog supply-level block (FieldKind::EquipmentSupplyLevel).
-    /// Equipment N reads from supply_base + N. Default 0x10 keeps
-    /// the block clear of the boolean block (0..N-1) so a small PLC
-    /// firmware doesn't have to re-page on a single contiguous read.
-    [[nodiscard]] int getModbusSupplyBaseAddress() const {
-        return getInt("network.modbus.supply_base_address",
-                      defaults::kModbusSupplyBaseAddress);
-    }
-    /// Linear scale on raw supply-register values before hand-off
-    /// to setEquipmentSupplyLevel. Default 1.0 (raw IS percent);
-    /// flip to 0.1 for fixed-point PLCs that ship raw 850 for 85%.
-    [[nodiscard]] float getModbusSupplyScale() const {
-        return getFloat("network.modbus.supply_scale",
-                        defaults::kModbusSupplyScale);
-    }
-
-    /// Analog pass-rate block (FieldKind::QualityPassRate). One
-    /// register per quality checkpoint, address = quality_base + N.
-    /// Default 0x20 keeps the three blocks non-overlapping under
-    /// the default counts.
-    [[nodiscard]] int getModbusQualityBaseAddress() const {
-        return getInt("network.modbus.quality_base_address",
-                      defaults::kModbusQualityBaseAddress);
-    }
-    /// Linear scale on raw pass-rate registers. Default 0.1 (raw
-    /// 987 -> 98.7 %) -- the most common SCADA fixed-point
-    /// convention for percentage readings.
-    [[nodiscard]] float getModbusQualityScale() const {
-        return getFloat("network.modbus.quality_scale",
-                        defaults::kModbusQualityScale);
-    }
-    /// How many quality checkpoints the bridge ingests over Modbus.
-    /// Matches SimulatedModel's three checkpoints by default.
-    [[nodiscard]] int getModbusQualityCount() const {
-        return getInt("network.modbus.quality_count", 3);
-    }
-
-    // MQTT inbound (subscriber) side. Off by default -- most
-    // deployments only PUBLISH telemetry outbound; the demo flips
-    // this on so a `mosquitto_pub` on the configured topics drives
-    // dashboard state changes.
-    [[nodiscard]] bool isMqttSubscriberEnabled() const {
-        return getValue("network.mqtt.subscriber.enabled", "false") == "true";
-    }
-
-    [[nodiscard]] std::string getMqttSensorTopicPrefix() const {
-        return getValue("network.mqtt.subscriber.topic_prefix",
-                        defaults::kMqttSensorTopicPrefix);
-    }
-
-    // OPC-UA backend (server role). Defaults to disabled like the
-    // other backends; turning it on starts a UA_Server bound to the
-    // configured port and exposes the Factory address space.
-    [[nodiscard]] bool isOpcUaBackendEnabled() const {
-        return getValue("network.opcua.enabled", "false") == "true";
-    }
-
-    [[nodiscard]] int getOpcUaServerPort() const {
-        return getInt("network.opcua.port", defaults::kOpcUaServerPort);
-    }
-
-    [[nodiscard]] std::string getOpcUaApplicationUri() const {
-        return getValue("network.opcua.application_uri",
-                        defaults::kOpcUaApplicationUri);
-    }
-
-    [[nodiscard]] std::string getOpcUaApplicationName() const {
-        return getValue("network.opcua.application_name",
-                        defaults::kOpcUaApplicationName);
-    }
-
-    // OPC-UA server -- inbound control surface. Defaults to ON so a
-    // newly-enabled server exposes Factory/Commands + per-line
-    // Enabled writes; deployments that need to lock down inbound
-    // control set this to false.
-    [[nodiscard]] bool isOpcUaServerCommandsEnabled() const {
-        return getValue("network.opcua.server.commands_enabled",
-                        "true") == "true";
-    }
-
-    // OPC-UA client (inbound role). Off by default -- needs an
-    // external endpoint to dial. When enabled, the IntegrationManager
-    // owns an Open62541Client alongside the server; both surface their
-    // own pill in the I/O bar.
-    [[nodiscard]] bool isOpcUaClientEnabled() const {
-        return getValue("network.opcua.client.enabled", "false") == "true";
-    }
-
-    [[nodiscard]] std::string getOpcUaClientEndpoint() const {
-        return getValue("network.opcua.client.endpoint",
-                        defaults::kOpcUaClientEndpoint);
-    }
-
-    [[nodiscard]] std::string getOpcUaClientApplicationUri() const {
-        return getValue("network.opcua.client.application_uri",
-                        defaults::kOpcUaClientApplicationUri);
-    }
-
-    [[nodiscard]] std::string getOpcUaClientApplicationName() const {
-        return getValue("network.opcua.client.application_name",
-                        defaults::kOpcUaClientApplicationName);
-    }
-
-    // OPC-UA ingest bridge (inbound mapping). Off by default because
-    // pointing the bridge at the HMI's own server creates a feedback
-    // cycle that would overwrite simulator state -- see the warning
-    // on OpcUaIngestBridge. Production deployments dialing a real
-    // PLC are safe to flip this on.
-    [[nodiscard]] bool isOpcUaIngestBridgeEnabled() const {
-        return getValue("network.opcua.client.ingest_bridge.enabled",
-                        "false") == "true";
-    }
-
-    [[nodiscard]] std::string getOpcUaIngestBridgeTopicPrefix() const {
-        return getValue("network.opcua.client.ingest_bridge.topic_prefix",
-                        defaults::kOpcUaClientIngestPrefix);
-    }
+    [[nodiscard]] bool isOpcUaBackendEnabled() const;
+    [[nodiscard]] int getOpcUaServerPort() const;
+    [[nodiscard]] std::string getOpcUaApplicationUri() const;
+    [[nodiscard]] std::string getOpcUaApplicationName() const;
+    [[nodiscard]] bool isOpcUaServerCommandsEnabled() const;
+    [[nodiscard]] bool isOpcUaClientEnabled() const;
+    [[nodiscard]] std::string getOpcUaClientEndpoint() const;
+    [[nodiscard]] std::string getOpcUaClientApplicationUri() const;
+    [[nodiscard]] std::string getOpcUaClientApplicationName() const;
+    [[nodiscard]] bool isOpcUaIngestBridgeEnabled() const;
+    [[nodiscard]] std::string getOpcUaIngestBridgeTopicPrefix() const;
 
     // Template Support
-    
+
     /**
-     * Format dialog message with template variables
-     * 
-     * Example:
+     * Format dialog message with template variables.
+     *
      *   template: "Delete \"{product_name}\"?"
      *   formatMessage(template, {{"product_name", "Product A"}})
-     *   -> "Delete \"Product A\"?"
+     *     -> "Delete \"Product A\"?"
      */
-    std::string formatMessage(const std::string& templateStr, 
-                             const std::map<std::string, std::string>& vars) const {
-        std::string result = templateStr;
-        for (const auto& [key, value] : vars) {
-            std::string placeholder = "{" + key + "}";
-            size_t pos = 0;
-            while ((pos = result.find(placeholder, pos)) != std::string::npos) {
-                result.replace(pos, placeholder.length(), value);
-                pos += value.length();
-            }
-        }
-        return result;
-    }
-    
-    // Non-copyable
+    std::string formatMessage(
+        const std::string& templateStr,
+        const std::map<std::string, std::string>& vars) const;
+
+    /**
+     * Direct flat-key access. Exposed for ConfigValidator (and tests).
+     * Returns empty string when the key is absent.
+     */
+    [[nodiscard]] std::string rawValue(const std::string& key) const;
+
+    /**
+     * Whether the JSON file was successfully read and parsed during the
+     * most recent initialize() call. Used by the validator + bootstrap
+     * to skip semantic checks when no config was loaded.
+     */
+    [[nodiscard]] bool isInitialized() const;
+
+    // Non-copyable, non-movable singleton
     ConfigManager(const ConfigManager&) = delete;
     ConfigManager& operator=(const ConfigManager&) = delete;
-    
+    ConfigManager(ConfigManager&&) = delete;
+    ConfigManager& operator=(ConfigManager&&) = delete;
+
 private:
-    ConfigManager() = default;
-    
-    std::string getValue(const std::string& key, const std::string& defaultValue = "") const {
-        auto it = config_.find(key);
-        return (it != config_.end()) ? it->second : defaultValue;
-    }
+    ConfigManager();
+    ~ConfigManager();
 
-    int getInt(const std::string& key, int defaultValue) const {
-        auto it = config_.find(key);
-        if (it == config_.end()) return defaultValue;
-        try {
-            return std::stoi(it->second);
-        } catch (...) {
-            return defaultValue;
-        }
-    }
+    std::string getValue(const std::string& key,
+                         const std::string& defaultValue = "") const;
+    int getInt(const std::string& key, int defaultValue) const;
+    float getFloat(const std::string& key, float defaultValue) const;
 
-    /// Same shape as getInt -- used by the Modbus scale factors
-    /// (`network.modbus.supply_scale`, `quality_scale`) so a PLC's
-    /// fixed-point convention can be tuned per deployment without
-    /// rebuilding.
-    float getFloat(const std::string& key, float defaultValue) const {
-        auto it = config_.find(key);
-        if (it == config_.end()) return defaultValue;
-        try {
-            return std::stof(it->second);
-        } catch (...) {
-            return defaultValue;
-        }
-    }
-    
-    bool loadConfig() {
-        std::ifstream file(configPath_);
-        if (!file.is_open()) {
-            return false;
-        }
-        
-        // Simple JSON parser (enough for our flat key-value needs)
-        // For production, use nlohmann/json or similar
-        parseJSON(file);
-        file.close();
-        
-        // Config loaded successfully
-        return true;
-    }
-    
-    void parseJSON(std::ifstream& file) {
-        std::string line;
-        std::string currentPath;
-        std::vector<std::string> pathStack;
-        
-        while (std::getline(file, line)) {
-            // Remove whitespace
-            line.erase(0, line.find_first_not_of(" \t"));
-            line.erase(line.find_last_not_of(" \t") + 1);
-            
-            // Skip empty lines and comments
-            if (line.empty() || line[0] == '#' || line[0] == '/') continue;
-            
-            // Parse JSON structure (simplified)
-            if (line.find("\"") != std::string::npos) {
-                size_t keyStart = line.find("\"");
-                size_t keyEnd = line.find("\"", keyStart + 1);
-                if (keyStart != std::string::npos && keyEnd != std::string::npos) {
-                    std::string key = line.substr(keyStart + 1, keyEnd - keyStart - 1);
-                    
-                    size_t colonPos = line.find(":", keyEnd);
-                    if (colonPos != std::string::npos) {
-                        std::string value = line.substr(colonPos + 1);
-
-                        // Check if it's an object start. The value
-                        // (text after the colon), once trimmed, must
-                        // START with '{'. A bare find("{") is wrong:
-                        // string values such as
-                        //   "message_template": "Delete \"{product_name}\"?"
-                        // contain a brace without opening an object, and
-                        // would push a bogus path frame -- corrupting the
-                        // stack for every key that follows in the file.
-                        std::string trimmedValue = value;
-                        trimmedValue.erase(
-                            0, trimmedValue.find_first_not_of(" \t"));
-                        if (!trimmedValue.empty() &&
-                            trimmedValue.front() == '{') {
-                            pathStack.push_back(key);
-                        } else {
-                            // Extract value
-                            size_t valStart = value.find("\"");
-                            if (valStart != std::string::npos) {
-                                size_t valEnd = value.find("\"", valStart + 1);
-                                if (valEnd != std::string::npos) {
-                                    std::string val = value.substr(valStart + 1, valEnd - valStart - 1);
-                                    
-                                    // Build full path
-                                    std::string fullKey;
-                                    for (const auto& p : pathStack) {
-                                        fullKey += p + ".";
-                                    }
-                                    fullKey += key;
-                                    
-                                    config_[fullKey] = val;
-                                }
-                            } else {
-                                // Number or boolean
-                                value.erase(0, value.find_first_not_of(" \t"));
-                                value.erase(value.find_last_not_of(" \t,") + 1);
-                                
-                                if (!value.empty() && value != "{" && value != "[") {
-                                    std::string fullKey;
-                                    for (const auto& p : pathStack) {
-                                        fullKey += p + ".";
-                                    }
-                                    fullKey += key;
-                                    config_[fullKey] = value;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if (line.find("{") != std::string::npos && !pathStack.empty()) {
-                // Anonymous object open -- a `{` on its own line, which
-                // happens for objects nested inside arrays (e.g. each
-                // element of dashboard.equipment_lines). It carries no
-                // key, so push a placeholder frame purely to balance the
-                // matching `}` pop below. Without this the pop runs
-                // unmatched and corrupts pathStack for every key that
-                // appears later in the file -- which is exactly what
-                // breaks once a formatter (JSON::PP, Prettier, ...)
-                // sorts keys so `ui` / `window` land after `dashboard`.
-                //
-                // The !pathStack.empty() guard skips the root object's
-                // opening `{` (first line, empty stack) -- pushing for
-                // that would prefix every top-level key with a stray
-                // ".".
-                pathStack.emplace_back("");
-            } else if (line.find("}") != std::string::npos && !pathStack.empty()) {
-                pathStack.pop_back();
-            }
-        }
-    }
-    
-    /**
-     * Targeted rewrite of the JSON config's i18n.language field.
-     * Reads the whole file, replaces (or inserts) the language value,
-     * and writes it back atomically-ish (via a temp file + rename).
-     */
-    bool persistLanguage(const std::string& language) {
-        const std::string insertion =
-            "\n  \"i18n\": {\n    \"language\": \"" + language + "\"\n  },\n";
-        return persistStringField("language", language, insertion);
-    }
-
-    bool persistPalette(const std::string& palette) {
-        const std::string insertion =
-            "\n  \"ui\": {\n    \"palette\": \"" + palette + "\"\n  },\n";
-        return persistStringField("palette", palette, insertion);
-    }
-
-    /// Swap a top-level `"<key>": "..."` string literal inside the
-    /// config file. Used by setLanguage/setPalette -- a targeted
-    /// string replace that avoids bringing in a full JSON library
-    /// and preserves hand-authored comments/formatting in the file.
-    /// `insertionIfMissing` is the JSON fragment inserted right
-    /// after the opening brace when the key doesn't exist yet.
+    bool loadConfig();
+    bool persistLanguage(const std::string& language);
+    bool persistPalette(const std::string& palette);
     bool persistStringField(const std::string& fieldName,
                             const std::string& value,
-                            const std::string& insertionIfMissing) {
-        std::ifstream in(configPath_);
-        if (!in.is_open()) return false;
-        std::stringstream buffer;
-        buffer << in.rdbuf();
-        in.close();
-        std::string content = buffer.str();
-
-        const std::string key = "\"" + fieldName + "\"";
-        size_t keyPos = content.find(key);
-        bool replaced = false;
-        if (keyPos != std::string::npos) {
-            size_t colon = content.find(':', keyPos + key.size());
-            if (colon != std::string::npos) {
-                size_t quoteStart = content.find('"', colon + 1);
-                if (quoteStart != std::string::npos) {
-                    size_t quoteEnd = content.find('"', quoteStart + 1);
-                    if (quoteEnd != std::string::npos) {
-                        content.replace(quoteStart + 1,
-                                        quoteEnd - quoteStart - 1,
-                                        value);
-                        replaced = true;
-                    }
-                }
-            }
-        }
-
-        if (!replaced) {
-            size_t brace = content.find('{');
-            if (brace == std::string::npos) return false;
-            content.insert(brace + 1, insertionIfMissing);
-        }
-
-        std::string tmpPath = configPath_ + ".tmp";
-        {
-            std::ofstream out(tmpPath, std::ios::binary | std::ios::trunc);
-            if (!out.is_open()) return false;
-            out << content;
-            if (!out.good()) return false;
-        }
-        std::remove(configPath_.c_str());
-        return std::rename(tmpPath.c_str(), configPath_.c_str()) == 0;
-    }
+                            const std::string& insertionIfMissing);
 
     std::string configPath_;
     std::map<std::string, std::string> config_;
@@ -753,6 +258,6 @@ private:
     bool initialized_ = false;
 };
 
-} // namespace app::config
+}  // namespace app::config
 
-#endif // CONFIG_MANAGER_H
+#endif  // CONFIG_MANAGER_H

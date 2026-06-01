@@ -21,7 +21,7 @@ core.
   **zero gtkmm** -- concrete proof that the `ViewObserver` abstraction
   is a real View-swap seam, not just marketing.
 - **67% test coverage** verified by gcovr in CI on every PR, across
-  11,112 instrumented lines and **76 ctest targets**: scenario-based
+  11,112 instrumented lines and **79 ctest targets**: scenario-based
   E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
   tests under real GTK via Xvfb, dialog dispatch via programmatic
   `response()`, plus integration tests that wire **real** components
@@ -329,7 +329,7 @@ scripts/
 po/                     gettext catalogs (11 languages)
 config/                 app-config.json
 cmake/                  FindOnnxRuntime.cmake
-tests/                  76 ctest targets (see Testing section)
+tests/                  79 ctest targets (see Testing section)
 ```
 
 ## Extensibility -- how to add X
@@ -1040,7 +1040,7 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled client (full duplex, no paho dep) + OPC-UA via open62541 |
 | Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros) |
-| Testing | GoogleTest + gmock (76 ctest targets) |
+| Testing | GoogleTest + gmock (79 ctest targets) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |
