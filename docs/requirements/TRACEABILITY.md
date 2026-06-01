@@ -111,6 +111,7 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-003 | MUST | `src/integration/modbus/ModbusBackend.cpp`, `src/integration/modbus/ModbusClient.cpp`, `src/integration/modbus/ModbusPdu.cpp`, `src/integration/modbus/ModbusPollLoop.cpp`, `src/integration/modbus/ModbusIngestBridge.cpp` | ModbusBackendTest, ModbusClientTest, ModbusPduTest, ModbusPollLoopTest, ModbusIngestBridgeTest | -- |
 | REQ-INTEGRATION-004 | MUST | `src/integration/opcua/OpcUaBackend.cpp`, `src/integration/opcua/OpcUaIngestBridge.cpp`, `src/integration/opcua/FactoryCommandSink.cpp`, `src/integration/opcua/FactoryNodeMap.cpp` | OpcUaBackendTest, Open62541ServerIntegrationTest, Open62541ClientIntegrationTest, Open62541ServerControlIntegrationTest, OpcUaIngestBridgeTest, FactoryCommandSinkTest, FactoryNodeMapTest | -- |
 | REQ-INTEGRATION-005 | SHOULD | `src/presenter/BackendHealthPresenter.cpp`, `src/integration/IntegrationManager.cpp::metricsSnapshot` | BackendHealthPresenterTest, IntegrationManagerTest | -- |
+| REQ-INTEGRATION-006 | MUST | `src/integration/modbus/ModbusPdu.cpp::decodeReadResponse`, `src/integration/MqttPacket.cpp::parsePublish` + `::decodeRemainingLength`, `fuzzers/fuzz_modbus_decode.cpp`, `fuzzers/fuzz_mqtt_publish.cpp`, `fuzzers/fuzz_mqtt_remaining_length.cpp` | libFuzzer harnesses under `-DBUILD_FUZZERS=ON` (Clang); seed corpora in `fuzzers/corpus/`; smoke-run baseline in `fuzzers/README.md` | -- |
 
 ## PERF
 
