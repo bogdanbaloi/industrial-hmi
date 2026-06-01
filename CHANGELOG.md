@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ISA-18.2 alarms Phase 4a -- operator-visible Shelved inventory (REQ-ALARM-005)
+
+Additive read API on `AlertCenter` so the panel can render shelved
+alarms as a distinct subsection ordered by most-imminent expiry,
+instead of folding them into the active list with a SHELVED badge
+(the Phase 1-3 behaviour). Phase 4b will rewire the GTK AlertsPanel
+UI to consume both lists; Phase 4a only ships the model+presenter
+contract + tests.
+
+#### Added
+
+- `AlertCenter::ShelvedView` struct -- pairs the alarm view model
+  with the absolute wall-clock `deadline` AND a precomputed
+  `secondsRemaining` countdown. The panel renders "4:37 left"
+  directly from `secondsRemaining` without owning a clock; tests
+  that inject a fake clock assert on either field without knowing
+  AlertCenter's `NowFn`.
+- `AlertCenter::shelvedSnapshot()` -- thread-safe snapshot of the
+  currently-shelved alarms, sorted by deadline ascending
+  (most-imminent first). Filters out any non-Shelved entries.
+- `secondsRemaining` clamps to zero for entries past their deadline
+  but not yet swept by `tick()` -- the panel renders "EXPIRED"
+  without juggling negative durations.
+- 7 new AlertCenterTest cases covering: empty inventory, filtered
+  inclusion (only Shelved), deadline-ascending order across mixed
+  shelve durations, countdown tracks injected clock, clamp-to-zero
+  past deadline, swept after tick, deadline matches the shelve call.
+- REQ-ALARM-005 in `REQUIREMENTS.md` + `TRACEABILITY.md` row.
+
+#### Compatibility
+
+- `snapshot()` is **unchanged** -- still includes Shelved entries so
+  the existing AlertsPanel UI keeps working without modification.
+  Phase 4b will migrate the UI to render two lists from the two
+  snapshots and stop including Shelved in `snapshot()`.
+
 ### Whole-program callgrind profile + regression baseline (REQ-PERF-002)
 
 Phase 1 of the profiling discipline: capture pipeline + workload +

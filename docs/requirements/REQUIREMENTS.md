@@ -977,6 +977,39 @@ ADR: standards basis ANSI/ISA-18.2-2016 (alarm history / journal).
 
 Needs: utest
 
+### REQ-ALARM-005 (SHOULD) — Operator-visible Shelved inventory
+
+`req~alarm-005~1`
+
+`AlertCenter` **shall** expose `shelvedSnapshot()` returning the
+currently-shelved alarms paired with the absolute deadline + the
+precomputed `secondsRemaining` countdown. The list **shall** be sorted
+by deadline ascending (most-imminent expiry first) so the panel renders
+the operator-attention order natively, without re-sorting on each
+redraw.
+
+`secondsRemaining` **shall** clamp to zero for entries whose deadline
+has already passed but have not yet been swept by `tick()` -- the panel
+renders "EXPIRED" without juggling a negative duration.
+
+The countdown is computed from the `NowFn` injected at construction so
+unit tests drive deterministic deadlines without sleeps (same pattern
+as REQ-ALARM-002). This is an **additive** API alongside the existing
+`snapshot()`; Phase 4b will migrate the GTK AlertsPanel UI to render
+the two snapshots as two distinct subsections (active alarms by
+priority + shelved inventory by deadline).
+
+Verified by: AlertCenterTest (7 cases pinning empty inventory, filtered
+inclusion, deadline-asc ordering, countdown tracks injected clock,
+clamp-to-zero past deadline, swept after tick, deadline matches shelve
+call).
+
+ADR: standards basis ANSI/ISA-18.2-2016 (shelved-alarm management
+section) -- making the inventory operator-visible turns a working
+shelve mechanism into a managed one.
+
+Needs: utest
+
 ---
 
 ## STATE — Production lifecycle state machine
