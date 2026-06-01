@@ -15,6 +15,7 @@ namespace app::core {
 enum class StartupErrorCode {
     ConfigMissing,     ///< app-config.json not found at expected path
     ConfigCorrupt,     ///< app-config.json present but cannot be parsed
+    ConfigInvalid,     ///< parsed OK but semantic validation rejected it
     DatabaseInit,      ///< SQLite initialisation refused
     LoggerBootstrap,   ///< even the stderr logger could not be constructed
 };
@@ -26,6 +27,7 @@ inline std::string_view toTag(StartupErrorCode code) {
     switch (code) {
     case StartupErrorCode::ConfigMissing:    return "CONFIG MISSING";
     case StartupErrorCode::ConfigCorrupt:    return "CONFIG CORRUPT";
+    case StartupErrorCode::ConfigInvalid:    return "CONFIG INVALID";
     case StartupErrorCode::DatabaseInit:     return "DATABASE ERROR";
     case StartupErrorCode::LoggerBootstrap:  return "LOGGER ERROR";
     }
@@ -73,6 +75,18 @@ class ConfigCorruptError final : public CriticalStartupError {
 public:
     explicit ConfigCorruptError(const std::string& detail)
         : CriticalStartupError(StartupErrorCode::ConfigCorrupt, detail) {}
+};
+
+/// Thrown when ConfigManager parses the JSON successfully but the
+/// resulting values fail ConfigValidator's semantic checks (types,
+/// ranges, enums). Distinct from ConfigCorruptError so the operator
+/// dialog can phrase "your config has bad values" instead of "your
+/// config file is broken" -- the recovery action is different
+/// (edit specific keys vs reinstall / restore).
+class ConfigInvalidError final : public CriticalStartupError {
+public:
+    explicit ConfigInvalidError(const std::string& detail)
+        : CriticalStartupError(StartupErrorCode::ConfigInvalid, detail) {}
 };
 
 class DatabaseInitError final : public CriticalStartupError {

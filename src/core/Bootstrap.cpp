@@ -4,6 +4,7 @@
 #include "src/core/StartupErrors.h"
 #include "src/core/i18n.h"
 #include "src/config/ConfigManager.h"
+#include "src/config/ConfigValidator.h"
 #include "src/config/config_defaults.h"
 #include "src/model/DatabaseManager.h"
 #include "src/model/ModelContext.h"
@@ -80,6 +81,33 @@ void Bootstrap::run() {
             _("Could not load configuration from {}. "
               "Re-install the application or restore the config file."),
             std::make_format_args(config::defaults::kConfigPath)));
+    }
+
+    // Stage 2.5 -- semantic validation (ADR-0015 / REQ-CORE-005).
+    // Parses OK doesn't mean values are usable. ConfigValidator hits the
+    // same accessors production code uses, so a clean pass here is the
+    // strongest signal we can give before the rest of startup commits
+    // to those values. Collects every violation so the operator dialog
+    // shows all problems at once.
+    {
+        auto vr = config::ConfigValidator::validate(config);
+        if (!vr.ok) {
+            // Approximate per-error message width used purely to size the
+            // joined buffer up-front; oversize is fine, undersize just
+            // triggers a couple of std::string reallocations.
+            constexpr std::size_t kAvgErrorLen = 80;
+            std::string joined;
+            joined.reserve(vr.errors.size() * kAvgErrorLen);
+            for (const auto& msg : vr.errors) {
+                if (!joined.empty()) joined.push_back('\n');
+                joined.append("  - ");
+                joined.append(msg);
+            }
+            throw ConfigInvalidError(
+                std::string(_("Configuration is syntactically valid but "
+                              "semantically rejected:\n")) +
+                joined);
+        }
     }
 
 #ifdef _WIN32

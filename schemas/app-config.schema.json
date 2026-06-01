@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://industrial-hmi.example/schemas/app-config.schema.json",
+  "title": "Industrial HMI Application Configuration",
+  "description": "Auditable spec for config/app-config.json. The runtime enforcement lives in src/config/ConfigValidator.cpp; this schema is the human- and tool-readable contract. Keep both in sync (see ADR-0015 + REQ-CONFIG-001).",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "application": {
+      "type": "object",
+      "properties": {
+        "name":    { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "window": {
+      "type": "object",
+      "properties": {
+        "title":          { "type": "string" },
+        "default_width":  { "type": "integer", "minimum": 1 },
+        "default_height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "default": { "type": "string" }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "palette":              { "type": "string" },
+        "multistation_enabled": { "type": "boolean" }
+      }
+    },
+    "i18n": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "enum": [
+            "auto", "en", "de", "es", "es_MX", "fi",
+            "fr", "ga", "it", "pt", "pt_BR", "sv"
+          ]
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["TRACE", "DEBUG", "INFO", "WARN", "ERROR"]
+        },
+        "file":              { "type": "string" },
+        "max_file_size_mb":  { "type": "integer", "minimum": 1 },
+        "max_files":         { "type": "integer", "minimum": 1 },
+        "console":           { "type": "boolean" }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "db_path": { "type": "string" }
+      }
+    },
+    "historian": {
+      "type": "object",
+      "properties": {
+        "enabled":             { "type": "boolean" },
+        "db_path":             { "type": "string" },
+        "batch_size":          { "type": "integer", "minimum": 1 },
+        "batch_age_ms":        { "type": "integer", "minimum": 1 },
+        "sweep_interval_ms":   { "type": "integer", "minimum": 1 },
+        "raw_retention_ms":    { "type": "integer", "minimum": 0 },
+        "minute_retention_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "network": {
+      "type": "object",
+      "properties": {
+        "tcp": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "port":    { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        },
+        "mqtt": {
+          "type": "object",
+          "properties": {
+            "enabled":          { "type": "boolean" },
+            "broker_host":      { "type": "string" },
+            "broker_port":      { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "client_id":        { "type": "string" },
+            "topic_prefix":     { "type": "string" },
+            "emit_plain_text":  { "type": "boolean" },
+            "emit_json":        { "type": "boolean" },
+            "subscriber": {
+              "type": "object",
+              "properties": {
+                "enabled":      { "type": "boolean" },
+                "topic_prefix": { "type": "string" }
+              }
+            }
+          }
+        },
+        "modbus": {
+          "type": "object",
+          "properties": {
+            "enabled":                 { "type": "boolean" },
+            "host":                    { "type": "string" },
+            "port":                    { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "poll_interval_ms":        { "type": "integer", "minimum": 1 },
+            "connect_timeout_ms":      { "type": "integer", "minimum": 1 },
+            "request_timeout_ms":      { "type": "integer", "minimum": 1 },
+            "slave_id":                { "type": "integer", "minimum": 1, "maximum": 247 },
+            "equipment_base_address":  { "type": "integer", "minimum": 0 },
+            "equipment_count":         { "type": "integer", "minimum": 1 },
+            "supply_base_address":     { "type": "integer", "minimum": 0 },
+            "supply_scale":            { "type": "number",  "exclusiveMinimum": 0 },
+            "quality_base_address":    { "type": "integer", "minimum": 0 },
+            "quality_scale":           { "type": "number",  "exclusiveMinimum": 0 },
+            "quality_count":           { "type": "integer", "minimum": 1 }
+          }
+        },
+        "opcua": {
+          "type": "object",
+          "properties": {
+            "enabled":          { "type": "boolean" },
+            "port":             { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "application_uri":  { "type": "string" },
+            "application_name": { "type": "string" },
+            "server": {
+              "type": "object",
+              "properties": {
+                "commands_enabled": { "type": "boolean" }
+              }
+            },
+            "client": {
+              "type": "object",
+              "properties": {
+                "enabled":          { "type": "boolean" },
+                "endpoint":         { "type": "string" },
+                "application_uri":  { "type": "string" },
+                "application_name": { "type": "string" },
+                "ingest_bridge": {
+                  "type": "object",
+                  "properties": {
+                    "enabled":      { "type": "boolean" },
+                    "topic_prefix": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "assets": { "type": "object" },
+    "dialogs": { "type": "object" }
+  }
+}
