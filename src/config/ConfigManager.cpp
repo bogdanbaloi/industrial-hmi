@@ -26,6 +26,7 @@
 
 #include "ConfigManager.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -56,6 +57,12 @@ using ordered_json = nlohmann::ordered_json;
 ///
 /// Arrays use numeric indices as path segments
 /// ("dashboard.equipment_lines.0.name").
+///
+/// NOLINTNEXTLINE(misc-no-recursion) -- DFS over a JSON DOM is the
+/// natural idiom; converting to an explicit stack would obscure the
+/// shape without bounding any practically-reachable depth (our
+/// app-config nests 3-4 levels; nlohmann itself imposes a 1000-frame
+/// limit at parse time, which we inherit).
 void flatten(const ordered_json& node,
              const std::string& prefix,
              std::map<std::string, std::string>& out) {
@@ -87,9 +94,13 @@ void flatten(const ordered_json& node,
     } else if (node.is_boolean()) {
         out[prefix] = node.get<bool>() ? "true" : "false";
     } else if (node.is_number_integer()) {
-        out[prefix] = std::to_string(node.get<long long>());
+        // Fixed-width int types (google-runtime-int): cstdint typedefs
+        // are mandated by the project's clang-tidy config, and pin the
+        // serialised range explicitly to 64 bits regardless of the
+        // platform's `long long` width.
+        out[prefix] = std::to_string(node.get<std::int64_t>());
     } else if (node.is_number_unsigned()) {
-        out[prefix] = std::to_string(node.get<unsigned long long>());
+        out[prefix] = std::to_string(node.get<std::uint64_t>());
     } else if (node.is_number_float()) {
         // nlohmann's dump() emits the shortest round-trip representation
         // for doubles -- exactly what std::stof / std::stoi consume on
