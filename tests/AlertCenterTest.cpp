@@ -1,7 +1,12 @@
 // [utest->req~quality-002~1]
 // [utest->req~alarm-001~1]
-// Covers REQ-QUALITY-002 (alert center) + REQ-ALARM-001 (ISA-18.2 alarm
-// lifecycle: UnackActive / AckActive / RtnUnack + acknowledge).
+// [utest->req~alarm-002~1]
+// [utest->req~alarm-003~1]
+// Covers REQ-QUALITY-002 (alert center),
+//        REQ-ALARM-001 (ISA-18.2 alarm lifecycle: UnackActive /
+//        AckActive / RtnUnack + acknowledge),
+//        REQ-ALARM-002 (Phase 2: shelve / unshelve / auto-expiry on tick),
+//        REQ-ALARM-003 (Phase 2: priority distinct from severity).
 //
 // Tests for app::presenter::AlertCenter
 //
@@ -22,6 +27,8 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <chrono>
+#include <memory>
 #include <string>
 
 using app::presenter::AlarmState;
@@ -406,4 +413,116 @@ TEST(AlertCenter, AcknowledgeMissingKeyIsNoOp) {
     AlertCenter c;
     c.acknowledge("nope");  // must not crash
     EXPECT_TRUE(c.snapshot().empty());
+}
+
+// ISA-18.2 Phase 2 -- shelve / unshelve / auto-expiry (REQ-ALARM-002)
+
+namespace {
+// Minimal controllable clock for shelve auto-expiry tests. AlertCenter
+// only reads the current time when computing shelve deadlines + on each
+// tick(); a value-returning closure backed by this struct gives the
+// test deterministic control without any sleeps.
+struct FakeClock {
+    AlertCenter::TimePoint now{};
+    AlertCenter::TimePoint operator()() const { return now; }
+};
+
+// Convenience: AlertCenter wired to a fake clock owned by the test.
+AlertCenter centerWithFakeClock(std::shared_ptr<FakeClock> clock) {
+    return AlertCenter{[clock] { return clock->now; }};
+}
+}  // namespace
+
+TEST(AlertCenter, ShelveHidesAlarmFromActiveLifecycleUntilExpiry) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+    ASSERT_EQ(stateOf(c, "k1"), AlarmState::UnackActive);
+
+    c.shelve("k1", std::chrono::seconds{60});
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::Shelved);
+
+    // Tick before deadline -- still shelved.
+    clock->now += std::chrono::seconds{30};
+    c.tick();
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::Shelved);
+
+    // Tick past deadline -- auto-unshelves to UnackActive (condition
+    // still holds because no clear() was received in the meantime).
+    clock->now += std::chrono::seconds{31};
+    c.tick();
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::UnackActive);
+}
+
+TEST(AlertCenter, ShelveExpiryRestoresRtnUnackIfConditionClearedWhileShelved) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+    c.shelve("k1", std::chrono::seconds{60});
+
+    // Condition clears silently while the alarm is shelved.
+    c.clear("k1");
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::Shelved);
+
+    // Auto-unshelve sees the cleared condition and returns to RtnUnack.
+    clock->now += std::chrono::seconds{61};
+    c.tick();
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::RtnUnack);
+}
+
+TEST(AlertCenter, UnshelveBeforeDeadlineRestoresPriorActiveState) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+    c.shelve("k1", std::chrono::seconds{60});
+
+    c.unshelve("k1");
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::UnackActive);
+
+    clock->now += std::chrono::seconds{120};
+    c.tick();  // already unshelved -- tick is a no-op
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::UnackActive);
+}
+
+TEST(AlertCenter, UnshelveOnNonShelvedAlarmIsNoOp) {
+    AlertCenter c;
+    c.raise(makeAlert("k1"));
+    c.unshelve("k1");  // not shelved -- must not crash, no state change
+    EXPECT_EQ(stateOf(c, "k1"), AlarmState::UnackActive);
+}
+
+// ISA-18.2 Phase 2 -- priority sorting (REQ-ALARM-003)
+
+TEST(AlertCenter, SnapshotIsOrderedByPriorityAscending) {
+    AlertCenter c;
+    AlertViewModel low      = makeAlert("low");      low.priority = 4;
+    AlertViewModel medium   = makeAlert("medium");   medium.priority = 3;
+    AlertViewModel high     = makeAlert("high");     high.priority = 2;
+    AlertViewModel emergency = makeAlert("emerg");   emergency.priority = 1;
+
+    // Insert in shuffled order.
+    c.raise(medium);
+    c.raise(low);
+    c.raise(emergency);
+    c.raise(high);
+
+    const auto snap = c.snapshot();
+    ASSERT_EQ(snap.size(), 4u);
+    // Most urgent first: 1, 2, 3, 4.
+    EXPECT_EQ(snap[0].key, "emerg");
+    EXPECT_EQ(snap[1].key, "high");
+    EXPECT_EQ(snap[2].key, "medium");
+    EXPECT_EQ(snap[3].key, "low");
+}
+
+TEST(AlertCenter, EqualPrioritiesKeepInsertionOrder) {
+    AlertCenter c;
+    AlertViewModel first  = makeAlert("first");  first.priority  = 3;
+    AlertViewModel second = makeAlert("second"); second.priority = 3;
+    c.raise(first);
+    c.raise(second);
+    const auto snap = c.snapshot();
+    ASSERT_EQ(snap.size(), 2u);
+    EXPECT_EQ(snap[0].key, "first");
+    EXPECT_EQ(snap[1].key, "second");
 }
