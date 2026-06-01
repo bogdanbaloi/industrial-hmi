@@ -1,0 +1,48 @@
+# Synthetic workload that drives the headless console binary through
+# the hot paths a real operator session exercises. Used by
+# `capture-callgrind.sh` to feed the binary's stdin while
+# valgrind/callgrind samples basic-block costs.
+#
+# Order chosen to exercise distinct hot paths in sequence rather than
+# the same path repeatedly: production lifecycle (start/stop), equipment
+# toggles (Model setters that fan out to all observers), alarm queries
+# (AlertCenter snapshot path), products listing (SQLite read path),
+# detail view (ProductsRepository::find by code), status (presenter
+# state aggregation), repeat. The final block fires a tight tick loop
+# (status x N) to amplify the per-tick cost so it dominates the
+# callgrind cost-share output.
+status
+start
+status
+eq 0 off
+eq 1 off
+eq 2 off
+eq 0 on
+eq 1 on
+eq 2 on
+alerts
+status
+products
+view 5
+view 6
+alerts
+eq 0 off
+alerts
+eq 0 on
+status
+status
+status
+status
+status
+status
+status
+status
+status
+status
+stop
+reset
+calibrate
+status
+start
+status
+quit

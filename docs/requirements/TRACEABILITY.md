@@ -118,6 +118,7 @@ requirements may be smoke-tested.
 | REQ-ID | Priority | Implementation | Verification | ADR |
 |---|---|---|---|---|
 | REQ-PERF-001 | SHOULD | `benchmarks/bench_alert_center.cpp`, `benchmarks/bench_modbus_pdu.cpp`, `benchmarks/bench_config_parse.cpp`, `benchmarks/README.md` (baseline numbers + scaling contract) | google/benchmark suites (built under `-DBUILD_BENCHMARKS=ON`) | -- |
+| REQ-PERF-002 | SHOULD | `scripts/perf/capture-callgrind.sh`, `scripts/perf/workload-baseline.txt`, `scripts/perf/README.md` (methodology + diff protocol) | `scripts/perf/baseline.callgrind-annotate.top50.txt` (committed top-N reference report; diff against fresh run after each meaty merge) | -- |
 
 ## MULTISTATION
 

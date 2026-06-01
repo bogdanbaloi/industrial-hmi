@@ -689,6 +689,37 @@ Verified by: `benchmarks/bench_alert_center`, `bench_modbus_pdu`,
 
 Needs: utest
 
+### REQ-PERF-002 (SHOULD) — Whole-program profile + regression baseline
+
+`req~perf-002~1`
+
+Beyond per-primitive microbenchmarks (REQ-PERF-001), the project
+**shall** carry a whole-program CPU profile captured under a synthetic
+operator workload, with a trimmed top-N report committed alongside the
+source so regressions in the hot-path distribution are caught by file
+diff.
+
+The capture **shall** use Valgrind / callgrind rather than `perf`
+because:
+
+1. `perf` requires kernel access that WSL2 + GitHub-hosted CI runners
+   do not grant by default.
+2. callgrind is deterministic (basic-block instrumentation) where
+   `perf` is sampling -- the diffable baseline depends on stability.
+3. Valgrind is already on the project's CI gate; one more invocation
+   is zero new infrastructure.
+
+The trimmed top-50 report lives at
+`scripts/perf/baseline.callgrind-annotate.top50.txt`; the capture
+pipeline is `scripts/perf/capture-callgrind.sh` driven by
+`scripts/perf/workload-baseline.txt`. The contract diffed across
+releases is the `%` column on the top-N rows (per-function share of
+total instructions retired) -- not the absolute counts, which depend
+on workload byte-stream + libc version + dynamic-linker symbol count.
+
+Verified by: `scripts/perf/baseline.callgrind-annotate.top50.txt`
+(diff against a fresh run after any meaty merge).
+
 ---
 
 ## MULTISTATION — Primary / secondary deployment

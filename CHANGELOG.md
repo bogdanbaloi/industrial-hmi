@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Whole-program callgrind profile + regression baseline (REQ-PERF-002)
+
+Phase 1 of the profiling discipline: capture pipeline + workload +
+committed top-N reference report. Pairs with the per-primitive
+microbenchmarks under `benchmarks/` -- benchmarks pin the budget per
+function, the callgrind report shows which functions dominate the
+budget under a real session.
+
+#### Added
+
+- `scripts/perf/capture-callgrind.sh` -- runs Valgrind / callgrind on
+  the headless console binary with a stdin workload, writes raw
+  `callgrind.out` + `callgrind_annotate` report to
+  `scripts/perf/output/` (gitignored).
+- `scripts/perf/workload-baseline.txt` -- synthetic operator session
+  driving distinct hot paths: production lifecycle, equipment toggles,
+  alarm snapshots, product reads, status loop.
+- `scripts/perf/baseline.callgrind-annotate.top50.txt` -- trimmed
+  top-50 inclusive-cost reference report from the Ryzen 7 5800X / WSL
+  Ubuntu 24.04 / GCC 13 capture. The contract diffed across releases
+  is the `%` column on the top-N rows, NOT the absolute Ir counts.
+- `scripts/perf/README.md` -- why callgrind not `perf` (kernel access
+  on WSL2 + CI runners, sampling vs deterministic, reuses the existing
+  Valgrind gate), how to read the baseline (which categories live in
+  the top 10 + what climbing into the top would mean for our code),
+  Phase 2 backlog (gprof2dot SVG, CI integration, per-subsystem
+  workloads).
+- REQ-PERF-002 in `REQUIREMENTS.md` + `TRACEABILITY.md` row.
+
+#### Initial baseline observations (Ryzen 7 5800X reference)
+
+- 10.7 M instructions total under the baseline workload.
+- ~30% dynamic linker symbol resolution (`do_lookup_x`,
+  `_dl_relocate_object`) -- one-shot startup cost, amortises with
+  workload length.
+- ~5% glibc malloc / free traffic.
+- ~3% nlohmann JSON lexer (config parse during bootstrap; matches
+  `bench_config_parse` baseline of ~42 us p50).
+- ~1.5% `std::vformat` (logger format-string lowering).
+- No function under our `src/` tree above 5% inclusive -- a regression
+  signal if that ever flips.
+
 ### Fuzz the wire parsers (REQ-INTEGRATION-006)
 
 Continuous-coverage fuzzing of the parsers that turn untrusted bytes off
