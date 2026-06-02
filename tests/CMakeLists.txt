@@ -931,6 +931,18 @@ target_link_libraries(test_alert_center PRIVATE
 target_include_directories(test_alert_center PRIVATE ${GTKMM_INCLUDE_DIRS})
 add_test(NAME AlertCenterTest COMMAND test_alert_center)
 
+# AlertsPanel: Phase 4b (REQ-ALARM-005). Pins the formatCountdown helper
+# without instantiating the full GTK widget (no Display / Application
+# context needed -- the helper is a static method with no widget state).
+add_executable(test_alerts_panel AlertsPanelTest.cpp)
+target_link_libraries(test_alerts_panel PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    ${GTKMM_LIBRARIES}
+)
+target_include_directories(test_alerts_panel PRIVATE ${GTKMM_INCLUDE_DIRS})
+add_test(NAME AlertsPanelTest COMMAND test_alerts_panel)
+
 # Presenter: ProductsPresenter (with mock repository)
 # ProductsPresenter.cpp lives in objectsPresenter; MockProductsRepository
 # is a header in tests/mocks. The test target needs the source root on its

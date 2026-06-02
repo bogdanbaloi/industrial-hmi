@@ -363,12 +363,23 @@ TEST(AlertCenter, ClearHistoryEmitsHistorySignalOnce) {
 // ISA-18.2 alarm lifecycle (REQ-ALARM-001)
 
 namespace {
-// Convenience: state of the single alarm with `key` in the snapshot.
+// Convenience: state of the single alarm with `key`, regardless of which
+// snapshot it currently lives in. Phase 4b filters Shelved entries out
+// of snapshot() and surfaces them via shelvedSnapshot() instead, so a
+// state lookup that only checked snapshot() would lose visibility on
+// Shelved alarms after they are shelved. The helper checks both lists.
 AlarmState stateOf(const AlertCenter& c, const std::string& key) {
     const auto snap = c.snapshot();
     const auto it = std::find_if(snap.begin(), snap.end(),
         [&](const AlertViewModel& a) { return a.key == key; });
-    return it != snap.end() ? it->state : AlarmState::RtnUnack;
+    if (it != snap.end()) return it->state;
+
+    const auto shelved = c.shelvedSnapshot();
+    const auto sit = std::find_if(shelved.begin(), shelved.end(),
+        [&](const AlertCenter::ShelvedView& v) { return v.vm.key == key; });
+    if (sit != shelved.end()) return sit->vm.state;
+
+    return AlarmState::RtnUnack;  // sentinel: not found
 }
 }  // namespace
 

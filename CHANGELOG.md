@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ISA-18.2 alarms Phase 4b -- AlertsPanel Shelved UI (REQ-ALARM-005)
+
+UI half of Phase 4. Phase 4a (just merged) shipped the model+presenter
+API: `shelvedSnapshot()` + `ShelvedView` with `secondsRemaining`
+countdown. Phase 4b consumes it in the GTK panel so the operator sees
+shelved alarms as a distinct subsection ordered by most-imminent
+expiry, with a per-row countdown widget.
+
+#### Added
+
+- `AlertsPanel::renderActiveAndShelved()` -- replaces the previous
+  `renderActive()` path. Renders TWO subsections in the Active view:
+  active alarms by priority on top, Shelved inventory by deadline
+  ascending underneath. The Shelved header is suppressed when empty
+  so an operator with active-only alarms sees the same layout as
+  before Phase 4b.
+- `AlertsPanel::appendShelvedHeader(count)` -- "SHELVED (n)" divider
+  with a tooltip explaining auto-unshelve semantics.
+- `AlertsPanel::buildShelvedCard(ShelvedView)` -- card layout mirrors
+  the active card but the timestamp slot is the countdown, and the
+  action row offers Unshelve only (Acknowledge is not meaningful
+  while shelved -- operator unshelves first).
+- `AlertsPanel::formatCountdown(seconds)` -- public static helper,
+  unit-testable without GTK. Renders MM:SS for any positive duration
+  (zero-padded seconds) and "EXPIRED" for zero / negative (defensive).
+- `AlertsPanelTest` -- 7 cases pinning the formatter contract: zero
+  -> EXPIRED, negative -> EXPIRED, pad rule under one minute, rollover
+  to minutes, default 5-min shelve case, long-shelve stays MM:SS,
+  secs<10 zero-pad rule.
+
+#### Changed
+
+- `AlertCenter::snapshot()` now FILTERS Shelved entries (lifting the
+  Phase 4a compatibility note). The operator-facing inventory split
+  is the contract: `snapshot()` = active list, `shelvedSnapshot()` =
+  shelved list. The `stateOf` test helper in AlertCenterTest checks
+  both lists so existing assertions on shelved-alarm state hold.
+
+#### Compatibility
+
+- All 84 ctest targets pass post-change (+1 vs Phase 4a baseline of
+  83 for the new AlertsPanelTest binary).
+- No producer-side change. Producers (presenter, integration bridges)
+  raise / clear / shelve through the existing AlertCenter API.
+
 ### ISA-18.2 alarms Phase 4a -- operator-visible Shelved inventory (REQ-ALARM-005)
 
 Additive read API on `AlertCenter` so the panel can render shelved

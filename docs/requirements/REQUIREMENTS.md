@@ -994,15 +994,26 @@ renders "EXPIRED" without juggling a negative duration.
 
 The countdown is computed from the `NowFn` injected at construction so
 unit tests drive deterministic deadlines without sleeps (same pattern
-as REQ-ALARM-002). This is an **additive** API alongside the existing
-`snapshot()`; Phase 4b will migrate the GTK AlertsPanel UI to render
-the two snapshots as two distinct subsections (active alarms by
-priority + shelved inventory by deadline).
+as REQ-ALARM-002).
 
-Verified by: AlertCenterTest (7 cases pinning empty inventory, filtered
-inclusion, deadline-asc ordering, countdown tracks injected clock,
-clamp-to-zero past deadline, swept after tick, deadline matches shelve
-call).
+**Phase 4b (now shipped)**: the GTK `AlertsPanel` renders Active +
+Shelved as two distinct subsections in its Active view, top-to-bottom.
+Each shelved row shows a countdown ("4:37 left" / "EXPIRED") in place
+of the raise timestamp; the action row offers Unshelve only
+(Acknowledge is not meaningful while shelved -- the alarm is out of
+the active inventory by operator choice). The `snapshot()` API now
+filters Shelved entries (Phase 4a had kept them in for UI compat);
+the Shelved subsection header is suppressed when empty so an operator
+with active-only alarms sees the same layout as before Phase 4b.
+
+Verified by: AlertCenterTest (7 cases pinning empty inventory,
+filtered inclusion, deadline-asc ordering, countdown tracks injected
+clock, clamp-to-zero past deadline, swept after tick, deadline matches
+shelve call) + AlertsPanelTest (7 cases on the
+`AlertsPanel::formatCountdown` static helper: EXPIRED at zero,
+EXPIRED on negative defensive input, pad rule for under-one-minute,
+rollover into minutes, default 5-min shelve case, long-shelve stays
+MM:SS, secs<10 zero-pad rule).
 
 ADR: standards basis ANSI/ISA-18.2-2016 (shelved-alarm management
 section) -- making the inventory operator-visible turns a working
