@@ -49,9 +49,16 @@ class ConfigManager;
 /// `std::jthread` works in both front-ends.
 ///
 /// @thread_safety The watcher's own state is mutex-protected.
-/// ConfigManager is single-writer + multi-reader by convention and
-/// reload() is a writer; callers must not run a second writer
-/// concurrently with the watcher.
+/// ConfigManager is documented single-writer (REQ-CORE-006); reads
+/// while the watcher's background thread is calling `reload()` are a
+/// data race that ThreadSanitizer catches in CI. Production callers
+/// MUST NOT read configuration values from a different thread while
+/// the watcher is running until Phase 3 adds internal synchronisation
+/// to ConfigManager. The Settings page reads on the GTK main thread,
+/// and integration backends snapshot their config at construction
+/// time, so the typical wiring is safe today; the constraint exists
+/// for future code that holds a ConfigManager reference and reads
+/// from a background thread.
 class ConfigFileWatcher {
 public:
     /// Default polling cadence -- 1 s matches the operator's

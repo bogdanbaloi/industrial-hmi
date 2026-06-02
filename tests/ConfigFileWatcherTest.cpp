@@ -191,15 +191,20 @@ TEST_F(ConfigFileWatcherTest, BackgroundThreadDetectsEdit) {
     writeFile(tmpPath_, configWith("de"));
     bumpMtime(tmpPath_, std::chrono::seconds{2});
 
-    // Poll up to ~500 ms for the change to land. Avoids a hard sleep
-    // by checking the side-effect (cfg.getLanguage() == "de").
-    const auto deadline = std::chrono::steady_clock::now() +
-                          std::chrono::milliseconds{500};
-    while (std::chrono::steady_clock::now() < deadline) {
-        if (cfg.getLanguage() == "de") break;
-        std::this_thread::sleep_for(std::chrono::milliseconds{10});
-    }
+    // ConfigManager is documented single-writer (REQ-CORE-006); reading
+    // from the main thread while the watcher's background thread is
+    // calling `reload()` is the racy pattern TSan flags (and which
+    // production callers must avoid until Phase 3 adds internal
+    // synchronisation -- see ConfigFileWatcher.h thread-safety note).
+    //
+    // To verify "the watcher detected the edit" without the race, we
+    // sleep through a few poll intervals (8 intervals = ~200 ms is
+    // plenty) then `stop()` the watcher. `stop()` joins the worker
+    // thread, which establishes the standard happens-before
+    // relationship -- by the time we read `getLanguage()` on the main
+    // thread, nothing concurrent is mutating `config_`.
+    std::this_thread::sleep_for(std::chrono::milliseconds{200});
+    watcher.stop();
 
     EXPECT_EQ(cfg.getLanguage(), "de");
-    watcher.stop();
 }
