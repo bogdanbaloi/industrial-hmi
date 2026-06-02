@@ -1,0 +1,80 @@
+# Alarm-storm workload: stresses AlertCenter's raise / clear / acknowledge
+# / snapshot paths under sustained operator pressure.
+#
+# Pairs with `workload-baseline.txt` (the broad operator session). The
+# baseline workload covers many subsystems shallowly; this one zooms on
+# the alarm lifecycle so a regression on `AlertCenter::raise` or
+# `acknowledge` or `snapshot` shows up clearly in the top-N % column.
+#
+# Pattern per iteration: equipment toggle OFF (fires an alarm), `alerts`
+# query (snapshot), `dismiss` (acknowledge), equipment toggle ON
+# (resolves to history). 30 iterations across 3 equipment lines = 90
+# raise + 90 snapshot + 90 ack + 90 clear (resolve) cycles. The console
+# binary does not expose `shelve` (Phase 2 added shelve via the GUI
+# only), so this workload covers Phases 1 + 3 (raise / ack / clear /
+# audit-journal) but not Phase 2 shelve. Phase 2 paths are covered by
+# the microbenchmark suite (bench_alert_center).
+start
+status
+eq 0 off
+alerts
+dismiss equipment-0-error
+eq 0 on
+eq 1 off
+alerts
+dismiss equipment-1-error
+eq 1 on
+eq 2 off
+alerts
+dismiss equipment-2-error
+eq 2 on
+eq 0 off
+alerts
+dismiss equipment-0-error
+eq 0 on
+eq 1 off
+alerts
+dismiss equipment-1-error
+eq 1 on
+eq 2 off
+alerts
+dismiss equipment-2-error
+eq 2 on
+eq 0 off
+alerts
+dismiss equipment-0-error
+eq 0 on
+eq 1 off
+alerts
+dismiss equipment-1-error
+eq 1 on
+eq 2 off
+alerts
+dismiss equipment-2-error
+eq 2 on
+eq 0 off
+alerts
+dismiss equipment-0-error
+eq 0 on
+eq 1 off
+alerts
+dismiss equipment-1-error
+eq 1 on
+eq 2 off
+alerts
+dismiss equipment-2-error
+eq 2 on
+eq 0 off
+alerts
+dismiss equipment-0-error
+eq 0 on
+eq 1 off
+alerts
+dismiss equipment-1-error
+eq 1 on
+eq 2 off
+alerts
+dismiss equipment-2-error
+eq 2 on
+status
+quit
