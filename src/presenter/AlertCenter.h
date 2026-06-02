@@ -66,6 +66,14 @@ public:
     /// more correct for durations (monotonic), but we display deadlines
     /// to the operator + carry them across log rotations -- system_clock
     /// matches the existing AlertViewModel::timestamp convention.
+    ///
+    /// `NowFn` injection here is deliberate (REQ-ALARM-002): shelve
+    /// auto-expiry tests drive `tick()` against a FakeClock without
+    /// sleeping. Do NOT copy this pattern into new `now()` readers
+    /// without a triggering REQ -- ADR-0017 documents the rejection of
+    /// "TimeSource everywhere"; the rule is "inject when a test needs
+    /// to gate a state-machine transition on a deadline; otherwise
+    /// keep the real clock".
     using Clock     = std::chrono::system_clock;
     using TimePoint = Clock::time_point;
     using NowFn     = std::function<TimePoint()>;

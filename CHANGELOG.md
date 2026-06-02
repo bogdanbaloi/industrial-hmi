@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ADR-0017: reject TimeSource injection everywhere
+
+Codifies the decision to NOT extend the `NowFn` clock injection
+pattern (used today by `AlertCenter` and `ThroughputMeter`) to the
+remaining wall-clock readers in `src/` -- `HistorianMaintenance`
+sweep cutoffs, `SqliteAuditLogger` row timestamps, `Logger` line
+timestamps, etc.
+
+The argument: each existing seam catches a specific class of bug
+(state-machine transition gated on a deadline crossing during a
+test step). The remaining readers do not have that shape. Their
+behaviour is "stamp the current time on a row" or "sleep until X",
+neither of which benefits from a fake clock; the existing sanitizer
++ integration gates cover the actually-broken cases. Extending the
+pattern would grow per-consumer surface (constructor param,
+member, default, rationale paragraph) for marginal diagnostic
+return.
+
+Same "rejected design" pattern as ADR-0014 (Result everywhere) and
+ADR-0016 (perf + flamegraph SVG as Phase 1 profiling). The
+portfolio signal lives in knowing when NOT to extend a pattern.
+
+#### Added
+
+- `docs/adr/0017-reject-timesource-injection-everywhere.md` --
+  decision record with reconsideration triggers (specific bug
+  ships that a fake-clock test would have caught, OR a `Needs:`
+  clause in REQUIREMENTS.md requires deterministic time on the
+  path).
+- Index row in `docs/adr/README.md`.
+- Cross-reference comment in `src/presenter/AlertCenter.h::NowFn`
+  pointing future maintainers at ADR-0017 before they copy the
+  pattern into a new consumer.
+
+#### Process
+
+- `.claude/ROADMAP.md` Tier-C entry for "TimeSource injection
+  across the codebase" moved to Tier-D rejected with the ADR
+  citation. Tier-C entry for "HotReload of app-config.json" marked
+  shipped (already on main as PR #138).
+
 ### Config hot reload Phase 1 (REQ-CORE-006)
 
 Closes the config story arc started by ADR-0015 (nlohmann parser +
