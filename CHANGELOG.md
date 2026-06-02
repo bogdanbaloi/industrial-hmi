@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Config hot reload Phase 1 (REQ-CORE-006)
+
+Closes the config story arc started by ADR-0015 (nlohmann parser +
+ConfigValidator + JSON Schema spec). Operators can now edit
+`config/app-config.json` and trigger a reload without restarting the
+binary, with the same atomic-or-nothing semantics fail-fast startup
+already enforces.
+
+#### Added
+
+- `ConfigManager::reload()` -- re-reads the configured `configPath`,
+  parses with `nlohmann::json::parse`, flattens into a TEMPORARY map,
+  swaps in atomically, runs `ConfigValidator::validate()`, and rolls
+  back to the previous state on any failure (file missing, parse
+  error, semantic-validation rejection). Returns `bool`; logs a
+  warning through the injected logger on each rejection path.
+- ConfigManagerTest gains 5 new reload cases: success-after-edit
+  (language changed `it` -> `de`), missing-file rejection,
+  truncated-JSON rejection, validator rejection on unknown language
+  code, no-init sentinel (reload before initialize is a no-op
+  returning `false`).
+- REQ-CORE-006 in `REQUIREMENTS.md` + `TRACEABILITY.md` row,
+  referencing ADR-0015 (same validation gate that vets the boot-time
+  config now vets every reload).
+
+#### Scope -- Phase 1 deliberately does NOT add
+
+- A file-system watcher. Consumers decide WHEN to call `reload()`:
+  Settings page button, SIGHUP, timer, OPC-UA method. Cadence and
+  trigger policy stay out of ConfigManager.
+- A change-notification callback. Consumers diff before/after or
+  re-poll on their existing tick path.
+- Re-application of derived state (i18n re-bind, logger
+  re-configure, theme re-apply). Those belong to the call site, not
+  to ConfigManager.
+
+Scope = the atomic data swap with the validation gate.
+
 ### Callgrind profiling Phase 2 -- CI workflow + diff helper + alarm-storm baseline (REQ-PERF-002, ADR-0016)
 
 Phase 1 (already on main) shipped the capture script + workload-baseline

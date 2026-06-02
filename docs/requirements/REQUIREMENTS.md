@@ -356,6 +356,39 @@ Verified by: ConfigValidatorTest.
 
 Needs: utest
 
+### REQ-CORE-006 (NICE) — Hot reload configuration without restart
+
+`req~core-006~1`
+
+`ConfigManager` **shall** expose a `reload()` method that re-reads the
+configured `configPath` from disk, runs `ConfigValidator` against the
+new contents, and atomically replaces the in-memory flat-key map IF
+AND ONLY IF parse + validation both pass. On any failure (file
+missing, parse error, validator rejection), the previous in-memory
+state **shall** be preserved exactly so getter consumers never observe
+a half-applied or invalid configuration.
+
+The method **shall** return `bool`: `true` on successful swap, `false`
+on rejection. The caller (or the injected logger) sees a warning on
+each rejection path.
+
+This is Phase 1 of the hot-reload story. Phase 1 deliberately omits:
+a file-system watcher (consumers decide WHEN to call `reload()`:
+Settings page button, SIGHUP, timer, OPC-UA method); a
+change-notification callback (consumers diff before/after or re-poll
+on their existing tick path); re-application of derived state (i18n
+re-bind, logger re-configure, theme re-apply) -- those are the
+caller's job. Scope = the atomic data swap with validation gate.
+
+Verified by: ConfigManagerTest (5 cases: successful reload after
+edit, missing-file rejection, parse-error rejection,
+validator-rejection, reload-without-initialize sentinel).
+
+ADR: 0015 (validator + schema as spec) -- the same validation gate
+that vets the boot-time config now vets every reload.
+
+Needs: utest
+
 ---
 
 ## DASHBOARD — Single-station surface
