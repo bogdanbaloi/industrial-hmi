@@ -127,6 +127,19 @@ target_link_libraries(test_config_validator PRIVATE
 add_test(NAME ConfigValidatorTest COMMAND test_config_validator
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+# ConfigFileWatcher -- Phase 2 of REQ-CORE-006 hot reload (REQ-CORE-007).
+# Drives the watcher's pollOnce() between writeFile calls + bumpMtime
+# to assert mtime-change semantics without sleeping. One short-interval
+# background-thread test exercises start/stop lifecycle.
+add_executable(test_config_file_watcher ConfigFileWatcherTest.cpp)
+target_link_libraries(test_config_file_watcher PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsConfig
+)
+add_test(NAME ConfigFileWatcherTest COMMAND test_config_file_watcher
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
 # Model: DatabaseManager
 # DatabaseManager.cpp uses Boost.Asio (async helpers) and SQLite at runtime,
 # so we do need the real object lib + its transitive deps here.

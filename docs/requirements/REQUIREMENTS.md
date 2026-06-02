@@ -356,6 +356,46 @@ Verified by: ConfigValidatorTest.
 
 Needs: utest
 
+### REQ-CORE-007 (NICE) — Watch the config file and trigger reload on edit
+
+`req~core-007~1`
+
+A `ConfigFileWatcher` **shall** poll the configured app-config path
+at a caller-supplied interval (default 1 s) and, whenever the file's
+last-write-time advances, call `ConfigManager::reload()`. The watcher
+itself **shall NOT** interpret reload failures beyond logging them --
+the manager's REQ-CORE-006 contract (atomic re-read + re-validate +
+rollback on any failure) already covers parse errors and validator
+rejections.
+
+Cross-platform implementation **shall** use polling
+(`std::filesystem::last_write_time`) rather than OS-specific
+event-driven primitives (inotify / kqueue /
+ReadDirectoryChangesW). Three reasons: (a) one code path works on
+Linux, Windows MSYS2 CLANG64, and the headless console; (b) the
+operator's perception of "instant" is the cadence (~1 s) the poll
+runs at, so event-driven sub-second latency buys nothing for a
+hand-edited config file; (c) the polling loop is trivial to test
+deterministically via a `pollOnce()` method that runs one iteration
+on the caller's thread.
+
+The watcher **shall** own a `std::jthread` (Glib timer would not
+run on the console binary). Iterations sleep on a
+`condition_variable` keyed to the stop token so shutdown returns
+within milliseconds, not the full poll interval.
+
+Verified by: ConfigFileWatcherTest (7 cases: no-change baseline,
+edit triggers reload, second-poll-after-edit reports no change,
+reload-rejected still reports the file change, missing file
+preserves previous config, background-thread start/stop lifecycle
+including idempotent stop, background thread detects an edit).
+
+ADR: 0015 (validator + schema as spec, same gate vets every reload)
++ 0017 (rejected TimeSource everywhere; the watcher uses the real
+process clock per the same rejection rationale).
+
+Needs: utest
+
 ### REQ-CORE-006 (NICE) — Hot reload configuration without restart
 
 `req~core-006~1`

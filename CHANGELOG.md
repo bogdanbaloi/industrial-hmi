@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Config hot reload Phase 2 -- file watcher (REQ-CORE-007)
+
+Continues the config story arc from ADR-0015 / REQ-CORE-005 / REQ-
+CORE-006: the watcher polls the configured app-config path for
+last-write-time changes and calls `ConfigManager::reload()` when
+the mtime advances. Reload itself handles parse + validation +
+atomic swap + rollback per Phase 1 (REQ-CORE-006); the watcher's
+only job is to notice the file changed.
+
+#### Added
+
+- `src/config/ConfigFileWatcher.h/.cpp` -- polling implementation
+  via `std::filesystem::last_write_time`. Cross-platform without
+  per-OS conditional code (inotify / kqueue /
+  ReadDirectoryChangesW deliberately rejected -- explained inline +
+  in REQ-CORE-007). Owns one `std::jthread`; iterations sleep on a
+  `condition_variable` keyed to the stop token so shutdown returns
+  in milliseconds, not the full interval. `pollOnce()` is exposed
+  on the public surface so unit tests drive iterations
+  deterministically without the background thread (the same
+  pattern HistorianMaintenance::runOnce uses).
+- `ConfigFileWatcherTest` -- 7 cases: no-change baseline,
+  edit-triggers-reload (with `std::filesystem::last_write_time`
+  bump to force a later mtime without sleeping), second-poll-no-
+  change, reload-rejected-still-reports-change, missing-file
+  preserves previous config, background-thread start/stop
+  lifecycle (including idempotent stop), background thread
+  detects an edit (deadline-bounded busy loop, not a hard sleep).
+- REQ-CORE-007 in `REQUIREMENTS.md` + `TRACEABILITY.md` row,
+  referencing ADR-0015 (validation gate) + ADR-0017 (real-clock
+  rationale -- the watcher uses the process clock per the same
+  reject-TimeSource-everywhere argument).
+
+#### Scope -- Phase 2 deliberately does NOT add
+
+- Bootstrap wiring. The watcher is a library; whether to start one
+  in production is the composition root's choice. Phase 3 will
+  wire it into Bootstrap behind a config flag (default off) +
+  re-apply derived state (i18n / logger / theme) on reload.
+- Change-notification callbacks. Same Phase 1 stance -- consumers
+  diff before/after or poll on their existing tick. The
+  AlertsPanel pattern (`signalAlertsChanged` + idle-coalesced
+  refresh) is the template if a UI surface ever needs it.
+
 ### ADR-0017: reject TimeSource injection everywhere
 
 Codifies the decision to NOT extend the `NowFn` clock injection

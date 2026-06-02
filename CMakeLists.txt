@@ -415,11 +415,13 @@ target_sources(objectsConfig
     PRIVATE
         src/config/ConfigManager.cpp
         src/config/ConfigValidator.cpp
+        src/config/ConfigFileWatcher.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
             src/config/ConfigManager.h
             src/config/ConfigValidator.h
+            src/config/ConfigFileWatcher.h
             src/config/config_defaults.h
 )
 target_link_libraries(objectsConfig
