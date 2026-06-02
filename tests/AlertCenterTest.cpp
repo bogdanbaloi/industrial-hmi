@@ -3,12 +3,15 @@
 // [utest->req~alarm-002~1]
 // [utest->req~alarm-003~1]
 // [utest->req~alarm-004~1]
+// [utest->req~alarm-005~1]
 // Covers REQ-QUALITY-002 (alert center),
 //        REQ-ALARM-001 (ISA-18.2 alarm lifecycle: UnackActive /
 //        AckActive / RtnUnack + acknowledge),
 //        REQ-ALARM-002 (Phase 2: shelve / unshelve / auto-expiry on tick),
 //        REQ-ALARM-003 (Phase 2: priority distinct from severity),
-//        REQ-ALARM-004 (Phase 3: audit journal of lifecycle transitions).
+//        REQ-ALARM-004 (Phase 3: audit journal of lifecycle transitions),
+//        REQ-ALARM-005 (Phase 4a: operator-visible Shelved inventory via
+//        shelvedSnapshot()).
 //
 // Tests for app::presenter::AlertCenter
 //
@@ -491,6 +494,111 @@ TEST(AlertCenter, UnshelveOnNonShelvedAlarmIsNoOp) {
     c.raise(makeAlert("k1"));
     c.unshelve("k1");  // not shelved -- must not crash, no state change
     EXPECT_EQ(stateOf(c, "k1"), AlarmState::UnackActive);
+}
+
+// ISA-18.2 Phase 4a -- operator-visible Shelved inventory (REQ-ALARM-005)
+//
+// `shelvedSnapshot()` is an additive read API alongside the existing
+// `snapshot()` (Phase 1) so the panel can render two distinct lists:
+// active alarms ordered by priority, and shelved alarms ordered by
+// most-imminent expiry. Phase 4b will rewire the GTK AlertsPanel to
+// consume both; Phase 4a only covers the model+presenter contract.
+
+TEST(AlertCenter, ShelvedSnapshotEmptyWhenNoShelvedAlarms) {
+    AlertCenter c;
+    c.raise(makeAlert("k1"));
+    c.raise(makeAlert("k2"));
+    EXPECT_TRUE(c.shelvedSnapshot().empty());
+}
+
+TEST(AlertCenter, ShelvedSnapshotIncludesShelvedAlarmsOnly) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+    c.raise(makeAlert("k2"));
+    c.raise(makeAlert("k3"));
+    c.shelve("k2", std::chrono::seconds{60});
+
+    const auto shelved = c.shelvedSnapshot();
+    ASSERT_EQ(shelved.size(), 1u);
+    EXPECT_EQ(shelved[0].vm.key, "k2");
+    EXPECT_EQ(shelved[0].vm.state, AlarmState::Shelved);
+}
+
+TEST(AlertCenter, ShelvedSnapshotOrderedByDeadlineAscending) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+    c.raise(makeAlert("k2"));
+    c.raise(makeAlert("k3"));
+
+    // Shelve at increasing durations -- k1 expires soonest, k3 last.
+    c.shelve("k1", std::chrono::seconds{30});
+    c.shelve("k2", std::chrono::seconds{120});
+    c.shelve("k3", std::chrono::seconds{60});
+
+    const auto shelved = c.shelvedSnapshot();
+    ASSERT_EQ(shelved.size(), 3u);
+    // Most-imminent expiry first -- the inventory panel's natural
+    // operator-attention order.
+    EXPECT_EQ(shelved[0].vm.key, "k1");
+    EXPECT_EQ(shelved[1].vm.key, "k3");
+    EXPECT_EQ(shelved[2].vm.key, "k2");
+}
+
+TEST(AlertCenter, ShelvedSnapshotSecondsRemainingFollowsClock) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+    c.shelve("k1", std::chrono::seconds{60});
+
+    auto shelved = c.shelvedSnapshot();
+    ASSERT_EQ(shelved.size(), 1u);
+    EXPECT_EQ(shelved[0].secondsRemaining, std::chrono::seconds{60});
+
+    // Advance clock 25s -- countdown should reflect remaining 35s.
+    clock->now += std::chrono::seconds{25};
+    shelved = c.shelvedSnapshot();
+    ASSERT_EQ(shelved.size(), 1u);
+    EXPECT_EQ(shelved[0].secondsRemaining, std::chrono::seconds{35});
+}
+
+TEST(AlertCenter, ShelvedSnapshotSecondsRemainingClampsToZeroPastDeadline) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+    c.shelve("k1", std::chrono::seconds{60});
+
+    // Past deadline but BEFORE tick() runs: entry is still in the
+    // snapshot, secondsRemaining clamps to 0 so the panel renders
+    // "EXPIRED" without juggling negative durations.
+    clock->now += std::chrono::seconds{90};
+    const auto shelved = c.shelvedSnapshot();
+    ASSERT_EQ(shelved.size(), 1u);
+    EXPECT_EQ(shelved[0].secondsRemaining, std::chrono::seconds{0});
+}
+
+TEST(AlertCenter, ShelvedSnapshotEmptyAfterTickSweepsExpired) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+    c.shelve("k1", std::chrono::seconds{60});
+
+    clock->now += std::chrono::seconds{90};
+    c.tick();  // auto-unshelves expired entries
+    EXPECT_TRUE(c.shelvedSnapshot().empty());
+}
+
+TEST(AlertCenter, ShelvedSnapshotDeadlineMatchesShelveCall) {
+    auto clock = std::make_shared<FakeClock>();
+    AlertCenter c = centerWithFakeClock(clock);
+    c.raise(makeAlert("k1"));
+
+    const auto t0 = clock->now;
+    c.shelve("k1", std::chrono::seconds{300});
+    const auto shelved = c.shelvedSnapshot();
+    ASSERT_EQ(shelved.size(), 1u);
+    EXPECT_EQ(shelved[0].deadline, t0 + std::chrono::seconds{300});
 }
 
 // ISA-18.2 Phase 2 -- priority sorting (REQ-ALARM-003)

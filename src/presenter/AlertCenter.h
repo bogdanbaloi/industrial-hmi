@@ -302,6 +302,64 @@ public:
         return out;
     }
 
+    /// Shelved-alarm row delivered to the panel. Pairs the alarm's
+    /// view model with the wall-clock deadline + the seconds-remaining
+    /// delta from "now" at the moment `shelvedSnapshot()` was called.
+    ///
+    /// We expose the absolute `deadline` AND the precomputed
+    /// `secondsRemaining` because:
+    ///   - the panel renders a countdown ("4:37 left") from
+    ///     `secondsRemaining`, so it does not need its own clock
+    ///   - tests that inject a fake clock can assert on either field
+    ///     without having to know AlertCenter's internal NowFn
+    ///   - `secondsRemaining` clamps to 0 for entries past their
+    ///     deadline (caller can still see them this tick, the next
+    ///     `tick()` will sweep them off the shelved list)
+    struct ShelvedView {
+        AlertViewModel        vm;
+        TimePoint             deadline;
+        std::chrono::seconds  secondsRemaining;
+    };
+
+    /// Thread-safe snapshot of currently-shelved alarms, sorted by
+    /// deadline ascending (most-imminent expiry first). Pairs with
+    /// `snapshot()` -- the active panel renders one list, the shelved
+    /// inventory panel renders the other. See REQ-ALARM-005.
+    ///
+    /// Phase 4a: this is an additive API; `snapshot()` still includes
+    /// Shelved entries so the existing AlertsPanel UI keeps working
+    /// unchanged. Phase 4b will switch the UI to render the two lists
+    /// from the two snapshots and stop including Shelved in
+    /// `snapshot()`.
+    [[nodiscard]] std::vector<ShelvedView> shelvedSnapshot() const {
+        const std::chrono::system_clock::time_point now = now_();
+        const std::scoped_lock lock(mutex_);
+        std::vector<ShelvedView> out;
+        out.reserve(alarms_.size());
+        for (const auto& alarm : alarms_) {
+            if (alarm.vm.state != AlarmState::Shelved) continue;
+            // `secondsRemaining` clamps at 0 so the panel can render
+            // "EXPIRED" without juggling a negative duration. The next
+            // tick() will remove these entries; until then the operator
+            // still sees them in the inventory.
+            const auto delta = std::chrono::duration_cast<std::chrono::seconds>(
+                alarm.shelvedUntil - now);
+            const auto clamped = delta.count() < 0
+                ? std::chrono::seconds{0}
+                : delta;
+            out.push_back(ShelvedView{
+                alarm.vm,
+                alarm.shelvedUntil,
+                clamped,
+            });
+        }
+        std::sort(out.begin(), out.end(),
+            [](const ShelvedView& a, const ShelvedView& b) {
+                return a.deadline < b.deadline;
+            });
+        return out;
+    }
+
     /// Snapshot of the resolved-alarm history, newest-first. Bounded by
     /// kHistoryCapacity (oldest entries drop off when the ring fills).
     [[nodiscard]] std::vector<AlertHistoryEntry> history() const {
