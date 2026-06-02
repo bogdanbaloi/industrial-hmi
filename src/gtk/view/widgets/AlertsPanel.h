@@ -215,18 +215,37 @@ private:
         if (showingHistory_) {
             renderHistory();
         } else {
-            renderActive();
+            renderActiveAndShelved();
         }
     }
 
-    void renderActive() {
-        const auto alerts = alertCenter_.snapshot();
-        if (alerts.empty()) {
+    /// Phase 4b (REQ-ALARM-005): render TWO subsections in the Active
+    /// view, top-to-bottom:
+    ///   1. Active alarms ordered by ISA-18.2 priority ascending
+    ///   2. Shelved inventory ordered by deadline ascending (most-
+    ///      imminent expiry first), each row with a countdown widget
+    /// The "No alerts" placeholder fires only when BOTH lists are empty;
+    /// the Shelved subsection header is suppressed when there is nothing
+    /// to put under it, so an operator with active-only alarms sees the
+    /// same layout as before Phase 4b.
+    void renderActiveAndShelved() {
+        const auto active  = alertCenter_.snapshot();
+        const auto shelved = alertCenter_.shelvedSnapshot();
+
+        if (active.empty() && shelved.empty()) {
             appendPlaceholder(_("No alerts"));
             return;
         }
-        for (const auto& a : alerts) {
+
+        for (const auto& a : active) {
             listBox_->append(*buildCard(a, /*historyMode*/ false, ""));
+        }
+
+        if (!shelved.empty()) {
+            appendShelvedHeader(shelved.size());
+            for (const auto& s : shelved) {
+                listBox_->append(*buildShelvedCard(s));
+            }
         }
     }
 
@@ -351,6 +370,134 @@ private:
 
         return card;
     }
+
+    /// Section divider rendered above the Shelved subsection. Carries the
+    /// label "SHELVED (n)" so the operator sees the count at a glance
+    /// without scrolling to the bottom.
+    void appendShelvedHeader(std::size_t count) {
+        // Top margin separates the Shelved section from the active list
+        // above. Bottom margin tightens it against the first shelved
+        // card so the grouping reads as one block.
+        constexpr int kSectionTopMargin    = 12;
+        constexpr int kSectionBottomMargin = 4;
+        auto* hdr = Gtk::make_managed<Gtk::Label>();
+        hdr->set_xalign(0);
+        hdr->set_margin_top(kSectionTopMargin);
+        hdr->set_margin_bottom(kSectionBottomMargin);
+        hdr->add_css_class("alerts-shelved-header");
+        hdr->set_label(
+            Glib::ustring(_("SHELVED")) + " (" + std::to_string(count) + ")");
+        hdr->set_tooltip_text(
+            _("Alarms operator-shelved; auto-unshelve at the listed deadline"));
+        listBox_->append(*hdr);
+    }
+
+    /// Build a card for one shelved alarm. Layout mirrors `buildCard`
+    /// but the timestamp slot is replaced by the countdown
+    /// ("4:37 left" / "EXPIRED") and the action row offers Unshelve only
+    /// (Acknowledge is not meaningful while shelved -- the alarm is
+    /// out of the active inventory by operator choice).
+    Gtk::Widget* buildShelvedCard(const presenter::AlertCenter::ShelvedView& s) {
+        const auto& a = s.vm;
+        auto* card = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 2);
+        card->add_css_class("alert-card");
+        card->add_css_class(cssForSeverity(a.severity));
+        card->add_css_class("alert-shelved");
+        card->set_margin_bottom(4);
+
+        auto* top = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 6);
+
+        auto* title = Gtk::make_managed<Gtk::Label>(a.title);
+        title->set_xalign(0);
+        title->set_hexpand(true);
+        title->set_wrap(true);
+        title->add_css_class("alert-title");
+        top->append(*title);
+
+        // Priority badge stays so the operator sees urgency even on
+        // shelved entries (a P1 shelved-and-expiring-in-30s is still
+        // operator-attention-worthy).
+        auto* pbadge = Gtk::make_managed<Gtk::Label>(priorityBadge(a.priority));
+        pbadge->add_css_class("alert-priority-badge");
+        pbadge->set_valign(Gtk::Align::CENTER);
+        pbadge->set_tooltip_text(_("ISA-18.2 priority (1 = most urgent)"));
+        top->append(*pbadge);
+
+        // Countdown replaces the timestamp on shelved cards. The
+        // operator's attention metric on a shelved alarm is "how soon
+        // does it un-shelve back into the active list?", not "when did
+        // it originally fire".
+        auto* countdown = Gtk::make_managed<Gtk::Label>(
+            formatCountdown(s.secondsRemaining));
+        countdown->add_css_class("alert-countdown");
+        if (s.secondsRemaining <= std::chrono::seconds{0}) {
+            countdown->add_css_class("alert-countdown-expired");
+        }
+        countdown->set_tooltip_text(_("Time remaining until auto-unshelve"));
+        top->append(*countdown);
+
+        // Unshelve action -- pull the alarm back into the active list
+        // before its deadline. Acknowledge is not offered because the
+        // alarm is out of the active inventory by operator choice; the
+        // operator unshelves first, then acknowledges from the active
+        // section.
+        const std::string key = a.key;
+        auto* unshelve = Gtk::make_managed<Gtk::Button>();
+        unshelve->set_icon_name("edit-undo-symbolic");
+        unshelve->set_has_frame(false);
+        unshelve->set_valign(Gtk::Align::CENTER);
+        unshelve->add_css_class("alert-dismiss");
+        unshelve->set_tooltip_text(_("Unshelve"));
+        unshelve->signal_clicked().connect(
+            [this, key]() { alertCenter_.unshelve(key); });
+        top->append(*unshelve);
+
+        card->append(*top);
+
+        if (!a.message.empty()) {
+            auto* msg = Gtk::make_managed<Gtk::Label>(a.message);
+            msg->set_xalign(0);
+            msg->set_wrap(true);
+            msg->add_css_class("alert-message");
+            card->append(*msg);
+        }
+
+        return card;
+    }
+
+public:
+    /// Format a seconds-remaining countdown for the Shelved subsection
+    /// row. Public + static so tests can verify the formatting contract
+    /// without standing up the full GTK widget tree.
+    ///
+    ///   secondsRemaining == 0  -> "EXPIRED" (entry is past deadline
+    ///                             and will be swept by the next tick)
+    ///   1..59                  -> "0:SS left"
+    ///   60+                    -> "M:SS left", zero-padded seconds
+    ///
+    /// MM:SS is the operator-canonical format for short ISA-18.2 shelf
+    /// durations (typical 5 min); we keep the same shape past 60 min so
+    /// a long shelve renders as e.g. "65:30 left" -- ugly but
+    /// unambiguous. Localisation: "left" / "EXPIRED" go through gettext.
+    static Glib::ustring formatCountdown(std::chrono::seconds remaining) {
+        if (remaining <= std::chrono::seconds{0}) {
+            return _("EXPIRED");
+        }
+        const auto total = remaining.count();
+        const auto mins  = total / 60;
+        const auto secs  = total % 60;
+        std::string out;
+        out.reserve(8);
+        out += std::to_string(mins);
+        out += ':';
+        if (secs < 10) out += '0';
+        out += std::to_string(secs);
+        out += ' ';
+        out += _("left");
+        return Glib::ustring(out);
+    }
+
+private:
 
     static const char* cssForSeverity(presenter::AlertSeverity s) {
         switch (s) {

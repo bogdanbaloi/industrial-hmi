@@ -283,16 +283,24 @@ public:
         for (const auto& k : resolvedKeys) emitAudit("RESOLVE", k);
     }
 
-    /// Thread-safe snapshot of the active alarms (any non-resolved state),
-    /// projected to view models the panel can render directly. Ordered
-    /// by ISA-18.2 priority ascending (most urgent first); ties keep
-    /// insertion order so a steady stream of equal-priority alarms shows
-    /// the operator the newest at the bottom.
+    /// Thread-safe snapshot of the active alarms (UnackActive / AckActive
+    /// / RtnUnack), projected to view models the panel can render
+    /// directly. Ordered by ISA-18.2 priority ascending (most urgent
+    /// first); ties keep insertion order so a steady stream of equal-
+    /// priority alarms shows the operator the newest at the bottom.
+    ///
+    /// Phase 4b (REQ-ALARM-005): Shelved alarms are EXCLUDED from this
+    /// snapshot -- they belong to `shelvedSnapshot()` instead, so the
+    /// panel can render the two inventories as distinct subsections.
+    /// Pre-Phase-4b the snapshot included Shelved with a SHELVED badge;
+    /// the test helper `stateOf` (in AlertCenterTest) was updated to
+    /// look in both snapshots so the lookup contract held.
     [[nodiscard]] std::vector<AlertViewModel> snapshot() const {
         const std::scoped_lock lock(mutex_);
         std::vector<AlertViewModel> out;
         out.reserve(alarms_.size());
         for (const auto& alarm : alarms_) {
+            if (alarm.vm.state == AlarmState::Shelved) continue;
             out.push_back(alarm.vm);
         }
         std::stable_sort(out.begin(), out.end(),
