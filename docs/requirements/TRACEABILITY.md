@@ -66,6 +66,7 @@ requirements may be smoke-tested.
 | REQ-CORE-003 | SHOULD | `src/core/Logger.cpp`, `src/core/LoggerImpl.h` | LoggerTest, LoggerImplTest | -- |
 | REQ-CORE-004 | SHOULD | `src/config/ConfigManager.h`, `src/config/ConfigManager.cpp`, `config/app-config.json` | ConfigManagerTest | ADR-0015 |
 | REQ-CORE-005 | SHOULD | `src/config/ConfigValidator.cpp`, `src/core/Bootstrap.cpp` (stage 2.5), `schemas/app-config.schema.json` | ConfigValidatorTest | ADR-0015 |
+| REQ-CORE-006 | NICE | `src/config/ConfigManager.cpp::reload()` (atomic re-read + re-validate + rollback on rejection) | ConfigManagerTest (5 reload cases: success-after-edit, missing-file, parse-error, validator-rejection, no-init sentinel) | ADR-0015 |
 
 ## DASHBOARD
 

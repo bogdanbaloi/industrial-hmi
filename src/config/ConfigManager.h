@@ -87,6 +87,47 @@ public:
      */
     void clear();
 
+    /**
+     * Re-read the configured `configPath` from disk and replace the
+     * in-memory state ATOMICALLY (Phase 1 hot-reload, REQ-CORE-006).
+     *
+     * Contract (consumer-facing):
+     *   - If the file cannot be opened or parsed, returns `false`. The
+     *     previous in-memory config is UNCHANGED so getter calls keep
+     *     returning the values they returned before `reload()`. The
+     *     caller (or the logger, if injected) sees a warning.
+     *   - If the file parses but the new contents fail semantic
+     *     validation via `ConfigValidator`, the result is identical to
+     *     a parse failure: returns `false`, previous config preserved.
+     *     This keeps half-validated configs out of production: an
+     *     operator typo never half-applies.
+     *   - If the file parses AND validates, the new flat-key map
+     *     replaces the previous one and the function returns `true`.
+     *     `getXxx()` accessors return the new values on the next call.
+     *
+     * Phase 1 deliberately does NOT add:
+     *   - A file-system watcher. Consumers decide WHEN to call
+     *     `reload()` (a Settings page button, a timer, a SIGHUP
+     *     handler, an OPC-UA method). Decoupling cadence from the
+     *     reload operation keeps the policy out of ConfigManager.
+     *   - A change-notification callback. Consumers that need to
+     *     react to specific values changing should diff before/after
+     *     `reload()` themselves or poll on their existing tick path.
+     *   - Wiring into `Bootstrap` / `applyI18n`. Re-applying i18n /
+     *     theme / logger config after a reload is the caller's job;
+     *     `ConfigManager` only owns the data swap.
+     *
+     * Thread-safety: caller responsibility. ConfigManager is
+     * single-writer + multi-reader by convention; `reload()` is a
+     * writer.
+     *
+     * @return `true` when the new file replaced the in-memory config;
+     *         `false` when it was rejected (file missing / parse
+     *         failure / semantic-validation failure) AND the previous
+     *         in-memory config still applies.
+     */
+    [[nodiscard]] bool reload();
+
     // Asset Paths
 
     std::string getAssetPath(const std::string& category,

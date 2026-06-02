@@ -1,6 +1,9 @@
 // [utest->req~core-004~1]
+// [utest->req~core-006~1]
 // [utest->req~multistation-001~1]
 // Covers REQ-CORE-004 (config from JSON, validated),
+//             REQ-CORE-006 (hot reload Phase 1: atomic re-read +
+//             re-validate + rollback on rejection),
 //             REQ-MULTISTATION-001 (multi-station opt-in via config).
 //
 // Tests for app::config::ConfigManager
@@ -195,4 +198,76 @@ TEST_F(ConfigManagerTest, ReadsApplicationNameFromConfig) {
     auto& cfg = ConfigManager::instance();
     ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
     EXPECT_EQ(cfg.getAppName(), "Industrial HMI");
+}
+
+// reload() -- REQ-CORE-006 Phase 1 (hot reload, atomic re-read + re-validate)
+
+TEST_F(ConfigManagerTest, ReloadAppliesNewLanguageFromEditedFile) {
+    writeFile(tmpPath_, baseConfig("it"));
+    auto& cfg = ConfigManager::instance();
+    ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
+    EXPECT_EQ(cfg.getLanguage(), "it");
+
+    // Operator edits the file in place.
+    writeFile(tmpPath_, baseConfig("de"));
+    ASSERT_TRUE(cfg.reload());
+    EXPECT_EQ(cfg.getLanguage(), "de");
+}
+
+TEST_F(ConfigManagerTest, ReloadReturnsFalseAndKeepsConfigWhenFileMissing) {
+    writeFile(tmpPath_, baseConfig("it"));
+    auto& cfg = ConfigManager::instance();
+    ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
+    ASSERT_EQ(cfg.getLanguage(), "it");
+
+    // Delete the file behind ConfigManager's back -- the file system
+    // can disappear under us (mount point, race with editor saving).
+    std::error_code ec;
+    fs::remove(tmpPath_, ec);
+
+    EXPECT_FALSE(cfg.reload());
+    // Previous in-memory config still applies -- consumer's getter
+    // calls do not see "auto" fallback.
+    EXPECT_EQ(cfg.getLanguage(), "it");
+}
+
+TEST_F(ConfigManagerTest, ReloadReturnsFalseAndKeepsConfigOnParseError) {
+    writeFile(tmpPath_, baseConfig("it"));
+    auto& cfg = ConfigManager::instance();
+    ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
+    ASSERT_EQ(cfg.getLanguage(), "it");
+
+    // Truncated JSON -- the operator's editor crashed mid-save.
+    writeFile(tmpPath_, "{ \"i18n\": { \"language\": \"de\"");
+
+    EXPECT_FALSE(cfg.reload());
+    EXPECT_EQ(cfg.getLanguage(), "it") << "Parse failure must not "
+                                          "half-apply the new file.";
+}
+
+TEST_F(ConfigManagerTest, ReloadReturnsFalseAndKeepsConfigOnValidatorRejection) {
+    writeFile(tmpPath_, baseConfig("it"));
+    auto& cfg = ConfigManager::instance();
+    ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
+    ASSERT_EQ(cfg.getLanguage(), "it");
+
+    // Syntactically valid JSON but semantically rejected by
+    // ConfigValidator: "klingon" is not a recognised LINGUAS code.
+    writeFile(tmpPath_,
+              "{\n"
+              "  \"i18n\": { \"language\": \"klingon\" }\n"
+              "}\n");
+
+    EXPECT_FALSE(cfg.reload());
+    // The validator-rejected file must NOT replace the previous valid
+    // state -- an operator typo never half-applies.
+    EXPECT_EQ(cfg.getLanguage(), "it");
+}
+
+TEST_F(ConfigManagerTest, ReloadReturnsFalseWhenInitializeNeverRan) {
+    // Programmer-error path: someone calls reload() before initialize()
+    // ever set a path. The method must not crash + must not pretend it
+    // succeeded.
+    auto& cfg = ConfigManager::instance();
+    EXPECT_FALSE(cfg.reload());
 }

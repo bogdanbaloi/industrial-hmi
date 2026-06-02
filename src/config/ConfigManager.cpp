@@ -37,6 +37,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include "ConfigValidator.h"
+
 namespace app::config {
 
 namespace {
@@ -152,6 +154,84 @@ bool ConfigManager::initialize(const std::string& configPath) {
     configPath_ = configPath;
     initialized_ = loadConfig();
     return initialized_;
+}
+
+bool ConfigManager::reload() {
+    // REQ-CORE-006 Phase 1: re-read + re-validate + atomic swap. If
+    // anything along the way fails, the previous in-memory state is
+    // preserved exactly so getter consumers never see a half-applied
+    // config.
+    //
+    // The order:
+    //   1. Open + parse the file into a temporary DOM
+    //   2. Flatten into a fresh local map (NOT into config_ yet)
+    //   3. Move-swap config_ <-> next; remember previous for rollback
+    //   4. Run ConfigValidator against the new state
+    //   5. If validation rejects, roll back; else keep the new state
+    if (configPath_.empty()) {
+        // No prior initialize() means there is no path to reload from.
+        // This is a programmer error, not a runtime config failure.
+        return false;
+    }
+
+    std::ifstream file(configPath_);
+    if (!file.is_open()) {
+        if (logger_) {
+            logger_->warn(
+                "Config reload: cannot open '{}'; keeping previous config",
+                configPath_);
+        }
+        return false;
+    }
+
+    ordered_json root;
+    try {
+        root = ordered_json::parse(
+            file,
+            /*cb=*/nullptr,
+            /*allow_exceptions=*/true,
+            /*ignore_comments=*/true);
+    } catch (const nlohmann::json::parse_error&) {
+        if (logger_) {
+            logger_->warn(
+                "Config reload: parse error in '{}'; keeping previous config",
+                configPath_);
+        }
+        return false;
+    }
+
+    std::map<std::string, std::string> nextConfig;
+    flatten(root, nextConfig);
+
+    // Move-swap; remember the previous map so we can roll back if the
+    // validator rejects the new state. We don't fall through to the
+    // happy path until the validator says ok.
+    std::map<std::string, std::string> prevConfig = std::move(config_);
+    config_ = std::move(nextConfig);
+
+    const auto result = ConfigValidator::validate(*this);
+    if (!result.ok) {
+        // Roll back. The caller sees `false`; subsequent getter calls
+        // resolve against the previous (still-valid) map.
+        config_ = std::move(prevConfig);
+        if (logger_) {
+            logger_->warn(
+                "Config reload: semantic validation rejected '{}' "
+                "({} violation{}); keeping previous config",
+                configPath_,
+                result.errors.size(),
+                result.errors.size() == 1 ? "" : "s");
+        }
+        return false;
+    }
+
+    // The new state is live. `initialized_` was already true; nothing
+    // to flip.
+    if (logger_) {
+        logger_->info("Config reload: applied new state from '{}'",
+                      configPath_);
+    }
+    return true;
 }
 
 void ConfigManager::setLogger(app::core::Logger& logger) {
