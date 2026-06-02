@@ -1,0 +1,147 @@
+name: Whole-program callgrind profile (REQ-PERF-002)
+
+# Phase 2 of the profiling discipline (ADR-0016). Phase 1 shipped the
+# capture pipeline + committed top-N reference report. This workflow
+# wires it into CI so:
+#   - every PR produces a fresh top-N artefact uploaded for download +
+#     spot-check against the baseline committed in the same change set
+#   - regressions (a function climbing into top-N that was not there
+#     before) are visible without a developer running Valgrind locally
+#
+# Trigger model: workflow_dispatch + opt-in via PR label
+# (`run-profiling`) rather than every PR. Reasons:
+#   - callgrind is ~50x slower than native; full capture under
+#     instrumentation takes 60-90 s per workload. Running on every PR
+#     would 2x the CI matrix wall-clock for marginal signal on docs-
+#     only / test-only changes.
+#   - the committed text baseline already pins the contract; this
+#     workflow is the "verify in CI" path, not the gate.
+#
+# Phase 2.2 (deferred): a diff-baseline.sh helper + a PR comment
+# action that posts a markdown table of functions whose % column moved
+# by >X threshold vs the committed baseline. Skipped here to keep the
+# Phase 2 PR scope tight.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, opened, synchronize, reopened]
+    branches: [ main ]
+
+jobs:
+  callgrind:
+    name: callgrind capture
+    runs-on: ubuntu-24.04
+    # Run on dispatch always; run on PR only when the `run-profiling`
+    # label is present (or was present when the PR last fired this
+    # event). The label-gate keeps the default PR matrix lean.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'run-profiling')
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install dependencies (valgrind for callgrind, build chain)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev \
+          libgtest-dev libgmock-dev \
+          valgrind
+
+    - name: Configure release
+      # The capture script targets `build/wsl-release/industrial-hmi-console`
+      # by default; the CMake preset writes to `build/release`. We
+      # configure to the script's expected path so the env-var override
+      # is unnecessary on the runner.
+      run: cmake -S . -B build/wsl-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build console binary
+      # callgrind only profiles the console binary -- it's the
+      # GTK-free entry point that reuses the same Model + Presenter +
+      # Integration layers. Skipping the GTK link saves a couple of
+      # minutes vs a full build.
+      run: cmake --build build/wsl-release --target industrial-hmi-console -- -j$(nproc)
+
+    - name: Capture -- baseline workload
+      run: |
+        WORKLOAD=scripts/perf/workload-baseline.txt \
+          ./scripts/perf/capture-callgrind.sh
+        # Rename so both captures coexist under output/.
+        mv scripts/perf/output/callgrind.out \
+           scripts/perf/output/callgrind-baseline.out
+        mv scripts/perf/output/callgrind-annotate.txt \
+           scripts/perf/output/callgrind-baseline-annotate.txt
+
+    - name: Capture -- alarm-storm workload
+      run: |
+        WORKLOAD=scripts/perf/workload-alarm-storm.txt \
+          ./scripts/perf/capture-callgrind.sh
+        mv scripts/perf/output/callgrind.out \
+           scripts/perf/output/callgrind-alarm-storm.out
+        mv scripts/perf/output/callgrind-annotate.txt \
+           scripts/perf/output/callgrind-alarm-storm-annotate.txt
+
+    - name: Trim each annotate to top-50 (matches committed format)
+      # The committed baseline format is: 4-line header (where / when /
+      # workload / blank) + 50 lines of function data. The function
+      # data is the top-50 inclusive-Ir lines as emitted by
+      # callgrind_annotate. We rebuild that shape from the fresh
+      # captures so the artefact is directly diff-able against the
+      # committed baseline via scripts/perf/diff-baseline.sh.
+      run: |
+        for tag in baseline alarm-storm; do
+          src="scripts/perf/output/callgrind-${tag}-annotate.txt"
+          dst="scripts/perf/output/callgrind-${tag}-top50.txt"
+          {
+            echo "# Top 50 functions by inclusive instruction-read share (Ir)."
+            echo "# Captured on the CI runner (Ubuntu 24.04)."
+            echo "# Workload: scripts/perf/workload-${tag}.txt"
+            echo "#"
+            grep -E '^\s*[0-9,]+\s+\(' "$src" | head -50
+          } > "$dst"
+        done
+
+    - name: Diff vs committed baseline
+      # Phase 2.2: produce a markdown table of functions whose % share
+      # moved by >= THRESHOLD vs the committed baseline. The output is
+      # appended to the workflow's job summary so reviewers see it
+      # without opening the artefact.
+      run: |
+        {
+          echo "## Callgrind diff vs committed baseline"
+          echo ""
+          for tag in baseline alarm-storm; do
+            committed="scripts/perf/baseline.callgrind-annotate.top50.txt"
+            if [[ "$tag" == "alarm-storm" ]]; then
+              committed="scripts/perf/baseline-alarm-storm.callgrind-annotate.top50.txt"
+            fi
+            echo "### ${tag} workload"
+            echo ""
+            THRESHOLD=1.0 ./scripts/perf/diff-baseline.sh \
+              "$committed" \
+              "scripts/perf/output/callgrind-${tag}-top50.txt"
+            echo ""
+          done
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload top-N artefacts
+      uses: actions/upload-artifact@v5
+      with:
+        name: callgrind-top50-${{ github.sha }}
+        path: |
+          scripts/perf/output/callgrind-baseline-top50.txt
+          scripts/perf/output/callgrind-alarm-storm-top50.txt
+        retention-days: 30
+
+    - name: Upload raw callgrind files (for KCachegrind / qcachegrind)
+      uses: actions/upload-artifact@v5
+      with:
+        name: callgrind-raw-${{ github.sha }}
+        path: |
+          scripts/perf/output/callgrind-baseline.out
+          scripts/perf/output/callgrind-alarm-storm.out
+        retention-days: 7

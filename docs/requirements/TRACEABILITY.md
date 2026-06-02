@@ -118,7 +118,7 @@ requirements may be smoke-tested.
 | REQ-ID | Priority | Implementation | Verification | ADR |
 |---|---|---|---|---|
 | REQ-PERF-001 | SHOULD | `benchmarks/bench_alert_center.cpp`, `benchmarks/bench_modbus_pdu.cpp`, `benchmarks/bench_config_parse.cpp`, `benchmarks/README.md` (baseline numbers + scaling contract) | google/benchmark suites (built under `-DBUILD_BENCHMARKS=ON`) | -- |
-| REQ-PERF-002 | SHOULD | `scripts/perf/capture-callgrind.sh`, `scripts/perf/workload-baseline.txt`, `scripts/perf/README.md` (methodology + diff protocol) | `scripts/perf/baseline.callgrind-annotate.top50.txt` (committed top-N reference report; diff against fresh run after each meaty merge) | -- |
+| REQ-PERF-002 | SHOULD | `scripts/perf/capture-callgrind.sh`, `scripts/perf/diff-baseline.sh` (Phase 2), `scripts/perf/workload-baseline.txt`, `scripts/perf/workload-alarm-storm.txt` (Phase 2), `scripts/perf/README.md` (methodology + diff protocol), `.github/workflows/profiling.yml` (Phase 2 CI integration) | `scripts/perf/baseline.callgrind-annotate.top50.txt` + `scripts/perf/baseline-alarm-storm.callgrind-annotate.top50.txt` (committed top-N reference reports, diffed by `diff-baseline.sh` in the CI profiling workflow with `THRESHOLD=1.0`) | 0016 |
 
 ## MULTISTATION
 

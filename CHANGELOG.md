@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Callgrind profiling Phase 2 -- CI workflow + diff helper + alarm-storm baseline (REQ-PERF-002, ADR-0016)
+
+Phase 1 (already on main) shipped the capture script + workload-baseline
++ committed top-50 reference. Phase 2 wires it into CI so every
+opt-in PR produces fresh artefacts plus an in-summary diff against
+the committed baseline. Adds a second alarm-focused workload + its
+baseline. Phase 3 (SVG render, PR-comment integration, per-backend
+workloads) remains deferred.
+
+#### Added
+
+- `.github/workflows/profiling.yml` -- new CI job triggered on
+  `workflow_dispatch` and on PRs labelled `run-profiling`. Configures
+  release, builds `industrial-hmi-console`, runs
+  `capture-callgrind.sh` on each workload, uploads top-50 + raw
+  artefacts (30 / 7 day retention), and appends the markdown diff
+  table to the GitHub job summary so reviewers see it without
+  downloading anything.
+- `scripts/perf/diff-baseline.sh` -- compares two callgrind annotate
+  files and emits a markdown table of functions whose `%` column
+  moved by >= `$THRESHOLD` (default 1.0). Stable runs return a
+  one-liner so the workflow can skip the table.
+- `scripts/perf/workload-alarm-storm.txt` -- 64-command stdin
+  workload that stresses the AlertCenter lifecycle: 30 iterations of
+  equipment-off -> `alerts` snapshot -> `dismiss` (acknowledge) ->
+  equipment-on across 3 lines. Pairs with the broad workload-baseline.
+- `scripts/perf/baseline-alarm-storm.callgrind-annotate.top50.txt` --
+  reference report for the new workload (Ryzen 7 5800X / WSL Ubuntu
+  24.04 / GCC 13.3, ~11.3M Ir total).
+
+#### Changed
+
+- `scripts/perf/baseline.callgrind-annotate.top50.txt` -- regenerated
+  with the cleaner 4-line header + 50-line body format the diff
+  script + CI consume. The Phase 1 file had a duplicate-rows bug
+  (head -30 + grep | head -60 overlapped on the top-5 entries); the
+  rebuild is mechanical and changes no contract beyond removing
+  duplicate rows.
+- `scripts/perf/README.md` -- documents the new Phase 2 artefacts +
+  the deferred Phase 3 backlog.
+
 ### ISA-18.2 alarms Phase 4b -- AlertsPanel Shelved UI (REQ-ALARM-005)
 
 UI half of Phase 4. Phase 4a (just merged) shipped the model+presenter
