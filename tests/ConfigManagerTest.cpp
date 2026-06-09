@@ -86,10 +86,17 @@ protected:
 
         // Reset singleton state so stale keys from previous tests don't bleed
         ConfigManager::instance().clear();
+        // Drop any listeners registered by a previous test (REQ-CORE-009
+        // Phase 3b). Listeners are global state on the singleton; without
+        // this, a leaked listener from a previous run fires on the next
+        // test's reload() and either crashes (captures dangling) or
+        // pollutes assertions.
+        ConfigManager::instance().clearReloadListeners();
     }
 
     void TearDown() override {
         ConfigManager::instance().clear();
+        ConfigManager::instance().clearReloadListeners();
         std::error_code ec;
         fs::remove(tmpPath_, ec);  // best-effort cleanup
     }
@@ -275,6 +282,107 @@ TEST_F(ConfigManagerTest, ReloadReturnsFalseWhenInitializeNeverRan) {
     // succeeded.
     auto& cfg = ConfigManager::instance();
     EXPECT_FALSE(cfg.reload());
+}
+
+// [utest->req~core-009~1]
+// REQ-CORE-009: registered listeners fire after every reload that
+// successfully replaces the in-memory map; they do NOT fire when a
+// reload is rejected (parse error, validator NACK, missing file).
+// This is the cornerstone of end-to-end hot-reload: Bootstrap
+// registers a listener that re-applies i18n, so a language edit in
+// app-config.json takes effect without a restart.
+TEST_F(ConfigManagerTest, ReloadListenerFiresOnAcceptedReload) {
+    auto& cfg = ConfigManager::instance();
+    {
+        std::ofstream out(tmpPath_, std::ios::trunc);
+        out << baseConfig("it");
+    }
+    ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
+
+    int callCount = 0;
+    cfg.addReloadListener([&callCount]() { ++callCount; });
+
+    {
+        std::ofstream out(tmpPath_, std::ios::trunc);
+        out << baseConfig("de");
+    }
+    EXPECT_TRUE(cfg.reload());
+    EXPECT_EQ(callCount, 1) << "Listener must fire exactly once per "
+                               "accepted reload.";
+    EXPECT_EQ(cfg.getLanguage(), "de");
+}
+
+TEST_F(ConfigManagerTest, ReloadListenerDoesNotFireOnRejectedReload) {
+    auto& cfg = ConfigManager::instance();
+    {
+        std::ofstream out(tmpPath_, std::ios::trunc);
+        out << baseConfig("it");
+    }
+    ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
+
+    int callCount = 0;
+    cfg.addReloadListener([&callCount]() { ++callCount; });
+
+    // Parse error -> reload rejected -> listener must NOT fire. The
+    // previous config is still live, so there is nothing new to
+    // re-apply downstream.
+    {
+        std::ofstream out(tmpPath_, std::ios::trunc);
+        out << "{ this is not valid json";
+    }
+    EXPECT_FALSE(cfg.reload());
+    EXPECT_EQ(callCount, 0);
+    EXPECT_EQ(cfg.getLanguage(), "it");
+}
+
+TEST_F(ConfigManagerTest, ReloadListenerSeesPostReloadState) {
+    // Critical contract for the i18n use case: by the time a
+    // listener runs, getters MUST return the new state. Otherwise
+    // applyI18n() would re-bind gettext to the OLD language.
+    auto& cfg = ConfigManager::instance();
+    {
+        std::ofstream out(tmpPath_, std::ios::trunc);
+        out << baseConfig("it");
+    }
+    ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
+
+    std::string observedLanguage;
+    cfg.addReloadListener([&cfg, &observedLanguage]() {
+        observedLanguage = cfg.getLanguage();
+    });
+
+    {
+        std::ofstream out(tmpPath_, std::ios::trunc);
+        out << baseConfig("de");
+    }
+    ASSERT_TRUE(cfg.reload());
+    EXPECT_EQ(observedLanguage, "de");
+}
+
+TEST_F(ConfigManagerTest, ReloadListenerExceptionDoesNotBreakPipeline) {
+    // Defence in depth: one badly-behaved listener must not prevent
+    // the remaining listeners from running. The manager catches +
+    // logs and keeps going.
+    auto& cfg = ConfigManager::instance();
+    {
+        std::ofstream out(tmpPath_, std::ios::trunc);
+        out << baseConfig("it");
+    }
+    ASSERT_TRUE(cfg.initialize(tmpPath_.string()));
+
+    int laterCallCount = 0;
+    cfg.addReloadListener([]() {
+        throw std::runtime_error("intentional listener failure");
+    });
+    cfg.addReloadListener([&laterCallCount]() { ++laterCallCount; });
+
+    {
+        std::ofstream out(tmpPath_, std::ios::trunc);
+        out << baseConfig("de");
+    }
+    EXPECT_TRUE(cfg.reload());
+    EXPECT_EQ(laterCallCount, 1) << "Second listener must still run "
+                                    "after the first one threw.";
 }
 
 // [utest->req~core-008~1]

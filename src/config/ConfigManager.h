@@ -3,9 +3,11 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "config_defaults.h"
 #include "src/core/LoggerBase.h"
@@ -128,6 +130,52 @@ public:
      *         in-memory config still applies.
      */
     [[nodiscard]] bool reload();
+
+    /**
+     * Reload listener -- void() callback fired after every reload that
+     * successfully replaces the in-memory map (REQ-CORE-009, Phase 3b
+     * of the hot-reload story).
+     *
+     * Typical wiring: Bootstrap registers a listener that calls
+     * `applyI18n()` so a language change in the JSON file takes effect
+     * end-to-end -- watcher notices mtime advance -> reload swaps the
+     * map -> listener re-binds gettext to the new LC_MESSAGES path
+     * without the operator restarting the binary.
+     *
+     * Contract:
+     *   - Listeners are invoked AFTER `reload()` has released the
+     *     internal mutex and the new state is live; a listener may
+     *     freely call getters, setLanguage(), even reload() again
+     *     (which would still re-validate -- no special re-entry path).
+     *   - Listeners are invoked in registration order on the thread
+     *     that called `reload()` -- typically the
+     *     ConfigFileWatcher's background `std::jthread`. Listeners
+     *     that touch GTK widgets MUST marshal back to the main loop
+     *     themselves (`Glib::signal_idle().connect_once(...)`); the
+     *     manager has no UI dependency.
+     *   - A listener exception is caught + logged and the next
+     *     listener still runs. One broken consumer cannot break the
+     *     reload pipeline for the others.
+     *   - Listeners are NOT invoked when `reload()` returns `false`
+     *     (parse failure, validator rejection, missing file). The
+     *     previous config is still live, so there is nothing new to
+     *     re-apply.
+     *
+     * No deregister API yet -- listeners live for the lifetime of the
+     * singleton, which matches the singleton's own lifetime
+     * (Bootstrap-to-shutdown). Tests work around this by `clear()`-
+     * ing listeners in the fixture (see `clearReloadListeners()`).
+     */
+    using ReloadListener = std::function<void()>;
+    void addReloadListener(ReloadListener listener);
+
+    /**
+     * Drop all registered listeners. Test-only seam: production code
+     * registers listeners exactly once at startup and never unsubs.
+     * Exposed publicly (rather than friend-classed) so the fixture
+     * does not need to be a friend of ConfigManager.
+     */
+    void clearReloadListeners();
 
     // Asset Paths
 
@@ -288,6 +336,13 @@ private:
     float getFloat(const std::string& key, float defaultValue) const;
 
     bool loadConfig();
+
+    /// Body of `reload()` minus the lock acquisition. Runs under the
+    /// caller's lock so the swap + validate stay atomic; isolated as
+    /// a helper so `reload()` can release the lock before invoking
+    /// the registered listeners (REQ-CORE-009).
+    bool reloadLocked();
+
     bool persistLanguage(const std::string& language);
     bool persistPalette(const std::string& palette);
     bool persistStringField(const std::string& fieldName,
@@ -309,6 +364,13 @@ private:
     /// recursive primitive: config access is sub-microsecond and rare
     /// vs the alarm / dashboard hot paths.
     mutable std::recursive_mutex config_mutex_;
+
+    /// Reload listener list (REQ-CORE-009, Phase 3b). Guarded by the
+    /// same `config_mutex_` -- registration is cold-path (Bootstrap)
+    /// and dispatch happens inside `reload()` which already holds
+    /// the lock. The lock is released before listeners actually run;
+    /// see the comment in `addReloadListener` for the rationale.
+    std::vector<ReloadListener> reloadListeners_;
 };
 
 }  // namespace app::config

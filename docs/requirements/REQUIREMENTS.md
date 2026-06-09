@@ -356,6 +356,49 @@ Verified by: ConfigValidatorTest.
 
 Needs: utest
 
+### REQ-CORE-009 (NICE) — Hot-reload listeners: end-to-end re-apply after watcher-triggered reload
+
+`req~core-009~1`
+
+`ConfigManager` **shall** expose an `addReloadListener` API that
+registers a `void()` callback to fire after every reload that
+successfully replaces the in-memory flat-key map. Listeners **shall
+NOT** fire on rejected reloads (parse error, validator NACK,
+missing file) -- the previous configuration is still live and
+nothing downstream has changed.
+
+Listeners **shall** be invoked AFTER the manager has released its
+internal mutex and the new state is observable to getters, so a
+listener that reads `getLanguage()` / `getXxx()` sees the new value.
+A listener **may** call back into `setLanguage`, `setPalette`, or
+even `reload()` recursively without deadlock.
+
+A listener that throws **shall NOT** prevent the remaining listeners
+from running. The manager catches + logs through the injected
+Logger and continues iterating.
+
+`Bootstrap` **shall** register one listener that re-invokes
+`applyI18n()` so a language edit in `config/app-config.json` takes
+effect end-to-end: the watcher (REQ-CORE-007) notices the mtime
+advance -> `reload()` swaps the map (REQ-CORE-006) -> listener
+re-binds gettext to the new `LC_MESSAGES`. The operator never
+restarts the binary.
+
+Out of scope for Phase 3b: re-applying logger configuration mid-
+flight (active log writers would need synchronised reconfiguration
+and the value is low); re-applying database connection pool /
+integration-backend topology (every backend snapshots its config at
+construction; their re-configuration is a separate roadmap item).
+
+Verified by: ConfigManagerTest.ReloadListenerFiresOnAcceptedReload,
+ReloadListenerDoesNotFireOnRejectedReload,
+ReloadListenerSeesPostReloadState,
+ReloadListenerExceptionDoesNotBreakPipeline.
+
+ADR: 0015, 0017.
+
+Needs: utest
+
 ### REQ-CORE-008 (NICE) — Internal synchronisation: race-free concurrent readers vs reload
 
 `req~core-008~1`

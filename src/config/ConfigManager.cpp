@@ -157,23 +157,54 @@ bool ConfigManager::initialize(const std::string& configPath) {
 }
 
 bool ConfigManager::reload() {
-    // REQ-CORE-006 Phase 1: re-read + re-validate + atomic swap. If
-    // anything along the way fails, the previous in-memory state is
-    // preserved exactly so getter consumers never see a half-applied
-    // config.
-    //
-    // The order:
+    // REQ-CORE-006 Phase 1: re-read + re-validate + atomic swap.
+    // REQ-CORE-008 Phase 3a: internal mutex over the swap + validate.
+    // REQ-CORE-009 Phase 3b: registered listeners fire AFTER lock
+    //                        release, so a listener may safely call
+    //                        back into ConfigManager getters from any
+    //                        thread without deadlocking on a
+    //                        non-recursive-aware caller.
+    bool success;
+    std::vector<ReloadListener> snapshot;
+    {
+        const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
+        success = reloadLocked();
+        if (success) {
+            // Copy the listener list under the lock so registration
+            // is race-free against dispatch; fire OUTSIDE the lock.
+            snapshot = reloadListeners_;
+        }
+    }
+    if (success) {
+        for (auto& l : snapshot) {
+            try {
+                l();
+            } catch (const std::exception& e) {
+                if (logger_) {
+                    logger_->warn(
+                        "Config reload listener threw: {}; "
+                        "continuing with remaining listeners",
+                        e.what());
+                }
+            } catch (...) {
+                if (logger_) {
+                    logger_->warn(
+                        "Config reload listener threw (non-std "
+                        "type); continuing with remaining listeners");
+                }
+            }
+        }
+    }
+    return success;
+}
+
+bool ConfigManager::reloadLocked() {
+    // Body of reload() with the caller's lock already held. Order:
     //   1. Open + parse the file into a temporary DOM
     //   2. Flatten into a fresh local map (NOT into config_ yet)
     //   3. Move-swap config_ <-> next; remember previous for rollback
     //   4. Run ConfigValidator against the new state
     //   5. If validation rejects, roll back; else keep the new state
-    // REQ-CORE-008: hold the write side of `config_mutex_` across the
-    // entire swap + validate window. `recursive_mutex` is required
-    // because ConfigValidator::validate(*this) recurses back through
-    // the public getters which acquire the same lock on this thread.
-    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
-
     if (configPath_.empty()) {
         // No prior initialize() means there is no path to reload from.
         // This is a programmer error, not a runtime config failure.
@@ -242,6 +273,18 @@ bool ConfigManager::reload() {
 
 void ConfigManager::setLogger(app::core::Logger& logger) {
     logger_ = &logger;
+}
+
+void ConfigManager::addReloadListener(ReloadListener listener) {
+    // Hold the lock for the push_back so registration is race-free
+    // against a concurrent reload() snapshotting the vector.
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
+    reloadListeners_.push_back(std::move(listener));
+}
+
+void ConfigManager::clearReloadListeners() {
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
+    reloadListeners_.clear();
 }
 
 // applyI18n is defined inline in the header so the dependency on

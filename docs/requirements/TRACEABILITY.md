@@ -69,6 +69,7 @@ requirements may be smoke-tested.
 | REQ-CORE-006 | NICE | `src/config/ConfigManager.cpp::reload()` (atomic re-read + re-validate + rollback on rejection) | ConfigManagerTest (5 reload cases: success-after-edit, missing-file, parse-error, validator-rejection, no-init sentinel) | ADR-0015 |
 | REQ-CORE-007 | NICE | `src/config/ConfigFileWatcher.cpp` (poll-based `last_write_time` watcher with `pollOnce` test seam + `jthread` + cv-on-stop-token shutdown) | ConfigFileWatcherTest (7 cases: no-change baseline, edit triggers reload, second-poll no change, reload-rejected still reports change, missing-file preserves config, background lifecycle, background detects edit) | ADR-0015, 0017 |
 | REQ-CORE-008 | NICE | `src/config/ConfigManager.h` (`mutable std::recursive_mutex config_mutex_`), `src/config/ConfigManager.cpp` (scoped_lock in every getter + reload + clear + setLanguage/setPalette write window + loadConfig) | ConfigManagerTest.ConcurrentReadersDuringReload (reader thread looping getters while main hammers reload; TSan-clean) | ADR-0015, 0017 |
+| REQ-CORE-009 | NICE | `src/config/ConfigManager.cpp::addReloadListener` + listener dispatch after lock release in `reload()`, `src/core/Bootstrap.cpp` (Stage 4.5 registers `applyI18n` listener) | ConfigManagerTest (4 listener cases: fires-on-accept, does-not-fire-on-reject, sees-post-reload-state, exception-does-not-break-pipeline) | ADR-0015, 0017 |
 
 ## DASHBOARD
 
