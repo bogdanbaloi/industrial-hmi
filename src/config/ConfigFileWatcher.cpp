@@ -112,7 +112,17 @@ void ConfigFileWatcher::loop(std::stop_token stop) {
                               e.what());
             }
         } catch (...) {
-            // Catch-all defensive. Watcher continues.
+            // Non-std exception (e.g. a third-party library throwing a
+            // foreign type, or a `throw 42;` somewhere). Log a generic
+            // message and continue rather than letting an unknown
+            // throw kill the worker -- the watcher's contract is
+            // "notice file changes"; bringing the binary down on the
+            // wrong shape of exception loses signal more than it
+            // gains. Logging keeps the event observable for triage.
+            if (logger_) {
+                logger_->warn("ConfigFileWatcher: poll exception "
+                              "(non-std type); continuing");
+            }
         }
     }
 }
