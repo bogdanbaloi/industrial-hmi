@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Config hot reload Phase 3b -- end-to-end re-apply via listeners (REQ-CORE-009)
+
+Closes the hot-reload arc. Phase 1 added `reload()` with atomic
+swap; Phase 2 added the watcher; Phase 3a added internal sync; now
+Phase 3b wires the manager to its consumers so a language edit in
+`config/app-config.json` takes effect end-to-end without a restart:
+watcher mtime tick -> `reload()` swaps the map -> registered
+listener re-binds gettext.
+
+#### Added
+- `ConfigManager::addReloadListener(std::function<void()>)` -- fires
+  after every accepted reload, after the internal mutex is released
+  so a listener can freely call back into getters from any thread.
+  Listeners are NOT invoked on rejected reloads (parse error,
+  validator NACK, missing file).
+- `ConfigManager::clearReloadListeners()` -- test-only seam; the
+  ConfigManagerTest fixture calls it in SetUp/TearDown so listener
+  state never bleeds between cases.
+- `Bootstrap` Stage 4.5: registers a listener that re-invokes
+  `config.applyI18n()` whenever a reload lands.
+- Four new tests in ConfigManagerTest (fires-on-accept, no-fire-on-
+  reject, listener-sees-post-reload-state, listener-exception-does-
+  not-break-pipeline).
+- REQ-CORE-009 in `REQUIREMENTS.md` + `TRACEABILITY.md`.
+
+#### Changed
+- `ConfigManager::reload()` refactored to release the internal
+  `recursive_mutex` before dispatching listeners (snapshot under
+  lock, fire outside). Body moved to `reloadLocked()` private
+  helper; locked semantics unchanged.
+- A listener exception is caught + logged + iteration continues, so
+  one buggy consumer cannot starve the rest.
+
 ### Config hot reload Phase 3a -- ConfigManager internal sync (REQ-CORE-008)
 
 Closes the "single-writer + single-reader by convention" constraint

@@ -148,6 +148,16 @@ void Bootstrap::run() {
     // the current logger. Never throws.
     config.applyI18n();
 
+    // Stage 4.5 -- hot-reload listener (REQ-CORE-009 Phase 3b). Wire
+    // applyI18n() to fire whenever ConfigFileWatcher accepts an
+    // edited app-config.json. Without this, the watcher swaps the
+    // map (REQ-CORE-006) but UI strings keep rendering against the
+    // old gettext binding until the next restart. Registered on the
+    // singleton because the watcher will dispatch listeners from its
+    // own std::jthread; applyI18n() only touches gettext globals,
+    // safe to call from any thread.
+    config.addReloadListener([&config]() { config.applyI18n(); });
+
     // Stage 5 -- database. Both frontends (GTK and console) read from
     // the same SQLite; failure to open it is fatal because every
     // products workflow depends on it, and a partial start would
