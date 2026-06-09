@@ -681,6 +681,51 @@ ADR: 0007 (Historian Degraded Open).
 
 Needs: utest
 
+### REQ-HISTORIAN-005 (SHOULD) — History page correctness and legibility
+
+`req~historian-005~1`
+
+The History page **shall** clear each TrendChart's internal data
+buffer before populating it on every refresh cycle, so that a range
+change (e.g. "Last 7 days" -> "Last hour") does not display stale
+samples from the previous query window once the ring wraps. The
+TrendChart widget **shall** expose a `clear()` method that resets
+its ring buffer counters and triggers a redraw.
+
+Chart entity labels **shall** be 1-based ("Checkpoint 1, 2, 3" /
+"Line 1, 2, 3"), not zero-indexed engineering view, because the
+History page is operator-facing.
+
+The History page footer **shall** render "No data yet" when the
+historian holds zero samples, and a thousands-grouped sample count
+("Total samples: 12,345") otherwise, so a cold-start state is not
+misread as "Total samples: 0" failure-mode and a 7-digit count
+stays scannable.
+
+The TrendChart widget's latest-value overlay **shall** respect a
+caller-configurable unit suffix (`setUnit`), defaulting to `%` so
+existing callers keep current rendering. This unblocks future
+series whose value is not a percentage without re-templating the
+widget.
+
+A `Gtk::Spinner` **shall** animate next to the Refresh button while
+a manual refresh is in flight. Auto-refresh ticks **shall NOT**
+animate the spinner (silent 5-second background re-queries should
+not strobe the toolbar).
+
+Verified by: TrendChartTest (ConstructionLeavesPointCountAtZero,
+AddPointIncrementsPointCount, ClearResetsPointCount,
+AddPointAfterClearBuildsFromZero, ClearOnEmptyChartIsNoop,
+SetUnitDoesNotCrashAndChartStaysUsable), HistoryPageTest
+(FooterShowsNoDataWhenTotalIsZero,
+FooterShowsThousandsCountWhenNonZero,
+RefreshReQueriesAllSixSeries).
+
+ADR: 0001 (MVP layer boundaries -- fix stays in View), 0014
+(Result at boundaries -- no new error surface needed).
+
+Needs: utest
+
 ---
 
 ## I18N — Internationalisation

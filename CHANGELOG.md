@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### History page polish (REQ-HISTORIAN-005)
+
+Corrects a stale-data bug on the History page (switching from
+"Last 7 days" to "Last hour" no longer ghost-renders old samples
+once the TrendChart ring buffer wraps), makes chart entity labels
+1-based so operators read "Checkpoint 1" not "Checkpoint 0",
+distinguishes empty-state ("No data yet") from a real zero, adds
+thousands grouping to the footer sample count so a 6-7 digit tally
+stays scannable, surfaces a spinner during manual Refresh for cold
+"Last 7 days" queries, and unblocks non-percentage future series
+with a configurable TrendChart unit suffix.
+
+#### Added
+- `TrendChart::clear() noexcept` -- zeroes the ring buffer + resets
+  write-pos + count + triggers redraw.
+- `TrendChart::setUnit(std::string)` -- overrides the hard-coded
+  `%` suffix in the latest-value overlay; default stays `%` so
+  existing callers (history page, dashboard inline cards) are
+  unaffected.
+- `TrendChart::pointCount() const noexcept` -- public test seam.
+- `tests/TrendChartTest.cpp` -- 6 cases covering construction,
+  add-point counting, clear semantics, add-after-clear, idempotent
+  clear, and setUnit smoke.
+- `sizes::kHistorySpinnerSize` in `ui_sizes.h`.
+- `Gtk::Spinner` in `HistoryPage` that animates only during manual
+  Refresh (auto-refresh ticks deliberately stay silent).
+- `HistoryPage::footerText()` and `triggerRefreshForTest()` test
+  seams; production callers have no use for them.
+- Three new cases in `HistoryPageTest` covering empty-state footer,
+  thousands-grouped footer, and refresh re-querying all 6 series.
+- REQ-HISTORIAN-005 in `REQUIREMENTS.md` + `TRACEABILITY.md`.
+
+#### Changed
+- `HistoryPage::populateChart()` now calls `chart->clear()` before
+  pushing rows -- fixes the range-switch stale-data bug.
+- Chart entity labels changed from 0-based (`Checkpoint 0`) to
+  1-based (`Checkpoint 1`).
+- Footer renders `_("No data yet")` when the historian holds zero
+  samples; otherwise a thousands-grouped count via the new
+  `formatWithThousands` helper (locale-neutral to keep the
+  multi-station layout-budget tests deterministic).
+
 ### Config hot reload Phase 3b -- end-to-end re-apply via listeners (REQ-CORE-009)
 
 Closes the hot-reload arc. Phase 1 added `reload()` with atomic

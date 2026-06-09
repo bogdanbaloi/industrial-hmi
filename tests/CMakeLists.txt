@@ -1167,6 +1167,23 @@ add_test(NAME DonutChartWidgetTest COMMAND test_donut_chart_widget
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(DonutChartWidgetTest PROPERTIES LABELS "gui")
 
+# View: TrendChart (REQ-HISTORIAN-005 history page polish).
+# Covers the public clear() / setUnit() / pointCount() surface that
+# HistoryPage now relies on. Same shape as DonutChartWidgetTest:
+# data-path accessors only, Cairo rendering is verified manually.
+add_executable(test_trend_chart
+    TrendChartTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_trend_chart PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_trend_chart PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_trend_chart PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME TrendChartTest COMMAND test_trend_chart
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(TrendChartTest PROPERTIES LABELS "gui")
+
 # View: ProductsPage
 add_executable(test_products_page
     ProductsPageTest.cpp

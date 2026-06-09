@@ -46,6 +46,32 @@ public:
         queue_draw();
     }
 
+    /// Drop every buffered point. Used by HistoryPage between range
+    /// switches so a "Last 7 days" -> "Last hour" transition does not
+    /// keep showing stale samples once the ring wraps. The vector
+    /// allocation is preserved so subsequent `addPoint()` calls do
+    /// not reallocate; only the live-data counters reset.
+    /// [impl->req~historian-005~1]
+    void clear() noexcept {
+        std::fill(data_.begin(), data_.end(), 0.0f);
+        writePos_ = 0;
+        count_    = 0;
+        queue_draw();
+    }
+
+    /// Override the unit suffix shown in the latest-value overlay
+    /// (top-right of the chart). Default is "%" so existing callers
+    /// keep their current rendering; HistoryPage's supply trend
+    /// retains the percent suffix until per-series units are
+    /// surfaced as data.
+    /// [impl->req~historian-005~1]
+    void setUnit(std::string unit) { unit_ = std::move(unit); }
+
+    /// Number of valid points currently held in the ring buffer.
+    /// Exposed as a test seam (TrendChartTest verifies `clear()`
+    /// brings it to zero); production callers do not need this.
+    [[nodiscard]] std::size_t pointCount() const noexcept { return count_; }
+
 private:
     // Layout / styling constants.
     static constexpr double kPadTop         = 22.0;
@@ -135,8 +161,16 @@ private:
         // Latest value text (top-right)
         if (count_ > 0) {
             const std::size_t lastIdx = (writePos_ + capacity_ - 1) % capacity_;
-            const auto valText = std::vformat("{:.1f}%",
-                                              std::make_format_args(data_[lastIdx]));
+            // Format the number and append the configurable unit
+            // suffix separately -- `std::vformat` does not let us
+            // splice a runtime string into the format spec without
+            // a second format call, and avoiding `std::format`'s
+            // compile-time check with `std::vformat` keeps the
+            // hot-path lean.
+            const auto valText =
+                std::vformat("{:.1f}",
+                             std::make_format_args(data_[lastIdx]))
+                + unit_;
 
             cr->set_font_size(kValueFontSize);
             Cairo::TextExtents ext;
@@ -161,6 +195,12 @@ private:
     std::vector<float> data_;
     std::size_t writePos_{0};
     std::size_t count_{0};
+
+    /// Unit suffix appended to the latest-value text overlay.
+    /// Defaults to "%" because every current caller (history page
+    /// quality + supply, dashboard inline trend cards) renders
+    /// percentages.
+    std::string unit_{"%"};
 };
 
 }  // namespace app::view

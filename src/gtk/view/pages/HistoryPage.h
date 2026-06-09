@@ -45,6 +45,21 @@ public:
     [[nodiscard]] Glib::ustring pageTitle() const override;
     void onLanguageChanged() override;
 
+    /// Test seam (REQ-HISTORIAN-005). Returns the current footer text
+    /// so HistoryPageTest can assert on the empty-state / sample-count
+    /// branch without peeking at private members. Production callers
+    /// have no use for this -- the footer is purely operator-facing.
+    [[nodiscard]] Glib::ustring footerText() const {
+        return footerLabel_ != nullptr ? footerLabel_->get_text()
+                                       : Glib::ustring{};
+    }
+
+    /// Test seam (REQ-HISTORIAN-005). Triggers the same code path the
+    /// Refresh button's signal_clicked would. Going through the public
+    /// button signal in a test requires a running Gtk main loop; this
+    /// shortcut keeps HistoryPageTest synchronous.
+    void triggerRefreshForTest() { onRefreshClicked(); }
+
 private:
     /// Operator-visible time range options. Maps to a fixed lookback
     /// in milliseconds applied at query time. Stored as an enum rather
@@ -75,6 +90,11 @@ private:
     Gtk::ComboBoxText*           rangePicker_{nullptr};
     Gtk::Button*                 refreshButton_{nullptr};
     Gtk::Label*                  footerLabel_{nullptr};
+    /// Visible only while a Refresh is in flight (REQ-HISTORIAN-005).
+    /// On the typical "Last hour" query the spin is sub-perceptual,
+    /// but for "Last 7 days" against a cold historian the operator
+    /// otherwise has no feedback that the click registered.
+    Gtk::Spinner*                spinner_{nullptr};
 
     // 3 quality charts + 3 supply charts. Kept in a fixed array so
     // refresh iterates without branching on equipmentCount /
