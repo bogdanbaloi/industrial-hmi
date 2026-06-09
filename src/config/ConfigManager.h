@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <map>
+#include <mutex>
 #include <string>
 
 #include "config_defaults.h"
@@ -297,6 +298,17 @@ private:
     std::map<std::string, std::string> config_;
     app::core::Logger* logger_ = nullptr;
     bool initialized_ = false;
+
+    /// Thread safety (REQ-CORE-008, Phase 3a of the hot-reload story).
+    /// Guards every read/write of `config_`. `std::recursive_mutex`
+    /// because `reload()` holds the lock around the validator call,
+    /// and `ConfigValidator::validate(*this)` recurses back through
+    /// our own public getters -- which take this lock -- on the same
+    /// thread. A non-recursive `std::mutex` would self-deadlock there.
+    /// Read-heavy workload is fine with the slightly more expensive
+    /// recursive primitive: config access is sub-microsecond and rare
+    /// vs the alarm / dashboard hot paths.
+    mutable std::recursive_mutex config_mutex_;
 };
 
 }  // namespace app::config

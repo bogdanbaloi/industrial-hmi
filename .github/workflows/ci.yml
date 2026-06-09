@@ -515,6 +515,16 @@ jobs:
     #   --suppressions=valgrind.supp   ignore library globals (see file)
     - name: Run tests under Valgrind Memcheck
       working-directory: build/valgrind
+      # RUNNING_UNDER_VALGRIND=1 lets individual tests detect the
+      # memcheck context and GTEST_SKIP work that is too slow to
+      # complete inside the per-test 300s timeout (e.g. the
+      # ConfigManager concurrent-reader stress, which spins a reader
+      # thread for many file-IO + reload cycles). Memcheck does not
+      # add value on those tests -- the race they target is a TSan
+      # concern, not a memory-leak concern, and TSan runs the same
+      # test separately.
+      env:
+        RUNNING_UNDER_VALGRIND: "1"
       run: |
         ctest --output-on-failure --no-tests=error --label-exclude gui \
               --overwrite MemoryCheckCommand=$(which valgrind) \
