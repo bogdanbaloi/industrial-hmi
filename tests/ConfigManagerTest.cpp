@@ -308,10 +308,15 @@ TEST_F(ConfigManagerTest, ConcurrentReadersDuringReload) {
         }
     });
 
-    // Hammer reload() from the main thread. 50 iterations is plenty to
-    // expose a race under TSan (the runtime is sensitive to a single
-    // unsynchronised access); kept small so wall-clock stays under 1 s.
-    for (int i = 0; i < 50; ++i) {
+    // Hammer reload() from the main thread. 10 iterations is plenty
+    // to expose a race under TSan -- the runtime is sensitive to a
+    // single unsynchronised access; we don't need volume, we need
+    // overlap. Kept low on purpose: this test also runs under the
+    // ctest Valgrind/memcheck gate (which slows execution ~20x). At
+    // 50 iterations the slowest non-TSan tool tipped the whole suite
+    // past its timeout.
+    const int kReloadIterations = 10;
+    for (int i = 0; i < kReloadIterations; ++i) {
         // Alternate between two valid configs so the validator stays
         // happy on every iteration -- we want to exercise the swap +
         // validate path, not the rollback path.
