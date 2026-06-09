@@ -1,3 +1,9 @@
+// [utest->req~historian-005~1]
+// Covers REQ-HISTORIAN-005 (history page polish) for the page-level
+// wiring: footer empty-state, footer thousands formatting, and the
+// refresh path that triggers populateChart->clear() (the chart-level
+// clear() semantic itself is covered by TrendChartTest).
+//
 // Tests for app::view::HistoryPage -- View layer smoke + interactions.
 //
 // HistoryPage queries an injected HistoryReader on construction and
@@ -137,4 +143,44 @@ TEST_F(HistoryPageTest, DefaultRangeIsOneHour) {
     constexpr std::int64_t kOneHourMs = 3'600'000;
     EXPECT_NEAR(lookback, kOneHourMs, 1000)
         << "expected ~1h lookback for default range";
+}
+
+// REQ-HISTORIAN-005: footer empty-state shows on a cold historian.
+TEST_F(HistoryPageTest, FooterShowsNoDataWhenTotalIsZero) {
+    // SetUp's ctor ran refreshAllCharts() against a fakeReader with
+    // cannedTotal_ == 0 (default), so the footer should already
+    // hold the empty-state message.
+    const auto txt = page_->footerText();
+    EXPECT_NE(txt.find("No data"), std::string::npos)
+        << "got footer text: '" << txt.raw() << "'";
+}
+
+// REQ-HISTORIAN-005: nonzero sample count renders as a thousands-
+// grouped number, NOT the empty-state string.
+TEST_F(HistoryPageTest, FooterShowsThousandsCountWhenNonZero) {
+    fakeReader_.setTotal(12345);
+    page_->triggerRefreshForTest();
+
+    const auto txt = page_->footerText();
+    EXPECT_EQ(txt.find("No data"), std::string::npos)
+        << "non-zero total should not show empty-state; got: '"
+        << txt.raw() << "'";
+    EXPECT_NE(txt.find("12,345"), std::string::npos)
+        << "expected thousands-grouped 12,345; got: '"
+        << txt.raw() << "'";
+}
+
+// REQ-HISTORIAN-005: a manual Refresh re-queries the reader. This
+// proves the refresh path runs (and therefore populateChart's
+// chart->clear() executes); the chart-level clear() semantic is
+// verified separately in TrendChartTest.
+TEST_F(HistoryPageTest, RefreshReQueriesAllSixSeries) {
+    const auto baselineCalls = fakeReader_.calls().size();
+    ASSERT_EQ(baselineCalls, 6U) << "fixture invariant";
+
+    page_->triggerRefreshForTest();
+
+    const auto afterRefresh = fakeReader_.calls().size();
+    EXPECT_EQ(afterRefresh, baselineCalls + 6U)
+        << "refresh should add exactly 3 quality + 3 supply queries";
 }

@@ -389,6 +389,18 @@ target_link_libraries(objectsModel
     PRIVATE
         boost_sml_headers
 )
+if(WIN32)
+    # DatabaseManager.cpp pulls Boost.Asio's winsock_init, which
+    # references WSAStartup/WSACleanup (ws2_32) and AcceptEx /
+    # GetAcceptExSockaddrs (mswsock). Declaring the dependency PUBLIC
+    # here is the SINGLE source of truth: objectsAppGtk and objectsView
+    # link objectsModel PUBLIC, so the requirement propagates
+    # transitively to every binary AND every test that links the
+    # model/view chain. No consumer -- and no future test target --
+    # needs its own Winsock line. Same pattern as objectsTcp /
+    # objectsMqtt below.
+    target_link_libraries(objectsModel PUBLIC ws2_32 mswsock)
+endif()
 target_include_directories(objectsModel
     PUBLIC
         ${GTKMM_INCLUDE_DIRS}

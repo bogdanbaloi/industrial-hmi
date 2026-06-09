@@ -1167,6 +1167,23 @@ add_test(NAME DonutChartWidgetTest COMMAND test_donut_chart_widget
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(DonutChartWidgetTest PROPERTIES LABELS "gui")
 
+# View: TrendChart (REQ-HISTORIAN-005 history page polish).
+# Covers the public clear() / setUnit() / pointCount() surface that
+# HistoryPage now relies on. Same shape as DonutChartWidgetTest:
+# data-path accessors only, Cairo rendering is verified manually.
+add_executable(test_trend_chart
+    TrendChartTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_trend_chart PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_trend_chart PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_trend_chart PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME TrendChartTest COMMAND test_trend_chart
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(TrendChartTest PROPERTIES LABELS "gui")
+
 # View: ProductsPage
 add_executable(test_products_page
     ProductsPageTest.cpp
@@ -1218,36 +1235,14 @@ add_test(NAME DialogManagerTest COMMAND test_dialog_manager
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(DialogManagerTest PROPERTIES LABELS "gui")
 
-# Boost.Asio on Windows references WSAStartup / WSACleanup from Winsock;
-# every objectsModel-linked target needs ws2_32.
-if(WIN32)
-    target_link_libraries(test_database_manager          PRIVATE ws2_32)
-    target_link_libraries(test_products_presenter        PRIVATE ws2_32)
-    target_link_libraries(test_products_presenter_async  PRIVATE ws2_32)
-    target_link_libraries(test_dashboard_presenter       PRIVATE ws2_32)
-    target_link_libraries(test_dashboard_page            PRIVATE ws2_32)
-    target_link_libraries(test_big_number_card           PRIVATE ws2_32)
-    target_link_libraries(test_donut_chart_widget        PRIVATE ws2_32)
-    target_link_libraries(test_products_page             PRIVATE ws2_32)
-    target_link_libraries(test_settings_page             PRIVATE ws2_32)
-    target_link_libraries(test_dialog_manager            PRIVATE ws2_32)
-    # Historian bridge test pulls objectsModel transitively for the
-    # SimulatedModel singleton, which drags in DatabaseManager.cpp
-    # and its Boost.Asio winsock_init. The HistoryPage GUI test does
-    # too via VIEW_COMMON_LIBS (objectsModel).
-    target_link_libraries(test_historian_bridge          PRIVATE ws2_32)
-    target_link_libraries(test_history_page              PRIVATE ws2_32)
-    target_link_libraries(test_users_presenter           PRIVATE ws2_32)
-    target_link_libraries(test_users_page                PRIVATE ws2_32)
-    # New targets that link objectsView / objectsAppGtk (and thus
-    # Boost.Asio -> Winsock) transitively.
-    target_link_libraries(test_toast                          PRIVATE ws2_32)
-    target_link_libraries(test_multistation_dashboard_page    PRIVATE ws2_32)
-    target_link_libraries(test_recipe_load_integration        PRIVATE ws2_32)
-    target_link_libraries(test_recipe_write_integration       PRIVATE ws2_32)
-    target_link_libraries(test_dashboard_presenter_integration PRIVATE ws2_32)
-    target_link_libraries(test_alert_center_model_integration PRIVATE ws2_32)
-endif()
+# NOTE: objectsModel-linked test targets used to need a per-target
+# `ws2_32` line here for Boost.Asio's Winsock init. That manual list was
+# a maintenance trap -- a new test target linking the model/view chain
+# would link-fail on Windows until someone remembered to add it (which
+# is exactly what happened to test_trend_chart). The Winsock dependency
+# is now declared ONCE, PUBLIC, on objectsModel in the top-level
+# CMakeLists.txt, so every consumer inherits it transitively. No
+# per-test Winsock wiring is needed.
 
 # Console scenario tests -- end-to-end MVP regression suite
 # Each *.txt scenario is piped into industrial-hmi-console and the filtered

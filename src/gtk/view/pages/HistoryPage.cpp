@@ -1,9 +1,11 @@
 #include "src/gtk/view/pages/HistoryPage.h"
 
 #include "src/core/i18n.h"
+#include "src/gtk/view/ui_sizes.h"
 
 #include <chrono>
 #include <format>
+#include <string>
 
 namespace app::view {
 
@@ -39,6 +41,29 @@ constexpr int kChartGridColGap   = 16;
 // numbers lint stays happy and the intent is obvious.
 constexpr int kHoursPerDay  = 24;
 constexpr int kHoursPerWeek = kHoursPerDay * 7;
+
+/// Render a non-negative integer with comma thousands separators,
+/// e.g. 1234567 -> "1,234,567". Used by the History page footer
+/// (REQ-HISTORIAN-005) so the operator can read a 6-digit sample
+/// count at a glance.
+///
+/// We do this by hand rather than via `std::format("{:L}", n)`
+/// because the `L` flag requires a non-classic `std::locale`, and
+/// the binary deliberately stays locale-neutral so the layout-budget
+/// tests (DashboardPageTest.CompactPaneFitsMultiStationWidthBudget)
+/// see deterministic text widths.
+std::string formatWithThousands(std::size_t n) {
+    auto s = std::to_string(n);
+    if (s.size() <= 3) return s;
+    // Walk backwards in groups of 3 inserting commas. Cast to int to
+    // avoid signed/unsigned mix in the loop counter.
+    auto pos = static_cast<int>(s.size()) - 3;
+    while (pos > 0) {
+        s.insert(static_cast<std::string::size_type>(pos), ",");
+        pos -= 3;
+    }
+    return s;
+}
 
 // Wall-clock ms since epoch. Uniform with HistorianBridge so the
 // queries line up with what the bridge wrote.
@@ -115,9 +140,19 @@ void HistoryPage::buildUi() {
     refreshButton_->signal_clicked().connect(
         sigc::mem_fun(*this, &HistoryPage::onRefreshClicked));
 
+    // Spinner sits next to the Refresh button, hidden by default. It
+    // only animates while a manual Refresh is in flight; auto-refresh
+    // ticks do not spin (silently re-querying every 5 s should not
+    // strobe the toolbar).
+    spinner_ = Gtk::make_managed<Gtk::Spinner>();
+    spinner_->set_size_request(sizes::kHistorySpinnerSize,
+                               sizes::kHistorySpinnerSize);
+    spinner_->set_visible(false);
+
     toolbar->append(*rangeLabel);
     toolbar->append(*rangePicker_);
     toolbar->append(*refreshButton_);
+    toolbar->append(*spinner_);
     append(*toolbar);
 
     // Chart grid: two columns -- quality on the left, supply on the right.
@@ -136,10 +171,12 @@ void HistoryPage::buildUi() {
     grid->attach(*supplyHeader,  1, 0, 1, 1);
 
     for (std::size_t i = 0; i < kQualityCount; ++i) {
-        const auto label = std::format("Checkpoint {}", i);
+        // 1-based labels (REQ-HISTORIAN-005): operators expect
+        // "Checkpoint 1, 2, 3", not zero-indexed engineering view.
         // Charts use the same 0..100 range as the gauges so an
         // operator switching back and forth between Dashboard and
         // History reads the same axes everywhere.
+        const auto label = std::format("Checkpoint {}", i + 1);
         qualityCharts_[i] = Gtk::make_managed<TrendChart>(
             label, 0.0F, 100.0F);
         qualityCharts_[i]->set_vexpand(true);
@@ -147,7 +184,7 @@ void HistoryPage::buildUi() {
                      static_cast<int>(i + 1), 1, 1);
     }
     for (std::size_t i = 0; i < kEquipmentCount; ++i) {
-        const auto label = std::format("Line {}", i);
+        const auto label = std::format("Line {}", i + 1);
         supplyCharts_[i] = Gtk::make_managed<TrendChart>(
             label, 0.0F, 100.0F);
         supplyCharts_[i]->set_vexpand(true);
@@ -164,6 +201,15 @@ void HistoryPage::buildUi() {
 }
 
 void HistoryPage::onRefreshClicked() {
+    // Manual Refresh gets visible spinner feedback (REQ-HISTORIAN-005):
+    // for a cold "Last 7 days" query the synchronous reader_.query()
+    // can take a noticeable beat. Auto-refresh deliberately does NOT
+    // spin -- silent re-queries every 5 s should not strobe the
+    // toolbar.
+    if (spinner_ != nullptr) {
+        spinner_->set_visible(true);
+        spinner_->start();
+    }
     refreshAllCharts();
 }
 
@@ -185,8 +231,26 @@ void HistoryPage::refreshAllCharts() {
 
     if (footerLabel_ != nullptr) {
         const auto total = reader_.totalSamples();
-        footerLabel_->set_text(
-            std::format("Total samples: {}", total));
+        // Empty-state messaging (REQ-HISTORIAN-005): a freshly-built
+        // historian renders blank charts and "Total samples: 0" would
+        // be misread as a failure. The explicit message makes the
+        // cold-start state obvious; once data lands we switch to a
+        // thousands-grouped count so a 7-digit sample tally stays
+        // readable.
+        if (total == 0) {
+            footerLabel_->set_text(_("No data yet"));
+        } else {
+            footerLabel_->set_text(
+                std::format("Total samples: {}",
+                            formatWithThousands(total)));
+        }
+    }
+
+    // Always stop the spinner, even on auto-refresh ticks where we
+    // never started it. set_visible + stop are both idempotent.
+    if (spinner_ != nullptr) {
+        spinner_->stop();
+        spinner_->set_visible(false);
     }
 }
 
@@ -194,6 +258,14 @@ void HistoryPage::populateChart(TrendChart* chart,
                                 historian::FieldKind field,
                                 std::uint32_t entityId) {
     if (chart == nullptr) return;
+
+    // Drop the previous query's points BEFORE we push the new ones
+    // (REQ-HISTORIAN-005). Without this, switching range from
+    // "Last 7 days" back to "Last hour" would keep the old samples
+    // visible until the ring buffer wraps -- a stale-data bug that
+    // silently lies to the operator about what window they are
+    // looking at.
+    chart->clear();
 
     const auto lookback = rangeLookback();
     const std::int64_t to   = nowMs();

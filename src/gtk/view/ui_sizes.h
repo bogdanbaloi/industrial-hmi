@@ -14,6 +14,11 @@ inline constexpr int kSpacingXL     = 24;
 // Quality gauge (Cairo-drawn circular gauge).
 inline constexpr int kGaugeSize = 100;  // square widget, width = height
 
+// History page busy spinner shown between "Refresh" click and the
+// historian query returning. 20px matches the row-height of the
+// surrounding header so the spinner does not jump the layout.
+inline constexpr int kHistorySpinnerSize = 20;
+
 // Trend chart (Cairo-drawn line chart in each quality card).
 inline constexpr int    kTrendChartDefaultWidth  = 300;
 inline constexpr int    kTrendChartDefaultHeight = 80;
