@@ -51,7 +51,6 @@ public:
     /// keep showing stale samples once the ring wraps. The vector
     /// allocation is preserved so subsequent `addPoint()` calls do
     /// not reallocate; only the live-data counters reset.
-    /// [impl->req~historian-005~1]
     void clear() noexcept {
         std::fill(data_.begin(), data_.end(), 0.0f);
         writePos_ = 0;
@@ -64,7 +63,6 @@ public:
     /// keep their current rendering; HistoryPage's supply trend
     /// retains the percent suffix until per-series units are
     /// surfaced as data.
-    /// [impl->req~historian-005~1]
     void setUnit(std::string unit) { unit_ = std::move(unit); }
 
     /// Number of valid points currently held in the ring buffer.
