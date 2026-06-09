@@ -168,6 +168,12 @@ bool ConfigManager::reload() {
     //   3. Move-swap config_ <-> next; remember previous for rollback
     //   4. Run ConfigValidator against the new state
     //   5. If validation rejects, roll back; else keep the new state
+    // REQ-CORE-008: hold the write side of `config_mutex_` across the
+    // entire swap + validate window. `recursive_mutex` is required
+    // because ConfigValidator::validate(*this) recurses back through
+    // the public getters which acquire the same lock on this thread.
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
+
     if (configPath_.empty()) {
         // No prior initialize() means there is no path to reload from.
         // This is a programmer error, not a runtime config failure.
@@ -243,6 +249,7 @@ void ConfigManager::setLogger(app::core::Logger& logger) {
 // ConfigManager.cpp -- see the header comment for the link rationale.
 
 void ConfigManager::clear() {
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
     config_.clear();
     configPath_.clear();
 }
@@ -283,6 +290,7 @@ std::string ConfigManager::getDialogTitle(const std::string& category,
 
 std::string ConfigManager::getDialogMessage(const std::string& category,
                                             const std::string& name) const {
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
     const auto base = "dialogs." + category + "." + name;
     auto it = config_.find(base + ".message");
     if (it != config_.end()) return it->second;
@@ -342,7 +350,14 @@ std::string ConfigManager::getLanguage() const {
 }
 
 bool ConfigManager::setLanguage(const std::string& language) {
-    config_["i18n.language"] = language;
+    {
+        // Lock only the in-memory write. persistLanguage performs file
+        // I/O which we deliberately keep OUTSIDE the lock: holding a
+        // mutex across disk writes would stall every getter for the
+        // duration of fsync, which is unbounded on a busy host.
+        const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
+        config_["i18n.language"] = language;
+    }
     return persistLanguage(language);
 }
 
@@ -351,7 +366,12 @@ std::string ConfigManager::getPalette() const {
 }
 
 bool ConfigManager::setPalette(const std::string& palette) {
-    config_["ui.palette"] = palette;
+    {
+        // Same pattern as setLanguage: lock the in-memory write only,
+        // do disk I/O outside the lock.
+        const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
+        config_["ui.palette"] = palette;
+    }
     return persistPalette(palette);
 }
 
@@ -584,11 +604,18 @@ std::string ConfigManager::formatMessage(
 
 std::string ConfigManager::getValue(const std::string& key,
                                     const std::string& defaultValue) const {
+    // REQ-CORE-008: every read of `config_` is mutex-protected so it is
+    // race-free against a concurrent `reload()` from ConfigFileWatcher.
+    // Recursive mutex so `reload()` can hold the lock during validation
+    // and have validate() recurse back through this method on the same
+    // thread.
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
     auto it = config_.find(key);
     return (it != config_.end()) ? it->second : defaultValue;
 }
 
 int ConfigManager::getInt(const std::string& key, int defaultValue) const {
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
     auto it = config_.find(key);
     if (it == config_.end()) return defaultValue;
     try {
@@ -600,6 +627,7 @@ int ConfigManager::getInt(const std::string& key, int defaultValue) const {
 
 float ConfigManager::getFloat(const std::string& key,
                               float defaultValue) const {
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
     auto it = config_.find(key);
     if (it == config_.end()) return defaultValue;
     try {
@@ -635,6 +663,12 @@ bool ConfigManager::loadConfig() {
         return false;
     }
 
+    // REQ-CORE-008: even though loadConfig() is typically called only
+    // from initialize() (single-threaded by convention before any
+    // watcher exists), lock the write so the invariant "every mutation
+    // of config_ holds config_mutex_" is enforced uniformly. Cheap on
+    // the cold path; eliminates a foot-gun for any future re-entry.
+    const std::scoped_lock<std::recursive_mutex> lock(config_mutex_);
     config_.clear();
     flatten(root, config_);
     return true;

@@ -356,6 +356,48 @@ Verified by: ConfigValidatorTest.
 
 Needs: utest
 
+### REQ-CORE-008 (NICE) — Internal synchronisation: race-free concurrent readers vs reload
+
+`req~core-008~1`
+
+`ConfigManager` **shall** guard every read and write of its in-memory
+flat-key map (`config_`) with an internal mutex, so a `reload()` call
+running on a background thread (typically `ConfigFileWatcher`'s
+`std::jthread`) is race-free against concurrent getter calls on any
+other thread. Previously (Phase 2 of REQ-CORE-006), thread-safety was
+"single-writer + single-reader by convention" and ThreadSanitizer
+correctly flagged the cross-thread pattern as a data race; Phase 3a
+closes that constraint inside the manager so consumers no longer have
+to synchronise externally.
+
+Implementation **shall** use `std::recursive_mutex` (not
+`std::mutex`): `reload()` holds the write lock across
+`ConfigValidator::validate(*this)` for the swap-and-validate window,
+and the validator recurses back through the public getters which
+acquire the same lock on the same thread. A non-recursive mutex would
+self-deadlock there. The performance trade-off is acceptable: getter
+calls are sub-microsecond and rare compared to the alarm / dashboard
+hot paths, while the recursive primitive removes an entire class of
+test-only scaffolding (separate "internal" un-locked accessors for
+the validator).
+
+`setLanguage()` and `setPalette()` **shall** lock only the in-memory
+write and release the lock BEFORE invoking the disk-persist helper
+(`persistLanguage` / `persistPalette`). Holding a mutex across fsync
+would stall every getter for an unbounded duration on a slow
+filesystem.
+
+Verified by: ConfigManagerTest.ConcurrentReadersDuringReload, run
+under ThreadSanitizer in CI (`ctest --label-regex tsan`). The test
+spawns a reader thread looping `getLanguage` / `getWindowWidth` /
+`getDialogMessage` while the main thread hammers `reload()` against
+two alternating valid configs; TSan-clean.
+
+ADR: 0015 + 0017 (no time-source abstraction needed here; the only
+clock involved is the OS-level mutex implementation).
+
+Needs: utest
+
 ### REQ-CORE-007 (NICE) — Watch the config file and trigger reload on edit
 
 `req~core-007~1`

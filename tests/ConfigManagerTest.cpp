@@ -18,10 +18,13 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
-#include <string>
 #include <sstream>
+#include <string>
+#include <thread>
 
 namespace fs = std::filesystem;
 using app::config::ConfigManager;
@@ -270,4 +273,66 @@ TEST_F(ConfigManagerTest, ReloadReturnsFalseWhenInitializeNeverRan) {
     // succeeded.
     auto& cfg = ConfigManager::instance();
     EXPECT_FALSE(cfg.reload());
+}
+
+// [utest->req~core-008~1]
+// REQ-CORE-008: ConfigManager guards `config_` with an internal mutex so
+// concurrent readers + a writer (`reload()`, typically from
+// ConfigFileWatcher's background thread) are race-free. The pre-Phase-3a
+// invariant was "single-writer + single-reader by convention"; this test
+// proves the new invariant by spinning a reader loop on one thread while
+// the main thread hammers reload() on the same singleton. Under TSan
+// (-fsanitize=thread, wired in CI as ctest --label-regex tsan) this
+// would have flagged on every iteration before Phase 3a.
+TEST_F(ConfigManagerTest, ConcurrentReadersDuringReload) {
+    const auto path = fs::temp_directory_path() /
+                      "industrial-hmi-concurrent.json";
+    {
+        std::ofstream out(path, std::ios::trunc);
+        out << baseConfig("it");
+    }
+    auto& cfg = ConfigManager::instance();
+    ASSERT_TRUE(cfg.initialize(path.string()));
+
+    std::atomic<bool> stop{false};
+    std::atomic<std::size_t> reads{0};
+    std::thread reader([&] {
+        while (!stop.load(std::memory_order_relaxed)) {
+            // Three different access paths: a flat getter, an int getter,
+            // a dialog lookup. They all funnel through the same mutex.
+            const auto lang = cfg.getLanguage();
+            (void)lang;
+            (void)cfg.getWindowWidth();
+            (void)cfg.getDialogMessage("confirm", "exit");
+            reads.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    // Hammer reload() from the main thread. 50 iterations is plenty to
+    // expose a race under TSan (the runtime is sensitive to a single
+    // unsynchronised access); kept small so wall-clock stays under 1 s.
+    for (int i = 0; i < 50; ++i) {
+        // Alternate between two valid configs so the validator stays
+        // happy on every iteration -- we want to exercise the swap +
+        // validate path, not the rollback path.
+        std::ofstream out(path, std::ios::trunc);
+        out << baseConfig((i % 2 == 0) ? "de" : "it");
+        out.close();
+        EXPECT_TRUE(cfg.reload());
+    }
+
+    stop.store(true, std::memory_order_relaxed);
+    reader.join();
+
+    // Sanity: the reader actually got CPU time. We don't assert a
+    // specific count -- scheduler-dependent -- just that it observed
+    // SOME iterations, so the test really did exercise concurrency.
+    EXPECT_GT(reads.load(), 0u);
+
+    // Final state must be one of the two valid values; the reload loop
+    // ended with i==49 -> "it".
+    EXPECT_EQ(cfg.getLanguage(), "it");
+
+    std::error_code ec;
+    fs::remove(path, ec);
 }

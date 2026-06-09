@@ -68,6 +68,7 @@ requirements may be smoke-tested.
 | REQ-CORE-005 | SHOULD | `src/config/ConfigValidator.cpp`, `src/core/Bootstrap.cpp` (stage 2.5), `schemas/app-config.schema.json` | ConfigValidatorTest | ADR-0015 |
 | REQ-CORE-006 | NICE | `src/config/ConfigManager.cpp::reload()` (atomic re-read + re-validate + rollback on rejection) | ConfigManagerTest (5 reload cases: success-after-edit, missing-file, parse-error, validator-rejection, no-init sentinel) | ADR-0015 |
 | REQ-CORE-007 | NICE | `src/config/ConfigFileWatcher.cpp` (poll-based `last_write_time` watcher with `pollOnce` test seam + `jthread` + cv-on-stop-token shutdown) | ConfigFileWatcherTest (7 cases: no-change baseline, edit triggers reload, second-poll no change, reload-rejected still reports change, missing-file preserves config, background lifecycle, background detects edit) | ADR-0015, 0017 |
+| REQ-CORE-008 | NICE | `src/config/ConfigManager.h` (`mutable std::recursive_mutex config_mutex_`), `src/config/ConfigManager.cpp` (scoped_lock in every getter + reload + clear + setLanguage/setPalette write window + loadConfig) | ConfigManagerTest.ConcurrentReadersDuringReload (reader thread looping getters while main hammers reload; TSan-clean) | ADR-0015, 0017 |
 
 ## DASHBOARD
 

@@ -48,17 +48,15 @@ class ConfigManager;
 /// GTK main loop, which the console binary doesn't have. A
 /// `std::jthread` works in both front-ends.
 ///
-/// @thread_safety The watcher's own state is mutex-protected.
-/// ConfigManager is documented single-writer (REQ-CORE-006); reads
-/// while the watcher's background thread is calling `reload()` are a
-/// data race that ThreadSanitizer catches in CI. Production callers
-/// MUST NOT read configuration values from a different thread while
-/// the watcher is running until Phase 3 adds internal synchronisation
-/// to ConfigManager. The Settings page reads on the GTK main thread,
-/// and integration backends snapshot their config at construction
-/// time, so the typical wiring is safe today; the constraint exists
-/// for future code that holds a ConfigManager reference and reads
-/// from a background thread.
+/// @thread_safety The watcher's own state is mutex-protected. Since
+/// Phase 3a (REQ-CORE-008), ConfigManager guards `config_` with an
+/// internal `std::recursive_mutex` across every read and write, so
+/// concurrent readers on any thread (GTK main loop, integration
+/// backends, future console workers) are race-free against the
+/// watcher's background `reload()` call. ThreadSanitizer is wired in
+/// CI and `ConfigManagerTest.ConcurrentReadersDuringReload` exercises
+/// the pattern explicitly. The earlier single-writer constraint
+/// (Phase 2 of REQ-CORE-006) no longer applies.
 class ConfigFileWatcher {
 public:
     /// Default polling cadence -- 1 s matches the operator's

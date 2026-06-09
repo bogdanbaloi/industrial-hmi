@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Config hot reload Phase 3a -- ConfigManager internal sync (REQ-CORE-008)
+
+Closes the "single-writer + single-reader by convention" constraint
+documented in Phase 2: `ConfigManager` now guards its in-memory
+flat-key map with an internal `std::recursive_mutex`, so the
+watcher's background `reload()` is race-free against any reader on
+any thread. ThreadSanitizer is wired in CI and a new test exercises
+the pattern explicitly.
+
+#### Added
+- `mutable std::recursive_mutex config_mutex_` in `ConfigManager.h`
+  with a design comment explaining why recursive (validator recurses
+  back through public getters on the same thread during reload).
+- `std::scoped_lock<std::recursive_mutex>` at every read site
+  (`getValue`, `getInt`, `getFloat`, `getDialogMessage`) and every
+  write site (`reload` across the swap + validate window, `clear`,
+  `setLanguage` / `setPalette` around the in-memory write only --
+  disk persist runs outside the lock, `loadConfig` defensively).
+- `ConfigManagerTest.ConcurrentReadersDuringReload` -- spawns a
+  reader thread looping `getLanguage` / `getWindowWidth` /
+  `getDialogMessage` while the main thread hammers 50 reloads
+  alternating between two valid configs. Runs TSan-clean.
+- REQ-CORE-008 in `REQUIREMENTS.md` + `TRACEABILITY.md`.
+
+#### Changed
+- `ConfigFileWatcher.h` `@thread_safety` block relaxes the previous
+  warning ("MUST NOT read from a different thread while the watcher
+  is running"); the new note documents that Phase 3a closed the
+  constraint inside the manager.
+
 ### Config hot reload Phase 2 -- file watcher (REQ-CORE-007)
 
 Continues the config story arc from ADR-0015 / REQ-CORE-005 / REQ-
