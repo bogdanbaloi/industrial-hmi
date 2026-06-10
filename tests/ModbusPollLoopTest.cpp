@@ -1,4 +1,10 @@
+// [utest->req~arch-010~1]
 // Tests for app::integration::modbus::ModbusPollLoop.
+//
+// REQ-ARCH-010 (cross-thread SPSC seam): pollOnce() now PRODUCES into a
+// lock-free queue and drainOnce() CONSUMES into the bridge, so the
+// single-cycle tests below call pollOnce() then drainOnce() to complete
+// the round-trip synchronously on one thread.
 //
 // Strategy: a FakeModbusReader implements the ModbusReader interface
 // in memory -- the test pre-programs register values per (slaveId,
@@ -160,7 +166,8 @@ TEST(ModbusPollLoopTest, PollOnceDispatchesEveryMappingToBridge) {
     EXPECT_CALL(model, setEquipmentEnabled(2U, true)).Times(1);
 
     ModbusPollLoop loop(reader, map, bridge);
-    loop.pollOnce();
+    loop.pollOnce();   // produce
+    loop.drainOnce();  // consume -> dispatch to bridge/model
 
     EXPECT_EQ(loop.successfulReads(), 3U);
     EXPECT_EQ(loop.failedReads(),     0U);
@@ -184,6 +191,7 @@ TEST(ModbusPollLoopTest, PollOnceUsesFc03ForHoldingFc04ForInput) {
 
     ModbusPollLoop loop(reader, map, bridge);
     loop.pollOnce();
+    loop.drainOnce();
 
     EXPECT_EQ(loop.successfulReads(), 0U);
     EXPECT_EQ(loop.failedReads(),     1U);
@@ -209,6 +217,7 @@ TEST(ModbusPollLoopTest, FailedReadDoesNotStopRemainingEntries) {
 
     ModbusPollLoop loop(reader, map, bridge);
     loop.pollOnce();
+    loop.drainOnce();
 
     EXPECT_EQ(loop.successfulReads(), 2U);
     EXPECT_EQ(loop.failedReads(),     1U);
@@ -229,6 +238,7 @@ TEST(ModbusPollLoopTest, DisconnectedReaderFailsAllReadsButKeepsLoopAlive) {
 
     ModbusPollLoop loop(reader, map, bridge);
     loop.pollOnce();
+    loop.drainOnce();
     EXPECT_EQ(loop.failedReads(), 2U);
 
     // Reconnect + reprogram: same loop, next pollOnce sees the
@@ -236,6 +246,7 @@ TEST(ModbusPollLoopTest, DisconnectedReaderFailsAllReadsButKeepsLoopAlive) {
     reader.reconnect();
     EXPECT_CALL(model, setEquipmentEnabled(0U, true)).Times(1);
     loop.pollOnce();
+    loop.drainOnce();
     EXPECT_EQ(loop.successfulReads(), 1U);
 }
 
@@ -248,6 +259,7 @@ TEST(ModbusPollLoopTest, EmptyMapIsAValidNoOp) {
     EXPECT_CALL(model, setEquipmentEnabled(testing::_, testing::_)).Times(0);
     ModbusPollLoop loop(reader, emptyMap, bridge);
     loop.pollOnce();
+    loop.drainOnce();
     EXPECT_EQ(loop.successfulReads(), 0U);
     EXPECT_EQ(loop.failedReads(),     0U);
 }
@@ -332,6 +344,54 @@ TEST(ModbusPollLoopTest, StartIsIdempotent) {
     EXPECT_TRUE(loop.isRunning());
     loop.stop();
     EXPECT_FALSE(loop.isRunning());
+}
+
+// ===== SPSC cross-thread seam (REQ-ARCH-010) ====================
+
+TEST(ModbusPollLoopTest, DrainOnceIsNoOpWhenQueueEmpty) {
+    FakeModbusReader reader;
+    MockProductionModel model;
+    // No pollOnce() -> nothing queued -> drainOnce() must dispatch
+    // nothing and not crash.
+    EXPECT_CALL(model, setEquipmentEnabled(testing::_, testing::_)).Times(0);
+    ModbusIngestBridge bridge(model);
+    ModbusRegisterMap map;
+
+    ModbusPollLoop loop(reader, map, bridge);
+    loop.drainOnce();  // empty pop loop -> no-op
+
+    EXPECT_EQ(loop.successfulReads(), 0U);
+    EXPECT_EQ(loop.droppedSamples(), 0U);
+}
+
+TEST(ModbusPollLoopTest, PollOncePushesDroppedSamplesOnQueueFull) {
+    // Produce more samples in a single walk than the SPSC queue can
+    // hold WITHOUT draining, so the overflow path increments the drop
+    // counter. The queue's usable depth is kQueueCapacity - 1.
+    FakeModbusReader reader;
+    MockProductionModel model;
+    // Allow any dispatch (none happens -- we never drainOnce) but don't
+    // require it.
+    EXPECT_CALL(model, setEquipmentEnabled(testing::_, testing::_))
+        .Times(testing::AnyNumber());
+    ModbusIngestBridge bridge(model);
+
+    ModbusRegisterMap map;
+    constexpr std::uint16_t kEntries =
+        static_cast<std::uint16_t>(ModbusPollLoop::kQueueCapacity + 4);
+    for (std::uint16_t i = 0; i < kEntries; ++i) {
+        reader.program(1, RegisterType::HoldingRegister, i, 1);
+        map.add(equipmentEnabledMapping(i, 1, i,
+                                        RegisterType::HoldingRegister));
+    }
+
+    ModbusPollLoop loop(reader, map, bridge);
+    loop.pollOnce();  // produce only -- no drain, so the queue fills
+
+    EXPECT_EQ(loop.successfulReads(), kEntries)
+        << "every read succeeded regardless of queue space";
+    EXPECT_GE(loop.droppedSamples(), 1U)
+        << "samples beyond the queue depth must be dropped, not block";
 }
 
 TEST(ModbusPollLoopTest, DestructorJoinsRunningThread) {

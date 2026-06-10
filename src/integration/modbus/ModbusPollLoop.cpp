@@ -1,8 +1,16 @@
 #include "src/integration/modbus/ModbusPollLoop.h"
 
+#include <chrono>
 #include <utility>
 
 namespace app::integration::modbus {
+
+namespace {
+// Backstop wake interval for the drain thread. The producer notifies
+// after every push so this only fires if a notify is ever missed --
+// the drain thread still makes progress within this bound.
+constexpr std::chrono::milliseconds kDrainWakeInterval{50};
+}  // namespace
 
 ModbusPollLoop::ModbusPollLoop(ModbusReader& reader,
                                const ModbusRegisterMap& map,
@@ -26,6 +34,12 @@ void ModbusPollLoop::start() {
     if (thread_.joinable()) {
         return;  // already running -- idempotent on purpose
     }
+    // Spawn the consumer first so it is ready to drain the moment the
+    // producer starts pushing. Order is not strictly required (the
+    // drain thread just waits on an empty queue) but it is the natural
+    // producer-after-consumer setup.
+    drainThread_ = std::jthread(
+        [this](std::stop_token token) { drainRun(std::move(token)); });
     thread_ = std::jthread(
         [this](std::stop_token token) { run(std::move(token)); });
 }
@@ -34,15 +48,28 @@ void ModbusPollLoop::stop() noexcept {
     if (!thread_.joinable()) {
         return;
     }
+    // Ordered shutdown to preserve the single-consumer invariant:
+    //   1. Stop the PRODUCER first + join. No more pushes can happen.
     thread_.request_stop();
-    // Kick the worker out of its interruptible wait promptly. The cv
-    // is shared so notify_all is cheap and avoids the dance of
-    // locking the same mutex the worker holds while running.
     sleepCv_.notify_all();
     thread_.join();
+    //   2. Stop the CONSUMER + join. The drain thread is now the only
+    //      thing that ever touched the queue's consumer side, and it is
+    //      gone.
+    if (drainThread_.joinable()) {
+        drainThread_.request_stop();
+        drainCv_.notify_all();
+        drainThread_.join();
+    }
+    //   3. Single-threaded now: flush any samples the drain thread did
+    //      not get to, so a clean shutdown loses nothing. Safe -- no
+    //      other consumer exists at this point.
+    drainOnce();
 }
 
 bool ModbusPollLoop::isRunning() const noexcept {
+    // Poll-thread liveness is the public contract; the drain thread is
+    // an internal implementation detail started/stopped alongside it.
     return thread_.joinable();
 }
 
@@ -66,7 +93,45 @@ void ModbusPollLoop::pollOnce() {
             continue;  // skip this entry, keep polling the rest
         }
         successfulReads_.fetch_add(1, std::memory_order_release);
-        bridge_.onRegisterChanged(entry, result.unwrap().front());
+        // PRODUCE: push the sample for the drain thread to dispatch.
+        // Drop on overflow (REQ-ARCH-010) -- the poll thread must never
+        // block on a full queue; the next walk refreshes the value.
+        if (!queue_.push(RegisterSample{entry, result.unwrap().front()})) {
+            droppedSamples_.fetch_add(1, std::memory_order_release);
+        }
+    }
+    // Wake the drain thread once per walk (cheap; the consumer also
+    // has a timeout backstop). Notify without holding drainMutex_ --
+    // the consumer re-checks the queue under the lock, so this can
+    // only ever cause one harmless extra wake, never a missed sample.
+    drainCv_.notify_one();
+}
+
+void ModbusPollLoop::drainOnce() {
+    // CONSUME: dispatch every queued sample to the bridge. Called by
+    // the drain thread, and by stop()/tests on a single thread.
+    RegisterSample sample;
+    while (queue_.pop(sample)) {
+        bridge_.onRegisterChanged(sample.mapping, sample.value);
+    }
+}
+
+void ModbusPollLoop::drainRun(std::stop_token token) {
+    while (!token.stop_requested()) {
+        drainOnce();
+        if (token.stop_requested()) {
+            break;
+        }
+        // Sleep until the producer pushes (notify) or the backstop
+        // timeout fires; wake immediately on stop. Predicate also wakes
+        // if the queue is non-empty so a push that raced the wait is
+        // not lost.
+        std::unique_lock<std::mutex> lock(drainMutex_);
+        drainCv_.wait_for(lock, token, kDrainWakeInterval,
+                          [this, &token]() {
+                              return token.stop_requested() ||
+                                     !queue_.empty();
+                          });
     }
 }
 
