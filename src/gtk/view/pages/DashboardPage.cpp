@@ -466,7 +466,13 @@ void DashboardPage::buildUI() {
     // below the readability-function-size threshold.
     buildUptimeDonut(builder);
 
-    // Control panel
+    // Control panel buttons (extracted to keep buildUI() under the
+    // readability-function-size threshold).
+    wireControlPanel(builder);
+}
+
+void DashboardPage::wireControlPanel(
+        const Glib::RefPtr<Gtk::Builder>& builder) {
     controlPanelWidgets_.activeIndicator = builder->get_widget<Gtk::Label>("cp_indicator");
     controlPanelWidgets_.startButton = builder->get_widget<Gtk::Button>("cp_start");
     controlPanelWidgets_.stopButton = builder->get_widget<Gtk::Button>("cp_stop");

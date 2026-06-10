@@ -218,6 +218,10 @@ private:
     // UI construction -- loads layout from assets/ui/dashboard-page.ui and
     // injects dynamic widgets (gauges, trend charts) into named containers.
     void buildUI();
+    /// Wire the control-panel buttons (retrieve from builder, add CSS
+    /// classes, connect click handlers). Extracted from buildUI() to
+    /// keep that method under the readability-function-size threshold.
+    void wireControlPanel(const Glib::RefPtr<Gtk::Builder>& builder);
 
     // Event handlers (user interactions -> Presenter)
     void onStartButtonClicked();
