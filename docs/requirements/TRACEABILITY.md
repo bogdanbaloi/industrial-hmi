@@ -45,6 +45,7 @@ requirements may be smoke-tested.
 | REQ-ARCH-007 | NICE | `src/CMakeLists.txt` (`BUILD_ML_CLASSIFIER` option), `src/gtk/view/MainWindow.cpp` (`#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN`) | CI: builds with `-DBUILD_ML_CLASSIFIER=OFF` and `=ON` | 0009 |
 | REQ-ARCH-008 | MUST | every integration backend + `src/gtk/view/pages/DashboardPage.cpp` (`Glib::signal_idle`) | CI: TSan job | -- |
 | REQ-ARCH-009 | NICE | `src/config/ConfigManager.h`, callers throughout | ConfigManagerTest + integration tests | 0010 |
+| REQ-ARCH-010 | SHOULD | `src/core/SpscQueue.h` (header-only lock-free SPSC ring buffer; alignas(64) head_/tail_, release/acquire ordering, power-of-two static_assert, drop-on-full) | SpscQueueTest (8 logic cases + StressProducerConsumer 2-jthread triangular-sum invariant under TSan) | 0018 |
 
 ## AUTH
 
@@ -185,7 +186,7 @@ requirements may be smoke-tested.
 
 | Category | Total | MUST | SHOULD | NICE | Fully tested | Manual-only |
 |---|---|---|---|---|---|---|
-| ARCH | 9 | 5 | 2 | 2 | 7 | 2 (REQ-ARCH-006, manual smoke) |
+| ARCH | 10 | 5 | 3 | 2 | 8 | 2 (REQ-ARCH-006, manual smoke) |
 | AUTH | 6 | 3 | 2 | 1 | 6 | 0 |
 | CORE | 9 | 2 | 3 | 4 | 9 | 0 |
 | DASHBOARD | 7 | 3 | 3 | 1 | 7 | 0 |
@@ -197,7 +198,7 @@ requirements may be smoke-tested.
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **57** | **24** | **21** | **12** | **52** | **5** |
+| **TOTAL** | **58** | **24** | **22** | **12** | **53** | **5** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE
