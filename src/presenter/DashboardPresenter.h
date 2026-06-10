@@ -10,6 +10,7 @@
 #include "src/presenter/AlertCenter.h"
 #include "src/model/ProductionModel.h"
 
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <atomic>
@@ -95,7 +96,21 @@ public:
     
     /// Called when user clicks Calibration button
     void onCalibrationClicked();
-    
+
+    /// Called when user clicks the Inject-Fault button (REQ-DASHBOARD-009).
+    /// Maintenance-gated; drives the system to the ERROR safe-state via
+    /// the injected fault callback (see setFaultInjector).
+    void onInjectFaultClicked();
+
+    /// Inject the fault-trigger callback (REQ-DASHBOARD-009). The fault
+    /// path is a SimulatedModel-only concern and is NOT on the
+    /// ProductionModel interface; the composition root wires this so the
+    /// presenter never depends on the concrete model type (ADR-0001).
+    /// No-op if never set.
+    void setFaultInjector(std::function<void()> fn) {
+        faultInjector_ = std::move(fn);
+    }
+
     /// Called when user toggles equipment enable switch
     /// @param equipmentId Equipment identifier
     /// @param enabled New enabled state
@@ -209,6 +224,11 @@ private:
 
     /// System-state change signal; emitted from handleSystemStateChanged.
     sigc::signal<void(int)> signalSystemStateChanged_;
+
+    /// Fault-trigger callback (REQ-DASHBOARD-009), wired by the
+    /// composition root. Null in tests / when never set -- guarded at
+    /// the call site.
+    std::function<void()> faultInjector_{nullptr};
 };
 
 }  // namespace app

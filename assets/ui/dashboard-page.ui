@@ -388,6 +388,7 @@
             <child><object class="GtkButton" id="cp_stop"><property name="label" translatable="yes">STOP</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
             <child><object class="GtkButton" id="cp_reset"><property name="label" translatable="yes">RESET</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
             <child><object class="GtkButton" id="cp_calibration"><property name="label" translatable="yes">CALIBRATION</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
+            <child><object class="GtkButton" id="cp_inject_fault"><property name="label" translatable="yes">INJECT FAULT</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
           </object>
         </child>
       </object>

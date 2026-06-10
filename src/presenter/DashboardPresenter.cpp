@@ -194,6 +194,21 @@ void DashboardPresenter::onCalibrationClicked() {
     model_.startCalibration();
 }
 
+void DashboardPresenter::onInjectFaultClicked() {
+    if (!checkRole(audit_, session_, logger_,
+                   app::auth::canInjectFault,
+                   app::auth::category::kProduction,
+                   "INJECT_FAULT")) return;
+    LOG_IF(info,"User action: Inject fault (demo / safe-state test)");
+    emitAudit(audit_, session_, app::auth::category::kProduction,
+              "INJECT_FAULT", "");
+    // The fault path is a SimulatedModel-only concern, so it is not on
+    // the ProductionModel interface. The composition root injects it
+    // as a callback (setFaultInjector) -- the presenter never sees the
+    // concrete model type (ADR-0001).
+    if (faultInjector_) faultInjector_();
+}
+
 void DashboardPresenter::onEquipmentToggled(uint32_t equipmentId, bool enabled) {
     const auto details = std::format("equipment id {}", equipmentId);
     if (!checkRole(audit_, session_, logger_,

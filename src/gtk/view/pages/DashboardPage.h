@@ -134,6 +134,7 @@ private:
         Gtk::Button* stopButton{nullptr};
         Gtk::Button* resetButton{nullptr};
         Gtk::Button* calibrationButton{nullptr};
+        Gtk::Button* injectFaultButton{nullptr};  // REQ-DASHBOARD-009
         Gtk::Label* activeIndicator{nullptr};  // Shows which operation is active
     } controlPanelWidgets_;
 
@@ -223,6 +224,7 @@ private:
     void onStopButtonClicked();
     void onResetButtonClicked();
     void onCalibrationButtonClicked();
+    void onInjectFaultButtonClicked();  // REQ-DASHBOARD-009
     void onEquipmentSwitchToggled(uint32_t equipmentId, bool enabled);
 
     // Helper methods for updating UI safely

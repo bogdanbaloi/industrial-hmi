@@ -68,6 +68,13 @@ enum class Role : std::uint8_t {
     return r >= Role::Maintenance;
 }
 
+[[nodiscard]] constexpr bool canInjectFault(Role r) noexcept {
+    // Fault injection drives the system to the ERROR safe-state; same
+    // Maintenance+ threshold as Reset/Calibrate (a deliberate
+    // operator-visible disruption, not an everyday Operator action).
+    return r >= Role::Maintenance;
+}
+
 [[nodiscard]] constexpr bool canEditProducts(Role r) noexcept {
     return r >= Role::Maintenance;
 }

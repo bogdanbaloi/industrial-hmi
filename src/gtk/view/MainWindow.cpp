@@ -388,6 +388,14 @@ void MainWindow::createDashboardPages(app::core::Logger& logger,
     if (alertCenter_) {
         dashboardPresenter_->setAlertCenter(*alertCenter_);
     }
+    // REQ-DASHBOARD-009: wire the fault injector at the composition root.
+    // triggerFault() is a SimulatedModel-only knob (not on the
+    // ProductionModel interface), so the presenter receives it as a
+    // callback and never depends on the concrete model type (ADR-0001).
+    // Same SimulatedModel::instance() the tick loop already drives below.
+    dashboardPresenter_->setFaultInjector([] {
+        app::model::SimulatedModel::instance().triggerFault("DEMO");
+    });
     if (audit != nullptr && session != nullptr) {
         dashboardPresenter_->setAudit(*audit, *session);
         // REQ-ALARM-004: wire AlertCenter lifecycle events into the audit
