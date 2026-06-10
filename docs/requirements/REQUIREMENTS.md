@@ -222,11 +222,23 @@ fan-in seams (MQTT multi-topic, GTK-thread historian bridge) **shall**
 keep their mutex-based handoff (see ADR-0018, which rejects
 generalising lock-free to non-SPSC seams).
 
+The `ModbusPollLoop` **shall** wire this seam cross-thread: the poll
+thread PUSHES register samples (and returns to the wire without
+blocking on dispatch), while a dedicated drain thread is the sole
+consumer that calls the ingest bridge. Shutdown **shall** stop the
+producer before the consumer so the single-consumer invariant holds,
+then flush any residual samples on the calling thread. Queue overflow
+**shall** drop the sample and increment a counter surfaced in
+`ModbusBackend::metricsSummary()`.
+
 ADR: 0018 (Lock-free SPSC queue for the ingest hot path, and only there).
 
 Verified by: SpscQueueTest (round-trip, full/empty, FIFO, wrap-around,
 size, and a two-jthread StressProducerConsumer that verifies the
-triangular-sum invariant under ThreadSanitizer).
+triangular-sum invariant under ThreadSanitizer); ModbusPollLoopTest
+(pollOnce produces / drainOnce consumes round-trip across all dispatch
+cases, DrainOnceIsNoOpWhenQueueEmpty, PollOncePushesDroppedSamplesOnQueueFull,
+start/stop two-thread lifecycle joins cleanly).
 
 Needs: utest
 

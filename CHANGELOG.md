@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Lock-free SPSC wiring into the Modbus poll loop (REQ-ARCH-010 Phase 2)
+
+Wires the `SpscQueue` primitive (Phase 1) into `ModbusPollLoop` as a
+real cross-thread seam. The poll thread now PUSHES register samples and
+returns straight to the wire; a dedicated drain thread is the sole
+consumer that dispatches to the ingest bridge -- the blocking-I/O
+cadence is decoupled from model-dispatch latency, which is the whole
+point of ADR-0018.
+
+#### Added
+- `ModbusPollLoop::drainOnce()` -- consumer step (pops the queue,
+  dispatches to the bridge); used by the drain thread and by
+  tests/stop() on a single thread.
+- `ModbusPollLoop::droppedSamples()` -- atomic overflow counter,
+  surfaced in `ModbusBackend::metricsSummary()` ("... / N dropped").
+- `ModbusPollLoop::RegisterSample` + `kQueueCapacity` (256, named).
+- Two ModbusPollLoopTest cases: DrainOnceIsNoOpWhenQueueEmpty,
+  PollOncePushesDroppedSamplesOnQueueFull.
+
+#### Changed
+- `ModbusPollLoop::pollOnce()` is now produce-only: it pushes samples
+  into the SPSC queue (drop + count on overflow, never blocks) and no
+  longer calls the bridge directly.
+- `start()` spawns a second jthread (the drain/consumer); `stop()` uses
+  an ordered shutdown -- join the producer first, then the consumer,
+  then a final single-threaded flush -- so the single-consumer
+  invariant is never violated.
+- Existing ModbusPollLoopTest dispatch cases now call
+  `pollOnce(); drainOnce();` to complete the round-trip synchronously.
+
 ### Demo enablement: fault-inject button + sparkline visibility (REQ-DASHBOARD-009)
 
 The single most senior-signal moment in the app -- the Boost.SML

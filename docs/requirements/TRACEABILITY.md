@@ -45,7 +45,7 @@ requirements may be smoke-tested.
 | REQ-ARCH-007 | NICE | `src/CMakeLists.txt` (`BUILD_ML_CLASSIFIER` option), `src/gtk/view/MainWindow.cpp` (`#ifdef INDUSTRIAL_HMI_HAS_ML_PLUGIN`) | CI: builds with `-DBUILD_ML_CLASSIFIER=OFF` and `=ON` | 0009 |
 | REQ-ARCH-008 | MUST | every integration backend + `src/gtk/view/pages/DashboardPage.cpp` (`Glib::signal_idle`) | CI: TSan job | -- |
 | REQ-ARCH-009 | NICE | `src/config/ConfigManager.h`, callers throughout | ConfigManagerTest + integration tests | 0010 |
-| REQ-ARCH-010 | SHOULD | `src/core/SpscQueue.h` (header-only lock-free SPSC ring buffer; alignas(64) head_/tail_, release/acquire ordering, power-of-two static_assert, drop-on-full) | SpscQueueTest (8 logic cases + StressProducerConsumer 2-jthread triangular-sum invariant under TSan) | 0018 |
+| REQ-ARCH-010 | SHOULD | `src/core/SpscQueue.h` (header-only lock-free SPSC ring buffer; alignas(64) head_/tail_, release/acquire ordering, power-of-two static_assert, drop-on-full), `src/integration/modbus/ModbusPollLoop.cpp` (cross-thread wiring: poll thread produces, drain thread consumes, ordered shutdown, drop counter), `src/integration/modbus/ModbusBackend.cpp` (dropped-samples in metricsSummary) | SpscQueueTest (8 logic + StressProducerConsumer TSan), ModbusPollLoopTest (pollOnce/drainOnce round-trip + DrainOnceIsNoOpWhenQueueEmpty + PollOncePushesDroppedSamplesOnQueueFull + two-thread start/stop lifecycle) | 0018 |
 
 ## AUTH
 

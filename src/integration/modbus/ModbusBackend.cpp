@@ -66,10 +66,17 @@ std::string ModbusBackend::name() const {
 
 std::string ModbusBackend::metricsSummary() const {
     if (!pollLoop_->isRunning()) return {};
-    return std::format("{} regs | {} ok / {} fail",
-                       map_->size(),
-                       pollLoop_->successfulReads(),
-                       pollLoop_->failedReads());
+    auto summary = std::format("{} regs | {} ok / {} fail",
+                               map_->size(),
+                               pollLoop_->successfulReads(),
+                               pollLoop_->failedReads());
+    // Surface dropped samples only when the SPSC queue has overflowed
+    // (drain thread fell behind) -- REQ-ARCH-010. Hidden in the common
+    // case to keep the I/O-panel tooltip terse.
+    if (const auto dropped = pollLoop_->droppedSamples(); dropped > 0) {
+        summary += std::format(" / {} dropped", dropped);
+    }
+    return summary;
 }
 
 BackendState ModbusBackend::connectionState() const noexcept {
