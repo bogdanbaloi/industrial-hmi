@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### History page per-checkpoint chart toggle (REQ-HISTORIAN-006)
+
+Gives the operator one-click control over which of the six TrendCharts
+are visible. A new row of labelled checkboxes sits directly below the
+range/refresh toolbar, grouped quality-left / supply-right to mirror
+the chart grid. All charts start checked; unchecking one hides it
+instantly. The data is still fetched on every auto-refresh tick, so
+re-enabling a chart shows current values without a manual Refresh.
+
+#### Added
+- Toggle toolbar row in `HistoryPage::buildUi()` -- six
+  `Gtk::CheckButton` widgets labelled "Checkpoint 1/2/3" and
+  "Line 1/2/3", all checked by default; each wired to `onToggleChart`.
+- `HistoryPage::onToggleChart(index, isQuality)` -- visibility-only
+  handler that mirrors the toggle's checked state onto the chart via
+  `set_visible()`. Never touches the data path, so hidden charts keep
+  getting queried.
+- `HistoryPage::chartVisible()` + `hideChartForTest()` +
+  `showChartForTest()` test seams; production callers have no use for
+  them.
+- `tests/HistoryPageToggleTest.cpp` -- 6 cases: default visibility,
+  per-group hide (quality + supply), re-show, refresh-does-not-force-
+  show (regression guard), and hidden-chart-still-queried.
+- REQ-HISTORIAN-006 in `REQUIREMENTS.md` + `TRACEABILITY.md`.
+
 ### History page polish (REQ-HISTORIAN-005)
 
 Corrects a stale-data bug on the History page (switching from

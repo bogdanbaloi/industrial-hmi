@@ -93,6 +93,7 @@ requirements may be smoke-tested.
 | REQ-HISTORIAN-003 | SHOULD | `src/historian/HistorianMaintenance.cpp` | HistorianMaintenanceTest | -- |
 | REQ-HISTORIAN-004 | SHOULD | `src/main.cpp::registerHistorian` (degraded-open path) | manual (delete DB file, observe app boots) | 0007 |
 | REQ-HISTORIAN-005 | SHOULD | `src/gtk/view/widgets/TrendChart.h` (clear/setUnit/pointCount), `src/gtk/view/pages/HistoryPage.cpp` (clear-before-populate, 1-based labels, empty-state + thousands-grouped footer, spinner on manual refresh), `src/gtk/view/pages/HistoryPage.h` (spinner member + test seams), `src/gtk/view/ui_sizes.h` (kHistorySpinnerSize) | TrendChartTest (6 cases: pointCount baseline + clear semantics + setUnit smoke), HistoryPageTest (3 added cases: empty-state footer, thousands footer, refresh re-queries all 6 series) | 0001, 0014 |
+| REQ-HISTORIAN-006 | SHOULD | `src/gtk/view/pages/HistoryPage.h` (qualityToggles_/supplyToggles_ + chartVisible/hideChartForTest/showChartForTest seams), `src/gtk/view/pages/HistoryPage.cpp` (toggle toolbar in buildUi, onToggleChart set_visible handler) | HistoryPageToggleTest (6 cases: default visibility, hide quality, hide supply, re-show, refresh-does-not-force-show, hidden-chart-still-queried) | 0001, 0014 |
 
 ## I18N
 
@@ -187,7 +188,7 @@ requirements may be smoke-tested.
 | AUTH | 6 | 3 | 2 | 1 | 6 | 0 |
 | CORE | 9 | 2 | 3 | 4 | 9 | 0 |
 | DASHBOARD | 6 | 3 | 2 | 1 | 6 | 0 |
-| HISTORIAN | 5 | 1 | 4 | 0 | 4 | 1 (REQ-HISTORIAN-004) |
+| HISTORIAN | 6 | 1 | 5 | 0 | 5 | 1 (REQ-HISTORIAN-004) |
 | I18N | 1 | 0 | 1 | 0 | 1 | 0 |
 | INSPECTION | 2 | 0 | 0 | 2 | 2 | 0 |
 | INTEGRATION | 5 | 4 | 1 | 0 | 5 | 0 |
@@ -195,7 +196,7 @@ requirements may be smoke-tested.
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **55** | **24** | **19** | **12** | **50** | **5** |
+| **TOTAL** | **56** | **24** | **20** | **12** | **51** | **5** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE

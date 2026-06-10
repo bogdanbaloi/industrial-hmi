@@ -155,6 +155,19 @@ void HistoryPage::buildUi() {
     toolbar->append(*spinner_);
     append(*toolbar);
 
+    // Per-chart visibility toggles (REQ-HISTORIAN-006): a second
+    // toolbar row of checkboxes, one per chart, grouped quality-left
+    // / supply-right to mirror the grid below. The CheckButtons are
+    // created during the chart-construction loops further down (so
+    // their labels stay in lock-step with the chart titles) and
+    // appended into this box.
+    auto* toggleBar = Gtk::make_managed<Gtk::Box>(
+        Gtk::Orientation::HORIZONTAL, kToolbarSpacingPx);
+    auto* toggleLabel = Gtk::make_managed<Gtk::Label>(_("Show:"));
+    toggleLabel->set_xalign(0.0F);
+    toggleBar->append(*toggleLabel);
+    append(*toggleBar);
+
     // Chart grid: two columns -- quality on the left, supply on the right.
     // Inside each column, one chart per entity stacked vertically.
     auto* grid = Gtk::make_managed<Gtk::Grid>();
@@ -182,6 +195,14 @@ void HistoryPage::buildUi() {
         qualityCharts_[i]->set_vexpand(true);
         grid->attach(*qualityCharts_[i], 0,
                      static_cast<int>(i + 1), 1, 1);
+
+        // Matching visibility toggle (REQ-HISTORIAN-006), checked by
+        // default. Label matches the chart title exactly.
+        qualityToggles_[i] = Gtk::make_managed<Gtk::CheckButton>(label);
+        qualityToggles_[i]->set_active(true);
+        qualityToggles_[i]->signal_toggled().connect(
+            [this, i]() { onToggleChart(i, /*isQuality=*/true); });
+        toggleBar->append(*qualityToggles_[i]);
     }
     for (std::size_t i = 0; i < kEquipmentCount; ++i) {
         const auto label = std::format("Line {}", i + 1);
@@ -190,6 +211,12 @@ void HistoryPage::buildUi() {
         supplyCharts_[i]->set_vexpand(true);
         grid->attach(*supplyCharts_[i], 1,
                      static_cast<int>(i + 1), 1, 1);
+
+        supplyToggles_[i] = Gtk::make_managed<Gtk::CheckButton>(label);
+        supplyToggles_[i]->set_active(true);
+        supplyToggles_[i]->signal_toggled().connect(
+            [this, i]() { onToggleChart(i, /*isQuality=*/false); });
+        toggleBar->append(*supplyToggles_[i]);
     }
     append(*grid);
 
@@ -215,6 +242,40 @@ void HistoryPage::onRefreshClicked() {
 
 void HistoryPage::onRangeChanged() {
     refreshAllCharts();
+}
+
+void HistoryPage::onToggleChart(std::size_t index, bool isQuality) {
+    // Visibility-only (REQ-HISTORIAN-006). The toggle's checked state
+    // is the single source of truth; mirror it onto the chart. We do
+    // NOT skip the chart's query on refresh -- a hidden chart keeps
+    // collecting so it shows current data the instant it is re-shown.
+    auto* toggle = isQuality ? qualityToggles_[index] : supplyToggles_[index];
+    auto* chart  = isQuality ? qualityCharts_[index]  : supplyCharts_[index];
+    if (toggle == nullptr || chart == nullptr) return;
+    chart->set_visible(toggle->get_active());
+}
+
+bool HistoryPage::chartVisible(bool isQuality,
+                               std::size_t index) const noexcept {
+    const auto* toggle =
+        isQuality ? qualityToggles_[index] : supplyToggles_[index];
+    return toggle != nullptr && toggle->get_active();
+}
+
+void HistoryPage::hideChartForTest(bool isQuality, std::size_t index) {
+    auto* toggle = isQuality ? qualityToggles_[index] : supplyToggles_[index];
+    if (toggle != nullptr) {
+        // set_active(false) fires signal_toggled() synchronously, so
+        // onToggleChart runs inline -- no Gtk main loop pump needed.
+        toggle->set_active(false);
+    }
+}
+
+void HistoryPage::showChartForTest(bool isQuality, std::size_t index) {
+    auto* toggle = isQuality ? qualityToggles_[index] : supplyToggles_[index];
+    if (toggle != nullptr) {
+        toggle->set_active(true);
+    }
 }
 
 void HistoryPage::refreshAllCharts() {
