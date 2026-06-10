@@ -134,6 +134,7 @@ private:
         Gtk::Button* stopButton{nullptr};
         Gtk::Button* resetButton{nullptr};
         Gtk::Button* calibrationButton{nullptr};
+        Gtk::Button* injectFaultButton{nullptr};  // REQ-DASHBOARD-009
         Gtk::Label* activeIndicator{nullptr};  // Shows which operation is active
     } controlPanelWidgets_;
 
@@ -217,12 +218,17 @@ private:
     // UI construction -- loads layout from assets/ui/dashboard-page.ui and
     // injects dynamic widgets (gauges, trend charts) into named containers.
     void buildUI();
+    /// Wire the control-panel buttons (retrieve from builder, add CSS
+    /// classes, connect click handlers). Extracted from buildUI() to
+    /// keep that method under the readability-function-size threshold.
+    void wireControlPanel(const Glib::RefPtr<Gtk::Builder>& builder);
 
     // Event handlers (user interactions -> Presenter)
     void onStartButtonClicked();
     void onStopButtonClicked();
     void onResetButtonClicked();
     void onCalibrationButtonClicked();
+    void onInjectFaultButtonClicked();  // REQ-DASHBOARD-009
     void onEquipmentSwitchToggled(uint32_t equipmentId, bool enabled);
 
     // Helper methods for updating UI safely

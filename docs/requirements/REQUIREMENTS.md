@@ -629,6 +629,39 @@ Verified by: DashboardPresenterTest.ForwardsModelOeeIntoViewModel
 
 Needs: utest
 
+### REQ-DASHBOARD-009 (SHOULD) — Demo fault-inject control + sparkline visibility
+
+`req~dashboard-009~1`
+
+The Dashboard control panel **shall** expose an "Inject Fault" button
+that, when clicked by a user holding at least the Maintenance role,
+drives the system to the ERROR safe-state via the fault-injection path
+(Boost.SML SystemStateMachine -> locked ERROR -> P1 ISA-18.2
+system-error alarm), producing the full visible recovery arc (alarm
+lights UNACK in the AlertsPanel, operator acknowledges, system resets).
+The button **shall** be insensitive (but visible) for Operator-role
+users, consistent with the `canResetSystem` / `canCalibrate` gating
+policy (REQ-DASHBOARD-005, ADR-0006).
+
+The fault path is a simulator-only concern and **shall NOT** be added
+to the `ProductionModel` interface; the composition root injects it as
+a callback (`DashboardPresenter::setFaultInjector`) so the presenter
+never depends on the concrete model type (ADR-0001).
+
+The per-checkpoint TrendChart sparklines on the single-station
+Dashboard **shall** be visible by default; the `setCompact(true)` path
+used by multi-station layout **shall** continue to hide them so the
+per-pane width budget (REQ-DASHBOARD-006) is not violated.
+
+Verified by: DashboardPageTest.InjectFaultButtonConfirmedCallsInjector,
+InjectFaultCancelledDoesNotFireInjector,
+InjectFaultButtonGatedByRole_OperatorCannotInject,
+SparklineVisibleInSingleStationMode, SparklineHiddenInCompactMode.
+
+ADR: 0001, 0006
+
+Needs: utest
+
 ---
 
 ## HISTORIAN — Time-series persistence

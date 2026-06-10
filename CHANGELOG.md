@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Demo enablement: fault-inject button + sparkline visibility (REQ-DASHBOARD-009)
+
+The single most senior-signal moment in the app -- the Boost.SML
+SystemStateMachine locking into the ERROR safe-state and raising a P1
+ISA-18.2 alarm -- was unreachable from the desktop GUI (`triggerFault`
+was console/test-only). A Maintenance-gated "INJECT FAULT" button on
+the Dashboard control panel now closes that gap so the full safety arc
+(ERROR -> P1 UNACK alarm -> Acknowledge -> Reset) is demoable on
+camera. Separately, the per-checkpoint trend sparklines -- hidden
+since Phase 8E -- are now visible on the single-station Dashboard so
+it reads as a live system at a glance; compact/multi-station mode keeps
+them hidden to respect the per-pane width budget (REQ-DASHBOARD-006).
+
+#### Added
+- `canInjectFault()` permission helper in `src/auth/Role.h` (Maintenance
+  threshold, consistent with `canCalibrate` / `canResetSystem`).
+- `DashboardPresenter::onInjectFaultClicked()` + `setFaultInjector()` DI
+  seam -- the fault path is wired as a callback at the composition root,
+  so the presenter never sees `SimulatedModel` (the knob is not on the
+  `ProductionModel` interface; ADR-0001).
+- `cp_inject_fault` GtkButton in `dashboard-page.ui`, wired through
+  `DashboardPage::onInjectFaultButtonClicked()` with a confirm dialog.
+- Five DashboardPageTest cases (confirm fires injector, cancel does not,
+  Operator-role gating, sparkline visible single-station, sparkline
+  hidden compact).
+- REQ-DASHBOARD-009 in `REQUIREMENTS.md` + `TRACEABILITY.md`.
+
+#### Changed
+- `MainWindow::createDashboardPages()` wires
+  `SimulatedModel::instance().triggerFault("DEMO")` into the DI seam.
+- `DashboardPage::buildUI()` no longer hides the trend sparklines;
+  `setCompact()` now uses symmetric `set_visible(!compact)` so a
+  palette-driven re-swap restores them.
+- `DashboardPage::applyRole()` / `updateControlPanel()` / `setCompact()`
+  extended to gate + size the new button.
+
 ### History page per-checkpoint chart toggle (REQ-HISTORIAN-006)
 
 Gives the operator one-click control over which of the six TrendCharts

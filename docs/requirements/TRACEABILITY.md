@@ -83,6 +83,7 @@ requirements may be smoke-tested.
 | REQ-DASHBOARD-006 | NICE | `src/gtk/view/pages/DashboardPage.cpp::setCompact` | DashboardPageTest.CompactPaneFitsMultiStationWidthBudget (layout-budget guard) | -- |
 | REQ-DASHBOARD-007 | NICE | `src/model/ThroughputMeter.h`, `src/model/SimulatedModel.h::tickSimulation` (records completions), `src/presenter/DashboardPresenter.cpp::buildWorkUnitVM`, `src/gtk/view/pages/DashboardPage.cpp::updateWorkUnitWidgets` (THROUGHPUT card) | ThroughputMeterTest + DashboardPresenterTest.ForwardsModelThroughputIntoViewModel | -- |
 | REQ-DASHBOARD-008 | NICE | `src/model/ProductionTypes.h::OeeMetrics`, `src/model/SimulatedModel.h::oeeSnapshot` (A * P * Q from real signals), `src/presenter/modelview/WorkUnitViewModel.h::oeePct`, `src/presenter/DashboardPresenter.cpp::buildWorkUnitVM`, `src/gtk/view/pages/DashboardPage.cpp::updateWorkUnitWidgets` (OEE card) | DashboardPresenterTest.ForwardsModelOeeIntoViewModel | -- |
+| REQ-DASHBOARD-009 | SHOULD | `src/auth/Role.h::canInjectFault`, `src/presenter/DashboardPresenter.cpp::onInjectFaultClicked` + `setFaultInjector` DI seam, `src/gtk/view/MainWindow.cpp::createDashboardPages` (wires SimulatedModel::triggerFault), `src/gtk/view/pages/DashboardPage.cpp` (button + confirm + applyRole gate + setCompact sparkline visibility), `assets/ui/dashboard-page.ui` (cp_inject_fault) | DashboardPageTest (InjectFaultButtonConfirmedCallsInjector, InjectFaultCancelledDoesNotFireInjector, InjectFaultButtonGatedByRole_OperatorCannotInject, SparklineVisibleInSingleStationMode, SparklineHiddenInCompactMode) | 0001, 0006 |
 
 ## HISTORIAN
 
@@ -187,7 +188,7 @@ requirements may be smoke-tested.
 | ARCH | 9 | 5 | 2 | 2 | 7 | 2 (REQ-ARCH-006, manual smoke) |
 | AUTH | 6 | 3 | 2 | 1 | 6 | 0 |
 | CORE | 9 | 2 | 3 | 4 | 9 | 0 |
-| DASHBOARD | 6 | 3 | 2 | 1 | 6 | 0 |
+| DASHBOARD | 7 | 3 | 3 | 1 | 7 | 0 |
 | HISTORIAN | 6 | 1 | 5 | 0 | 5 | 1 (REQ-HISTORIAN-004) |
 | I18N | 1 | 0 | 1 | 0 | 1 | 0 |
 | INSPECTION | 2 | 0 | 0 | 2 | 2 | 0 |
@@ -196,7 +197,7 @@ requirements may be smoke-tested.
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **56** | **24** | **20** | **12** | **51** | **5** |
+| **TOTAL** | **57** | **24** | **21** | **12** | **52** | **5** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE

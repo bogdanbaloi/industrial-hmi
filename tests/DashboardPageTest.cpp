@@ -2,9 +2,12 @@
 // [utest->req~dashboard-002~1]
 // [utest->req~dashboard-005~1]
 // [utest->req~dashboard-006~1]
+// [utest->req~dashboard-009~1]
 // Covers REQ-DASHBOARD-001 (equipment cards reflect live state),
 //             REQ-DASHBOARD-002 (quality checkpoint cards),
-//             REQ-DASHBOARD-005 (control panel role gating).
+//             REQ-DASHBOARD-005 (control panel role gating),
+//             REQ-DASHBOARD-009 (demo fault-inject button + sparkline
+//             visibility).
 //
 // Tests for app::view::DashboardPage -- View layer.
 //
@@ -18,6 +21,7 @@
 #include "src/gtk/view/pages/DashboardPage.h"
 #include "src/gtk/view/DialogManager.h"
 #include "src/presenter/DashboardPresenter.h"
+#include "src/auth/Role.h"
 #include "mocks/MockDialogManager.h"
 #include "mocks/MockProductionModel.h"
 
@@ -51,6 +55,16 @@ protected:
     static void callCalibration(app::view::DashboardPage* p) { p->onCalibrationButtonClicked(); }
     static void callStart(app::view::DashboardPage* p) { p->onStartButtonClicked(); }
     static void callStop(app::view::DashboardPage* p) { p->onStopButtonClicked(); }
+    static void callInjectFault(app::view::DashboardPage* p) { p->onInjectFaultButtonClicked(); }
+    // REQ-DASHBOARD-009 accessors.
+    static bool injectButtonSensitive(app::view::DashboardPage* p) {
+        return p->controlPanelWidgets_.injectFaultButton != nullptr &&
+               p->controlPanelWidgets_.injectFaultButton->get_sensitive();
+    }
+    static bool firstTrendVisible(app::view::DashboardPage* p) {
+        return !p->trendCharts_.empty() &&
+               p->trendCharts_.front()->get_visible();
+    }
 
     app::test::MockProductionModel mockModel_;
     app::test::MockDialogManager mockDM_;
@@ -118,6 +132,68 @@ TEST_F(DashboardPageTest, CalibrationConfirmedCallsPresenterCalibration) {
 
     EXPECT_CALL(mockModel_, startCalibration()).Times(1);
     capturedCb(true);
+}
+
+// Inject-Fault button -> confirm dialog -> presenter -> injector callback
+// (REQ-DASHBOARD-009)
+
+TEST_F(DashboardPageTest, InjectFaultButtonConfirmedCallsInjector) {
+    // The whole MVP path: button -> confirm dialog -> presenter
+    // -> the injected fault callback. We wire a probe callback (in
+    // production MainWindow wires SimulatedModel::triggerFault).
+    bool injectorFired = false;
+    presenter_->setFaultInjector([&injectorFired] { injectorFired = true; });
+
+    std::function<void(bool)> capturedCb;
+    EXPECT_CALL(mockDM_, showConfirmAsync(HasSubstr("Fault"), _, _, _))
+        .WillOnce(SaveArg<2>(&capturedCb));
+
+    callInjectFault(page_);
+    ASSERT_TRUE(capturedCb) << "fault-inject confirm callback not captured";
+
+    capturedCb(true);  // operator confirms
+    EXPECT_TRUE(injectorFired)
+        << "confirming the dialog must drive the presenter's fault injector";
+}
+
+TEST_F(DashboardPageTest, InjectFaultCancelledDoesNotFireInjector) {
+    bool injectorFired = false;
+    presenter_->setFaultInjector([&injectorFired] { injectorFired = true; });
+
+    std::function<void(bool)> capturedCb;
+    EXPECT_CALL(mockDM_, showConfirmAsync(_, _, _, _))
+        .WillOnce(SaveArg<2>(&capturedCb));
+
+    callInjectFault(page_);
+    ASSERT_TRUE(capturedCb);
+
+    capturedCb(false);  // operator cancels
+    EXPECT_FALSE(injectorFired);
+}
+
+TEST_F(DashboardPageTest, InjectFaultButtonGatedByRole_OperatorCannotInject) {
+    // RBAC: Operator role must not be able to inject a fault; the
+    // button is insensitive (same policy as Reset / Calibrate).
+    page_->applyRole(app::auth::Role::Operator);
+    EXPECT_FALSE(injectButtonSensitive(page_));
+
+    // Maintenance role re-enables it.
+    page_->applyRole(app::auth::Role::Maintenance);
+    EXPECT_TRUE(injectButtonSensitive(page_));
+}
+
+TEST_F(DashboardPageTest, SparklineVisibleInSingleStationMode) {
+    // REQ-DASHBOARD-009: the per-checkpoint trend sparkline is visible
+    // by default on the single-station dashboard (regression guard for
+    // the un-hide -- it was set_visible(false) before).
+    EXPECT_TRUE(firstTrendVisible(page_));
+}
+
+TEST_F(DashboardPageTest, SparklineHiddenInCompactMode) {
+    // The layout-budget protection: compact / multi-station mode hides
+    // the sparklines so two panes + sidebar fit the width budget.
+    page_->setCompact(true);
+    EXPECT_FALSE(firstTrendVisible(page_));
 }
 
 // Direct button handlers forward to presenter without dialog

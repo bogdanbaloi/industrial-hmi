@@ -141,6 +141,7 @@ void DashboardPage::applyRole(app::auth::Role role) {
 
     const bool calibrateAllowed = app::auth::canCalibrate(role);
     const bool resetAllowed     = app::auth::canResetSystem(role);
+    const bool injectAllowed    = app::auth::canInjectFault(role);
 
     if (controlPanelWidgets_.calibrationButton != nullptr) {
         controlPanelWidgets_.calibrationButton->set_sensitive(
@@ -154,6 +155,13 @@ void DashboardPage::applyRole(app::auth::Role role) {
         controlPanelWidgets_.resetButton->set_sensitive(resetAllowed);
         if (!resetAllowed) {
             controlPanelWidgets_.resetButton->set_tooltip_text(
+                _("Requires Maintenance role"));
+        }
+    }
+    if (controlPanelWidgets_.injectFaultButton != nullptr) {
+        controlPanelWidgets_.injectFaultButton->set_sensitive(injectAllowed);
+        if (!injectAllowed) {
+            controlPanelWidgets_.injectFaultButton->set_tooltip_text(
                 _("Requires Maintenance role"));
         }
     }
@@ -189,12 +197,12 @@ void DashboardPage::setCompact(bool compact) {
     }
     for (auto* chart : trendCharts_) {
         if (chart != nullptr) {
-            // Hide entirely in compact mode -- they're the widest
-            // element per quality card and provide detail the
-            // operator can reach in the History tab anyway.
-            if (compact) {
-                chart->set_visible(false);
-            }
+            // Visible in single-station, hidden in compact/multi-station
+            // (REQ-DASHBOARD-009 / REQ-DASHBOARD-006): they're the widest
+            // element per quality card. Symmetric set_visible so a
+            // palette-driven setCompact(true)->setCompact(false) re-swap
+            // restores them rather than leaving them stuck hidden.
+            chart->set_visible(!compact);
             chart->queue_draw();
         }
     }
@@ -204,6 +212,17 @@ void DashboardPage::setCompact(bool compact) {
     // without adding information. Single-station keeps the strip.
     if (kpiStripWidgets_.container != nullptr) {
         kpiStripWidgets_.container->set_visible(!compact);
+    }
+
+    // Hide the Inject-Fault button in compact / multi-station mode
+    // (REQ-DASHBOARD-009 / REQ-DASHBOARD-006). It is a single-station
+    // demo/maintenance action, and as a 5th control-panel button its
+    // "INJECT FAULT" label widened the compact pane past the per-pane
+    // width budget. A hidden widget contributes 0 to the min-width, so
+    // hiding it keeps the layout-budget guard green while single-station
+    // keeps the button.
+    if (controlPanelWidgets_.injectFaultButton != nullptr) {
+        controlPanelWidgets_.injectFaultButton->set_visible(!compact);
     }
 
     // Hide the inline uptime donut in compact (multi-station) mode.
@@ -230,7 +249,8 @@ void DashboardPage::setCompact(bool compact) {
     for (Gtk::Button* btn : {controlPanelWidgets_.startButton,
                              controlPanelWidgets_.stopButton,
                              controlPanelWidgets_.resetButton,
-                             controlPanelWidgets_.calibrationButton}) {
+                             controlPanelWidgets_.calibrationButton,
+                             controlPanelWidgets_.injectFaultButton}) {
         if (btn != nullptr) {
             btn->set_size_request(btnW, kControlBtnHeight);
         }
@@ -423,12 +443,12 @@ void DashboardPage::buildUI() {
         gaugeContainer->append(*card.gauge);
 
         // Inject dynamic trend chart into the container defined in XML.
-        // Hidden by default since Phase 8E -- the KPI top strip's
-        // aggregate Pass Rate plus the per-checkpoint gauge already
-        // cover at-a-glance quality monitoring. Sparkline detail
-        // belongs in the History tab; keeping the widget constructed
-        // (just invisible) so a future operator-toggle or compact-
-        // mode flag can flip it back on without re-plumbing.
+        // Visible by default in single-station mode (REQ-DASHBOARD-009):
+        // the animated per-checkpoint sparkline makes the dashboard read
+        // as a live system at a glance. Compact / multi-station mode
+        // hides it via setCompact() to stay inside the per-pane width
+        // budget (REQ-DASHBOARD-006) -- two side-by-side panes have no
+        // room for the widest element in each quality card.
         auto* trendContainer = builder->get_widget<Gtk::Box>("qc_trend_container_" + id);
         auto* chart = Gtk::make_managed<TrendChart>(
             "", sizes::kTrendChartMinY, sizes::kTrendChartMaxY,
@@ -437,7 +457,6 @@ void DashboardPage::buildUI() {
         chart->set_vexpand(true);
         chart->set_hexpand(true);
         trendContainer->append(*chart);
-        trendContainer->set_visible(false);
         trendCharts_.push_back(chart);
 
         qualityCards_.push_back(card);
@@ -447,12 +466,20 @@ void DashboardPage::buildUI() {
     // below the readability-function-size threshold.
     buildUptimeDonut(builder);
 
-    // Control panel
+    // Control panel buttons (extracted to keep buildUI() under the
+    // readability-function-size threshold).
+    wireControlPanel(builder);
+}
+
+void DashboardPage::wireControlPanel(
+        const Glib::RefPtr<Gtk::Builder>& builder) {
     controlPanelWidgets_.activeIndicator = builder->get_widget<Gtk::Label>("cp_indicator");
     controlPanelWidgets_.startButton = builder->get_widget<Gtk::Button>("cp_start");
     controlPanelWidgets_.stopButton = builder->get_widget<Gtk::Button>("cp_stop");
     controlPanelWidgets_.resetButton = builder->get_widget<Gtk::Button>("cp_reset");
     controlPanelWidgets_.calibrationButton = builder->get_widget<Gtk::Button>("cp_calibration");
+    controlPanelWidgets_.injectFaultButton =
+        builder->get_widget<Gtk::Button>("cp_inject_fault");
 
     // GTK4 Builder parses css-classes with spaces inconsistently across
     // versions, so we add the per-button color classes from code.
@@ -460,6 +487,12 @@ void DashboardPage::buildUI() {
     controlPanelWidgets_.stopButton->add_css_class(css::kStopButton);
     controlPanelWidgets_.resetButton->add_css_class(css::kResetButton);
     controlPanelWidgets_.calibrationButton->add_css_class(css::kCalibrationButton);
+    // Reuse the Reset button's destructive-action styling for the
+    // fault injector -- it is the same "drives the system to a
+    // disruptive state" visual category.
+    if (controlPanelWidgets_.injectFaultButton != nullptr) {
+        controlPanelWidgets_.injectFaultButton->add_css_class(css::kResetButton);
+    }
 
     controlPanelWidgets_.startButton->signal_clicked().connect(
         sigc::mem_fun(*this, &DashboardPage::onStartButtonClicked));
@@ -469,6 +502,10 @@ void DashboardPage::buildUI() {
         sigc::mem_fun(*this, &DashboardPage::onResetButtonClicked));
     controlPanelWidgets_.calibrationButton->signal_clicked().connect(
         sigc::mem_fun(*this, &DashboardPage::onCalibrationButtonClicked));
+    if (controlPanelWidgets_.injectFaultButton != nullptr) {
+        controlPanelWidgets_.injectFaultButton->signal_clicked().connect(
+            sigc::mem_fun(*this, &DashboardPage::onInjectFaultButtonClicked));
+    }
 }
 
 // Event Handlers (User Actions -> Presenter)
@@ -520,6 +557,29 @@ void DashboardPage::onCalibrationButtonClicked() {
                         confirmed ? "confirmed" : "cancelled");
             if (confirmed && presenter_) {
                 presenter_->onCalibrationClicked();
+            }
+        },
+        parent
+    );
+}
+
+void DashboardPage::onInjectFaultButtonClicked() {
+    // REQ-DASHBOARD-009. Confirm before injecting -- the fault drives
+    // the SystemState FSM to the locked ERROR safe-state and raises a
+    // P1 alarm, exactly like the Reset/Calibration destructive actions.
+    log().debug("DashboardPage: Inject Fault button clicked (opening confirmation)");
+    auto* parent = dynamic_cast<Gtk::Window*>(get_root());
+
+    dialogManager_.showConfirmAsync(
+        _("Confirm Fault Injection"),
+        _("Inject a system fault?\n\n"
+          "This drives the system to the ERROR safe-state and raises a "
+          "priority-1 alarm. Use Acknowledge + Reset to recover."),
+        [this](bool confirmed) {
+            log().debug("DashboardPage: Inject Fault confirmation -> {}",
+                        confirmed ? "confirmed" : "cancelled");
+            if (confirmed && presenter_) {
+                presenter_->onInjectFaultClicked();
             }
         },
         parent
@@ -695,6 +755,7 @@ void DashboardPage::updateControlPanel(const presenter::ControlPanelViewModel& v
     // production state would otherwise allow it.
     const bool calibrateAllowed = app::auth::canCalibrate(currentRole_);
     const bool resetAllowed     = app::auth::canResetSystem(currentRole_);
+    const bool injectAllowed    = app::auth::canInjectFault(currentRole_);
 
     controlPanelWidgets_.startButton->set_sensitive(vm.startEnabled);
     controlPanelWidgets_.stopButton->set_sensitive(vm.stopEnabled);
@@ -702,6 +763,12 @@ void DashboardPage::updateControlPanel(const presenter::ControlPanelViewModel& v
         vm.resetRestartEnabled && resetAllowed);
     controlPanelWidgets_.calibrationButton->set_sensitive(
         vm.calibrationEnabled && calibrateAllowed);
+    // Fault injection has no production-state precondition (you can
+    // always force a fault) -- gate on role only (REQ-DASHBOARD-009).
+    // Re-applied here so a VM update doesn't clobber applyRole's gate.
+    if (controlPanelWidgets_.injectFaultButton != nullptr) {
+        controlPanelWidgets_.injectFaultButton->set_sensitive(injectAllowed);
+    }
     
     // Update active indicator
     Glib::ustring indicatorText;
