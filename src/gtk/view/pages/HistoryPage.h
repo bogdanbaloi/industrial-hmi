@@ -60,6 +60,26 @@ public:
     /// shortcut keeps HistoryPageTest synchronous.
     void triggerRefreshForTest() { onRefreshClicked(); }
 
+    /// Test seam (REQ-HISTORIAN-006). Reports whether the chart at
+    /// `index` in the quality (`isQuality == true`) or supply
+    /// (`isQuality == false`) group is currently shown. Reads the
+    /// toggle's checked state -- the single source of truth that
+    /// drives chart visibility -- so the seam survives any future
+    /// show/hide transition animation.
+    [[nodiscard]] bool chartVisible(bool isQuality,
+                                    std::size_t index) const noexcept;
+
+    /// Test seam (REQ-HISTORIAN-006). Unchecks the toggle at `index`
+    /// in the chosen group, which fires `signal_toggled()`
+    /// synchronously and runs `onToggleChart` inline -- no Gtk main
+    /// loop pump needed.
+    void hideChartForTest(bool isQuality, std::size_t index);
+
+    /// Test seam (REQ-HISTORIAN-006). Re-checks the toggle at `index`,
+    /// driving the chart back to visible. Symmetric counterpart to
+    /// `hideChartForTest`.
+    void showChartForTest(bool isQuality, std::size_t index);
+
 private:
     /// Operator-visible time range options. Maps to a fixed lookback
     /// in milliseconds applied at query time. Stored as an enum rather
@@ -74,6 +94,14 @@ private:
     void refreshAllCharts();
     void onRefreshClicked();
     void onRangeChanged();
+
+    /// Show/hide the chart at `index` in the quality or supply group
+    /// to match its toggle's checked state (REQ-HISTORIAN-006). Runs
+    /// on the GTK main thread from the CheckButton's `signal_toggled`;
+    /// touches only widget visibility, never the data path -- hidden
+    /// charts keep getting queried so they show current data the
+    /// moment the operator re-enables them.
+    void onToggleChart(std::size_t index, bool isQuality);
 
     /// Pull data for one (field, entity) pair and push it into the
     /// chart. The chart's fixed-capacity ring buffer means very long
@@ -105,6 +133,12 @@ private:
     static constexpr std::size_t kEquipmentCount = 3;
     std::array<TrendChart*, kQualityCount>   qualityCharts_{};
     std::array<TrendChart*, kEquipmentCount> supplyCharts_{};
+
+    // Per-chart visibility toggles (REQ-HISTORIAN-006), one checkbox
+    // per chart, parallel-indexed with the chart arrays above. All
+    // checked by default; unchecking hides the matching chart.
+    std::array<Gtk::CheckButton*, kQualityCount>   qualityToggles_{};
+    std::array<Gtk::CheckButton*, kEquipmentCount> supplyToggles_{};
 
     // Auto-refresh timer. Glib::SignalTimeout fires on the GTK main
     // thread which is exactly where reader_.query() must run anyway,

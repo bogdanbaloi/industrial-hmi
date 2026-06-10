@@ -726,6 +726,34 @@ ADR: 0001 (MVP layer boundaries -- fix stays in View), 0014
 
 Needs: utest
 
+### REQ-HISTORIAN-006 (SHOULD) — Per-checkpoint chart visibility toggle
+
+`req~historian-006~1`
+
+The History page **shall** render a row of labelled `Gtk::CheckButton`
+toggles, one per TrendChart (three quality: "Checkpoint 1/2/3"; three
+supply: "Line 1/2/3"), all checked by default. Toggling a checkbox
+**shall** immediately show or hide the corresponding TrendChart so an
+operator can reduce visual noise by hiding charts irrelevant to the
+current task.
+
+The auto-refresh cycle and the `reader_.query()` calls **shall**
+continue for hidden charts, so a re-enabled chart shows current data
+without a manual Refresh. Toggle state is session-only and is not
+persisted. A refresh **shall NOT** force a hidden chart back to
+visible.
+
+ADR: 0001 (MVP layer boundaries -- implementation stays entirely in
+the View; no presenter split triggered), 0014 (Result at boundaries --
+no new error surface introduced).
+
+Verified by: HistoryPageToggleTest (AllChartsVisibleByDefault,
+HidingQualityChartMakesItInvisible, HidingSupplyChartMakesItInvisible,
+ReshowingChartRestoresVisibility, RefreshDoesNotForceHiddenChartVisible,
+AllSixQueriesStillRunWhenChartHidden).
+
+Needs: utest
+
 ---
 
 ## I18N — Internationalisation

@@ -1080,6 +1080,23 @@ add_test(NAME HistoryPageTest COMMAND test_history_page
          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 set_tests_properties(HistoryPageTest PROPERTIES LABELS "gui")
 
+# View: HistoryPage per-checkpoint chart toggle (REQ-HISTORIAN-006).
+# Separate executable so the toggle REQ owns a clean utest tag; same
+# VIEW_COMMON_LIBS link (inherits ws2_32/mswsock transitively from
+# objectsModel -- no per-target Winsock line needed).
+add_executable(test_history_page_toggle
+    HistoryPageToggleTest.cpp
+    ViewTestMain.cpp
+)
+target_include_directories(test_history_page_toggle PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(test_history_page_toggle PRIVATE ${VIEW_COMMON_LIBS})
+target_link_libraries(test_history_page_toggle PRIVATE GTest::gtest GTest::gmock)
+add_test(NAME HistoryPageToggleTest COMMAND test_history_page_toggle
+         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_tests_properties(HistoryPageToggleTest PROPERTIES LABELS "gui")
+
 # View: UsersPage (admin-only user management).
 add_executable(test_users_page
     UsersPageTest.cpp
