@@ -196,6 +196,40 @@ config **shall** degrade gracefully when the value is missing.
 
 ADR: 0010 (Config Policy vs Mechanism).
 
+### REQ-ARCH-010 (SHOULD) — Lock-free SPSC ring buffer for strict producer/consumer handoffs
+
+`req~arch-010~1`
+
+The codebase **shall** provide a bounded, lock-free single-producer /
+single-consumer ring buffer (`app::core::SpscQueue<T, kCapacity>`) for
+decoupling a latency-sensitive producer thread from a slower consumer
+thread without a shared mutex. The capacity **shall** be a compile-time
+power of two (enforced by `static_assert`); `push()` and `pop()`
+**shall** be `[[nodiscard]] noexcept` and **shall** never block, with
+`push()` returning `false` on overflow (drop semantics) so the producer
+is never stalled by back-pressure.
+
+The implementation **shall** be race-free under ThreadSanitizer
+(`-fsanitize=thread`, the REQ-ARCH-008 CI gate): the producer's element
+publish is a release store on `tail_`, the consumer's observe is an
+acquire load on `tail_`, and the consumer's slot release is a release
+store on `head_`. `head_` and `tail_` **shall** be cache-line-aligned
+to avoid false sharing.
+
+The queue **shall** be applied only where the producer/consumer pair is
+genuinely 1:1 (e.g. the Modbus poll thread -> ingest bridge seam);
+fan-in seams (MQTT multi-topic, GTK-thread historian bridge) **shall**
+keep their mutex-based handoff (see ADR-0018, which rejects
+generalising lock-free to non-SPSC seams).
+
+ADR: 0018 (Lock-free SPSC queue for the ingest hot path, and only there).
+
+Verified by: SpscQueueTest (round-trip, full/empty, FIFO, wrap-around,
+size, and a two-jthread StressProducerConsumer that verifies the
+triangular-sum invariant under ThreadSanitizer).
+
+Needs: utest
+
 ---
 
 ## AUTH — Authentication & Authorisation

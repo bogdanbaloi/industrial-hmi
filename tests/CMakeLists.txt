@@ -64,6 +64,18 @@ target_link_libraries(test_result PRIVATE
 )
 add_test(NAME ResultTest COMMAND test_result)
 
+# core/SpscQueue -- header-only lock-free SPSC ring buffer
+# (REQ-ARCH-010). Pure stdlib (<atomic>, <array>); Threads for the
+# two-jthread StressProducerConsumer case. No objectsModel / GTK /
+# Winsock. The stress test is the one exercised under the TSan CI job.
+add_executable(test_spsc_queue SpscQueueTest.cpp)
+target_link_libraries(test_spsc_queue PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    Threads::Threads
+)
+add_test(NAME SpscQueueTest COMMAND test_spsc_queue)
+
 # core/TimeFormat -- pure ISO-8601 UTC -> local display helper. Compile
 # the .cpp directly (no deps beyond the stdlib) to avoid pulling
 # objectsCore -> Application -> GTK.

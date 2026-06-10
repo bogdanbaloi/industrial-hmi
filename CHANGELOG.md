@@ -43,6 +43,33 @@ them hidden to respect the per-pane width budget (REQ-DASHBOARD-006).
 - `DashboardPage::applyRole()` / `updateControlPanel()` / `setCompact()`
   extended to gate + size the new button.
 
+### Lock-free SPSC ring buffer primitive (REQ-ARCH-010, ADR-0018)
+
+Adds `app::core::SpscQueue<T, N>` -- a bounded, lock-free
+single-producer/single-consumer ring buffer for decoupling a
+latency-sensitive producer (e.g. an I/O poll thread) from a slower
+consumer without a shared mutex. This is Phase 1: the primitive plus
+its ThreadSanitizer proof. Phase 2 wires it into the Modbus poll-loop
+seam.
+
+#### Added
+- `src/core/SpscQueue.h` -- header-only template. Power-of-two capacity
+  (`static_assert`), `alignas(64)` cache-line-separated `head_`/`tail_`
+  atomics (false-sharing elimination), Lamport release/acquire memory
+  ordering documented inline, `[[nodiscard]] noexcept` `push()`/`pop()`
+  that never block (drop-on-full).
+- `tests/SpscQueueTest.cpp` -- 8 single-threaded logic cases (round-trip,
+  fill-to-capacity, drop-leaves-contents, FIFO, wrap-around, size) plus
+  `StressProducerConsumer`: two `std::jthread`s pushing/popping
+  1,000,000 sequential values, asserting the triangular-sum invariant
+  to prove no item is lost/duplicated/torn. Runs under the TSan CI gate;
+  skipped under Valgrind memcheck via the `RUNNING_UNDER_VALGRIND` guard.
+- `docs/adr/0018-spsc-lock-free-queue.md` -- documents the memory
+  ordering (the four ordered atomic accesses) and rejects generalising
+  lock-free to non-SPSC fan-in seams (MQTT multi-topic, GTK-thread
+  historian bridge), same discipline as ADR-0014/0016/0017.
+- REQ-ARCH-010 in `REQUIREMENTS.md` + `TRACEABILITY.md`.
+
 ### History page per-checkpoint chart toggle (REQ-HISTORIAN-006)
 
 Gives the operator one-click control over which of the six TrendCharts
