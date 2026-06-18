@@ -438,8 +438,8 @@ void DashboardPage::buildUI() {
         // Inject dynamic Cairo gauge into the container defined in XML
         auto* gaugeContainer = builder->get_widget<Gtk::Box>("qc_gauge_container_" + id);
         card.gauge = Gtk::make_managed<QualityGauge>();
-        card.gauge->set_margin_top(sizes::kSpacingSmall);
-        card.gauge->set_margin_bottom(sizes::kSpacingSmall);
+        card.gauge->set_margin_top(sizes::kSpacingTiny);
+        card.gauge->set_margin_bottom(sizes::kSpacingTiny);
         gaugeContainer->append(*card.gauge);
 
         // Inject dynamic trend chart into the container defined in XML.

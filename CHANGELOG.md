@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Dashboard vertical overflow against the 1200px height budget: the
+  work-unit card's top/bottom margins were 25px each, pushing the
+  dashboard's minimum height to ~1218-1222px (theme-dependent) and
+  spamming `Gtk-WARNING: ... needs at least 1218`. Trimmed both to 14px
+  (-22px) so the dashboard fits the 1200px budget across all themes
+  (`assets/ui/dashboard-page.ui`).
+- Dashboard control panel clipped off the bottom edge on a full 1200px
+  display: the three quality-checkpoint cards were ~330px tall each
+  (100px gauge + 60px sparkline + 10px inter-row spacing), pushing the
+  CONTROL PANEL row past the bottom of the viewport. Trimmed the quality
+  cards by ~66px: gauge 100->78px, inline sparkline 60->44px, gauge
+  margins 8->4px, inter-row spacing 10->6px. The quality section keeps
+  `vexpand` so it still absorbs slack and pins the control panel to the
+  bottom, now fully on-screen (`src/gtk/view/ui_sizes.h`,
+  `src/gtk/view/pages/DashboardPage.cpp`, `assets/ui/dashboard-page.ui`).
+
 ### Lock-free SPSC wiring into the Modbus poll loop (REQ-ARCH-010 Phase 2)
 
 Wires the `SpscQueue` primitive (Phase 1) into `ModbusPollLoop` as a
