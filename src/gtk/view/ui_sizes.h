@@ -11,8 +11,10 @@ inline constexpr int kSpacingMedium = 12;
 inline constexpr int kSpacingLarge  = 20;
 inline constexpr int kSpacingXL     = 24;
 
-// Quality gauge (Cairo-drawn circular gauge).
-inline constexpr int kGaugeSize = 100;  // square widget, width = height
+// Quality gauge (Cairo-drawn circular gauge). Sized so the three quality
+// cards (gauge + pass-rate + stats + trend) plus the control panel below
+// them all fit within a 1080px-tall kiosk display without clipping.
+inline constexpr int kGaugeSize = 78;  // square widget, width = height
 
 // History page busy spinner shown between "Refresh" click and the
 // historian query returning. 20px matches the row-height of the
@@ -22,7 +24,7 @@ inline constexpr int kHistorySpinnerSize = 20;
 // Trend chart (Cairo-drawn line chart in each quality card).
 inline constexpr int    kTrendChartDefaultWidth  = 300;
 inline constexpr int    kTrendChartDefaultHeight = 80;
-inline constexpr int    kTrendChartInlineHeight  = 60;
+inline constexpr int    kTrendChartInlineHeight  = 44;
 inline constexpr size_t kTrendChartCapacity      = 60;  // data points buffered
 
 // Y-axis range for pass-rate trend (matches simulation clamp in SimulatedModel)
