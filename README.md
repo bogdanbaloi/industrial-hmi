@@ -41,7 +41,7 @@ core.
   running state, Performance from throughput / target UPH (clamped to
   100%), Quality from the average checkpoint pass rate. See
   REQ-DASHBOARD-008.
-- **Requirements traceability (OpenFastTrace)** -- 15 ADRs + 62
+- **Requirements traceability (OpenFastTrace)** -- 18 ADRs + 73
   functional requirements in `docs/requirements/REQUIREMENTS.md`,
   cross-checked on every PR against `// [utest->req~xxx~1]`
   coverage tags in source. Bidirectional matrix: every MUST/SHOULD
@@ -56,7 +56,7 @@ core.
   is the operator-budget contract, not the mean. Baseline numbers
   captured on AMD Ryzen 7 5800X / WSL Ubuntu 24.04 / GCC 13.3
   (e.g. `AlertCenter::snapshot` at N=1000 active alarms: ~195us p50,
-  leaving 99% of a 100ms render budget). See REQ-PERF-001 + ADR-0015.
+  leaving 99% of a 100ms render budget). See REQ-PERF-001 + ADR-0016.
   Build with `-DBUILD_BENCHMARKS=ON`.
 - **Adversarial-input safety on wire parsers (libFuzzer)** -- under
   `fuzzers/`, three harnesses (`fuzz_modbus_decode`,
@@ -525,7 +525,7 @@ backend they're talking to.
    `src/gtk/view/pages/AuditLogPage.cpp` (alphabetical, drives
    the Action filter dropdown).
 3. Test the row format in
-   `tests/UsersPresenterTest.cpp` (the 12 audit-format tests
+   `tests/UsersPresenterTest.cpp` (the 11 audit-format tests
    are the template).
 
 No schema migration. The audit log table is already verb-
@@ -604,11 +604,11 @@ context (skipped via runtime check, not silenced).
 
 | Binary | Scope | Tests |
 |---|---|---|
-| `test_result` | Result\<T, E\> monadic operations | 22 |
+| `test_result` | Result\<T, E\> monadic operations | 25 |
 | `test_logger_impl` | FileLogger rotation, Composite, Null, Callback | 23 |
 | `test_database_manager` | SQLite CRUD, search, soft delete | 12 |
-| `test_dashboard_presenter` | Mock model, signal routing, state machine | 29 |
-| `test_alert_center` | Severity routing, dismiss, resolved history | 26 |
+| `test_dashboard_presenter` | Mock model, signal routing, state machine | 32 |
+| `test_alert_center` | Severity routing, dismiss, resolved history | 52 |
 | `test_settings_page` | Handlers + sync guard + palette mode-lock | 25 |
 | `test_dialog_manager` | Show* methods + programmatic response | 11 |
 | `test_main_window_key_dispatch` | F1..F11/Esc dispatcher | 13 |
@@ -837,8 +837,8 @@ for CONNECT / CONNACK / PUBLISH / SUBSCRIBE / SUBACK / UNSUBSCRIBE /
 UNSUBACK / PINGREQ / DISCONNECT against the spec;
 `MqttClientTest` (14 cases) drives the client against an in-process
 mock broker, both publish and subscribe round-trips;
-`ProductionTelemetryBridgeTest` (8 cases) and
-`SensorIngestBridgeTest` (6 cases) verify the two domain bridges in
+`ProductionTelemetryBridgeTest` (13 cases) and
+`SensorIngestBridgeTest` (14 cases) verify the two domain bridges in
 isolation against a fake `TelemetryPublisher` / `TelemetrySubscriber`.
 
 ### OPC-UA backend (industrial protocol, bidirectional)
@@ -919,7 +919,7 @@ Build is opt-in via `-DBUILD_OPCUA_BACKEND=ON`; FetchContent pulls
 open62541 and statically links it (~2.4 MB binary contribution). The
 host binary builds and runs unchanged when the flag is off.
 
-Coverage: `OpcUaBackendTest` + `FactoryNodeMapTest` (12 mock-based
+Coverage: `OpcUaBackendTest` + `FactoryNodeMapTest` (13 mock-based
 unit tests, no open62541 dep) plus two integration tests that link
 the real C stack and run server + client on loopback --
 `Open62541ServerIntegrationTest` validates the address-space write
@@ -992,13 +992,13 @@ Design points worth calling out:
   drops the bridge + page -- the rest of the binary keeps running.
   Same opt-in degradation pattern as the ML and OPC-UA paths.
 
-Coverage: `SqliteHistoryStoreTest` (16 tests -- roundtrip, batch,
+Coverage: `SqliteHistoryStoreTest` (17 tests -- roundtrip, batch,
 index, limit, order, plus tiered-retention demotion atomicity,
 bucket alignment, query routing per tier), `HistorianBridgeTest`
 (5 fixture-based signal-to-row tests with a `FakeHistoryWriter`),
 `HistorianMaintenanceTest` (5 worker tests -- raw -> minute, fresh
 rows untouched, chained raw -> minute -> hour, jthread shutdown
-deadlock smoke), `HistoryPageTest` (4 GUI tests asserting the page
+deadlock smoke), `HistoryPageTest` (7 GUI tests asserting the page
 queries all six series with the correct lookback window on
 construction).
 

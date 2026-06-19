@@ -1,7 +1,7 @@
 # `src/integration/` -- Integration Backends + Telemetry Bridges
 
 Protocol-agnostic integration core plus four concrete network backends
-(TCP, MQTT 3.1.1 + 5.0, Modbus TCP, OPC-UA) and the bridge layer that
+(TCP, MQTT 3.1.1, Modbus TCP, OPC-UA) and the bridge layer that
 moves data between them and the application model. The whole module is
 GTK-free and presenter-free; drops into any C++20 server / daemon / HMI
 that needs to expose a `ProductionModel`-shaped state over a wire
@@ -23,7 +23,7 @@ An HMI on a shop floor never lives alone. It has to:
 
 Different customers want different wires for the same payloads. One
 plant wants OPC-UA because the rest of their stack is open62541
-servers. The next wants MQTT 5 with retained messages on a Mosquitto
+servers. The next wants MQTT 3.1.1 with retained messages on a Mosquitto
 broker. A QA bench wants a quick TCP `nc` shell. A retrofit on a 20-
 year-old PLC wants Modbus TCP on RS-485-over-Ethernet.
 
@@ -44,7 +44,7 @@ Putting all four behind a single `IntegrationBackend` interface means:
 ```
                   ┌──────────────────────────┐
                   │   IntegrationBackend     │  abstract base
-                  │   (start/stop/state)     │
+                  │ (start/stop/connState)   │
                   └──────────▲───────────────┘
                              │
         ┌───────────┬────────┴─────────┬───────────────┐
@@ -76,8 +76,8 @@ Putting all four behind a single `IntegrationBackend` interface means:
   touches the other surface.
 - **L**iskov -- `IntegrationManager` iterates
   `vector<unique_ptr<IntegrationBackend>>` and never downcasts.
-  `start() / stop() / state()` keep the same contract across TCP,
-  MQTT, Modbus, OPC-UA.
+  `start() / stop() / connectionState()` keep the same contract across
+  TCP, MQTT, Modbus, OPC-UA.
 - **I**nterface segregation -- `IntegrationBackend` is intentionally
   narrow (5 verbs). Each protocol-specific helper (
   `MqttPacket::encodePublish`, `ModbusPdu::readHoldingRegisters`,
@@ -107,19 +107,20 @@ accept loop instead of `shared_ptr` (otherwise the lambda holds a
 strong reference to itself and the closure leaks at shutdown -- a
 Valgrind-detected real bug, see commit history).
 
-### `MqttClient` + `MqttPacket` (hand-rolled MQTT 3.1.1 / 5.0)
+### `MqttClient` + `MqttPacket` (hand-rolled MQTT 3.1.1)
 
 In-process MQTT client without external dependencies. `MqttPacket`
 encodes / decodes the binary wire format byte-for-byte (CONNECT,
-PUBLISH, SUBSCRIBE, PINGREQ, DISCONNECT, plus the 5.0-only
-properties block); `MqttClient` runs the keep-alive timer + the
-publish queue + the broker reconnect loop on a dedicated thread.
-Supports both QoS 0 and QoS 1 with PUBACK round-trips.
+PUBLISH, SUBSCRIBE, PINGREQ, DISCONNECT); `MqttClient` runs the
+keep-alive timer + the publish queue + the broker reconnect loop on
+a dedicated thread. Supports both QoS 0 and QoS 1 with PUBACK
+round-trips.
 
 **Why hand-rolled**: the deployments this serves run on devices
 where `paho-mqtt-cpp` brings in too much dependency closure. The
 ~1k-line implementation is enough for the publish + subscribe paths
-the HMI actually uses; QoS 2 (PUBREC / PUBREL / PUBCOMP) is
+the HMI actually uses. Scope is MQTT 3.1.1 only -- no 5.0 properties,
+no shared subscriptions, and QoS 2 (PUBREC / PUBREL / PUBCOMP) is
 intentionally out of scope.
 
 ### `Modbus` (Modbus TCP master + slave bridge)
@@ -128,8 +129,22 @@ intentionally out of scope.
 Single) + 0x10 (Write Multiple). `ModbusClient` owns the TCP
 connection to a slave and exposes a request-response API.
 `ModbusPollLoop` schedules cyclic reads against a register map (one
-entry per equipment slot) and feeds the deltas into the
+entry per equipment slot) and feeds the results into the
 `ModbusIngestBridge`, which validates + applies them to the model.
+
+**Lock-free decoupling (ADR-0018, REQ-ARCH-010)**: `ModbusPollLoop`
+runs TWO `std::jthread`s, not one. The POLL thread does the blocking
+socket I/O against the slave, then PUSHES each `RegisterSample` into a
+bounded lock-free SPSC ring buffer (`src/core/SpscQueue.h`,
+release/acquire ordering, `alignas(64)` to dodge false sharing,
+capacity 256) and returns immediately to the wire -- it never blocks
+on bridge or model lock-hold time. A separate DRAIN thread is the sole
+consumer: it pops samples and dispatches them to `ModbusIngestBridge`.
+On overflow the sample is dropped and a `droppedSamples` counter is
+incremented (surfaced in `ModbusBackend::metricsSummary()`); a drop is
+staler data, never corruption, because the next poll refreshes the
+value. The point: the blocking PLC I/O cadence is decoupled from
+model-dispatch latency, so a slow consumer can never stall the wire.
 
 A `ModbusBackend` wrapping this stack lets the HMI itself act as a
 master polling external PLCs; tested via the
@@ -179,6 +194,16 @@ Specialised bridge that emits the "work unit started / progressed /
 completed" lifecycle events as discrete messages rather than
 periodic snapshots. Subscribed by audit-adjacent consumers
 (Grafana annotations, MES event hooks).
+
+### `PrimaryToSecondaryBridge`
+
+Implements `IntegrationBackend` (so `IntegrationManager` treats it
+uniformly and it renders next to TCP / MQTT / Modbus / OPC-UA in the
+I/O panel). Forwards equipment supply levels + quality pass rates from
+a primary `ProductionModel` onto a passive secondary, modelling the
+physical conveyor between a fill/calibration station and a production
+station. The cross-process equivalent is the same shape with an
+MQTT-backed bridge instead of the in-process subscription (ADR-0011).
 
 ---
 
@@ -245,9 +270,9 @@ publisher.addSink(tcpBackend);     // TCP shell also sees it
 class GrpcBackend : public app::integration::IntegrationBackend {
 public:
     GrpcBackend(model::ProductionModel& m, std::string addr);
-    bool start() override;
-    bool stop()  override;
-    app::integration::BackendState state() const override;
+    void start() override;
+    void stop()  override;
+    app::integration::BackendState connectionState() const noexcept override;
     std::string name() const override          { return "grpc"; }
     std::string metricsSummary() const override;
 };
@@ -300,8 +325,8 @@ trips, the weak_ptr capture fix verified under Valgrind.
 
 `tests/MqttClientTest.cpp` + `tests/MqttPacketTest.cpp` -- byte-
 exact encode / decode for CONNECT / PUBLISH / SUBSCRIBE / PINGREQ /
-DISCONNECT (3.1.1 and 5.0 with property blocks), broker reconnect
-loop with simulated socket errors.
+DISCONNECT (MQTT 3.1.1), broker reconnect loop with simulated
+socket errors.
 
 `tests/ModbusPduTest.cpp` + `tests/ModbusClientTest.cpp` --
 function-code encode / decode, master-side request-response,

@@ -185,7 +185,8 @@ handleSignOut()`.
 
 | Page | Presenter | Notable concern |
 |---|---|---|
-| `DashboardPage` | `DashboardPresenter` | 3 equipment cards + 3 quality gauges + work-unit progress + control panel. Cached `currentRole_` to gate Calibration / Reset on every `ControlPanelViewModel` update. |
+| `DashboardPage` | `DashboardPresenter` | 3 equipment cards + 3 quality gauges + work-unit progress + control panel. Cached `currentRole_` to gate Calibration / Reset on every `ControlPanelViewModel` update. Role-gated fault-inject button (`injectFaultButton` -> `onInjectFaultButtonClicked`, shown only when `canInjectFault(role)`, REQ-DASHBOARD-009). |
+| `MultiStationDashboardPage` | two `DashboardPresenter`s | Hosts two `DashboardPage` panes side by side (primary + secondary station), linked at the model layer via `PrimaryToSecondaryBridge` (ADR-0011). Thin view shell, no presenter coordination. REQ-MULTISTATION-002. |
 | `ProductsPage` | `ProductsPresenter` | CRUD table with search, async writes via `Glib::signal_idle`. |
 | `SettingsPage` | (none -- pure view over Config + Theme + Logger) | Palette + layout + language switchers + log tail; reloads in place. |
 | `HistoryPage` | reads from `HistoryReader` directly | Multi-series TrendChart with range presets (1h / 24h / 7d). |
@@ -207,7 +208,9 @@ the current role can't touch get `set_sensitive(false)`.
 |---|---|
 | `QualityGauge` | Circular arc gauge with numeric centre + colour from threshold. Custom Cairo `DrawingArea`. |
 | `TrendChart` | Multi-series line chart with grid + Y-axis labels. Custom Cairo. |
-| `AlertsPanel` | Coalesced alert list; presenter (`AlertCenter`) handles dedup + debounce. |
+| `AlertsPanel` | Coalesced alert list; presenter (`AlertCenter`) handles dedup + debounce. Renders an active list plus a separate shelved subsection (`renderActiveAndShelved` / `buildShelvedCard`, `AlarmState::Shelved`), each shelved card carrying a live MM:SS countdown to auto-unshelve (REQ-ALARM-005). |
+| `BigNumberCard` | KPI card for the dashboard top strip: small label + huge number/unit + optional delta-vs-target row, with a coloured status strip (Ok / Warning / Critical). Custom Cairo. |
+| `DonutChartWidget` | Multi-segment donut for the session-uptime breakdown (% time per `SystemState`); generic (label, value, colour) segments, normalised + drawn clockwise. Custom Cairo. |
 | `SystemStatusBadge` | Coloured dot + state label. Idle / Running / Stopped / Calibrating / Error. |
 | `LiveClock` | Wall-clock label updated on a 1-second timer. |
 | `BackendHealthBar` | Per-backend health dots (TCP / MQTT / Modbus / OPC-UA). |
@@ -280,8 +283,9 @@ examples of CSS-driven theming.
 ## Internationalisation (i18n)
 
 All user-visible strings flow through `_()` (the gettext macro).
-11 catalogs live under `po/`; the build pipeline compiles them
-into `.mo` files mounted at `share/locale/`.
+10 translation catalogs live under `po/` (one `.po` per LINGUAS
+code -- 11 languages including the English source base); the build
+pipeline compiles them into `.mo` files mounted at `share/locale/`.
 
 Language switching is runtime:
 
