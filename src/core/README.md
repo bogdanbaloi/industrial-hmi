@@ -46,6 +46,7 @@ src/core/
 ├── TimeFormat.{h,cpp}      ISO 8601 UTC -> local time string formatter
 ├── i18n.h                  gettext macros (_, N_) + initI18n signature
 ├── i18n.cpp                Binds gettext catalogs to the runtime
+├── SpscQueue.h             Lock-free single-producer/single-consumer ring (ADR-0018)
 ├── Application.{h,cpp}     GTK-bound application lifecycle (only used by GTK exe)
 ```
 
@@ -318,8 +319,11 @@ class JournaldLogger : public app::core::Logger {
   thread (gettext globals are not thread-safe across rebinds).
   The console binary calls it once at startup; the GTK binary
   calls it again on each language switch.
-- **`ConfigManager`** is read-only after `initialize()` returns;
-  subsequent reads are safe from any thread.
+- **`ConfigManager`** guards all access with a `recursive_mutex`, so
+  reads are safe from any thread (REQ-CORE-008). It is no longer
+  read-once: it supports runtime reload via `addReloadListener` /
+  `clearReloadListeners` (REQ-CORE-009), and a `ConfigFileWatcher`
+  can re-read the file on change and fire the registered listeners.
 
 ---
 
@@ -353,11 +357,14 @@ ctest -R '(Result|ConfigManager)' --output-on-failure
 - **Metrics / observability** -- adding Prometheus / OpenTelemetry
   is a new `core/` file (a `MetricsClient` interface + a concrete
   per backend). Hasn't been needed yet; HMI runs with file logs.
-- **Hot-reload of config** -- ConfigManager is read-once.
-  Operator changes go through Settings UI + a runtime apply path
-  in `ThemeManager` for theme bits; full hot-reload would
-  require every layer to re-read its config, which is bigger
-  than the current operator workflow needs.
+- **Whole-config hot-swap into every layer** -- ConfigManager
+  itself supports reload: `addReloadListener` (REQ-CORE-009) lets
+  a subsystem re-apply config when `ConfigFileWatcher` detects a
+  file change, and Bootstrap registers an `applyI18n` listener so
+  a language change takes effect live. What is still out of scope
+  is fanning a reload into *every* layer automatically; subsystems
+  opt in by registering a listener rather than the core pushing a
+  re-read everywhere.
 - **C++ exceptions across DLL boundary** -- the ONNX plugin
   uses a C ABI specifically to avoid this; we never throw
   across module boundaries.

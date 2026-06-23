@@ -76,7 +76,7 @@ Constraints we accepted:
 - **L** -- `OnnxImageClassifier` and `FakeImageClassifier` are
   interchangeable from the presenter's perspective; the same
   `QualityInspectionPresenter` unit tests run against either.
-- **I** -- `ImageClassifier` is two methods (classify, name).
+- **I** -- `ImageClassifier` is two methods (classifyTopK, name).
   Threading, batching, GPU policy stay implementation-private.
 - **D** -- presenter takes `ImageClassifier&`; tests inject the
   fake, production wires the ONNX concrete.
@@ -89,51 +89,67 @@ Constraints we accepted:
 
 ```cpp
 struct Image {
-    int                     width;
-    int                     height;
-    int                     channels;
-    std::vector<std::uint8_t> pixels;     // row-major RGBA
+    int                       width;
+    int                       height;
+    int                       channels;
+    std::vector<std::uint8_t> pixels;     // row-major RGB
 };
 
-std::optional<Image> decodeFromFile(const std::filesystem::path&);
-std::optional<Image> decodeFromMemory(std::span<const std::uint8_t>);
+class ImageDecoder {
+    Image decodeFile(const std::filesystem::path&) const;
+    Image decodeMemory(std::span<const std::uint8_t>) const;
+};
 ```
 
-PNG + JPEG via stb_image (header-only, public-domain). Returns
-`nullopt` on any decode error; the caller surfaces it as a UI
-status. No exceptions out of this path.
+PNG / JPEG / BMP via stb_image (header-only, public-domain). The
+decoder always returns 3-channel **RGB** (grayscale duplicated,
+alpha dropped) so downstream stages never branch on channel count.
+On a missing file / unsupported format / truncated payload it
+throws `std::runtime_error` carrying `stbi_failure_reason`.
 
 ### `Preprocessor` + `ImageNetPreprocessor`
 
 ```cpp
 class Preprocessor {
-    virtual std::vector<float> prepare(const Image& image) = 0;
+    virtual std::vector<float>          apply(const Image&) const = 0;
+    virtual std::array<std::int64_t, 4> outputShape() const = 0;   // NCHW
+    virtual std::string                 name() const = 0;
 };
 ```
 
 `ImageNetPreprocessor`: resize to 224×224, normalise to the
-ImageNet mean / stdev triple, flatten to NCHW float tensor.
-Output goes straight to the classifier's `classify(...)` call.
+ImageNet mean / stdev triple, flatten to an NCHW float tensor.
+`outputShape()` (`{batch, channels, height, width}`) lets the
+classifier bind the ONNX input port without re-deriving the shape.
 
-A custom model with different input shape = new `Preprocessor`
+A custom model with a different input shape = new `Preprocessor`
 subclass. Zero changes to the classifier or to call sites that
-already use `Preprocessor&` injection.
+already use `Preprocessor&` injection. Note: the production
+`OnnxImageClassifier` runs preprocessing internally inside
+`classifyTopK(...)`, so callers pass a decoded `Image`, not a
+pre-built tensor.
 
 ### `ImageClassifier`
 
 ```cpp
 struct Classification {
-    std::uint32_t classId;
-    float         confidence;     // 0..1
-    std::string   label;          // human-readable
+    int         classId;       // ImageNet class index, 0..999
+    std::string label;         // human-readable, resolved via ImageNetLabels
+    float       confidence;    // softmax probability, 0..1
 };
 
 class ImageClassifier {
     virtual std::vector<Classification>
-        classify(std::span<const float> tensor, std::size_t topK) = 0;
+        classifyTopK(const Image& image, int k) const = 0;
     virtual std::string name() const = 0;
 };
 ```
+
+`classifyTopK` takes a **decoded `Image`** and does preprocessing
+internally, then returns the top-`k` classifications sorted by
+descending confidence. Throws on a non-positive `k` or on
+inference failure -- callers get a populated result or an
+exception, never a silently truncated / empty vector.
 
 Top-K result so the UI can show "Pizza (94%) / Sandwich (3%) /
 Burger (2%)" -- a single top-1 readout doesn't surface the
@@ -147,7 +163,8 @@ Constructor takes the path to an `.onnx` file + a labels file
 
 1. `LoadLibrary` / `dlopen` the plugin module.
 2. Plugin creates an ORT environment + session from the `.onnx`.
-3. Each `classify(...)` call binds the input tensor + runs inference.
+3. Each `classifyTopK(...)` call preprocesses the image, binds the
+   input tensor + runs inference.
 
 The plugin module exposes a tiny C ABI (3 functions: create /
 classify / destroy) so the host binary never sees ORT types at
@@ -159,14 +176,22 @@ isolation pattern.
 ### `FakeImageClassifier`
 
 ```cpp
-class FakeImageClassifier : public ImageClassifier {
+class FakeImageClassifier final : public ImageClassifier {
 public:
-    void setNextResult(std::vector<Classification> r) { next_ = std::move(r); }
-    std::vector<Classification> classify(...) override { return next_; }
+    explicit FakeImageClassifier(std::vector<Classification> cannedResults,
+                                 std::string displayName = "Fake");
+
+    std::vector<Classification>
+        classifyTopK(const Image&, int k) const override;  // replays canned,
+                                                           // truncated to k
+    std::string name() const override;
 };
 ```
 
-Three lines of behaviour. Used by every presenter test that
+Canned results are passed at construction (auto-sorted by
+descending confidence) -- there is no `setNextResult`. `classifyTopK`
+replays them, truncated to `k`, and throws on a non-positive `k`
+to match the production contract. Used by every presenter test that
 needs a classifier without paying the ORT setup cost.
 
 ### `ImageNetLabels`
@@ -187,38 +212,36 @@ For the plugin: ONNX Runtime headers + shared library at runtime.
 
 ```cpp
 #include "ml/OnnxImageClassifier.h"
-#include "ml/ImageNetPreprocessor.h"
 #include "ml/ImageDecoder.h"
 
-// Concretes
+// Concrete classifier (preprocessing happens internally).
 app::ml::OnnxImageClassifier classifier{
-    "models/resnet50.onnx",
+    "models/mobilenetv2-int8.onnx",
     "models/imagenet_labels.txt"};
-app::ml::ImageNetPreprocessor preprocessor;
 
-// Run inference
-auto image = app::ml::decodeFromFile("frame.png");
-if (image) {
-    auto tensor = preprocessor.prepare(*image);
-    auto top5  = classifier.classify(tensor, /*topK=*/5);
-    for (const auto& c : top5) {
-        std::cout << c.label << " " << c.confidence << '\n';
-    }
+// Run inference -- hand the decoded image straight in.
+app::ml::ImageDecoder decoder;
+const auto image = decoder.decodeFile("frame.png");   // throws on bad input
+const auto top5  = classifier.classifyTopK(image, /*k=*/5);
+for (const auto& c : top5) {
+    std::cout << c.label << " " << c.confidence << '\n';
 }
 ```
 
 ### Drop-in for tests
 
 ```cpp
-app::ml::FakeImageClassifier classifier;
-classifier.setNextResult({
-    { .classId = 42, .confidence = 0.94f, .label = "tabby" },
-    { .classId = 43, .confidence = 0.03f, .label = "tiger" },
-});
+app::ml::FakeImageClassifier classifier{
+    {
+        { .classId = 42, .label = "tabby", .confidence = 0.94f },
+        { .classId = 43, .label = "tiger", .confidence = 0.03f },
+    },
+    "Fake-2-class"};
 
-// Pass to the presenter:
-app::QualityInspectionPresenter pres{classifier, preprocessor};
-// pres.classify(image)  -> top hit "tabby" -- deterministic.
+// Pass to the presenter (which takes a classifier + a decoder):
+app::ml::ImageDecoder decoder;
+app::QualityInspectionPresenter pres{classifier, decoder};
+// pres inspects a frame -> top hit "tabby" -- deterministic.
 ```
 
 ### Swapping the runtime (TensorRT / OpenVINO / libtorch)
@@ -226,13 +249,14 @@ app::QualityInspectionPresenter pres{classifier, preprocessor};
 ```cpp
 class LibTorchClassifier : public app::ml::ImageClassifier {
     LibTorchClassifier(std::filesystem::path tsModel);
-    std::vector<Classification> classify(...) override;
+    std::vector<Classification>
+        classifyTopK(const app::ml::Image&, int k) const override;
     std::string name() const override { return "libtorch"; }
 };
 
 // In main.cpp -- change one line:
 std::unique_ptr<app::ml::ImageClassifier> classifier =
-    std::make_unique<LibTorchClassifier>("models/resnet50.ts");
+    std::make_unique<LibTorchClassifier>("models/mobilenetv2.ts");
 ```
 
 Zero presenter / preprocessor / decoder changes.
@@ -244,7 +268,7 @@ Zero presenter / preprocessor / decoder changes.
 - **Decoder + preprocessor are stateless** -- safe to call from any
   thread; cheap copies of `Image` and `vector<float>`.
 - **OnnxImageClassifier holds a single ORT session** behind an
-  internal mutex. Concurrent `classify(...)` calls serialise; for
+  internal mutex. Concurrent `classifyTopK(...)` calls serialise; for
   the HMI workload (one camera, one inference per second) that's
   fine. A high-throughput batching server would spin a session
   pool inside the plugin -- transparent to callers.
@@ -264,7 +288,12 @@ Zero presenter / preprocessor / decoder changes.
 against `FakeImageClassifier`; asserts the inspection result
 ViewModel matches the top class returned by the fake.
 
-`tests/OnnxImageClassifierIntegrationTest.cpp` -- gated behind
+`tests/ImageClassifierTest.cpp` -- exercises the `ImageClassifier`
+contract against `FakeImageClassifier`: top-K truncation, the
+descending-confidence ordering guarantee, and the throwing
+semantics for a non-positive `k`.
+
+`tests/OnnxImageClassifierTest.cpp` -- gated behind
 `-DBUILD_ML_CLASSIFIER=ON` because it loads a real `.onnx` file.
 Skips at runtime if the model file is not present, so the test
 binary is safe to run on any CI environment.
@@ -273,8 +302,11 @@ binary is safe to run on any CI environment.
 a synthetic 256×256 input; verifies the resize + normalise math
 against a hand-computed reference.
 
-`tests/ImageDecoderTest.cpp` -- corrupt input rejected with
-`nullopt`, supported formats round-trip cleanly.
+`tests/ImageNetLabelsTest.cpp` -- the 1000-entry label table loads,
+indexes in range, and rejects out-of-range class ids.
+
+`tests/ImageDecoderTest.cpp` -- corrupt / truncated input throws
+`std::runtime_error`, supported formats round-trip cleanly to RGB.
 
 Run isolated:
 

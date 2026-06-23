@@ -26,7 +26,14 @@ exist and what their defaults are:
   `config/app-config.json` over the defaults, exposes typed
   getters per concern, and owns the **policy** of what to do
   when a section is missing or malformed (warn + fall back, not
-  crash).
+  crash). Also owns the shipped hot-reload path (`reload()` +
+  `ReloadListener`s).
+- **`ConfigValidator`** -- semantic / JSON-schema validation
+  against `schemas/app-config.schema.json` (ADR-0015). A reload
+  that parses but fails validation is rejected so a typo never
+  half-applies.
+- **`ConfigFileWatcher`** -- a `std::jthread` that watches the
+  config file's mtime and calls `reload()` when it changes.
 
 Keeping this in a self-contained module means every other layer
 depends on a stable interface (`ConfigManager::getMqttBrokerHost()`)
@@ -39,14 +46,18 @@ new default + one new getter -- no scatter across files.
 
 ```
 src/config/
-├── ConfigManager.h         Singleton config façade + per-section getters
-└── config_defaults.h       Header-only constants (paths, hostnames, sizes)
+├── ConfigManager.{h,cpp}     Singleton config façade + per-section getters
+│                             (nlohmann/json behind a PIMPL boundary, ADR-0015)
+├── config_defaults.h         Header-only constants (paths, hostnames, sizes)
+├── ConfigValidator.{h,cpp}   Semantic / JSON-schema validation (ADR-0015)
+└── ConfigFileWatcher.{h,cpp}  std::jthread mtime watcher -> reload()
 ```
 
-That's it. Two files. The module is deliberately tiny -- the
-policy surface should be small, the runtime cost zero
-(`ConfigManager::instance()` is a Meyers' singleton constructed
-on first use).
+Four pairs, still a deliberately small policy surface. The
+runtime cost stays near zero (`ConfigManager::instance()` is a
+Meyers' singleton constructed on first use); the JSON parser is
+kept behind a PIMPL boundary so its single-header bulk never
+leaks into the 100+ call sites that touch an accessor.
 
 ---
 
@@ -78,7 +89,7 @@ on first use).
 - **L** -- Tests inject a different config path (or pre-loaded
   in-memory map) without behavioural divergence.
 - **I** -- Per-section getters (
-  `getMqttBrokerHost`, `getModbusUnitId`, `getAuthDbPath`, ...)
+  `getMqttBrokerHost`, `getModbusSlaveId`, `getAuthDbPath`, ...)
   so callers only need what they use. No "get the whole config
   blob" escape hatch.
 - **D** -- Every layer takes the `ConfigManager` it needs by
@@ -114,7 +125,7 @@ constexpr int         kMqttBrokerPort    = 1883;
 // Modbus defaults
 constexpr const char* kModbusHost        = "127.0.0.1";
 constexpr int         kModbusPort        = 5020;
-constexpr int         kModbusUnitId      = 1;
+// (slave id default is inline in getModbusSlaveId(): "network.modbus.slave_id", 1)
 
 // UI defaults
 constexpr const char* kDefaultLanguage   = "auto";
@@ -148,15 +159,18 @@ public:
     std::string getMqttBrokerHost() const;
     int         getMqttBrokerPort() const;
 
-    bool        isModbusEnabled() const;
+    bool        isModbusBackendEnabled() const;
     std::string getModbusHost() const;
     int         getModbusPort() const;
-    int         getModbusUnitId() const;
+    int         getModbusSlaveId() const;
 
     bool        isHistorianEnabled() const;
     std::string getHistorianDbPath() const;
     int         getHistorianBatchSize() const;
     int         getHistorianBatchAgeMs() const;
+    int         getHistorianSweepIntervalMs() const;      // ADR-0007
+    int         getHistorianRawRetentionMs() const;       // ADR-0007
+    int         getHistorianMinuteRetentionMs() const;    // ADR-0007
 
     std::string getLanguage() const;
     std::string getPalette() const;
@@ -254,16 +268,28 @@ Done. The change is local; no scatter.
 ## Threading model
 
 - **`initialize()` is called once** at startup, before any
-  worker thread spawns. ConfigManager is **read-only after
-  that**; concurrent reads from any thread are safe (string
-  copies returned by value).
-- **No mutex** inside ConfigManager -- the read-only-after-init
-  contract makes one unnecessary.
-- **No hot-reload** -- if the JSON changes at runtime, the
-  binary reads the new value only on next start. The Settings
-  page exposes a subset (palette, language, log level) for
-  runtime change without re-reading the JSON; those go through
-  in-memory setters on the relevant subsystems.
+  worker thread spawns. Concurrent reads from any thread are
+  safe (string copies returned by value).
+- **Guarded by a mutex** (REQ-CORE-008): every read/write of the
+  flat-key map goes through a `mutable std::recursive_mutex
+  config_mutex_`. Recursive because `reload()` holds the lock
+  across the `ConfigValidator::validate(*this)` call, which
+  recurses back through our own public getters on the same
+  thread; a plain `std::mutex` would self-deadlock. The
+  read-heavy workload tolerates the slightly costlier primitive
+  (config access is sub-microsecond and rare versus the alarm /
+  dashboard hot paths).
+- **Hot-reload is shipped** (REQ-CORE-006/008/009):
+  `reload()` re-reads the configured path and swaps the in-memory
+  map atomically -- on parse failure or validator rejection the
+  previous config is preserved (an operator typo never
+  half-applies). `ConfigFileWatcher` is a `std::jthread` mtime
+  watcher that calls `reload()` when the file changes;
+  `addReloadListener()` / `ReloadListener` fire after a successful
+  swap so consumers (e.g. Bootstrap re-applying `applyI18n()`)
+  re-bind to the new values. The Settings page also exposes a
+  subset (palette, language, log level) for direct runtime change
+  through `setLanguage` / `setPalette` persisting setters.
 
 ---
 
@@ -340,12 +366,6 @@ rather than IPs.
 
 ## Out of scope (intentional)
 
-- **JSON Schema validation** -- the per-getter default fallback
-  pattern is more forgiving than schema validation (a typo in
-  one section doesn't reject the whole file). Schema would be
-  added if a customer asks.
-- **Hot-reload** -- see threading model above. Operator-tunable
-  knobs go through Settings UI + per-subsystem setters.
 - **Encrypted secrets** -- production deployments inject secrets
   via environment variables read at startup, not via JSON. The
   config layer doesn't try to be a secrets manager.

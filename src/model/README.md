@@ -44,14 +44,30 @@ without a single change.
 
 ```
 src/model/
-├── ProductionModel.h        Pure interface (signals + setters + queries)
-├── SimulatedModel.h         Singleton concrete with demo data + simulator
-├── ProductionTypes.h        Shared enums + value types (EquipmentStatus, WorkUnit, ...)
-├── ProductsRepository.h     Pure interface for the products master
-├── Product.h                Product DTO
-├── DatabaseManager.{h,cpp}  SQLite-backed ProductsRepository + async write pool
-└── ModelContext.h           Boost.Asio io_context owner shared by async writers
+├── ProductionModel.h          Pure interface (signals + commands + queries)
+├── SimulatedModel.h           Singleton concrete with demo data + simulator
+├── MirrorModel.{h,cpp}        Passive secondary model mirroring the primary (ADR-0011)
+├── ProductionTypes.h          Shared enum + value types (EquipmentStatus, WorkUnit, ...)
+├── SystemStateMachine.{h,cpp} Top-level SystemState transitions + fault reason
+├── ThroughputMeter.h          Work-units-per-hour estimator over a sliding window
+├── ProductsRepository.h       Pure interface for the products master
+├── Product.h                  Product DTO
+├── Recipe.h                   Recipe DTO (per-checkpoint pass-rate targets)
+├── RecipesRepository.h        Pure read interface for recipes
+├── RecipesWriter.h            Pure write interface for recipes
+├── DatabaseManager.{h,cpp}    SQLite-backed ProductsRepository + RecipesRepository
+│                              + RecipesWriter + async write pool
+└── ModelContext.h             Boost.Asio io_context owner shared by async writers
 ```
+
+The Recipe subsystem (`Recipe.h`, `RecipesRepository.h`, `RecipesWriter.h`)
+carries the per-checkpoint pass-rate targets a product expects.
+`ProductionModel::loadProduct(const Product&, const Recipe&)` makes a recipe
+the active work unit and applies its targets onto the live checkpoints.
+`SystemStateMachine` owns the `SystemState` transitions + the last fault
+reason; `MirrorModel` is a passive secondary that mirrors the primary
+(it computes no throughput and returns zeroed OEE); `ThroughputMeter`
+estimates work units per hour over a sliding window.
 
 ---
 
@@ -70,9 +86,9 @@ src/model/
         [Presenter subscribers]
 
 
-   ┌─────────────────────────┐
-   │   ProductsRepository    │  interface (read API for products)
-   └────────────▲────────────┘
+   ┌──────────────────────────────────────────────────┐
+   │  ProductsRepository / RecipesRepository / Writer   │  read+write interfaces
+   └────────────▲───────────────────────────────────────┘
                 │
    ┌────────────┴────────────┐
    │     DatabaseManager     │  singleton concrete; SQLite + async write pool
@@ -106,17 +122,27 @@ src/model/
 ### `ProductionTypes.h`
 
 The shared vocabulary every other layer speaks. Plain aggregates +
-enums:
+one enum:
 
-- `enum class SystemState { Idle, Running, Stopped, Calibrating, Error }`
-- `enum class EquipmentStatusKind { Online, Offline, Processing, Idle }`
-- `enum class QualityCheckpointStatusKind { Passing, Warning, Failing }`
-- `struct EquipmentStatus { id, kind, supplyLevel, ... }`
-- `struct QualityCheckpoint { id, name, kind, passRate, ... }`
-- `struct WorkUnit { id, productCode, completedSteps, totalSteps, ... }`
-- `struct ActuatorStatus { id, kind, ... }`
+- `enum class SystemState { IDLE, RUNNING, ERROR, CALIBRATION }` -- the
+  only enum here; the top-level mode of the line.
+- `struct EquipmentStatus { equipmentId, status, supplyLevel, message }`
+  -- `status` is an int-encoded field (0 offline, 1 online, 2 processing,
+  3 error), kept as `int` rather than an enum so the wire format with
+  PLC-side code stays unchanged.
+- `struct QualityCheckpoint { checkpointId, name, status, unitsInspected,
+  defectsFound, passRate, lastDefect, passRateTarget }` -- `status` is an
+  int (0 passing, 1 warning, 2 critical); `passRateTarget` comes from the
+  active product's recipe.
+- `struct WorkUnit { workUnitId, productId, description, completedOperations,
+  totalOperations, throughputUnitsPerHour }`
+- `struct ActuatorStatus { actuatorId, status, posX, posY, autoMode,
+  atHome }` -- `status` is an int (0 idle, 1 working, 2 error).
+- `struct OeeMetrics { availabilityPct, performancePct, qualityPct, oeePct }`
 
-Pure-value, copyable, no behaviour. Adding a field means
+Pure-value, copyable, no behaviour. Equipment, checkpoint, and actuator
+state are int-encoded (not enums) deliberately, so the encoding matches
+what PLC-side code already ships on the wire. Adding a field means
 re-compiling the layers that read it; nothing else.
 
 ### `ProductionModel.h`
@@ -124,25 +150,31 @@ re-compiling the layers that read it; nothing else.
 ```cpp
 class ProductionModel {
     // Subscriptions -- presenters call these in initialize().
-    virtual void onEquipmentChanged(EquipmentCallback) = 0;
+    virtual void onEquipmentStatusChanged(EquipmentCallback) = 0;
+    virtual void onActuatorStatusChanged(ActuatorCallback) = 0;
     virtual void onQualityCheckpointChanged(QualityCheckpointCallback) = 0;
     virtual void onWorkUnitChanged(WorkUnitCallback) = 0;
     virtual void onSystemStateChanged(StateCallback) = 0;
-    // ...
 
-    // Queries -- snapshot by value.
-    virtual EquipmentStatus equipmentStatus(std::uint32_t id) const = 0;
-    virtual std::vector<QualityCheckpoint> qualityCheckpoints() const = 0;
-    virtual SystemState systemState() const = 0;
-    // ...
-
-    // Setters -- trigger signals.
-    virtual void setEquipmentEnabled(std::uint32_t id, bool) = 0;
-    virtual void setEquipmentSupplyLevel(std::uint32_t id, float) = 0;
-    virtual void setQualityPassRate(std::uint32_t id, float) = 0;
+    // Commands -- trigger signals.
     virtual void startProduction() = 0;
     virtual void stopProduction() = 0;
-    // ...
+    virtual void resetSystem() = 0;
+    virtual void startCalibration() = 0;
+    virtual void setEquipmentEnabled(std::uint32_t id, bool) = 0;
+    // Load a recipe onto the line as the active work unit.
+    virtual void loadProduct(const Product&, const Recipe&) = 0;
+    // Inbound analog setters used by ingest bridges.
+    virtual void setEquipmentSupplyLevel(std::uint32_t id, int level) = 0;
+    virtual void setQualityPassRate(std::uint32_t id, float rate) = 0;
+
+    // Queries -- snapshot by value.
+    virtual SystemState getState() const = 0;
+    virtual QualityCheckpoint getQualityCheckpoint(std::uint32_t id) const = 0;
+    virtual std::vector<QualityCheckpoint> getQualityCheckpoints() const = 0;
+    virtual WorkUnit getWorkUnit() const = 0;
+    virtual std::string lastFaultReason() const = 0;
+    virtual OeeMetrics oeeSnapshot() const = 0;
 };
 ```
 
@@ -187,8 +219,9 @@ Writes go through `DatabaseManager` directly (it implements
 
 ### `DatabaseManager.{h,cpp}`
 
-SQLite-backed singleton. Implements `ProductsRepository` for
-synchronous reads and exposes an async write surface:
+SQLite-backed singleton. Implements `ProductsRepository`,
+`RecipesRepository`, and `RecipesWriter` for synchronous reads +
+recipe persistence, and exposes an async write surface:
 
 ```cpp
 void addProductAsync(productCode, name, status, stock, qualityRate,
@@ -236,7 +269,7 @@ app::model::SimulatedModel::instance().tickSimulation();
 
 ```cpp
 auto& model = app::model::SimulatedModel::instance();
-model.onEquipmentChanged([](const EquipmentStatus& e) {
+model.onEquipmentStatusChanged([](const EquipmentStatus& e) {
     // ... transform to a ViewModel, publish to a backend, log, ...
 });
 ```

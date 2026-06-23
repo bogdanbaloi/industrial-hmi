@@ -50,6 +50,7 @@ Each file has the following sections:
 | 0015 | [nlohmann/json + C++ validator + JSON Schema as spec](0015-nlohmann-json-and-cpp-validator.md) | Accepted |
 | 0016 | [Profiling discipline: microbench + callgrind, no flamegraph Phase 1](0016-profiling-microbench-and-callgrind.md) | Accepted |
 | 0017 | [Reject TimeSource injection everywhere](0017-reject-timesource-injection-everywhere.md) | Accepted |
+| 0018 | [SPSC lock-free queue](0018-spsc-lock-free-queue.md) | Accepted |
 
 ## Adding a new ADR
 

@@ -14,7 +14,7 @@ in unit tests without dragging a GUI toolkit in.
 The classical mistake in desktop apps is letting Model and View talk
 to each other directly. After a few releases the UI is full of
 business logic ("if quality drops below 95% AND equipment is idle AND
-operator role is Maintenance, show the calibrate button"), the model
+operator role is Maintenance, show the calibrate button"), the model 
 is full of UI concerns ("after writing the value, queue a Glib idle
 callback to refresh the gauge"), and nothing can be tested without a
 real screen.
@@ -59,7 +59,12 @@ REST API) reuses every presenter unchanged.
                                  └──────────────────┘
 ```
 
-Six presenters today; each owns one product surface:
+Six presenter-layer classes today; each owns one product surface.
+Four (`DashboardPresenter`, `ProductsPresenter`,
+`BackendHealthPresenter`, `QualityInspectionPresenter`) subclass
+`BasePresenter`. The other two do not: `AlertCenter` and
+`UsersPresenter` carry their own observer wiring rather than the
+shared `BasePresenter` observer list.
 
 | Presenter | Drives | Notable concern |
 |---|---|---|
@@ -79,8 +84,10 @@ Six presenters today; each owns one product surface:
   one registration. No existing presenter changes; no `if (page ==
   new_one)` switches anywhere.
 - **L**iskov -- `BasePresenter` enforces the same observer
-  contract for every concrete (notify the list, ignore null
-  observers, mutex-guarded register/unregister). The view treats
+  contract for the presenters that subclass it (notify the list,
+  ignore null observers, mutex-guarded register/unregister). The
+  two that don't (`AlertCenter`, `UsersPresenter`) reproduce the
+  same dispatch shape on their own. Either way the view treats
   every presenter the same way through `ViewObserver`.
 - **I**nterface segregation -- `ViewObserver` uses **empty default
   implementations** instead of pure virtual methods, so a view
@@ -178,6 +185,17 @@ Pattern repeats: pull current user → check `Role` helper → apply
 or refuse → audit either way. Defence-in-depth (the sidebar
 already hid the button if the role lacked permission, but the
 presenter re-checks because RBAC must NOT depend on UI state).
+
+### Fault-injection seam (`DashboardPresenter`, REQ-DASHBOARD-009)
+
+`DashboardPresenter::setFaultInjector(std::function<void()>)` installs
+a callback the composition root wires to a SimulatedModel-only fault
+trigger; `onInjectFaultClicked()` (Maintenance-gated) invokes
+`faultInjector_` to drive the line into the ERROR safe-state. This is
+a shipped, demo-facing feature for showing the alarm + recovery path
+live. The fault trigger is deliberately kept off the `ProductionModel`
+interface, so the presenter never depends on the concrete model type
+(ADR-0001); the seam is a no-op if no injector is set.
 
 ---
 

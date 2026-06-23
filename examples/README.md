@@ -14,7 +14,7 @@ the HMI ships with. Two flavours:
 
 Plus one **orchestrator** that runs every live scenario in parallel,
 so a single command produces a fully populated "day-in-the-life"
-demo across three protocols at once.
+demo across four protocols at once.
 
 ## Setup
 
@@ -65,13 +65,14 @@ for screenshots, or run them in observe-only mode.
 
 ## Orchestrator
 
-`factory_simulation.py` runs three live scenarios in parallel:
+`factory_simulation.py` runs four live scenarios in parallel:
 
 - `tcp_operator_session.py` against the TCP backend
 - `mqtt_sensor_loop.py` against the MQTT subscriber
 - `opcua_dashboard.py` against the OPC-UA server
+- `modbus_slave_simulator.py` against the Modbus primary
 
-One command, three protocols hitting the HMI continuously. This is
+One command, four protocols hitting the HMI continuously. This is
 the script to launch when demonstrating the system to a customer:
 the dashboard reflects work from each backend in real time, the I/O
 panel pills all turn green at once, and the live scenarios stay alive
@@ -97,10 +98,11 @@ can compose them consistently:
 | TCP | none -- HMI starts the server when `network.tcp.enabled = true` | `127.0.0.1:5555` |
 | MQTT | a broker. Easiest is `mosquitto -p 1883` locally. | `127.0.0.1:1883` |
 | OPC-UA | none -- HMI starts the server when `network.opcua.enabled = true` | `opc.tcp://127.0.0.1:4840` |
+| Modbus | none -- `modbus_slave_simulator.py` hosts the slave; the HMI polls it when `network.modbus.enabled = true` | `127.0.0.1:5020` |
 
-The HMI's default configuration enables TCP and OPC-UA out of the
-box; MQTT requires either a local broker or pointing the config at
-a public broker (`test.mosquitto.org` works without authentication).
+TCP, MQTT, and OPC-UA are enabled by default; MQTT additionally needs
+a reachable broker -- either a local one or pointing the config at a
+public broker (`test.mosquitto.org` works without authentication).
 
 ## Recommended demo flow
 
@@ -121,8 +123,8 @@ Terminal 4 (optional): passive observer
     python examples/mqtt_subscribe_telemetry.py
 ```
 
-The dashboard's I/O panel shows three green pills (TCP, MQTT, OPC-UA)
-within seconds of launching the orchestrator. The simulator inside
+The dashboard's I/O panel shows four green pills (TCP, MQTT, OPC-UA,
+Modbus) within seconds of launching the orchestrator. The simulator inside
 the HMI runs alongside the external actors, so the operator sees the
 same kind of traffic a real plant would produce.
 

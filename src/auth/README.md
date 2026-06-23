@@ -113,6 +113,7 @@ constexpr bool canEditProducts(Role)   noexcept;   // Maintenance+
 constexpr bool canManageUsers(Role)    noexcept;   // Admin
 constexpr bool canViewAuditLog(Role)   noexcept;   // Admin
 constexpr bool canDismissAlerts(Role)  noexcept;   // Operator+
+constexpr bool canInjectFault(Role)    noexcept;   // Maintenance+ (REQ-DASHBOARD-009)
 ```
 
 **Three roles** is the sweet spot every industrial deployment uses;
