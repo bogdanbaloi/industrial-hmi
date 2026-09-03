@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted (2026-04)
+Accepted (2026-04). Amended by ADR-0019 (2026-05): the "Runtime-only opt-in,
+dynamic library load" alternative rejected below was later adopted after a
+runtime heap-corruption crash forced ORT out of the host address space. The
+`BUILD_ML_CLASSIFIER` compile-time gate decided here still stands. ADR-0019
+changes only how the feature is built when the gate is ON.
 
 ## Context
 

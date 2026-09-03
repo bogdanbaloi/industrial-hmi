@@ -41,7 +41,7 @@ Each file has the following sections:
 | 0006 | [Auth defense-in-depth at presenter + view](0006-auth-defense-in-depth.md) | Accepted |
 | 0007 | [Historian degraded-open on store failure](0007-historian-degraded-open.md) | Accepted |
 | 0008 | [Runtime palette + layout swap](0008-runtime-palette-layout-swap.md) | Accepted |
-| 0009 | [ML plugin gated by build-time flag](0009-ml-plugin-conditional-compile.md) | Accepted |
+| 0009 | [ML plugin gated by build-time flag](0009-ml-plugin-conditional-compile.md) | Accepted (amended by 0019) |
 | 0010 | [ConfigManager: policy / mechanism split](0010-config-policy-vs-mechanism.md) | Accepted |
 | 0011 | [Multi-station support (Primary/Secondary first instance)](0011-multi-station-support.md) | Accepted |
 | 0012 | [Requirements traceability — lightweight, not DOORS](0012-requirements-traceability.md) | Superseded by 0013 |
@@ -51,6 +51,7 @@ Each file has the following sections:
 | 0016 | [Profiling discipline: microbench + callgrind, no flamegraph Phase 1](0016-profiling-microbench-and-callgrind.md) | Accepted |
 | 0017 | [Reject TimeSource injection everywhere](0017-reject-timesource-injection-everywhere.md) | Accepted |
 | 0018 | [SPSC lock-free queue](0018-spsc-lock-free-queue.md) | Accepted |
+| 0019 | [ONNX Runtime isolated behind a dlopen shared module](0019-onnx-dlopen-shared-module.md) | Accepted (amends 0009) |
 
 ## Adding a new ADR
 
