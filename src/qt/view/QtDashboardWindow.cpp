@@ -6,7 +6,11 @@
 
 #include "src/qt/view/QtDashboardWindow.h"
 
+#include "src/qt/view/widgets/QtActuatorCard.h"
+#include "src/qt/view/widgets/QtEquipmentCard.h"
+
 #include <QGridLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProgressBar>
@@ -84,6 +88,16 @@ void QtDashboardWindow::buildUi() {
     progressBar_->setValue(0);
     layout->addWidget(progressBar_);
 
+    // Equipment and actuator sections. Cards are added lazily by the render
+    // helpers as the presenter first reports each id.
+    auto* equipmentBox = new QGroupBox("Equipment", central);
+    equipmentLayout_ = new QHBoxLayout(equipmentBox);
+    layout->addWidget(equipmentBox);
+
+    auto* actuatorBox = new QGroupBox("Actuators", central);
+    actuatorLayout_ = new QHBoxLayout(actuatorBox);
+    layout->addWidget(actuatorBox);
+
     auto* buttonRow = new QHBoxLayout();
     startButton_ = new QPushButton("Start", central);
     stopButton_  = new QPushButton("Stop", central);
@@ -152,6 +166,43 @@ void QtDashboardWindow::renderStatusZone(
         statusBanner_->setText(QString::fromStdString(vm.message));
     }
     statusBanner_->setStyleSheet(bannerStyle(severityColor(vm.severity)));
+}
+
+void QtDashboardWindow::onEquipmentCardChanged(
+    const presenter::EquipmentCardViewModel& vm) {
+    QMetaObject::invokeMethod(
+        this, [this, vm] { renderEquipmentCard(vm); }, Qt::QueuedConnection);
+}
+
+void QtDashboardWindow::onActuatorCardChanged(
+    const presenter::ActuatorCardViewModel& vm) {
+    QMetaObject::invokeMethod(
+        this, [this, vm] { renderActuatorCard(vm); }, Qt::QueuedConnection);
+}
+
+void QtDashboardWindow::renderEquipmentCard(
+    const presenter::EquipmentCardViewModel& vm) {
+    auto it = equipmentCards_.find(vm.equipmentId);
+    if (it == equipmentCards_.end()) {
+        auto* card = new QtEquipmentCard(
+            vm.equipmentId, [this](std::uint32_t id, bool enabled) {
+                presenter_.onEquipmentToggled(id, enabled);
+            });
+        equipmentLayout_->addWidget(card);
+        it = equipmentCards_.emplace(vm.equipmentId, card).first;
+    }
+    it->second->applyViewModel(vm);
+}
+
+void QtDashboardWindow::renderActuatorCard(
+    const presenter::ActuatorCardViewModel& vm) {
+    auto it = actuatorCards_.find(vm.actuatorId);
+    if (it == actuatorCards_.end()) {
+        auto* card = new QtActuatorCard(vm.actuatorId);
+        actuatorLayout_->addWidget(card);
+        it = actuatorCards_.emplace(vm.actuatorId, card).first;
+    }
+    it->second->applyViewModel(vm);
 }
 
 }  // namespace app::view

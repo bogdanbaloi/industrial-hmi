@@ -8,6 +8,10 @@
 
 #include <QMainWindow>
 
+#include <cstdint>
+#include <unordered_map>
+
+class QHBoxLayout;
 class QLabel;
 class QProgressBar;
 class QPushButton;
@@ -17,6 +21,9 @@ class DashboardPresenter;
 }
 
 namespace app::view {
+
+class QtEquipmentCard;
+class QtActuatorCard;
 
 /// Qt implementation of the dashboard View. It is both a QMainWindow and an
 /// app::ViewObserver, so the real DashboardPresenter drives it through the
@@ -44,6 +51,8 @@ public:
     void onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) override;
     void onControlPanelChanged(const presenter::ControlPanelViewModel& vm) override;
     void onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) override;
+    void onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) override;
+    void onActuatorCardChanged(const presenter::ActuatorCardViewModel& vm) override;
 
 private:
     void buildUi();
@@ -52,6 +61,8 @@ private:
     void renderWorkUnit(const presenter::WorkUnitViewModel& vm);
     void renderControlPanel(const presenter::ControlPanelViewModel& vm);
     void renderStatusZone(const presenter::StatusZoneViewModel& vm);
+    void renderEquipmentCard(const presenter::EquipmentCardViewModel& vm);
+    void renderActuatorCard(const presenter::ActuatorCardViewModel& vm);
 
     DashboardPresenter& presenter_;
 
@@ -63,6 +74,13 @@ private:
     QPushButton*  startButton_{nullptr};
     QPushButton*  stopButton_{nullptr};
     QPushButton*  resetButton_{nullptr};
+
+    // Equipment and actuator cards, created lazily as the presenter first
+    // reports each id, then updated in place on later notifications.
+    QHBoxLayout* equipmentLayout_{nullptr};
+    QHBoxLayout* actuatorLayout_{nullptr};
+    std::unordered_map<std::uint32_t, QtEquipmentCard*> equipmentCards_;
+    std::unordered_map<std::uint32_t, QtActuatorCard*>  actuatorCards_;
 };
 
 }  // namespace app::view

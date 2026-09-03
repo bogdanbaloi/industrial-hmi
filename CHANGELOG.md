@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Qt desktop frontend (dashboard, Slice 1) (REQ-ARCH-011)
+### Qt desktop frontend (dashboard) (REQ-ARCH-011)
 
 Adds an opt-in third frontend that proves the MVP boundary is
 toolkit-independent: a Qt6 QMainWindow drives the real `DashboardPresenter`
@@ -22,6 +22,9 @@ Third view technology beside GTK and the console (ADR-0020, extends ADR-0002).
   Start/Stop/Reset wired to the real `DashboardPresenter` action methods.
   Cross-thread callbacks marshal onto the Qt UI thread via
   `QMetaObject::invokeMethod(..., Qt::QueuedConnection)`.
+- Equipment and actuator cards (`QtEquipmentCard`, `QtActuatorCard`), created
+  lazily per id and updated live on the tick. The equipment enable toggle
+  forwards to `DashboardPresenter::onEquipmentToggled`.
 - ADR-0020 documenting the third frontend and the toolkit-independence proof.
 
 ### Fixed

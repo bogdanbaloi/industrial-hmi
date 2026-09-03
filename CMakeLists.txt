@@ -1194,6 +1194,8 @@ if(BUILD_QT_FRONTEND)
     target_sources(objectsQt PRIVATE
         src/qt/QtInitRoot.cpp
         src/qt/view/QtDashboardWindow.cpp
+        src/qt/view/widgets/QtEquipmentCard.cpp
+        src/qt/view/widgets/QtActuatorCard.cpp
     )
     target_link_libraries(objectsQt
         PUBLIC
