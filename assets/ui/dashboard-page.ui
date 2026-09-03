@@ -5,6 +5,7 @@
   <!-- Root vertical box - becomes DashboardPage's child -->
   <object class="GtkBox" id="dashboard_root">
     <property name="orientation">vertical</property>
+    <property name="hexpand">true</property>
     <property name="spacing">5</property>
     <property name="margin-start">32</property>
     <property name="margin-end">32</property>
@@ -47,6 +48,7 @@
         <property name="orientation">horizontal</property>
         <property name="spacing">12</property>
         <property name="homogeneous">true</property>
+        <property name="hexpand">true</property>
         <property name="margin-top">12</property>
         <property name="margin-bottom">4</property>
         <property name="css-classes">kpi-strip</property>
@@ -70,6 +72,7 @@
         <property name="margin-bottom">4</property>
         <property name="css-classes">work-unit-card</property>
         <property name="vexpand">false</property>
+        <property name="hexpand">true</property>
         <child>
           <object class="GtkBox">
             <property name="orientation">horizontal</property>
@@ -208,6 +211,7 @@
         <property name="margin-bottom">4</property>
         <property name="column-spacing">16</property>
         <property name="column-homogeneous">true</property>
+        <property name="hexpand">true</property>
 
         <!-- MIXER (column 0) -->
         <child>
@@ -296,6 +300,7 @@
         <property name="margin-bottom">4</property>
         <property name="homogeneous">true</property>
         <property name="vexpand">true</property>
+        <property name="hexpand">true</property>
 
         <!-- Checkpoint 0 -->
         <child>
@@ -314,7 +319,7 @@
             <!-- Gauge injected here from code -->
             <child><object class="GtkBox" id="qc_gauge_container_0"><property name="halign">center</property><property name="hexpand">true</property></object></child>
             <child><object class="GtkLabel" id="qc_rate_0"><property name="label">---%</property><property name="css-classes">pass-rate-large</property></object></child>
-            <child><object class="GtkLabel" id="qc_stats_0"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property></object></child>
+            <child><object class="GtkLabel" id="qc_stats_0"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property><property name="ellipsize">end</property></object></child>
             <child><object class="GtkLabel" id="qc_defect_0"><property name="label">-</property><property name="css-classes">defect-info</property><property name="ellipsize">end</property></object></child>
             <!-- Trend chart injected here from code -->
             <child><object class="GtkBox" id="qc_trend_container_0"><property name="vexpand">true</property><property name="hexpand">true</property></object></child>
@@ -337,7 +342,7 @@
             </child>
             <child><object class="GtkBox" id="qc_gauge_container_1"><property name="halign">center</property><property name="hexpand">true</property></object></child>
             <child><object class="GtkLabel" id="qc_rate_1"><property name="label">---%</property><property name="css-classes">pass-rate-large</property></object></child>
-            <child><object class="GtkLabel" id="qc_stats_1"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property></object></child>
+            <child><object class="GtkLabel" id="qc_stats_1"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property><property name="ellipsize">end</property></object></child>
             <child><object class="GtkLabel" id="qc_defect_1"><property name="label">-</property><property name="css-classes">defect-info</property><property name="ellipsize">end</property></object></child>
             <child><object class="GtkBox" id="qc_trend_container_1"><property name="vexpand">true</property><property name="hexpand">true</property></object></child>
           </object>
@@ -359,7 +364,7 @@
             </child>
             <child><object class="GtkBox" id="qc_gauge_container_2"><property name="halign">center</property><property name="hexpand">true</property></object></child>
             <child><object class="GtkLabel" id="qc_rate_2"><property name="label">---%</property><property name="css-classes">pass-rate-large</property></object></child>
-            <child><object class="GtkLabel" id="qc_stats_2"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property></object></child>
+            <child><object class="GtkLabel" id="qc_stats_2"><property name="label" translatable="yes">0 inspected • 0 defects</property><property name="css-classes">quality-stats</property><property name="ellipsize">end</property></object></child>
             <child><object class="GtkLabel" id="qc_defect_2"><property name="label">-</property><property name="css-classes">defect-info</property><property name="ellipsize">end</property></object></child>
             <child><object class="GtkBox" id="qc_trend_container_2"><property name="vexpand">true</property><property name="hexpand">true</property></object></child>
           </object>
@@ -383,7 +388,7 @@
             <property name="margin-bottom">8</property>
             <property name="halign">center</property>
 
-            <child><object class="GtkLabel" id="cp_indicator"><property name="label" translatable="yes">System Idle</property><property name="css-classes">active-indicator</property></object></child>
+            <child><object class="GtkLabel" id="cp_indicator"><property name="label" translatable="yes">System Idle</property><property name="css-classes">active-indicator</property><property name="width-request">150</property><property name="xalign">0.5</property><property name="ellipsize">end</property></object></child>
             <child><object class="GtkButton" id="cp_start"><property name="label" translatable="yes">START</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
             <child><object class="GtkButton" id="cp_stop"><property name="label" translatable="yes">STOP</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>
             <child><object class="GtkButton" id="cp_reset"><property name="label" translatable="yes">RESET</property><property name="css-classes">control-button</property><property name="width-request">100</property><property name="height-request">40</property></object></child>

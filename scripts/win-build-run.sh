@@ -12,6 +12,9 @@
 #   --auth             Enable auth (login dialog, RBAC, Users tab, audit log)
 #   --historian        Enable historian (SQLite time-series + History tab)
 #   --modbus           Enable Modbus TCP master (default off)
+#   --tcp / --no-tcp       Force TCP backend on/off (default on in config)
+#   --mqtt / --no-mqtt     Force MQTT backend on/off (default on; needs a broker)
+#   --opcua / --no-opcua   Force OPC-UA backend on/off (default on)
 #   --all              Shortcut: --multistation --auth --historian --modbus
 #   --no-run           Build only, do not launch
 #   --clean            Wipe build/release before configure
@@ -27,6 +30,10 @@ WANT_MULTISTATION=0
 WANT_AUTH=0
 WANT_HISTORIAN=0
 WANT_MODBUS=0
+# Tri-state for default-on backends: "" = leave config as-is, 1 = on, 0 = off.
+WANT_TCP=""
+WANT_MQTT=""
+WANT_OPCUA=""
 WANT_RUN=1
 WANT_CLEAN=0
 WANT_TESTS=0
@@ -36,6 +43,12 @@ for arg in "$@"; do
         --auth)         WANT_AUTH=1 ;;
         --historian)    WANT_HISTORIAN=1 ;;
         --modbus)       WANT_MODBUS=1 ;;
+        --tcp)          WANT_TCP=1 ;;
+        --no-tcp)       WANT_TCP=0 ;;
+        --mqtt)         WANT_MQTT=1 ;;
+        --no-mqtt)      WANT_MQTT=0 ;;
+        --opcua)        WANT_OPCUA=1 ;;
+        --no-opcua)     WANT_OPCUA=0 ;;
         --all)
             WANT_MULTISTATION=1
             WANT_AUTH=1
@@ -130,6 +143,27 @@ else
     if [[ ${WANT_MODBUS} -eq 1 ]]; then
         echo "Enabling Modbus TCP master"
         patch_json 'network.modbus.enabled' 'true'
+    fi
+    if [[ "${WANT_TCP}" == "1" ]]; then
+        echo "Enabling TCP backend"
+        patch_json 'network.tcp.enabled' 'true'
+    elif [[ "${WANT_TCP}" == "0" ]]; then
+        echo "Disabling TCP backend"
+        patch_json 'network.tcp.enabled' 'false'
+    fi
+    if [[ "${WANT_MQTT}" == "1" ]]; then
+        echo "Enabling MQTT backend"
+        patch_json 'network.mqtt.enabled' 'true'
+    elif [[ "${WANT_MQTT}" == "0" ]]; then
+        echo "Disabling MQTT backend"
+        patch_json 'network.mqtt.enabled' 'false'
+    fi
+    if [[ "${WANT_OPCUA}" == "1" ]]; then
+        echo "Enabling OPC-UA backend"
+        patch_json 'network.opcua.enabled' 'true'
+    elif [[ "${WANT_OPCUA}" == "0" ]]; then
+        echo "Disabling OPC-UA backend"
+        patch_json 'network.opcua.enabled' 'false'
     fi
 fi
 

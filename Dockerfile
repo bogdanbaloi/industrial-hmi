@@ -167,6 +167,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 #   even when there's no real display manager; missing them surfaces as
 #   silent crashes inside gtk_init().
 # - ca-certificates: same TLS rationale as the console stage.
+# - adwaita-icon-theme + hicolor-icon-theme: the GTK icon theme. Without
+#   it GTK still starts, but themed icons (alert states, buttons) render
+#   blank. Minimal image dropped it, so add it back for the demo visuals.
+# - librsvg2-common: registers the SVG gdk-pixbuf loader so inline / file
+#   SVGs (the app logo) render instead of showing empty.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtkmm-4.0-0 \
     libsqlite3-0 \
@@ -178,6 +183,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dbus-x11 \
     libxkbcommon0 \
     fluxbox \
+    adwaita-icon-theme \
+    hicolor-icon-theme \
+    librsvg2-common \
     ca-certificates \
     tzdata \
  && rm -rf /var/lib/apt/lists/*
