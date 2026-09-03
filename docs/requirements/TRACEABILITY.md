@@ -46,6 +46,7 @@ requirements may be smoke-tested.
 | REQ-ARCH-008 | MUST | every integration backend + `src/gtk/view/pages/DashboardPage.cpp` (`Glib::signal_idle`) | CI: TSan job | -- |
 | REQ-ARCH-009 | NICE | `src/config/ConfigManager.h`, callers throughout | ConfigManagerTest + integration tests | 0010 |
 | REQ-ARCH-010 | SHOULD | `src/core/SpscQueue.h` (header-only lock-free SPSC ring buffer; alignas(64) head_/tail_, release/acquire ordering, power-of-two static_assert, drop-on-full), `src/integration/modbus/ModbusPollLoop.cpp` (cross-thread wiring: poll thread produces, drain thread consumes, ordered shutdown, drop counter), `src/integration/modbus/ModbusBackend.cpp` (dropped-samples in metricsSummary) | SpscQueueTest (8 logic + StressProducerConsumer TSan), ModbusPollLoopTest (pollOnce/drainOnce round-trip + DrainOnceIsNoOpWhenQueueEmpty + PollOncePushesDroppedSamplesOnQueueFull + two-thread start/stop lifecycle) | 0018 |
+| REQ-ARCH-011 | SHOULD | `src/qt/main.cpp`, `src/qt/QtInitRoot.cpp`, `src/qt/view/QtDashboardWindow.cpp`, `CMakeLists.txt` (`BUILD_QT_FRONTEND` option + `objectsQt` / `industrial-hmi-qt` targets) | manual run of `industrial-hmi-qt` (Start/Stop/Reset drive state, tick updates work-unit + status zone); DashboardPresenterTest (presenter logic already covered) | 0001, 0002, 0003, 0020 |
 
 ## AUTH
 
@@ -186,7 +187,7 @@ requirements may be smoke-tested.
 
 | Category | Total | MUST | SHOULD | NICE | Fully tested | Manual-only |
 |---|---|---|---|---|---|---|
-| ARCH | 10 | 5 | 3 | 2 | 8 | 2 (REQ-ARCH-006, manual smoke) |
+| ARCH | 11 | 5 | 4 | 2 | 8 | 3 (REQ-ARCH-006, REQ-ARCH-011, manual smoke) |
 | AUTH | 6 | 3 | 2 | 1 | 6 | 0 |
 | CORE | 9 | 2 | 3 | 4 | 9 | 0 |
 | DASHBOARD | 7 | 3 | 3 | 1 | 7 | 0 |
@@ -198,16 +199,17 @@ requirements may be smoke-tested.
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **58** | **24** | **22** | **12** | **53** | **5** |
+| **TOTAL** | **59** | **24** | **23** | **12** | **53** | **6** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE
 requirements may be smoke-tested or manual-only.
 
 **Current status:** 24 / 24 MUST requirements are automated;
-16 / 17 SHOULD requirements are automated (REQ-SETTINGS-001 has
+16 / 18 SHOULD requirements are automated (REQ-SETTINGS-001 has
 a unit test for the toggle handler but the theme propagation
-itself is verified manually). All NICE requirements have a path
+itself is verified manually, and REQ-ARCH-011's Qt frontend is
+verified by a manual run). All NICE requirements have a path
 to verification.
 
 ---

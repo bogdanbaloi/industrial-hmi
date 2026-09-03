@@ -242,6 +242,27 @@ start/stop two-thread lifecycle joins cleanly).
 
 Needs: utest
 
+### REQ-ARCH-011 (SHOULD) — Qt frontend proves the toolkit-independent MVP boundary
+
+`req~arch-011~1`
+
+An optional Qt6 desktop frontend (`industrial-hmi-qt`, gated by `BUILD_QT_FRONTEND`,
+default OFF) **shall** render the dashboard by driving the existing
+`DashboardPresenter` through the `app::ViewObserver` seam, with no change to
+`DashboardPresenter`, its view-models, `ViewObserver`, or the model layer. It
+**shall** be a third frontend beside the GTK and console binaries, reusing the
+shared presenter and model object libraries and adding only a new View layer
+plus its own composition root. Cross-thread ViewObserver callbacks **shall** be
+marshalled onto the Qt UI thread before touching any widget, the Qt-native
+analogue of the GTK `Glib::signal_idle` hand-off.
+
+Verified by: manual run of `industrial-hmi-qt` (Start/Stop/Reset drive the real state
+machine, work-unit and status-zone update on tick); the presenter logic is
+already covered by DashboardPresenterTest.
+
+ADR: 0001 (MVP layer boundaries), 0002 (Two front-ends), 0003 (Observer),
+0020 (Qt frontend for MVP toolkit-independence).
+
 ---
 
 ## AUTH — Authentication & Authorisation

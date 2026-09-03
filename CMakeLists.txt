@@ -319,6 +319,16 @@ option(BUILD_OPCUA_BACKEND
 option(BUILD_MODBUS_BACKEND
     "Compile Modbus master backend (hand-rolled MBAP over Boost.Asio)" ON)
 
+# Qt6 desktop frontend (industrial-hmi-qt): an opt-in third frontend beside the GTK
+# and console binaries. Proves the MVP View seam is toolkit-independent by
+# driving the real DashboardPresenter from a Qt6 QMainWindow, with zero
+# changes to the presenter / model layers. OFF by default so the GTK,
+# console, CI and WSL builds are untouched (Qt6 need not be installed unless
+# this is switched on). Qt6 comes from the system toolchain, not Conan.
+# See ADR-0020.
+option(BUILD_QT_FRONTEND
+    "Compile the opt-in Qt6 desktop frontend (industrial-hmi-qt)" OFF)
+
 if(BUILD_OPCUA_BACKEND)
     message(STATUS "OPC-UA backend enabled -- fetching open62541 v1.5.4")
 
@@ -1170,6 +1180,54 @@ target_compile_definitions(industrial-hmi-console PRIVATE
     LOCALE_DIR="${LOCALE_BUILD_DIR}"
 )
 
+# Qt6 Desktop Frontend (industrial-hmi-qt) -- opt-in third frontend (ADR-0020).
+# Mirrors the industrial-hmi-console pattern: a sibling executable that
+# links the shared presenter / model / integration object libraries and
+# adds only a new View layer (src/qt) plus its own composition root. No
+# gtkmm widget code and no Conan -- Qt6 comes from the system toolchain.
+if(BUILD_QT_FRONTEND)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
+    # View-layer object library. AUTOMOC is scoped to THIS target only so
+    # the GTK / console / test object libraries never run moc.
+    add_library(objectsQt OBJECT)
+    target_sources(objectsQt PRIVATE
+        src/qt/QtInitRoot.cpp
+        src/qt/view/QtDashboardWindow.cpp
+    )
+    target_link_libraries(objectsQt
+        PUBLIC
+            objectsModel
+            objectsConfig
+            objectsCore
+            objectsPresenter
+            Qt6::Widgets
+    )
+    set_target_properties(objectsQt PROPERTIES AUTOMOC ON)
+
+    add_executable(industrial-hmi-qt src/qt/main.cpp)
+    target_link_libraries(industrial-hmi-qt
+        PRIVATE
+            objectsQt
+            objectsModel
+            objectsConfig
+            objectsCore
+            objectsPresenter
+            objectsIntegrationCore
+            objectsMl
+            objectsAuth
+            Threads::Threads
+            Qt6::Widgets
+    )
+    if(WIN32)
+        # Winsock arrives transitively via objectsModel (PUBLIC ws2_32 /
+        # mswsock), kept explicit for parity with the console target.
+        target_link_libraries(industrial-hmi-qt PRIVATE ws2_32 mswsock)
+    endif()
+    add_dependencies(industrial-hmi-qt CopyAssets CopyConfig)
+    message(STATUS "Qt frontend enabled -- building industrial-hmi-qt")
+endif()
+
 # libintl - needed on platforms where gettext is not in libc (Windows, macOS)
 if(Intl_FOUND)
     target_include_directories(industrial-hmi PRIVATE ${Intl_INCLUDE_DIRS})
@@ -1369,6 +1427,9 @@ message(STATUS "  objectsAppGtk          - GTK application bootstrap (Applicatio
 message(STATUS "  objectsPresenter       - Presenter layer (MVP orchestration)")
 message(STATUS "  objectsView            - View layer (GTK4 pages + dialogs + widgets)")
 message(STATUS "  objectsConsole         - Headless console front-end (GTK-free)")
+if(BUILD_QT_FRONTEND)
+    message(STATUS "  objectsQt              - Qt6 desktop front-end (QMainWindow + ViewObserver)")
+endif()
 message(STATUS "")
 message(STATUS "Dependency graph (low -> high):")
 message(STATUS "  Config -> Model -> Core -> Auth   ----------+")
@@ -1377,6 +1438,9 @@ message(STATUS "                          \\-> Ml             --+")
 message(STATUS "                                              |")
 message(STATUS "                                              +-- View    -> industrial-hmi (GTK exe)")
 message(STATUS "                                              +-- Console -> industrial-hmi-console")
+if(BUILD_QT_FRONTEND)
+    message(STATUS "                                              +-- Qt      -> industrial-hmi-qt")
+endif()
 message(STATUS "")
 if(WIN32)
     message(STATUS "Windows Build:")

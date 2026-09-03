@@ -51,6 +51,7 @@ Each file has the following sections:
 | 0016 | [Profiling discipline: microbench + callgrind, no flamegraph Phase 1](0016-profiling-microbench-and-callgrind.md) | Accepted |
 | 0017 | [Reject TimeSource injection everywhere](0017-reject-timesource-injection-everywhere.md) | Accepted |
 | 0018 | [SPSC lock-free queue](0018-spsc-lock-free-queue.md) | Accepted |
+| 0020 | [Qt frontend proves MVP toolkit-independence](0020-qt-frontend-mvp-toolkit-independence.md) | Accepted |
 
 ## Adding a new ADR
 

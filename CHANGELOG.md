@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Qt desktop frontend (dashboard, Slice 1) (REQ-ARCH-011)
+
+Adds an opt-in third frontend that proves the MVP boundary is
+toolkit-independent: a Qt6 QMainWindow drives the real `DashboardPresenter`
+through the `ViewObserver` seam with no change to the presenter or model layer.
+Third view technology beside GTK and the console (ADR-0020, extends ADR-0002).
+
+#### Added
+- `industrial-hmi-qt` executable behind `BUILD_QT_FRONTEND` (default OFF, Qt6 from the
+  system toolchain, not Conan): `QtInitRoot` composition root (a direct mirror
+  of `InitConsole`) and `QtDashboardWindow` (`QMainWindow` + `app::ViewObserver`).
+- Slice 1 renders the control panel, status zone and work-unit info, with
+  Start/Stop/Reset wired to the real `DashboardPresenter` action methods.
+  Cross-thread callbacks marshal onto the Qt UI thread via
+  `QMetaObject::invokeMethod(..., Qt::QueuedConnection)`.
+- ADR-0020 documenting the third frontend and the toolkit-independence proof.
+
 ### Fixed
 - Dashboard vertical overflow against the 1200px height budget: the
   work-unit card's top/bottom margins were 25px each, pushing the
