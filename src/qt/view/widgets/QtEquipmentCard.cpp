@@ -1,7 +1,10 @@
 #include "src/qt/view/widgets/QtEquipmentCard.h"
 
+#include "src/qt/view/QtTheme.h"
+
 #include <QCheckBox>
 #include <QLabel>
+#include <QObject>
 #include <QSignalBlocker>
 #include <QString>
 #include <QVBoxLayout>
@@ -12,32 +15,35 @@ namespace app::view {
 
 namespace {
 
-const char* statusText(presenter::EquipmentCardStatus status) {
+QString statusText(presenter::EquipmentCardStatus status) {
     using Status = presenter::EquipmentCardStatus;
     switch (status) {
-        case Status::Offline:     return "Offline";
-        case Status::StartingUp:  return "Starting up";
-        case Status::CheckOutput: return "Self-check";
-        case Status::Online:      return "Online";
-        case Status::Processing:  return "Processing";
-        case Status::WarmingUp:   return "Warming up";
-        case Status::Ready:       return "Ready";
-        case Status::Reboot:      return "Reboot";
-        case Status::Error:       return "Error";
-        case Status::Disabled:    return "Disabled";
-        case Status::Unknown:     return "Unknown";
+        case Status::Offline:     return QObject::tr("Offline");
+        case Status::StartingUp:  return QObject::tr("Starting up");
+        case Status::CheckOutput: return QObject::tr("Self-check");
+        case Status::Online:      return QObject::tr("Online");
+        case Status::Processing:  return QObject::tr("Processing");
+        case Status::WarmingUp:   return QObject::tr("Warming up");
+        case Status::Ready:       return QObject::tr("Ready");
+        case Status::Reboot:      return QObject::tr("Reboot");
+        case Status::Error:       return QObject::tr("Error");
+        case Status::Disabled:    return QObject::tr("Disabled");
+        case Status::Unknown:     return QObject::tr("Unknown");
     }
-    return "Unknown";
+    return QObject::tr("Unknown");
 }
 
 const char* statusColor(presenter::EquipmentCardStatus status) {
     using Status = presenter::EquipmentCardStatus;
     switch (status) {
-        case Status::Error:    return "#c62828";  // red
+        case Status::Error:
+            return theme::kColorAlarm;
         case Status::Offline:
         case Status::Disabled:
-        case Status::Unknown:  return "#616161";  // grey
-        default:               return "#2e7d32";  // green
+        case Status::Unknown:
+            return theme::kColorNeutral;
+        default:
+            return theme::kColorOk;
     }
 }
 
@@ -48,14 +54,14 @@ QtEquipmentCard::QtEquipmentCard(std::uint32_t equipmentId,
     : QGroupBox(parent),
       equipmentId_(equipmentId),
       onToggle_(std::move(onToggle)) {
-    setTitle(QString("Equipment %1").arg(equipmentId_));
+    setTitle(tr("Equipment %1").arg(equipmentId_));
 
     auto* layout = new QVBoxLayout(this);
 
-    statusLabel_      = new QLabel("Status: -", this);
-    consumablesLabel_ = new QLabel("Supplies: -", this);
+    statusLabel_      = new QLabel(tr("Status: -"), this);
+    consumablesLabel_ = new QLabel(tr("Supplies: -"), this);
     messageLabel_     = new QLabel("-", this);
-    enableCheck_      = new QCheckBox("Enabled", this);
+    enableCheck_      = new QCheckBox(tr("Enabled"), this);
 
     layout->addWidget(statusLabel_);
     layout->addWidget(consumablesLabel_);
@@ -74,13 +80,11 @@ QtEquipmentCard::QtEquipmentCard(std::uint32_t equipmentId,
 
 void QtEquipmentCard::applyViewModel(
     const presenter::EquipmentCardViewModel& viewModel) {
-    statusLabel_->setText(
-        QString("Status: %1").arg(statusText(viewModel.status)));
-    statusLabel_->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(statusColor(viewModel.status)));
+    statusLabel_->setText(tr("Status: %1").arg(statusText(viewModel.status)));
+    statusLabel_->setStyleSheet(theme::coloredBold(statusColor(viewModel.status)));
 
     consumablesLabel_->setText(
-        QString("Supplies: %1").arg(QString::fromStdString(viewModel.consumables)));
+        tr("Supplies: %1").arg(QString::fromStdString(viewModel.consumables)));
     messageLabel_->setText(QString::fromStdString(viewModel.messageStatus));
 
     // Reflect the enabled flag without re-triggering the toggled signal.
