@@ -3,12 +3,15 @@
 // Boost.Asio header pulls in wingdi.h (ERROR=0 macro).
 #include "src/model/SimulatedModel.h"
 #include "src/presenter/DashboardPresenter.h"
+#include "src/presenter/ProductsPresenter.h"
 
 #include "src/qt/QtInitRoot.h"
 
+#include "src/config/ConfigManager.h"
 #include "src/core/Bootstrap.h"
 #include "src/core/LoggerBase.h"
 #include "src/qt/view/QtDashboardPage.h"
+#include "src/qt/view/QtProductsPage.h"
 #include "src/qt/view/QtMainWindow.h"
 #include "src/model/ModelContext.h"
 
@@ -23,10 +26,16 @@ QtInitRoot::~QtInitRoot() {
     // callbacks reach the window, then detach and drop.
     tickTimer_.reset();
 
-    if (dashboardPresenter_ && window_) {
-        dashboardPresenter_->removeObserver(window_->dashboardPage());
+    if (window_) {
+        if (dashboardPresenter_) {
+            dashboardPresenter_->removeObserver(window_->dashboardPage());
+        }
+        if (productsPresenter_) {
+            productsPresenter_->removeObserver(window_->productsPage());
+        }
     }
     window_.reset();
+    productsPresenter_.reset();
     dashboardPresenter_.reset();
 
     // Mirror InitConsole's shutdown: drop model callbacks and stop the Asio
@@ -46,14 +55,22 @@ void QtInitRoot::run() {
 
     // Presenter: DI construction, identical to the console and test wiring.
     dashboardPresenter_ = std::make_unique<DashboardPresenter>(model);
+    productsPresenter_  = std::make_unique<ProductsPresenter>();
 
-    // Shell owns the page widgets; the presenter never learns it is talking to
-    // a Qt widget rather than a GTK page or a terminal.
-    window_ = std::make_unique<view::QtMainWindow>(*dashboardPresenter_);
+    // Shell owns the page widgets; the presenters never learn they are talking
+    // to Qt widgets rather than GTK pages or a terminal.
+    window_ = std::make_unique<view::QtMainWindow>(
+        *dashboardPresenter_, *productsPresenter_,
+        app::config::ConfigManager::instance());
 
     dashboardPresenter_->addObserver(window_->dashboardPage());
+    productsPresenter_->addObserver(window_->productsPage());
     dashboardPresenter_->initialize();
+    productsPresenter_->initialize();
     model.initializeDemoData();
+
+    // Populate the products table once (onProductsLoaded fires synchronously).
+    productsPresenter_->loadProducts();
 
     // Drive the simulation from a UI-thread timer. Every tick runs on the Qt
     // event loop, so the presenter callbacks reach the widgets on the UI thread

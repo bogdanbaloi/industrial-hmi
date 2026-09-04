@@ -11,6 +11,7 @@ class Bootstrap;
 
 namespace app {
 class DashboardPresenter;
+class ProductsPresenter;
 }
 
 namespace app::view {
@@ -50,6 +51,7 @@ public:
 private:
     core::Bootstrap&                    bootstrap_;
     std::unique_ptr<DashboardPresenter> dashboardPresenter_;
+    std::unique_ptr<ProductsPresenter>  productsPresenter_;
     std::unique_ptr<view::QtMainWindow> window_;
     std::unique_ptr<QTimer>             tickTimer_;
 
