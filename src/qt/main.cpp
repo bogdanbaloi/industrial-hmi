@@ -28,7 +28,8 @@ int main(int argc, char* argv[]) {
         app::qt::QtInitRoot root(bootstrap);
         root.run();
 
-        return app.exec();
+        // exec() is static on QCoreApplication; call it as such.
+        return QApplication::exec();
     } catch (const std::exception& e) {
         std::cerr << "Fatal: " << e.what() << '\n';
         return 1;

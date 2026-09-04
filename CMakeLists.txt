@@ -1193,7 +1193,8 @@ if(BUILD_QT_FRONTEND)
     add_library(objectsQt OBJECT)
     target_sources(objectsQt PRIVATE
         src/qt/QtInitRoot.cpp
-        src/qt/view/QtDashboardWindow.cpp
+        src/qt/view/QtMainWindow.cpp
+        src/qt/view/QtDashboardPage.cpp
         src/qt/view/widgets/QtEquipmentCard.cpp
         src/qt/view/widgets/QtActuatorCard.cpp
         src/qt/view/widgets/QtQualityCard.cpp
@@ -1206,7 +1207,10 @@ if(BUILD_QT_FRONTEND)
             objectsPresenter
             Qt6::Widgets
     )
-    set_target_properties(objectsQt PROPERTIES AUTOMOC ON)
+    # AUTOMOC/AUTOUIC scoped to THIS target only: the GTK / console / test
+    # object libraries never run moc or uic. AUTOUIC turns QtDashboardPage.ui
+    # into ui_QtDashboardPage.h at build time (the Qt analog of GtkBuilder).
+    set_target_properties(objectsQt PROPERTIES AUTOMOC ON AUTOUIC ON)
 
     add_executable(industrial-hmi-qt src/qt/main.cpp)
     target_link_libraries(industrial-hmi-qt
