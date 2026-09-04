@@ -142,6 +142,7 @@ jobs:
           build-essential cmake ninja-build \
           libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev \
           libgtest-dev libgmock-dev \
+          qt6-base-dev \
           clang-tidy
 
     # ONNX Runtime is needed at configure time so OnnxImageClassifier.cpp
@@ -160,6 +161,7 @@ jobs:
           -DBUILD_TESTS=ON \
           -DBUILD_ML_CLASSIFIER=ON \
           -DBUILD_OPCUA_BACKEND=ON \
+          -DBUILD_QT_FRONTEND=ON \
           -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime" \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
