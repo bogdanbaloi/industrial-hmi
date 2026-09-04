@@ -1196,6 +1196,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/QtDashboardWindow.cpp
         src/qt/view/widgets/QtEquipmentCard.cpp
         src/qt/view/widgets/QtActuatorCard.cpp
+        src/qt/view/widgets/QtQualityCard.cpp
     )
     target_link_libraries(objectsQt
         PUBLIC

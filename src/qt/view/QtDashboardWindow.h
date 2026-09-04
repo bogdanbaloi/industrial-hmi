@@ -24,6 +24,7 @@ namespace app::view {
 
 class QtEquipmentCard;
 class QtActuatorCard;
+class QtQualityCard;
 
 /// Qt implementation of the dashboard View. It is both a QMainWindow and an
 /// app::ViewObserver, so the real DashboardPresenter drives it through the
@@ -53,6 +54,7 @@ public:
     void onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) override;
     void onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) override;
     void onActuatorCardChanged(const presenter::ActuatorCardViewModel& vm) override;
+    void onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) override;
 
 private:
     void buildUi();
@@ -63,6 +65,7 @@ private:
     void renderStatusZone(const presenter::StatusZoneViewModel& vm);
     void renderEquipmentCard(const presenter::EquipmentCardViewModel& vm);
     void renderActuatorCard(const presenter::ActuatorCardViewModel& vm);
+    void renderQualityCard(const presenter::QualityCheckpointViewModel& vm);
 
     DashboardPresenter& presenter_;
 
@@ -79,8 +82,10 @@ private:
     // reports each id, then updated in place on later notifications.
     QHBoxLayout* equipmentLayout_{nullptr};
     QHBoxLayout* actuatorLayout_{nullptr};
+    QHBoxLayout* qualityLayout_{nullptr};
     std::unordered_map<std::uint32_t, QtEquipmentCard*> equipmentCards_;
     std::unordered_map<std::uint32_t, QtActuatorCard*>  actuatorCards_;
+    std::unordered_map<std::uint32_t, QtQualityCard*>   qualityCards_;
 };
 
 }  // namespace app::view

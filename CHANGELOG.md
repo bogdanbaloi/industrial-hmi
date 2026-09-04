@@ -25,6 +25,8 @@ Third view technology beside GTK and the console (ADR-0020, extends ADR-0002).
 - Equipment and actuator cards (`QtEquipmentCard`, `QtActuatorCard`), created
   lazily per id and updated live on the tick. The equipment enable toggle
   forwards to `DashboardPresenter::onEquipmentToggled`.
+- Quality-checkpoint cards (`QtQualityCard`) with pass rate, inspected count,
+  defects and last-defect, updated live on the tick.
 - ADR-0020 documenting the third frontend and the toolkit-independence proof.
 
 ### Fixed

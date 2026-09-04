@@ -8,6 +8,7 @@
 
 #include "src/qt/view/widgets/QtActuatorCard.h"
 #include "src/qt/view/widgets/QtEquipmentCard.h"
+#include "src/qt/view/widgets/QtQualityCard.h"
 
 #include <QGridLayout>
 #include <QGroupBox>
@@ -97,6 +98,10 @@ void QtDashboardWindow::buildUi() {
     auto* actuatorBox = new QGroupBox("Actuators", central);
     actuatorLayout_ = new QHBoxLayout(actuatorBox);
     layout->addWidget(actuatorBox);
+
+    auto* qualityBox = new QGroupBox("Quality checkpoints", central);
+    qualityLayout_ = new QHBoxLayout(qualityBox);
+    layout->addWidget(qualityBox);
 
     auto* buttonRow = new QHBoxLayout();
     startButton_ = new QPushButton("Start", central);
@@ -201,6 +206,23 @@ void QtDashboardWindow::renderActuatorCard(
         auto* card = new QtActuatorCard(vm.actuatorId);
         actuatorLayout_->addWidget(card);
         it = actuatorCards_.emplace(vm.actuatorId, card).first;
+    }
+    it->second->applyViewModel(vm);
+}
+
+void QtDashboardWindow::onQualityCheckpointChanged(
+    const presenter::QualityCheckpointViewModel& vm) {
+    QMetaObject::invokeMethod(
+        this, [this, vm] { renderQualityCard(vm); }, Qt::QueuedConnection);
+}
+
+void QtDashboardWindow::renderQualityCard(
+    const presenter::QualityCheckpointViewModel& vm) {
+    auto it = qualityCards_.find(vm.checkpointId);
+    if (it == qualityCards_.end()) {
+        auto* card = new QtQualityCard(vm.checkpointId);
+        qualityLayout_->addWidget(card);
+        it = qualityCards_.emplace(vm.checkpointId, card).first;
     }
     it->second->applyViewModel(vm);
 }
