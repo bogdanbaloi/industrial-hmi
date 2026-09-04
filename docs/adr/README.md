@@ -52,6 +52,7 @@ Each file has the following sections:
 | 0017 | [Reject TimeSource injection everywhere](0017-reject-timesource-injection-everywhere.md) | Accepted |
 | 0018 | [SPSC lock-free queue](0018-spsc-lock-free-queue.md) | Accepted |
 | 0019 | [ONNX Runtime isolated behind a dlopen shared module](0019-onnx-dlopen-shared-module.md) | Accepted (amends 0009) |
+| 0020 | [Qt frontend proves MVP toolkit-independence](0020-qt-frontend-mvp-toolkit-independence.md) | Accepted |
 
 ## Adding a new ADR
 

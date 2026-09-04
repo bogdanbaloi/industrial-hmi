@@ -142,6 +142,7 @@ jobs:
           build-essential cmake ninja-build \
           libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev \
           libgtest-dev libgmock-dev \
+          qt6-base-dev \
           clang-tidy
 
     # ONNX Runtime is needed at configure time so OnnxImageClassifier.cpp
@@ -160,6 +161,7 @@ jobs:
           -DBUILD_TESTS=ON \
           -DBUILD_ML_CLASSIFIER=ON \
           -DBUILD_OPCUA_BACKEND=ON \
+          -DBUILD_QT_FRONTEND=ON \
           -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime" \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
@@ -172,6 +174,13 @@ jobs:
     # compile_commands.json.
     - name: Pre-build open62541 generated headers
       run: cmake --build build/tidy --target open62541 -- -j$(nproc)
+
+    # AUTOUIC/AUTOMOC generate ui_*.h / moc_*.h for the Qt frontend at build
+    # time. clang-tidy follows #include "ui_QtDashboardPage.h" when analysing
+    # src/qt and fails on "file not found" if the generator has not run yet.
+    # Build the Qt autogen target first so the generated headers exist on disk.
+    - name: Pre-build Qt autogen headers
+      run: cmake --build build/tidy --target objectsQt_autogen -- -j$(nproc)
 
     - name: Run clang-tidy on src/
       run: |
