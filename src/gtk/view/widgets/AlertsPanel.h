@@ -300,6 +300,12 @@ private:
             auto* badge = Gtk::make_managed<Gtk::Label>(stateBadge(a.state));
             badge->add_css_class("alert-state-badge");
             badge->set_valign(Gtk::Align::CENTER);
+            // Fixed width so the badge occupies the same space across all
+            // ISA-18.2 states (UNACK / ACK / RTN / SHELVED). Without this a
+            // UNACK -> RTN transition changes the label width, which reflows
+            // the alert card and the whole fixed-width sidebar with it.
+            badge->set_width_chars(7);
+            badge->set_xalign(0.5f);
             badge->set_tooltip_text(stateTooltip(a.state));
             top->append(*badge);
         }

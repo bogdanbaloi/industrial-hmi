@@ -1,6 +1,7 @@
 {
   "ui": {
-    "palette": "right"
+    "palette": "right",
+    "multistation_enabled": "false"
   },
   "application": {
     "name": "Industrial HMI",
