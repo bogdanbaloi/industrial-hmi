@@ -2,23 +2,42 @@
 
 #include <QMainWindow>
 
-class QTabWidget;
+class QStackedWidget;
 
 namespace app {
 class DashboardPresenter;
+class ProductsPresenter;
+}
+
+namespace app::presenter {
+class AlertCenter;
+class QualityInspectionPresenter;
+}
+
+namespace app::config {
+class ConfigManager;
 }
 
 namespace app::view {
 
 class QtDashboardPage;
+class QtProductsPage;
+class QtGoodsReceiptPage;
+class QtStatusStrip;
+class QtPaletteManager;
+class QtSidebar;
 
-/// The Qt application shell: a QMainWindow hosting a QTabWidget, one tab per
-/// page. Slice 4 holds the dashboard; later slices add Settings and Products as
-/// further tabs. It owns the page widgets through the tab widget (Qt parent
-/// ownership) and exposes them so the composition root can attach observers.
+/// The Qt application shell: a custom QtSidebar rail beside a QStackedWidget,
+/// one stacked page per nav entry (the GTK-sidebar feel on Qt). It owns the
+/// page widgets and exposes them so the composition root can attach observers.
 class QtMainWindow : public QMainWindow {
 public:
     explicit QtMainWindow(DashboardPresenter& dashboardPresenter,
+                          ProductsPresenter& productsPresenter,
+                          presenter::AlertCenter& alertCenter,
+                          presenter::QualityInspectionPresenter& inspectionPresenter,
+                          const config::ConfigManager& config,
+                          QtPaletteManager& paletteManager,
                           QWidget* parent = nullptr);
     ~QtMainWindow() override;
 
@@ -28,10 +47,22 @@ public:
     QtMainWindow& operator=(QtMainWindow&&)      = delete;
 
     [[nodiscard]] QtDashboardPage* dashboardPage() const { return dashboardPage_; }
+    [[nodiscard]] QtProductsPage* productsPage() const { return productsPage_; }
+    [[nodiscard]] QtStatusStrip* statusStrip() const { return statusStrip_; }
+    [[nodiscard]] QtGoodsReceiptPage* goodsReceiptPage() const {
+        return goodsReceiptPage_;
+    }
+
+    /// Set the active-alert count shown as a badge on the Alerts nav entry.
+    void setAlertsBadge(int count);
 
 private:
-    QTabWidget*      tabs_{nullptr};
+    QtSidebar*       sidebar_{nullptr};
+    QStackedWidget*  stack_{nullptr};
     QtDashboardPage* dashboardPage_{nullptr};
+    QtProductsPage*  productsPage_{nullptr};
+    QtGoodsReceiptPage* goodsReceiptPage_{nullptr};
+    QtStatusStrip*   statusStrip_{nullptr};
 };
 
 }  // namespace app::view

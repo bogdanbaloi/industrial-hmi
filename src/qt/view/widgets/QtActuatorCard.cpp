@@ -1,6 +1,9 @@
 #include "src/qt/view/widgets/QtActuatorCard.h"
 
+#include "src/qt/view/QtTheme.h"
+
 #include <QLabel>
+#include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QVBoxLayout>
@@ -9,27 +12,30 @@ namespace app::view {
 
 namespace {
 
-const char* statusText(presenter::ActuatorCardStatus status) {
+QString statusText(presenter::ActuatorCardStatus status) {
     using Status = presenter::ActuatorCardStatus;
     switch (status) {
-        case Status::Offline:     return "Offline";
-        case Status::Idle:        return "Idle";
-        case Status::Working:     return "Working";
-        case Status::Error:       return "Error";
-        case Status::Homing:      return "Homing";
-        case Status::Calibrating: return "Calibrating";
-        case Status::Unknown:     return "Unknown";
+        case Status::Offline:     return QObject::tr("Offline");
+        case Status::Idle:        return QObject::tr("Idle");
+        case Status::Working:     return QObject::tr("Working");
+        case Status::Error:       return QObject::tr("Error");
+        case Status::Homing:      return QObject::tr("Homing");
+        case Status::Calibrating: return QObject::tr("Calibrating");
+        case Status::Unknown:     return QObject::tr("Unknown");
     }
-    return "Unknown";
+    return QObject::tr("Unknown");
 }
 
 const char* statusColor(presenter::ActuatorCardStatus status) {
     using Status = presenter::ActuatorCardStatus;
     switch (status) {
-        case Status::Error:   return "#c62828";  // red
+        case Status::Error:
+            return theme::kColorAlarm;
         case Status::Offline:
-        case Status::Unknown: return "#616161";  // grey
-        default:              return "#2e7d32";  // green
+        case Status::Unknown:
+            return theme::kColorNeutral;
+        default:
+            return theme::kColorOk;
     }
 }
 
@@ -37,11 +43,11 @@ const char* statusColor(presenter::ActuatorCardStatus status) {
 
 QtActuatorCard::QtActuatorCard(std::uint32_t actuatorId, QWidget* parent)
     : QGroupBox(parent), actuatorId_(actuatorId) {
-    setTitle(QString("Actuator %1").arg(actuatorId_));
+    setTitle(tr("Actuator %1").arg(actuatorId_));
 
     auto* layout = new QVBoxLayout(this);
 
-    statusLabel_  = new QLabel("Status: -", this);
+    statusLabel_  = new QLabel(tr("Status: -"), this);
     messageLabel_ = new QLabel("-", this);
     flagsLabel_   = new QLabel("-", this);
 
@@ -52,21 +58,19 @@ QtActuatorCard::QtActuatorCard(std::uint32_t actuatorId, QWidget* parent)
 
 void QtActuatorCard::applyViewModel(
     const presenter::ActuatorCardViewModel& viewModel) {
-    statusLabel_->setText(
-        QString("Status: %1").arg(statusText(viewModel.status)));
-    statusLabel_->setStyleSheet(
-        QString("color: %1; font-weight: bold;").arg(statusColor(viewModel.status)));
+    statusLabel_->setText(tr("Status: %1").arg(statusText(viewModel.status)));
+    statusLabel_->setStyleSheet(theme::coloredBold(statusColor(viewModel.status)));
 
     messageLabel_->setText(QString::fromStdString(viewModel.statusMessage));
 
     // Compact flag line: mode, home and alert state at a glance.
     QStringList flags;
-    flags << (viewModel.autoMode ? "AUTO" : "MANUAL");
+    flags << (viewModel.autoMode ? tr("AUTO") : tr("MANUAL"));
     if (viewModel.atHomePosition) {
-        flags << "HOME";
+        flags << tr("HOME");
     }
     if (viewModel.hasAlert) {
-        flags << "ALERT";
+        flags << tr("ALERT");
     }
     flagsLabel_->setText(flags.join(" | "));
 }

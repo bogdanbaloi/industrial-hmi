@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sigc++/connection.h>
+
 #include <chrono>
 #include <memory>
 
@@ -11,10 +13,27 @@ class Bootstrap;
 
 namespace app {
 class DashboardPresenter;
+class ProductsPresenter;
+class BackendHealthPresenter;
+}
+
+namespace app::presenter {
+class AlertCenter;
+class QualityInspectionPresenter;
+}
+
+namespace app::ml {
+class ImageDecoder;
+class FakeImageClassifier;
+}
+
+namespace app::integration {
+struct IntegrationServices;
 }
 
 namespace app::view {
 class QtMainWindow;
+class QtPaletteManager;
 }
 
 namespace app::qt {
@@ -48,10 +67,24 @@ public:
     void run();
 
 private:
+    /// Push the active-alarm count onto the sidebar Alerts badge, marshalled to
+    /// the UI thread (the AlertCenter signal may fire on a backend thread).
+    void refreshAlertsBadge();
+
     core::Bootstrap&                    bootstrap_;
-    std::unique_ptr<DashboardPresenter> dashboardPresenter_;
-    std::unique_ptr<view::QtMainWindow> window_;
-    std::unique_ptr<QTimer>             tickTimer_;
+    std::unique_ptr<integration::IntegrationServices> integrationServices_;
+    std::unique_ptr<presenter::AlertCenter>           alertCenter_;
+    std::unique_ptr<BackendHealthPresenter>           backendHealthPresenter_;
+    std::unique_ptr<DashboardPresenter>     dashboardPresenter_;
+    std::unique_ptr<ProductsPresenter>      productsPresenter_;
+    std::unique_ptr<ml::ImageDecoder>            imageDecoder_;
+    std::unique_ptr<ml::FakeImageClassifier>     imageClassifier_;
+    std::unique_ptr<presenter::QualityInspectionPresenter> inspectionPresenter_;
+    std::unique_ptr<view::QtPaletteManager> paletteManager_;
+    std::unique_ptr<view::QtMainWindow>     window_;
+    std::unique_ptr<QTimer>                 tickTimer_;
+    sigc::connection                        systemStateConn_;
+    sigc::connection                        alertsBadgeConn_;
 
     static constexpr std::chrono::milliseconds kTickPeriod{2000};
 };
