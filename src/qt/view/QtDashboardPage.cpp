@@ -7,8 +7,10 @@
 #include "src/qt/view/QtUiDispatch.h"
 #include "src/qt/view/widgets/QtActuatorCard.h"
 #include "src/qt/view/widgets/QtEquipmentCard.h"
+#include "src/qt/view/widgets/QtGauge.h"
 #include "src/qt/view/widgets/QtKpiTile.h"
 #include "src/qt/view/widgets/QtQualityCard.h"
+#include "src/qt/view/widgets/QtUptimeDonut.h"
 
 #include "ui_QtDashboardPage.h"
 
@@ -21,6 +23,9 @@ namespace {
 
 // Percent scale for the progress bar (progress is a 0..1 fraction).
 constexpr float kPercentScale = 100.0F;
+
+// OEE gauge target -- the "world class" 85% benchmark the GTK dashboard uses.
+constexpr double kOeeTargetPct = 85.0;
 
 }  // namespace
 
@@ -41,6 +46,13 @@ QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
         ui_->kpiLayout->addWidget(tile, 1);
     }
 
+    // Rich circular visuals (GTK dashboard parity): OEE gauge + uptime donut.
+    oeeGauge_    = new QtGauge(tr("OEE"), kOeeTargetPct);
+    uptimeDonut_ = new QtUptimeDonut();
+    ui_->visualsLayout->addWidget(oeeGauge_);
+    ui_->visualsLayout->addWidget(uptimeDonut_);
+    ui_->visualsLayout->addStretch(1);
+
     // Back-channel: buttons call the SAME presenter methods the GTK page and the
     // console view call.
     connect(ui_->startButton, &QPushButton::clicked, this,
@@ -52,6 +64,11 @@ QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
 }
 
 QtDashboardPage::~QtDashboardPage() = default;
+
+void QtDashboardPage::setSystemState(int state) {
+    // The state signal can fire on a backend thread; hop to the UI thread.
+    postToUi(this, [this, state] { uptimeDonut_->setSystemState(state); });
+}
 
 // Every ViewObserver callback marshals onto the UI thread: with the
 // integration backends running, these can arrive on a backend Asio thread (an
@@ -72,6 +89,7 @@ void QtDashboardPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) 
             static_cast<int>(vm.progress * kPercentScale));
         oeePct_        = vm.oeePct;
         throughputUph_ = vm.throughputUph;
+        oeeGauge_->setValue(oeePct_);
         updateKpis();
     });
 }

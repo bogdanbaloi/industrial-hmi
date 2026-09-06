@@ -53,6 +53,10 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
             border: 1px solid @border; border-radius: 3px; background: @surface; }
         QCheckBox::indicator:checked { background: @accent; border-color: @accent; }
         QCheckBox::indicator:disabled { border-color: @muted; }
+        QRadioButton::indicator { width: 15px; height: 15px;
+            border: 1px solid @border; border-radius: 8px; background: @surface; }
+        QRadioButton::indicator:checked { background: @accent;
+            border-color: @accent; }
         QTableWidget { background: @surface; alternate-background-color: @surface2;
             gridline-color: @border; border: 1px solid @border; }
         QHeaderView::section { background: @surface2; color: @muted;

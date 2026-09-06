@@ -10,6 +10,9 @@
     <layout class="QHBoxLayout" name="kpiLayout"/>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="visualsLayout"/>
+   </item>
+   <item>
     <widget class="QLabel" name="workUnitIdLabel">
      <property name="text">
       <string>Work unit: -</string>

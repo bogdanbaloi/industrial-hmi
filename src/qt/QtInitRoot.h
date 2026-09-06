@@ -84,6 +84,7 @@ private:
     std::unique_ptr<view::QtMainWindow>     window_;
     std::unique_ptr<QTimer>                 tickTimer_;
     sigc::connection                        systemStateConn_;
+    sigc::connection                        dashboardStateConn_;
     sigc::connection                        alertsBadgeConn_;
 
     static constexpr std::chrono::milliseconds kTickPeriod{2000};

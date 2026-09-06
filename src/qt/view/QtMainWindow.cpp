@@ -20,8 +20,10 @@
 namespace app::view {
 
 namespace {
-constexpr int kWindowWidth  = 940;
-constexpr int kWindowHeight = 660;
+// Match the GTK frontend's kiosk scale (1920x1080 target). The window manager
+// clamps this to the screen when it is smaller.
+constexpr int kWindowWidth  = 1920;
+constexpr int kWindowHeight = 1080;
 }  // namespace
 
 QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
@@ -47,7 +49,14 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     productsPage_  = new QtProductsPage(productsPresenter);
     auto* alerts      = new QtAlertsPage(alertCenter);
     goodsReceiptPage_ = new QtGoodsReceiptPage(inspectionPresenter);
-    auto* settings    = new QtSettingsPage(config, paletteManager);
+    auto* settings    = new QtSettingsPage(
+        config, paletteManager, [this](bool fullscreen) {
+            if (fullscreen) {
+                showFullScreen();
+            } else {
+                showNormal();
+            }
+        });
 
     stack_->addWidget(dashboardPage_);    // index 0 -> Overview
     stack_->addWidget(alerts);            // index 1 -> Alerts

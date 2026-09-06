@@ -14,10 +14,12 @@
 #include <QObject>
 #include <QPainter>
 #include <QPixmap>
+#include <QRadioButton>
 #include <QString>
 #include <QToolButton>
 
 #include <cstddef>
+#include <utility>
 
 namespace app::view {
 
@@ -59,9 +61,12 @@ QToolButton* makeSwatch(const PaletteDef& palette) {
 }  // namespace
 
 QtSettingsPage::QtSettingsPage(const config::ConfigManager& config,
-                              QtPaletteManager& paletteManager, QWidget* parent)
+                              QtPaletteManager& paletteManager,
+                              DisplayModeCallback onDisplayModeChanged,
+                              QWidget* parent)
     : QWidget(parent),
       paletteManager_(paletteManager),
+      onDisplayModeChanged_(std::move(onDisplayModeChanged)),
       ui_(std::make_unique<Ui::QtSettingsPage>()) {
     ui_->setupUi(this);
 
@@ -81,6 +86,17 @@ QtSettingsPage::QtSettingsPage(const config::ConfigManager& config,
         paletteManager_.apply(
             paletteManager_.palettes()[static_cast<std::size_t>(index)].id);
     });
+
+    // Display mode: report changes through the injected callback so the page
+    // never touches the window. Fullscreen is the default (kiosk); set before
+    // connecting so this initial state does not fire the callback.
+    ui_->fullscreenRadio->setChecked(true);
+    connect(ui_->fullscreenRadio, &QRadioButton::toggled, this,
+            [this](bool fullscreen) {
+                if (onDisplayModeChanged_) {
+                    onDisplayModeChanged_(fullscreen);
+                }
+            });
 
     populate(config);
 }

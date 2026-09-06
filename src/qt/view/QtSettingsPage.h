@@ -2,6 +2,7 @@
 
 #include <QWidget>
 
+#include <functional>
 #include <memory>
 
 // The Ui namespace name is fixed by Qt's uic generator, not our style.
@@ -18,15 +19,21 @@ namespace app::view {
 
 class QtPaletteManager;
 
-/// Configuration page. The palette picker (light / dark / themed) applies +
-/// persists through QtPaletteManager; the rest is a read-only overview of the
-/// current ConfigManager state. Both collaborators are injected (DIP); the page
-/// reaches no singleton itself. Editing the other settings is a future
-/// extension that would not change this structure.
+/// Configuration page, grouped into Appearance (palette swatches), Display
+/// (windowed / fullscreen) and Configuration (a read-only overview of the
+/// current ConfigManager state). The palette applies + persists through
+/// QtPaletteManager; the display-mode toggle is reported through an injected
+/// callback so the page never touches the window directly (DIP), mirroring the
+/// GTK settings page's runtime display-mode signal.
 class QtSettingsPage : public QWidget {
 public:
+    /// `onDisplayModeChanged(true)` requests fullscreen, `false` windowed.
+    using DisplayModeCallback = std::function<void(bool)>;
+
     QtSettingsPage(const config::ConfigManager& config,
-                   QtPaletteManager& paletteManager, QWidget* parent = nullptr);
+                   QtPaletteManager& paletteManager,
+                   DisplayModeCallback onDisplayModeChanged,
+                   QWidget* parent = nullptr);
     ~QtSettingsPage() override;
 
     QtSettingsPage(const QtSettingsPage&)            = delete;
@@ -38,6 +45,7 @@ private:
     void populate(const config::ConfigManager& config);
 
     QtPaletteManager&                   paletteManager_;
+    DisplayModeCallback                 onDisplayModeChanged_;
     std::unique_ptr<Ui::QtSettingsPage> ui_;
 };
 

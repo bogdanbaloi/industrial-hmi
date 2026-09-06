@@ -28,6 +28,8 @@ class QtEquipmentCard;
 class QtActuatorCard;
 class QtQualityCard;
 class QtKpiTile;
+class QtGauge;
+class QtUptimeDonut;
 
 /// Qt dashboard page. A QWidget (hosted in a QtMainWindow tab) that is also an
 /// app::ViewObserver, so the real DashboardPresenter drives it through the exact
@@ -58,13 +60,11 @@ public:
     void onActuatorCardChanged(const presenter::ActuatorCardViewModel& vm) override;
     void onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) override;
 
-    /// Update the big state banner. `state` is `static_cast<int>(SystemState)`;
-    /// fed from the presenter's state signal by the composition root (the
-    /// StatusZone placeholder VM the banner used to read is never emitted).
+    /// Feed the uptime donut from the presenter's system-state signal
+    /// (0 Idle / 1 Running / 2 Error / 3 Calibration); marshals to the UI thread.
     void setSystemState(int state);
 
 private:
-    void applyBanner(int state);
     DashboardPresenter&                  presenter_;
     std::unique_ptr<Ui::QtDashboardPage> ui_;
 
@@ -82,6 +82,9 @@ private:
     QtKpiTile* qualityTile_{nullptr};
     QtKpiTile* defectsTile_{nullptr};
     QtKpiTile* linesTile_{nullptr};
+
+    QtGauge*       oeeGauge_{nullptr};
+    QtUptimeDonut* uptimeDonut_{nullptr};
 
     float  oeePct_{0.0F};
     double throughputUph_{0.0};

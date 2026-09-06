@@ -1243,6 +1243,8 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/widgets/QtActuatorCard.cpp
         src/qt/view/widgets/QtQualityCard.cpp
         src/qt/view/widgets/QtKpiTile.cpp
+        src/qt/view/widgets/QtGauge.cpp
+        src/qt/view/widgets/QtUptimeDonut.cpp
     )
     target_link_libraries(objectsQt
         PUBLIC

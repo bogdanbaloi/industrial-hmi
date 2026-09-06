@@ -62,6 +62,7 @@ QtInitRoot::~QtInitRoot() {
     // Drop the sigc slot into the status strip before the window (and the strip)
     // are destroyed.
     systemStateConn_.disconnect();
+    dashboardStateConn_.disconnect();
     alertsBadgeConn_.disconnect();
 
     // Stop the integration backends before any observer of them is torn down.
@@ -175,6 +176,10 @@ void QtInitRoot::run() {
     // (the same signal the GTK SystemStatusBadge listens to).
     systemStateConn_ = dashboardPresenter_->signalSystemStateChanged().connect(
         sigc::mem_fun(*window_->statusStrip(), &view::QtStatusStrip::setSystemState));
+    // Feed the Overview uptime donut from the same state signal.
+    dashboardStateConn_ = dashboardPresenter_->signalSystemStateChanged().connect(
+        sigc::mem_fun(*window_->dashboardPage(),
+                      &view::QtDashboardPage::setSystemState));
     // Keep the sidebar Alerts badge in sync with the active-alarm count.
     alertsBadgeConn_ = alertCenter_->signalAlertsChanged().connect(
         sigc::mem_fun(*this, &QtInitRoot::refreshAlertsBadge));
@@ -210,7 +215,9 @@ void QtInitRoot::run() {
     // Apply the stored palette (or the default) before showing.
     paletteManager_->applyInitial();
 
-    window_->show();
+    // Start in fullscreen (industrial kiosk mode), matching the GTK frontend.
+    // The Settings Windowed toggle restores the 1920x1080 windowed size.
+    window_->showFullScreen();
 }
 
 }  // namespace app::qt

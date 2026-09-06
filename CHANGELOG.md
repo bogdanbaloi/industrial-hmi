@@ -28,10 +28,11 @@ reusing the existing presenters through the ViewObserver seam.
 
 #### Added
 - Products tab (`QtProductsPage`) reusing `ProductsPresenter`, with a Refresh action and a products table.
-- Settings tab (`QtSettingsPage`): a read-only config overview plus the palette picker.
+- Settings tab (`QtSettingsPage`): grouped into Appearance (palette swatches), Display (windowed / fullscreen toggle wired to the window through an injected callback) and a read-only Configuration overview.
 - Runtime palettes (`QtPaletteManager`): light, dark, Nord and Cockpit, applied application-wide via a Qt style sheet built from semantic role colours and persisted through ConfigManager. ADR-0021.
 - Live log panel (`QtLogPanel`) at the bottom of the shell, tailing the log file (the GTK log-panel analog).
 - Overview KPI tiles (`QtKpiTile`): OEE, throughput, average quality, defects and lines-up, all aggregated live from the same view models the cards render (no fabricated figures).
+- Overview circular visuals matching the GTK dashboard: an OEE gauge (`QtGauge`) and a session-uptime donut (`QtUptimeDonut`), both custom-painted with QPainter (no charting dependency). The window starts fullscreen (kiosk mode, like GTK), restoring to 1920x1080 when the Settings toggle switches to windowed.
 - SVG sidebar nav icons (rendered from inline SVG via `QSvgRenderer`, no shipped assets) plus a live active-alert count badge on the Alerts entry (fed from `AlertCenter`, marshalled to the UI thread).
 - Goods-receipt inspection page (`QtGoodsReceiptPage`) reusing the real `QualityInspectionPresenter` (decode, classify, top-K) with the project's `FakeImageClassifier` as a clearly-labelled demo model. Extends the toolkit-independence proof to the Edge-AI inspection presenter.
 - Alerts tab (`QtAlertsPage`) reusing the shared ISA-18.2 `AlertCenter` (the same alarm store the GTK `AlertsPanel` renders): active alarms with priority and lifecycle badges, per-alarm Acknowledge, a history toggle and Clear. Reusing the alarm store unchanged behind a second toolkit extends the REQ-ARCH-011 toolkit-independence proof.
