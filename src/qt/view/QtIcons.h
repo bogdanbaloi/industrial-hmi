@@ -13,18 +13,38 @@
 // neutral grey that reads on every palette ground.
 namespace app::view::icons {
 
-inline constexpr int kNavIconPx = 18;
+inline constexpr int kNavIconPx   = 18;
+inline constexpr int kBrandLogoPx = 28;
 
 inline QString navColor() { return QStringLiteral("#8a8a8a"); }
 
-inline QIcon fromSvg(const QString& svg) {
+inline QPixmap pixmapFromSvg(const QString& svg, int px) {
     QSvgRenderer renderer(svg.toUtf8());
-    QPixmap pixmap(kNavIconPx, kNavIconPx);
+    QPixmap     pixmap(px, px);
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
     renderer.render(&painter);
     painter.end();
-    return QIcon(pixmap);
+    return pixmap;
+}
+
+inline QIcon fromSvg(const QString& svg) {
+    return QIcon(pixmapFromSvg(svg, kNavIconPx));
+}
+
+/// Brand logo (gauge arc + EKG waveform in teal) -- the same inline SVG the GTK
+/// sidebar renders, as a pixmap for the brand row.
+inline QPixmap appLogo() {
+    return pixmapFromSvg(
+        QStringLiteral(
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'"
+            " fill='none'>"
+            "<path d='M 6 22 A 12 12 0 1 1 26 22' stroke='#00d4aa'"
+            " stroke-width='2.5' stroke-linecap='round'/>"
+            "<path d='M 8 18 L 11 18 L 13 14 L 15 22 L 17 14 L 19 18 L 24 18'"
+            " stroke='#00d4aa' stroke-width='1.6' stroke-linecap='round'"
+            " stroke-linejoin='round'/></svg>"),
+        kBrandLogoPx);
 }
 
 inline QIcon overview() {
@@ -69,6 +89,17 @@ inline QIcon goodsReceipt() {
             " fill='none' stroke='%1' stroke-width='2' stroke-linecap='round'>"
             "<circle cx='11' cy='11' r='8'/>"
             "<line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>")
+            .arg(navColor()));
+}
+
+inline QIcon trends() {
+    return fromSvg(
+        QStringLiteral(
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'"
+            " fill='none' stroke='%1' stroke-width='2' stroke-linecap='round'"
+            " stroke-linejoin='round'>"
+            "<polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/>"
+            "<polyline points='17 6 23 6 23 12'/></svg>")
             .arg(navColor()));
 }
 

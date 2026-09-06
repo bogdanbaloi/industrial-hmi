@@ -10,6 +10,7 @@
 #include "src/qt/view/QtSettingsPage.h"
 #include "src/qt/view/QtSidebar.h"
 #include "src/qt/view/QtStatusStrip.h"
+#include "src/qt/view/QtTrendsPage.h"
 
 #include <QHBoxLayout>
 #include <QStackedWidget>
@@ -49,6 +50,7 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     productsPage_  = new QtProductsPage(productsPresenter);
     auto* alerts      = new QtAlertsPage(alertCenter);
     goodsReceiptPage_ = new QtGoodsReceiptPage(inspectionPresenter);
+    trendsPage_       = new QtTrendsPage();
     auto* settings    = new QtSettingsPage(
         config, paletteManager, [this](bool fullscreen) {
             if (fullscreen) {
@@ -62,7 +64,8 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     stack_->addWidget(alerts);            // index 1 -> Alerts
     stack_->addWidget(productsPage_);     // index 2 -> Inventory
     stack_->addWidget(goodsReceiptPage_); // index 3 -> Goods receipt
-    stack_->addWidget(settings);          // index 4 -> Settings
+    stack_->addWidget(trendsPage_);       // index 4 -> Trends
+    stack_->addWidget(settings);          // index 5 -> Settings
 
     sidebar_ = new QtSidebar(
         [this](int index) { stack_->setCurrentIndex(index); }, content);
@@ -70,6 +73,7 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     sidebar_->addItem(tr("Alerts"), icons::alerts());
     sidebar_->addItem(tr("Inventory"), icons::inventory());
     sidebar_->addItem(tr("Goods receipt"), icons::goodsReceipt());
+    sidebar_->addItem(tr("Trends"), icons::trends());
     sidebar_->addItem(tr("Settings"), icons::settings());
 
     row->addWidget(sidebar_);

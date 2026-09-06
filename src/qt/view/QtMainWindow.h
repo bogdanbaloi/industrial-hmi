@@ -23,6 +23,7 @@ namespace app::view {
 class QtDashboardPage;
 class QtProductsPage;
 class QtGoodsReceiptPage;
+class QtTrendsPage;
 class QtStatusStrip;
 class QtPaletteManager;
 class QtSidebar;
@@ -52,6 +53,7 @@ public:
     [[nodiscard]] QtGoodsReceiptPage* goodsReceiptPage() const {
         return goodsReceiptPage_;
     }
+    [[nodiscard]] QtTrendsPage* trendsPage() const { return trendsPage_; }
 
     /// Set the active-alert count shown as a badge on the Alerts nav entry.
     void setAlertsBadge(int count);
@@ -62,6 +64,7 @@ private:
     QtDashboardPage* dashboardPage_{nullptr};
     QtProductsPage*  productsPage_{nullptr};
     QtGoodsReceiptPage* goodsReceiptPage_{nullptr};
+    QtTrendsPage*    trendsPage_{nullptr};
     QtStatusStrip*   statusStrip_{nullptr};
 };
 

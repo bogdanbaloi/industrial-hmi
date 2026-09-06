@@ -21,6 +21,7 @@
 #include "src/qt/view/QtDashboardPage.h"
 #include "src/qt/view/QtGoodsReceiptPage.h"
 #include "src/qt/view/QtProductsPage.h"
+#include "src/qt/view/QtTrendsPage.h"
 #include "src/qt/view/QtPaletteManager.h"
 #include "src/qt/view/QtMainWindow.h"
 #include "src/qt/view/QtStatusStrip.h"
@@ -73,6 +74,7 @@ QtInitRoot::~QtInitRoot() {
     if (window_) {
         if (dashboardPresenter_) {
             dashboardPresenter_->removeObserver(window_->dashboardPage());
+            dashboardPresenter_->removeObserver(window_->trendsPage());
         }
         if (productsPresenter_) {
             productsPresenter_->removeObserver(window_->productsPage());
@@ -169,6 +171,7 @@ void QtInitRoot::run() {
         *paletteManager_);
 
     dashboardPresenter_->addObserver(window_->dashboardPage());
+    dashboardPresenter_->addObserver(window_->trendsPage());
     productsPresenter_->addObserver(window_->productsPage());
     backendHealthPresenter_->addObserver(window_->statusStrip());
     inspectionPresenter_->addObserver(window_->goodsReceiptPage());

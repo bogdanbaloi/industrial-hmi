@@ -1,6 +1,9 @@
 #include "src/qt/view/QtSidebar.h"
 
+#include "src/qt/view/QtIcons.h"
+
 #include <QButtonGroup>
+#include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
 #include <QPushButton>
@@ -15,6 +18,7 @@ namespace {
 constexpr int kSidebarWidth = 220;
 constexpr int kNavSpacing   = 4;
 constexpr int kNavIconSize  = 18;
+constexpr int kBrandSpacing = 8;
 }  // namespace
 
 QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
@@ -24,9 +28,22 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
 
     auto* root = new QVBoxLayout(this);
 
-    auto* brand = new QLabel(tr("Nordwind SC"), this);
+    // Brand row: logo + title, mirroring the GTK sidebar's app-logo + title.
+    auto* brandRow    = new QWidget(this);
+    auto* brandLayout = new QHBoxLayout(brandRow);
+    brandLayout->setContentsMargins(0, 0, 0, 0);
+    brandLayout->setSpacing(kBrandSpacing);
+
+    auto* logo = new QLabel(brandRow);
+    logo->setPixmap(icons::appLogo());
+    brandLayout->addWidget(logo);
+
+    auto* brand = new QLabel(tr("Industrial HMI"), brandRow);
     brand->setObjectName("sidebarBrand");
-    root->addWidget(brand);
+    brandLayout->addWidget(brand);
+    brandLayout->addStretch();
+
+    root->addWidget(brandRow);
 
     navLayout_ = new QVBoxLayout();
     navLayout_->setSpacing(kNavSpacing);

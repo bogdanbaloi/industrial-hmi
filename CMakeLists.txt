@@ -1234,6 +1234,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/QtAlertsPage.cpp
         src/qt/view/QtStatusStrip.cpp
         src/qt/view/QtGoodsReceiptPage.cpp
+        src/qt/view/QtTrendsPage.cpp
         src/qt/view/QtSettingsPage.cpp
         src/qt/view/QtProductsPage.cpp
         src/qt/view/QtPaletteManager.cpp
@@ -1245,6 +1246,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/widgets/QtKpiTile.cpp
         src/qt/view/widgets/QtGauge.cpp
         src/qt/view/widgets/QtUptimeDonut.cpp
+        src/qt/view/widgets/QtLineChart.cpp
     )
     target_link_libraries(objectsQt
         PUBLIC
