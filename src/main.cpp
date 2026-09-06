@@ -2,28 +2,8 @@
 #include "src/core/StartupDialog.h"
 #include "src/core/StartupErrors.h"
 #include "src/config/ConfigManager.h"
+#include "src/app/IntegrationBootstrap.h"
 #include "src/integration/IntegrationManager.h"
-#include "src/integration/MqttClient.h"
-#include "src/integration/PrimaryToSecondaryBridge.h"
-#include "src/integration/SensorIngestBridge.h"
-#include "src/integration/ProductionTelemetryBridge.h"
-#include "src/integration/TcpBackend.h"
-#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
-#  include "src/integration/opcua/FactoryCommandSink.h"
-#  include "src/integration/opcua/FactoryNodeMap.h"
-#  include "src/integration/opcua/OpcUaBackend.h"
-#  include "src/integration/opcua/OpcUaConfig.h"
-#  include "src/integration/opcua/OpcUaIngestBridge.h"
-#  include "src/integration/opcua/Open62541Client.h"
-#  include "src/integration/opcua/Open62541Server.h"
-#endif
-#ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-#  include "src/integration/modbus/ModbusBackend.h"
-#  include "src/integration/modbus/ModbusClient.h"
-#  include "src/integration/modbus/ModbusIngestBridge.h"
-#  include "src/integration/modbus/ModbusPollLoop.h"
-#  include "src/integration/modbus/ModbusRegisterMap.h"
-#endif
 #include "src/auth/Argon2PasswordHasher.h"
 #include "src/auth/AuthService.h"
 #include "src/auth/Session.h"
@@ -33,7 +13,6 @@
 #include "src/historian/HistorianBridge.h"
 #include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
-#include "src/model/DatabaseManager.h"
 #include "src/model/MirrorModel.h"
 #include "src/model/SimulatedModel.h"
 #include <chrono>
@@ -79,268 +58,8 @@ constexpr bool kConsoleMode =
 [[maybe_unused]] constexpr int kExitStartupFatal    = 2;
 [[maybe_unused]] constexpr int kExitUnknownFatal    = 3;
 
-/// Build + register the MQTT backend with the IntegrationManager,
-/// plus the outbound ProductionTelemetryBridge and (optionally) the
-/// inbound SensorIngestBridge. Extracted from main() to keep the
-/// latter under the readability-function-size threshold.
-///
-/// The bridges are owned via out-params because they need to outlive
-/// this helper -- the caller's stack frame keeps them alive until the
-/// front-end exits.
-void registerMqttBackend(
-    app::integration::IntegrationManager& integration,
-    app::config::ConfigManager& config,
-    std::unique_ptr<app::integration::ProductionTelemetryBridge>&
-        productionBridgeOut,
-    std::unique_ptr<app::integration::SensorIngestBridge>&
-        sensorIngestBridgeOut) {
-    app::integration::MqttClient::Config mqttConfig;
-    mqttConfig.brokerHost = config.getMqttBrokerHost();
-    mqttConfig.brokerPort =
-        static_cast<std::uint16_t>(config.getMqttBrokerPort());
-    mqttConfig.clientId = config.getMqttClientId();
-    auto client =
-        std::make_unique<app::integration::MqttClient>(std::move(mqttConfig));
 
-    // The outbound bridge subscribes to the production model and pushes
-    // through the client's TelemetryPublisher interface -- it doesn't
-    // know or care that the underlying transport is MQTT.
-    app::integration::ProductionTelemetryBridge::Config bridgeConfig;
-    bridgeConfig.topicPrefix   = config.getMqttTopicPrefix();
-    bridgeConfig.emitPlainText = config.isMqttEmitPlainText();
-    bridgeConfig.emitJson      = config.isMqttEmitJson();
-    productionBridgeOut =
-        std::make_unique<app::integration::ProductionTelemetryBridge>(
-            *client,
-            app::model::SimulatedModel::instance(),
-            std::move(bridgeConfig));
-    productionBridgeOut->wire();
 
-    // Inbound counterpart: same MqttClient also drives SensorIngestBridge.
-    // One socket, two roles, two bridges. Wired before transferring
-    // ownership of the client into the manager so the bridge constructor
-    // gets a live reference.
-    if (config.isMqttSubscriberEnabled()) {
-        app::integration::SensorIngestBridge::Config sensorCfg;
-        sensorCfg.topicPrefix = config.getMqttSensorTopicPrefix();
-        sensorIngestBridgeOut =
-            std::make_unique<app::integration::SensorIngestBridge>(
-                *client,
-                app::model::SimulatedModel::instance(),
-                std::move(sensorCfg));
-        sensorIngestBridgeOut->wire();
-    }
-
-    integration.registerBackend(std::move(client));
-}
-
-#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
-/// Build + register the OPC-UA backend with the IntegrationManager.
-/// Extracted from main() to keep the latter under the
-/// readability-function-size threshold; the wiring is mechanical
-/// enough that pulling it into a helper hurts nothing.
-void registerOpcUaBackend(
-        app::integration::IntegrationManager& integration,
-        app::config::ConfigManager& config,
-        app::core::Logger& logger,
-        std::unique_ptr<app::integration::opcua::FactoryCommandSink>&
-            commandSink) {
-    app::integration::opcua::OpcUaConfig opcuaConfig;
-    opcuaConfig.port =
-        static_cast<std::uint16_t>(config.getOpcUaServerPort());
-    opcuaConfig.applicationUri = config.getOpcUaApplicationUri();
-    opcuaConfig.applicationName = config.getOpcUaApplicationName();
-
-    auto opcuaServer =
-        std::make_unique<app::integration::opcua::Open62541Server>(
-            std::move(opcuaConfig), logger);
-
-    // Inbound control surface is opt-in via config. When enabled, the
-    // node map registers Factory/Commands + per-line Enabled writes;
-    // the sink (owned by main()) routes each invocation to the
-    // ProductionModel.
-    std::unique_ptr<app::integration::opcua::FactoryNodeMap> opcuaNodeMap;
-    if (config.isOpcUaServerCommandsEnabled()) {
-        commandSink =
-            std::make_unique<app::integration::opcua::FactoryCommandSink>(
-                app::model::SimulatedModel::instance(), logger);
-        opcuaNodeMap =
-            std::make_unique<app::integration::opcua::FactoryNodeMap>(
-                app::model::SimulatedModel::instance(), logger,
-                *commandSink);
-    } else {
-        opcuaNodeMap =
-            std::make_unique<app::integration::opcua::FactoryNodeMap>(
-                app::model::SimulatedModel::instance(), logger);
-    }
-
-    integration.registerBackend(
-        std::make_unique<app::integration::opcua::OpcUaBackend>(
-            std::move(opcuaServer),
-            std::move(opcuaNodeMap),
-            logger));
-}
-
-/// Build + register the OPC-UA *client* backend (inbound role). Same
-/// pattern as registerOpcUaBackend above; kept on its own so it stays
-/// opt-in independently and the main() body keeps a flat list of
-/// composition calls.
-///
-/// If `network.opcua.client.ingest_bridge.enabled` is set, an
-/// `OpcUaIngestBridge` is wired alongside so inbound notifications
-/// flow into the `ProductionModel`. The bridge is created BEFORE the
-/// backend ownership transfers into the manager so we still hold a
-/// live reference for the bridge constructor.
-void registerOpcUaClient(
-        app::integration::IntegrationManager& integration,
-        app::config::ConfigManager& config,
-        app::core::Logger& logger,
-        std::unique_ptr<app::integration::opcua::OpcUaIngestBridge>&
-            ingestBridge) {
-    app::integration::opcua::Open62541Client::Config clientConfig;
-    clientConfig.endpointUrl     = config.getOpcUaClientEndpoint();
-    clientConfig.applicationUri  = config.getOpcUaClientApplicationUri();
-    clientConfig.applicationName = config.getOpcUaClientApplicationName();
-    auto client =
-        std::make_unique<app::integration::opcua::Open62541Client>(
-            std::move(clientConfig), logger);
-
-    if (config.isOpcUaIngestBridgeEnabled()) {
-        app::integration::opcua::OpcUaIngestBridge::Config bridgeConfig;
-        bridgeConfig.topicPrefix =
-            config.getOpcUaIngestBridgeTopicPrefix();
-        ingestBridge =
-            std::make_unique<app::integration::opcua::OpcUaIngestBridge>(
-                *client,
-                app::model::SimulatedModel::instance(),
-                std::move(bridgeConfig));
-        ingestBridge->wire();
-    }
-
-    integration.registerBackend(std::move(client));
-}
-#endif
-
-#ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-/// Build + register the Modbus primary backend. Composes the four
-/// pieces (client + register map + ingest bridge + poll loop) and
-/// hands ownership to the IntegrationManager. Same shape as
-/// registerOpcUaBackend / registerMqttBackend; lives in a helper so
-/// main() stays under the readability-function-size threshold.
-///
-/// The register map is built from a single block of contiguous
-/// holding-register addresses: equipment[i] maps to register
-/// `baseAddress + i` on `slaveId`. This is the simplest mapping that
-/// demonstrates the abstraction; a future schema would let the JSON
-/// list individual (address, field, entity) triples. Keeps the MVP
-/// JSON tiny.
-void registerModbusBackend(
-        app::integration::IntegrationManager& integration,
-        app::config::ConfigManager& config,
-        app::core::Logger& logger) {
-    namespace modbus = app::integration::modbus;
-
-    modbus::ModbusClient::Config clientConfig;
-    clientConfig.host = config.getModbusHost();
-    clientConfig.port =
-        static_cast<std::uint16_t>(config.getModbusPort());
-    clientConfig.connectTimeout =
-        std::chrono::milliseconds{config.getModbusConnectTimeoutMs()};
-    clientConfig.requestTimeout =
-        std::chrono::milliseconds{config.getModbusRequestTimeoutMs()};
-    auto client = std::make_unique<modbus::ModbusClient>(
-        std::move(clientConfig));
-
-    // Build the register map. The default layout exposes three
-    // contiguous blocks on the same secondary:
-    //
-    //   Block A (boolean):   addresses base+[0..N-1]   EquipmentEnabled
-    //   Block B (supply):    addresses supplyBase+[0..N-1]
-    //                                                  EquipmentSupplyLevel
-    //   Block C (quality):   addresses qualityBase+[0..M-1]
-    //                                                  QualityPassRate
-    //
-    // Block A is the original boolean per-equipment toggle. Blocks B
-    // and C ride the new analog setters added in the A3 model-surface
-    // refactor; bridge `scale` converts fixed-point PLC encodings
-    // (raw 850 -> 85.0%) into the model's percent domain.
-    //
-    // Operators retarget any block via app-config.json without code
-    // changes; future PRs let the JSON enumerate individual (address,
-    // field, entity, scale) tuples for non-contiguous PLC layouts.
-    auto map = std::make_unique<modbus::ModbusRegisterMap>();
-    const auto slaveId =
-        static_cast<std::uint8_t>(config.getModbusSlaveId());
-    const auto enabledBase =
-        static_cast<std::uint16_t>(config.getModbusEquipmentBaseAddress());
-    const auto equipmentCount = config.getModbusEquipmentCount();
-
-    // Block A -- boolean equipment-enabled bits.
-    for (int i = 0; i < equipmentCount; ++i) {
-        modbus::RegisterMapping mapping;
-        mapping.slaveId  = slaveId;
-        mapping.type     = modbus::RegisterType::HoldingRegister;
-        mapping.address  =
-            static_cast<std::uint16_t>(enabledBase + i);
-        mapping.field    = modbus::FieldKind::EquipmentEnabled;
-        mapping.entityId = static_cast<std::uint32_t>(i);
-        map->add(mapping);
-    }
-
-    // Block B -- analog supply levels (one register per equipment).
-    const auto supplyBase =
-        static_cast<std::uint16_t>(config.getModbusSupplyBaseAddress());
-    const auto supplyScale = config.getModbusSupplyScale();
-    for (int i = 0; i < equipmentCount; ++i) {
-        modbus::RegisterMapping mapping;
-        mapping.slaveId  = slaveId;
-        mapping.type     = modbus::RegisterType::HoldingRegister;
-        mapping.address  =
-            static_cast<std::uint16_t>(supplyBase + i);
-        mapping.field    = modbus::FieldKind::EquipmentSupplyLevel;
-        mapping.entityId = static_cast<std::uint32_t>(i);
-        mapping.scale    = supplyScale;
-        map->add(mapping);
-    }
-
-    // Block C -- analog quality pass rates (one register per checkpoint).
-    const auto qualityBase =
-        static_cast<std::uint16_t>(config.getModbusQualityBaseAddress());
-    const auto qualityScale = config.getModbusQualityScale();
-    const auto qualityCount = config.getModbusQualityCount();
-    for (int i = 0; i < qualityCount; ++i) {
-        modbus::RegisterMapping mapping;
-        mapping.slaveId  = slaveId;
-        mapping.type     = modbus::RegisterType::HoldingRegister;
-        mapping.address  =
-            static_cast<std::uint16_t>(qualityBase + i);
-        mapping.field    = modbus::FieldKind::QualityPassRate;
-        mapping.entityId = static_cast<std::uint32_t>(i);
-        mapping.scale    = qualityScale;
-        map->add(mapping);
-    }
-
-    auto bridge = std::make_unique<modbus::ModbusIngestBridge>(
-        app::model::SimulatedModel::instance());
-
-    modbus::ModbusPollLoop::Config pollConfig;
-    pollConfig.pollInterval =
-        std::chrono::milliseconds{config.getModbusPollIntervalMs()};
-    // The poll loop holds references; create it AFTER its
-    // collaborators and pass them in. ModbusBackend then takes
-    // ownership of all four via unique_ptr.
-    auto pollLoop = std::make_unique<modbus::ModbusPollLoop>(
-        *client, *map, *bridge, pollConfig);
-
-    integration.registerBackend(
-        std::make_unique<modbus::ModbusBackend>(
-            std::move(client),
-            std::move(map),
-            std::move(bridge),
-            std::move(pollLoop),
-            logger));
-}
-#endif
 
 /// Build the Historian (SQLite store + bridge) when enabled in config.
 /// Extracted from main() for the same reason as registerMqttBackend
@@ -482,21 +201,6 @@ void initWindowsConsole() {
 }
 #endif
 
-/// Multi-station: build the secondary MirrorModel + the in-process
-/// PrimaryToSecondaryBridge linking the singleton SimulatedModel
-/// (primary) into the mirror (secondary), then hand the bridge to the
-/// IntegrationManager so it surfaces in the BackendHealthBar next to
-/// the other protocols. See ADR-0011.
-void registerMultiStation(
-        app::integration::IntegrationManager& integration,
-        std::unique_ptr<app::model::MirrorModel>& secondaryModelOut,
-        std::unique_ptr<app::integration::PrimaryToSecondaryBridge>& bridgeOut) {
-    secondaryModelOut = std::make_unique<app::model::MirrorModel>();
-    bridgeOut = std::make_unique<app::integration::PrimaryToSecondaryBridge>(
-        app::model::SimulatedModel::instance(),
-        *secondaryModelOut);
-    integration.registerBackend(std::move(bridgeOut));
-}
 
 #ifndef CONSOLE_MODE
 /// Composition-root bundle passed to wireApplicationServices().
@@ -575,20 +279,15 @@ int main(int argc, char* argv[]) {
         // Integration backends -- opt-in per deployment via JSON.
         // Stack-owned through main() so RAII shuts them down on exit.
         auto& config = app::config::ConfigManager::instance();
-        app::integration::IntegrationManager integration;
-        std::unique_ptr<app::integration::ProductionTelemetryBridge>
-            productionBridge;
-        std::unique_ptr<app::integration::SensorIngestBridge>
-            sensorIngestBridge;
-
-        // Multi-station mode -- when enabled, instantiate a secondary
-        // MirrorModel and a PrimaryToSecondaryBridge linking the singleton
-        // SimulatedModel (primary) into the mirror (secondary). Both live
-        // on this stack frame so RAII tears them down after the
-        // IntegrationManager.stopAll() above. See ADR-0011 +
-        // docs/design/multi-station-primary-secondary.md
-        std::unique_ptr<app::model::MirrorModel>            secondaryModel;
-        std::unique_ptr<app::integration::PrimaryToSecondaryBridge> primarySecondaryBridge;
+        // Integration backends are built (not started) by the shared
+        // bootstrap so the GTK, console and Qt frontends compose the same
+        // protocol set from one place. The bundle is stack-owned through
+        // main() so RAII shuts the backends down on exit; the manager is
+        // started below after auth / historian are wired.
+        auto integrationServices =
+            app::integration::buildIntegrationServices(config,
+                                                       bootstrap.logger());
+        auto& integration = *integrationServices.manager;
 
         // Auth + Historian stacks. Declared in construction order so
         // destruction reverses naturally. See registerAuth() /
@@ -601,20 +300,6 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::historian::SqliteHistoryStore>   historyStore;
         std::unique_ptr<app::historian::HistorianBridge>      historianBridge;
         std::unique_ptr<app::historian::HistorianMaintenance> historianMaintenance;
-#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
-        std::unique_ptr<app::integration::opcua::OpcUaIngestBridge>
-            opcuaIngestBridge;
-        std::unique_ptr<app::integration::opcua::FactoryCommandSink>
-            opcuaCommandSink;
-#endif
-
-        if (config.isTcpBackendEnabled()) {
-            integration.registerBackend(
-                std::make_unique<app::integration::TcpBackend>(
-                    static_cast<std::uint16_t>(config.getTcpBackendPort()),
-                    app::model::SimulatedModel::instance(),
-                    app::model::DatabaseManager::instance()));
-        }
 
         if (config.isAuthEnabled()) {
             registerAuth(config, bootstrap.logger(),
@@ -626,40 +311,6 @@ int main(int argc, char* argv[]) {
             registerHistorian(config, bootstrap.logger(),
                               historyStore, historianBridge,
                               historianMaintenance);
-        }
-
-        if (config.isMqttBackendEnabled()) {
-            registerMqttBackend(integration, config,
-                                productionBridge, sensorIngestBridge);
-        }
-
-#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
-        // OPC-UA server + client backends -- both opt-in via config,
-        // compiled out via BUILD_OPCUA_BACKEND=OFF. See register*().
-        if (config.isOpcUaBackendEnabled()) {
-            registerOpcUaBackend(integration, config, bootstrap.logger(),
-                                 opcuaCommandSink);
-        }
-        if (config.isOpcUaClientEnabled()) {
-            registerOpcUaClient(integration, config, bootstrap.logger(),
-                                opcuaIngestBridge);
-        }
-#endif
-
-#ifdef INDUSTRIAL_HMI_HAS_MODBUS_BACKEND
-        // Modbus primary -- opt-in via config; compiled out via
-        // BUILD_MODBUS_BACKEND=OFF. See registerModbusBackend().
-        if (config.isModbusBackendEnabled()) {
-            registerModbusBackend(integration, config, bootstrap.logger());
-        }
-#endif
-
-        // Multi-station: build the secondary model + the bridge before
-        // startAll so the bridge appears in the BackendHealthBar
-        // alongside TCP/MQTT/Modbus/OPC-UA. See registerMultiStation().
-        if (config.isMultiStationEnabled()) {
-            registerMultiStation(integration, secondaryModel,
-                                 primarySecondaryBridge);
         }
 
         integration.startAll();
@@ -675,7 +326,8 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<app::presenter::UsersPresenter> usersPresenter;
         CompositionRoot root{
             historyStore, authService, authSession, auditLogger,
-            secondaryModel, authRepo, authHasher, usersPresenter};
+            integrationServices.secondaryModel, authRepo, authHasher,
+            usersPresenter};
         wireApplicationServices(app, integration, root);
 
         app.initialize(bootstrap, argc, argv);   // throws DatabaseInitError on DB failure

@@ -278,6 +278,25 @@ palette swap (ADR-0008 / REQ-ARCH-006) on the Qt toolkit.
 Verified by: manual run of `industrial-hmi-qt` (switching the Settings palette
 re-themes the app live; the choice survives a restart).
 
+### REQ-ARCH-013 (SHOULD) — Shared integration composition
+
+`req~arch-013~1`
+
+The integration layer (the `IntegrationManager` plus every config-enabled
+backend and the side objects those backends need kept alive) **shall** be
+composed in one shared, toolkit-agnostic place, so the GTK, console and Qt
+frontends build the same protocol set instead of each composition root wiring
+it independently. The composition **shall** return an owning bundle the caller
+starts and holds for the process lifetime, with no GTK or Qt dependency. The Qt
+frontend **shall** surface the resulting backend health through the existing
+`BackendHealthPresenter` and the `ViewObserver` seam, showing the integration
+layer is as toolkit-independent as the presenter layer (extends REQ-ARCH-005
+and REQ-ARCH-011).
+
+Verified by: CI builds all three frontends over the shared
+`buildIntegrationServices`; existing backend tests cover the backends; manual
+run of `industrial-hmi-qt` (the bottom status strip lists each backend's state).
+
 ADR: 0008 (Runtime palette swap), 0020 (Qt frontend), 0021 (Qt palette manager).
 
 ---

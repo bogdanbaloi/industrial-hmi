@@ -54,6 +54,7 @@ Each file has the following sections:
 | 0019 | [ONNX Runtime isolated behind a dlopen shared module](0019-onnx-dlopen-shared-module.md) | Accepted (amends 0009) |
 | 0020 | [Qt frontend proves MVP toolkit-independence](0020-qt-frontend-mvp-toolkit-independence.md) | Accepted |
 | 0021 | [Qt runtime palettes via an application-wide style sheet](0021-qt-runtime-palettes-via-stylesheet.md) | Accepted |
+| 0022 | [Shared integration bootstrap across frontends](0022-shared-integration-bootstrap.md) | Accepted |
 
 ## Adding a new ADR
 
