@@ -6,6 +6,10 @@
 #include "src/presenter/BackendHealthPresenter.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/presenter/ProductsPresenter.h"
+#include "src/presenter/QualityInspectionPresenter.h"
+
+#include "src/ml/FakeImageClassifier.h"
+#include "src/ml/ImageDecoder.h"
 
 #include "src/qt/QtInitRoot.h"
 
@@ -15,6 +19,7 @@
 #include "src/core/Bootstrap.h"
 #include "src/core/LoggerBase.h"
 #include "src/qt/view/QtDashboardPage.h"
+#include "src/qt/view/QtGoodsReceiptPage.h"
 #include "src/qt/view/QtProductsPage.h"
 #include "src/qt/view/QtPaletteManager.h"
 #include "src/qt/view/QtMainWindow.h"
@@ -25,6 +30,8 @@
 #include <sigc++/functors/mem_fun.h>
 
 #include <QTimer>
+
+#include <vector>
 
 namespace app::qt {
 
@@ -54,11 +61,19 @@ QtInitRoot::~QtInitRoot() {
         if (backendHealthPresenter_) {
             backendHealthPresenter_->removeObserver(window_->statusStrip());
         }
+        if (inspectionPresenter_) {
+            inspectionPresenter_->removeObserver(window_->goodsReceiptPage());
+        }
     }
     window_.reset();
     paletteManager_.reset();
     productsPresenter_.reset();
     dashboardPresenter_.reset();
+    // Inspection presenter holds references to the classifier + decoder, so
+    // drop it before them.
+    inspectionPresenter_.reset();
+    imageClassifier_.reset();
+    imageDecoder_.reset();
     // AlertCenter last: the presenter holds a bare reference to it, so it must
     // out-live the presenter that raises alarms into it.
     alertCenter_.reset();
@@ -116,15 +131,34 @@ void QtInitRoot::run() {
     backendHealthPresenter_ = std::make_unique<BackendHealthPresenter>(
         *integrationServices_->manager);
 
+    // Edge-AI goods-receipt inspection: the real QualityInspectionPresenter
+    // (decode -> classify -> top-K) driven by the project's FakeImageClassifier
+    // as a demo model. Reusing the ML presenter behind Qt continues the
+    // toolkit-independence proof (the image is decoded for real; the canned
+    // classification is surfaced plainly as a demo in the view).
+    imageDecoder_    = std::make_unique<ml::ImageDecoder>();
+    imageClassifier_ = std::make_unique<ml::FakeImageClassifier>(
+        std::vector<ml::Classification>{
+            {0, "Intact packaging", 0.93F},
+            {1, "Minor surface scuff", 0.045F},
+            {2, "Crushed corner", 0.018F},
+            {3, "Water damage", 0.007F},
+        },
+        "Goods-receipt demo");
+    inspectionPresenter_ = std::make_unique<presenter::QualityInspectionPresenter>(
+        *imageClassifier_, *imageDecoder_);
+
     // Shell owns the page widgets; the presenters never learn they are talking
     // to Qt widgets rather than GTK pages or a terminal.
     window_ = std::make_unique<view::QtMainWindow>(
         *dashboardPresenter_, *productsPresenter_, *alertCenter_,
-        app::config::ConfigManager::instance(), *paletteManager_);
+        *inspectionPresenter_, app::config::ConfigManager::instance(),
+        *paletteManager_);
 
     dashboardPresenter_->addObserver(window_->dashboardPage());
     productsPresenter_->addObserver(window_->productsPage());
     backendHealthPresenter_->addObserver(window_->statusStrip());
+    inspectionPresenter_->addObserver(window_->goodsReceiptPage());
     // Feed the status-strip system-state pill from the presenter's state signal
     // (the same signal the GTK SystemStatusBadge listens to).
     systemStateConn_ = dashboardPresenter_->signalSystemStateChanged().connect(
@@ -134,6 +168,7 @@ void QtInitRoot::run() {
         sigc::mem_fun(*this, &QtInitRoot::refreshAlertsBadge));
     dashboardPresenter_->initialize();
     productsPresenter_->initialize();
+    inspectionPresenter_->initialize();
     model.initializeDemoData();
 
     // Populate the products table once (onProductsLoaded fires synchronously).

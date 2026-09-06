@@ -11,6 +11,7 @@ class ProductsPresenter;
 
 namespace app::presenter {
 class AlertCenter;
+class QualityInspectionPresenter;
 }
 
 namespace app::config {
@@ -21,6 +22,7 @@ namespace app::view {
 
 class QtDashboardPage;
 class QtProductsPage;
+class QtGoodsReceiptPage;
 class QtStatusStrip;
 class QtPaletteManager;
 class QtSidebar;
@@ -33,6 +35,7 @@ public:
     explicit QtMainWindow(DashboardPresenter& dashboardPresenter,
                           ProductsPresenter& productsPresenter,
                           presenter::AlertCenter& alertCenter,
+                          presenter::QualityInspectionPresenter& inspectionPresenter,
                           const config::ConfigManager& config,
                           QtPaletteManager& paletteManager,
                           QWidget* parent = nullptr);
@@ -46,6 +49,9 @@ public:
     [[nodiscard]] QtDashboardPage* dashboardPage() const { return dashboardPage_; }
     [[nodiscard]] QtProductsPage* productsPage() const { return productsPage_; }
     [[nodiscard]] QtStatusStrip* statusStrip() const { return statusStrip_; }
+    [[nodiscard]] QtGoodsReceiptPage* goodsReceiptPage() const {
+        return goodsReceiptPage_;
+    }
 
     /// Set the active-alert count shown as a badge on the Alerts nav entry.
     void setAlertsBadge(int count);
@@ -55,6 +61,7 @@ private:
     QStackedWidget*  stack_{nullptr};
     QtDashboardPage* dashboardPage_{nullptr};
     QtProductsPage*  productsPage_{nullptr};
+    QtGoodsReceiptPage* goodsReceiptPage_{nullptr};
     QtStatusStrip*   statusStrip_{nullptr};
 };
 

@@ -19,6 +19,12 @@ class BackendHealthPresenter;
 
 namespace app::presenter {
 class AlertCenter;
+class QualityInspectionPresenter;
+}
+
+namespace app::ml {
+class ImageDecoder;
+class FakeImageClassifier;
 }
 
 namespace app::integration {
@@ -71,6 +77,9 @@ private:
     std::unique_ptr<BackendHealthPresenter>           backendHealthPresenter_;
     std::unique_ptr<DashboardPresenter>     dashboardPresenter_;
     std::unique_ptr<ProductsPresenter>      productsPresenter_;
+    std::unique_ptr<ml::ImageDecoder>            imageDecoder_;
+    std::unique_ptr<ml::FakeImageClassifier>     imageClassifier_;
+    std::unique_ptr<presenter::QualityInspectionPresenter> inspectionPresenter_;
     std::unique_ptr<view::QtPaletteManager> paletteManager_;
     std::unique_ptr<view::QtMainWindow>     window_;
     std::unique_ptr<QTimer>                 tickTimer_;

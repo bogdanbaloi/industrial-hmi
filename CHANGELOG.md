@@ -33,11 +33,12 @@ reusing the existing presenters through the ViewObserver seam.
 - Live log panel (`QtLogPanel`) at the bottom of the shell, tailing the log file (the GTK log-panel analog).
 - Overview KPI tiles (`QtKpiTile`): OEE, throughput, average quality, defects and lines-up, all aggregated live from the same view models the cards render (no fabricated figures).
 - SVG sidebar nav icons (rendered from inline SVG via `QSvgRenderer`, no shipped assets) plus a live active-alert count badge on the Alerts entry (fed from `AlertCenter`, marshalled to the UI thread).
+- Goods-receipt inspection page (`QtGoodsReceiptPage`) reusing the real `QualityInspectionPresenter` (decode, classify, top-K) with the project's `FakeImageClassifier` as a clearly-labelled demo model. Extends the toolkit-independence proof to the Edge-AI inspection presenter.
 - Alerts tab (`QtAlertsPage`) reusing the shared ISA-18.2 `AlertCenter` (the same alarm store the GTK `AlertsPanel` renders): active alarms with priority and lifecycle badges, per-alarm Acknowledge, a history toggle and Clear. Reusing the alarm store unchanged behind a second toolkit extends the REQ-ARCH-011 toolkit-independence proof.
 
 #### Changed
 - Card status colours moved to a QtTheme palette and card strings wrapped in tr().
-- Replaced the tab bar with a custom sidebar (`QtSidebar`) over a QStackedWidget. Nav reskinned to supply-chain (Overview, Alerts, Inventory, Settings) and the products table relabelled as inventory (SKU, Description, On hand).
+- Replaced the tab bar with a custom sidebar (`QtSidebar`) over a QStackedWidget. Nav reskinned to supply-chain (Overview, Alerts, Inventory, Goods receipt, Settings) and the products table relabelled as inventory (SKU, Description, On hand).
 
 #### Fixed
 - Removed the redundant dashboard state banner: it duplicated the always-visible status-strip state pill (and had read a `StatusZoneViewModel` placeholder that no presenter emits, so it was stuck on "System Idle"). The status-strip pill is now the single, global state indicator.

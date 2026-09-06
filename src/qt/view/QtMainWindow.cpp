@@ -3,6 +3,7 @@
 #include "src/config/ConfigManager.h"
 #include "src/qt/view/QtAlertsPage.h"
 #include "src/qt/view/QtDashboardPage.h"
+#include "src/qt/view/QtGoodsReceiptPage.h"
 #include "src/qt/view/QtIcons.h"
 #include "src/qt/view/QtLogPanel.h"
 #include "src/qt/view/QtProductsPage.h"
@@ -26,6 +27,7 @@ constexpr int kWindowHeight = 660;
 QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
                            ProductsPresenter& productsPresenter,
                            presenter::AlertCenter& alertCenter,
+                           presenter::QualityInspectionPresenter& inspectionPresenter,
                            const config::ConfigManager& config,
                            QtPaletteManager& paletteManager, QWidget* parent)
     : QMainWindow(parent) {
@@ -43,19 +45,22 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     stack_         = new QStackedWidget(content);
     dashboardPage_ = new QtDashboardPage(dashboardPresenter);
     productsPage_  = new QtProductsPage(productsPresenter);
-    auto* alerts   = new QtAlertsPage(alertCenter);
-    auto* settings = new QtSettingsPage(config, paletteManager);
+    auto* alerts      = new QtAlertsPage(alertCenter);
+    goodsReceiptPage_ = new QtGoodsReceiptPage(inspectionPresenter);
+    auto* settings    = new QtSettingsPage(config, paletteManager);
 
-    stack_->addWidget(dashboardPage_);  // index 0 -> Overview
-    stack_->addWidget(alerts);          // index 1 -> Alerts
-    stack_->addWidget(productsPage_);   // index 2 -> Inventory
-    stack_->addWidget(settings);        // index 3 -> Settings
+    stack_->addWidget(dashboardPage_);    // index 0 -> Overview
+    stack_->addWidget(alerts);            // index 1 -> Alerts
+    stack_->addWidget(productsPage_);     // index 2 -> Inventory
+    stack_->addWidget(goodsReceiptPage_); // index 3 -> Goods receipt
+    stack_->addWidget(settings);          // index 4 -> Settings
 
     sidebar_ = new QtSidebar(
         [this](int index) { stack_->setCurrentIndex(index); }, content);
     sidebar_->addItem(tr("Overview"), icons::overview());
     sidebar_->addItem(tr("Alerts"), icons::alerts());
     sidebar_->addItem(tr("Inventory"), icons::inventory());
+    sidebar_->addItem(tr("Goods receipt"), icons::goodsReceipt());
     sidebar_->addItem(tr("Settings"), icons::settings());
 
     row->addWidget(sidebar_);
