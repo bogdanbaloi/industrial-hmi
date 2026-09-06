@@ -142,7 +142,7 @@ jobs:
           build-essential cmake ninja-build \
           libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev \
           libgtest-dev libgmock-dev \
-          qt6-base-dev \
+          qt6-base-dev libqt6svg6-dev \
           clang-tidy
 
     # ONNX Runtime is needed at configure time so OnnxImageClassifier.cpp
