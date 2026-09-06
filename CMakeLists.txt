@@ -1199,6 +1199,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/QtProductsPage.cpp
         src/qt/view/QtPaletteManager.cpp
         src/qt/view/QtSidebar.cpp
+        src/qt/view/QtLogPanel.cpp
         src/qt/view/widgets/QtEquipmentCard.cpp
         src/qt/view/widgets/QtActuatorCard.cpp
         src/qt/view/widgets/QtQualityCard.cpp

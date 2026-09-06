@@ -1,12 +1,16 @@
 #include "src/qt/view/QtMainWindow.h"
 
+#include "src/config/ConfigManager.h"
 #include "src/qt/view/QtDashboardPage.h"
+#include "src/qt/view/QtLogPanel.h"
 #include "src/qt/view/QtProductsPage.h"
 #include "src/qt/view/QtSettingsPage.h"
 #include "src/qt/view/QtSidebar.h"
 
 #include <QHBoxLayout>
 #include <QStackedWidget>
+#include <QString>
+#include <QVBoxLayout>
 #include <QWidget>
 
 namespace app::view {
@@ -22,12 +26,17 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
                            QtPaletteManager& paletteManager, QWidget* parent)
     : QMainWindow(parent) {
     auto* central = new QWidget(this);
-    auto* row     = new QHBoxLayout(central);
+    auto* outer   = new QVBoxLayout(central);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    // Top: sidebar rail beside the stacked pages.
+    auto* content = new QWidget(central);
+    auto* row     = new QHBoxLayout(content);
     row->setContentsMargins(0, 0, 0, 0);
     row->setSpacing(0);
 
-    // Pages, stacked. The sidebar selects which one is shown.
-    stack_         = new QStackedWidget(central);
+    stack_         = new QStackedWidget(content);
     dashboardPage_ = new QtDashboardPage(dashboardPresenter);
     productsPage_  = new QtProductsPage(productsPresenter);
     auto* settings = new QtSettingsPage(config, paletteManager);
@@ -37,13 +46,20 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     stack_->addWidget(settings);        // index 2 -> Settings
 
     sidebar_ = new QtSidebar(
-        [this](int index) { stack_->setCurrentIndex(index); }, central);
+        [this](int index) { stack_->setCurrentIndex(index); }, content);
     sidebar_->addItem(tr("Overview"));
     sidebar_->addItem(tr("Inventory"));
     sidebar_->addItem(tr("Settings"));
 
     row->addWidget(sidebar_);
     row->addWidget(stack_, 1);
+
+    outer->addWidget(content, 1);
+
+    // Bottom: live log panel tailing the log file (the GTK log-panel analog).
+    auto* logPanel = new QtLogPanel(
+        QString::fromStdString(config.getLogFilePath()), central);
+    outer->addWidget(logPanel);
 
     setCentralWidget(central);
     sidebar_->select(0);

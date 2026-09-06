@@ -64,6 +64,10 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
         #sidebarBrand { color: @text; font-weight: bold; font-size: 15px;
             padding: 4px 4px 8px; }
         #sidebarUser { color: @muted; padding: 6px 4px; }
+        #logPanel { background: @surface; border-top: 1px solid @border; }
+        #logHeader { color: @muted; font-weight: bold; padding: 2px 4px; }
+        #logView { background: @surface2; color: @text; border: 1px solid @border;
+            border-radius: 4px; font-family: monospace; }
     )QSS");
 
     qss.replace("@surface2", palette.surface2)

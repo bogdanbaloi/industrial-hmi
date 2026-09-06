@@ -16,6 +16,7 @@ reusing the existing presenters through the ViewObserver seam.
 - Products tab (`QtProductsPage`) reusing `ProductsPresenter`, with a Refresh action and a products table.
 - Settings tab (`QtSettingsPage`): a read-only config overview plus the palette picker.
 - Runtime palettes (`QtPaletteManager`): light, dark, Nord and Cockpit, applied application-wide via a Qt style sheet built from semantic role colours and persisted through ConfigManager. ADR-0021.
+- Live log panel (`QtLogPanel`) at the bottom of the shell, tailing the log file (the GTK log-panel analog).
 
 #### Changed
 - Card status colours moved to a QtTheme palette and card strings wrapped in tr().
