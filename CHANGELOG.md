@@ -17,10 +17,14 @@ reusing the existing presenters through the ViewObserver seam.
 - Settings tab (`QtSettingsPage`): a read-only config overview plus the palette picker.
 - Runtime palettes (`QtPaletteManager`): light, dark, Nord and Cockpit, applied application-wide via a Qt style sheet built from semantic role colours and persisted through ConfigManager. ADR-0021.
 - Live log panel (`QtLogPanel`) at the bottom of the shell, tailing the log file (the GTK log-panel analog).
+- Alerts tab (`QtAlertsPage`) reusing the shared ISA-18.2 `AlertCenter` (the same alarm store the GTK `AlertsPanel` renders): active alarms with priority and lifecycle badges, per-alarm Acknowledge, a history toggle and Clear. Reusing the alarm store unchanged behind a second toolkit extends the REQ-ARCH-011 toolkit-independence proof.
 
 #### Changed
 - Card status colours moved to a QtTheme palette and card strings wrapped in tr().
-- Replaced the tab bar with a custom sidebar (`QtSidebar`) over a QStackedWidget. Nav reskinned to supply-chain (Overview, Inventory, Settings) and the products table relabelled as inventory (SKU, Description, On hand).
+- Replaced the tab bar with a custom sidebar (`QtSidebar`) over a QStackedWidget. Nav reskinned to supply-chain (Overview, Alerts, Inventory, Settings) and the products table relabelled as inventory (SKU, Description, On hand).
+
+#### Fixed
+- Equipment "Enabled" checkbox indicator was invisible: a global Qt style sheet suppresses the native `QCheckBox` indicator, and the palette QSS did not restyle it, so a checked (enabled) box rendered blank. The palette now styles `QCheckBox::indicator` from its role colours (checked = filled accent, unchecked = bordered surface).
 
 ### Qt desktop frontend (dashboard) (REQ-ARCH-011)
 

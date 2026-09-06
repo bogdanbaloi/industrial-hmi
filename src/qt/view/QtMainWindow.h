@@ -9,6 +9,10 @@ class DashboardPresenter;
 class ProductsPresenter;
 }
 
+namespace app::presenter {
+class AlertCenter;
+}
+
 namespace app::config {
 class ConfigManager;
 }
@@ -27,6 +31,7 @@ class QtMainWindow : public QMainWindow {
 public:
     explicit QtMainWindow(DashboardPresenter& dashboardPresenter,
                           ProductsPresenter& productsPresenter,
+                          presenter::AlertCenter& alertCenter,
                           const config::ConfigManager& config,
                           QtPaletteManager& paletteManager,
                           QWidget* parent = nullptr);

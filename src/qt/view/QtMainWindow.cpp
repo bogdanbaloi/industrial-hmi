@@ -1,6 +1,7 @@
 #include "src/qt/view/QtMainWindow.h"
 
 #include "src/config/ConfigManager.h"
+#include "src/qt/view/QtAlertsPage.h"
 #include "src/qt/view/QtDashboardPage.h"
 #include "src/qt/view/QtLogPanel.h"
 #include "src/qt/view/QtProductsPage.h"
@@ -22,6 +23,7 @@ constexpr int kWindowHeight = 660;
 
 QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
                            ProductsPresenter& productsPresenter,
+                           presenter::AlertCenter& alertCenter,
                            const config::ConfigManager& config,
                            QtPaletteManager& paletteManager, QWidget* parent)
     : QMainWindow(parent) {
@@ -39,15 +41,18 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     stack_         = new QStackedWidget(content);
     dashboardPage_ = new QtDashboardPage(dashboardPresenter);
     productsPage_  = new QtProductsPage(productsPresenter);
+    auto* alerts   = new QtAlertsPage(alertCenter);
     auto* settings = new QtSettingsPage(config, paletteManager);
 
     stack_->addWidget(dashboardPage_);  // index 0 -> Overview
-    stack_->addWidget(productsPage_);   // index 1 -> Inventory
-    stack_->addWidget(settings);        // index 2 -> Settings
+    stack_->addWidget(alerts);          // index 1 -> Alerts
+    stack_->addWidget(productsPage_);   // index 2 -> Inventory
+    stack_->addWidget(settings);        // index 3 -> Settings
 
     sidebar_ = new QtSidebar(
         [this](int index) { stack_->setCurrentIndex(index); }, content);
     sidebar_->addItem(tr("Overview"));
+    sidebar_->addItem(tr("Alerts"));
     sidebar_->addItem(tr("Inventory"));
     sidebar_->addItem(tr("Settings"));
 

@@ -14,6 +14,10 @@ class DashboardPresenter;
 class ProductsPresenter;
 }
 
+namespace app::presenter {
+class AlertCenter;
+}
+
 namespace app::view {
 class QtMainWindow;
 class QtPaletteManager;
@@ -51,6 +55,7 @@ public:
 
 private:
     core::Bootstrap&                    bootstrap_;
+    std::unique_ptr<presenter::AlertCenter> alertCenter_;
     std::unique_ptr<DashboardPresenter>     dashboardPresenter_;
     std::unique_ptr<ProductsPresenter>      productsPresenter_;
     std::unique_ptr<view::QtPaletteManager> paletteManager_;

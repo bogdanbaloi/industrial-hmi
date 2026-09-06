@@ -1195,6 +1195,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/QtInitRoot.cpp
         src/qt/view/QtMainWindow.cpp
         src/qt/view/QtDashboardPage.cpp
+        src/qt/view/QtAlertsPage.cpp
         src/qt/view/QtSettingsPage.cpp
         src/qt/view/QtProductsPage.cpp
         src/qt/view/QtPaletteManager.cpp

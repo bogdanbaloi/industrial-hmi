@@ -2,6 +2,7 @@
 // StatusZoneViewModel::Severity::ERROR enumerators are parsed before any Qt or
 // Boost.Asio header pulls in wingdi.h (ERROR=0 macro).
 #include "src/model/SimulatedModel.h"
+#include "src/presenter/AlertCenter.h"
 #include "src/presenter/DashboardPresenter.h"
 #include "src/presenter/ProductsPresenter.h"
 
@@ -39,6 +40,9 @@ QtInitRoot::~QtInitRoot() {
     paletteManager_.reset();
     productsPresenter_.reset();
     dashboardPresenter_.reset();
+    // AlertCenter last: the presenter holds a bare reference to it, so it must
+    // out-live the presenter that raises alarms into it.
+    alertCenter_.reset();
 
     // Mirror InitConsole's shutdown: drop model callbacks and stop the Asio
     // io_context worker before static teardown gets ambiguous.
@@ -61,10 +65,16 @@ void QtInitRoot::run() {
     paletteManager_     = std::make_unique<view::QtPaletteManager>(
         app::config::ConfigManager::instance());
 
+    // Alarm store: the same ISA-18.2 AlertCenter the console and GTK frontends
+    // wire (InitConsole / MainWindow). The presenter raises / clears alarms
+    // into it; the Qt alerts page renders it. Injected before the first tick.
+    alertCenter_ = std::make_unique<presenter::AlertCenter>();
+    dashboardPresenter_->setAlertCenter(*alertCenter_);
+
     // Shell owns the page widgets; the presenters never learn they are talking
     // to Qt widgets rather than GTK pages or a terminal.
     window_ = std::make_unique<view::QtMainWindow>(
-        *dashboardPresenter_, *productsPresenter_,
+        *dashboardPresenter_, *productsPresenter_, *alertCenter_,
         app::config::ConfigManager::instance(), *paletteManager_);
 
     dashboardPresenter_->addObserver(window_->dashboardPage());
@@ -82,8 +92,11 @@ void QtInitRoot::run() {
     // producer would marshal via a queued signal, the Qt analog of the GTK
     // frontend's Glib::signal_idle hop.
     tickTimer_ = std::make_unique<QTimer>();
-    QObject::connect(tickTimer_.get(), &QTimer::timeout, window_.get(), [] {
+    QObject::connect(tickTimer_.get(), &QTimer::timeout, window_.get(), [this] {
         app::model::SimulatedModel::instance().tickSimulation();
+        // Drive alarm shelf auto-expiry on the same UI-thread cadence the GTK
+        // frontend uses (no separate timer needed).
+        alertCenter_->tick();
     });
     tickTimer_->start(kTickPeriod);
 
