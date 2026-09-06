@@ -49,6 +49,10 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
         QComboBox { background: @surface; color: @text; border: 1px solid @border;
             border-radius: 6px; padding: 4px 8px; }
         QCheckBox { background: transparent; }
+        QCheckBox::indicator { width: 15px; height: 15px;
+            border: 1px solid @border; border-radius: 3px; background: @surface; }
+        QCheckBox::indicator:checked { background: @accent; border-color: @accent; }
+        QCheckBox::indicator:disabled { border-color: @muted; }
         QTableWidget { background: @surface; alternate-background-color: @surface2;
             gridline-color: @border; border: 1px solid @border; }
         QHeaderView::section { background: @surface2; color: @muted;
