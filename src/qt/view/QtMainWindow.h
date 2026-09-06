@@ -17,6 +17,7 @@ namespace app::view {
 
 class QtDashboardPage;
 class QtProductsPage;
+class QtPaletteManager;
 
 /// The Qt application shell: a QMainWindow hosting a QTabWidget, one tab per
 /// page. Slice 4 holds the dashboard; later slices add Settings and Products as
@@ -27,6 +28,7 @@ public:
     explicit QtMainWindow(DashboardPresenter& dashboardPresenter,
                           ProductsPresenter& productsPresenter,
                           const config::ConfigManager& config,
+                          QtPaletteManager& paletteManager,
                           QWidget* parent = nullptr);
     ~QtMainWindow() override;
 

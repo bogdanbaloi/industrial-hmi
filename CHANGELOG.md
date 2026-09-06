@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Qt frontend pages and runtime palettes (REQ-ARCH-012)
+
+Extends the Qt frontend with more pages and a runtime palette system, all
+reusing the existing presenters through the ViewObserver seam.
+
+#### Added
+- Products tab (`QtProductsPage`) reusing `ProductsPresenter`, with a Refresh action and a products table.
+- Settings tab (`QtSettingsPage`): a read-only config overview plus the palette picker.
+- Runtime palettes (`QtPaletteManager`): light, dark, Nord and Cockpit, applied application-wide via a Qt style sheet built from semantic role colours and persisted through ConfigManager. ADR-0021.
+
+#### Changed
+- Card status colours moved to a QtTheme palette and card strings wrapped in tr().
+
 ### Qt desktop frontend (dashboard) (REQ-ARCH-011)
 
 Adds an opt-in third frontend that proves the MVP boundary is

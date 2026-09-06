@@ -12,6 +12,7 @@
 #include "src/core/LoggerBase.h"
 #include "src/qt/view/QtDashboardPage.h"
 #include "src/qt/view/QtProductsPage.h"
+#include "src/qt/view/QtPaletteManager.h"
 #include "src/qt/view/QtMainWindow.h"
 #include "src/model/ModelContext.h"
 
@@ -35,6 +36,7 @@ QtInitRoot::~QtInitRoot() {
         }
     }
     window_.reset();
+    paletteManager_.reset();
     productsPresenter_.reset();
     dashboardPresenter_.reset();
 
@@ -56,12 +58,14 @@ void QtInitRoot::run() {
     // Presenter: DI construction, identical to the console and test wiring.
     dashboardPresenter_ = std::make_unique<DashboardPresenter>(model);
     productsPresenter_  = std::make_unique<ProductsPresenter>();
+    paletteManager_     = std::make_unique<view::QtPaletteManager>(
+        app::config::ConfigManager::instance());
 
     // Shell owns the page widgets; the presenters never learn they are talking
     // to Qt widgets rather than GTK pages or a terminal.
     window_ = std::make_unique<view::QtMainWindow>(
         *dashboardPresenter_, *productsPresenter_,
-        app::config::ConfigManager::instance());
+        app::config::ConfigManager::instance(), *paletteManager_);
 
     dashboardPresenter_->addObserver(window_->dashboardPage());
     productsPresenter_->addObserver(window_->productsPage());
@@ -82,6 +86,9 @@ void QtInitRoot::run() {
         app::model::SimulatedModel::instance().tickSimulation();
     });
     tickTimer_->start(kTickPeriod);
+
+    // Apply the stored palette (or the default) before showing.
+    paletteManager_->applyInitial();
 
     window_->show();
 }

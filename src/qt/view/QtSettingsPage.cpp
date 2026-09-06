@@ -2,8 +2,11 @@
 
 #include "src/qt/view/QtSettingsPage.h"
 
+#include "src/qt/view/QtPaletteManager.h"
+
 #include "ui_QtSettingsPage.h"
 
+#include <QComboBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QObject>
@@ -20,9 +23,27 @@ QString onOff(bool enabled) {
 }  // namespace
 
 QtSettingsPage::QtSettingsPage(const config::ConfigManager& config,
-                              QWidget* parent)
-    : QWidget(parent), ui_(std::make_unique<Ui::QtSettingsPage>()) {
+                              QtPaletteManager& paletteManager, QWidget* parent)
+    : QWidget(parent),
+      paletteManager_(paletteManager),
+      ui_(std::make_unique<Ui::QtSettingsPage>()) {
     ui_->setupUi(this);
+
+    // Palette picker: populate from the manager, select the active one, then
+    // wire changes. Connecting after the initial fill avoids re-applying on
+    // setup.
+    for (const auto& palette : paletteManager_.palettes()) {
+        ui_->paletteCombo->addItem(palette.displayName, palette.id);
+    }
+    const int active = ui_->paletteCombo->findData(paletteManager_.currentId());
+    if (active >= 0) {
+        ui_->paletteCombo->setCurrentIndex(active);
+    }
+    connect(ui_->paletteCombo, &QComboBox::currentIndexChanged, this,
+            [this](int index) {
+                paletteManager_.apply(ui_->paletteCombo->itemData(index).toString());
+            });
+
     populate(config);
 }
 
@@ -37,7 +58,6 @@ void QtSettingsPage::populate(const config::ConfigManager& config) {
     addRow(tr("Application"),
            QString::fromStdString(config.getAppName()) + " "
                + QString::fromStdString(config.getAppVersion()));
-    addRow(tr("Theme"), QString::fromStdString(config.getDefaultTheme()));
     addRow(tr("Language"), QString::fromStdString(config.getLanguage()));
 
     addRow(tr("TCP backend"),

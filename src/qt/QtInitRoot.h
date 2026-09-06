@@ -16,6 +16,7 @@ class ProductsPresenter;
 
 namespace app::view {
 class QtMainWindow;
+class QtPaletteManager;
 }
 
 namespace app::qt {
@@ -50,10 +51,11 @@ public:
 
 private:
     core::Bootstrap&                    bootstrap_;
-    std::unique_ptr<DashboardPresenter> dashboardPresenter_;
-    std::unique_ptr<ProductsPresenter>  productsPresenter_;
-    std::unique_ptr<view::QtMainWindow> window_;
-    std::unique_ptr<QTimer>             tickTimer_;
+    std::unique_ptr<DashboardPresenter>     dashboardPresenter_;
+    std::unique_ptr<ProductsPresenter>      productsPresenter_;
+    std::unique_ptr<view::QtPaletteManager> paletteManager_;
+    std::unique_ptr<view::QtMainWindow>     window_;
+    std::unique_ptr<QTimer>                 tickTimer_;
 
     static constexpr std::chrono::milliseconds kTickPeriod{2000};
 };

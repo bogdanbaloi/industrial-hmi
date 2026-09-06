@@ -16,15 +16,17 @@ class ConfigManager;
 
 namespace app::view {
 
-/// Read-only configuration overview page. It reads the current ConfigManager
-/// state and renders it as a key/value form. No presenter: settings are a
-/// config-direct concern, not a Model/Presenter flow. The ConfigManager is
-/// injected (DIP) so the page never reaches the singleton itself. Editing and
-/// persistence are a future extension that would not change this display.
+class QtPaletteManager;
+
+/// Configuration page. The palette picker (light / dark / themed) applies +
+/// persists through QtPaletteManager; the rest is a read-only overview of the
+/// current ConfigManager state. Both collaborators are injected (DIP); the page
+/// reaches no singleton itself. Editing the other settings is a future
+/// extension that would not change this structure.
 class QtSettingsPage : public QWidget {
 public:
-    explicit QtSettingsPage(const config::ConfigManager& config,
-                            QWidget* parent = nullptr);
+    QtSettingsPage(const config::ConfigManager& config,
+                   QtPaletteManager& paletteManager, QWidget* parent = nullptr);
     ~QtSettingsPage() override;
 
     QtSettingsPage(const QtSettingsPage&)            = delete;
@@ -35,6 +37,7 @@ public:
 private:
     void populate(const config::ConfigManager& config);
 
+    QtPaletteManager&                   paletteManager_;
     std::unique_ptr<Ui::QtSettingsPage> ui_;
 };
 

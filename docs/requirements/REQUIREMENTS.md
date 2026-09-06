@@ -263,6 +263,23 @@ already covered by DashboardPresenterTest.
 ADR: 0001 (MVP layer boundaries), 0002 (Two front-ends), 0003 (Observer),
 0020 (Qt frontend for MVP toolkit-independence).
 
+### REQ-ARCH-012 (SHOULD) — Qt runtime palette switching
+
+`req~arch-012~1`
+
+The Qt frontend **shall** let the operator switch the visual palette at runtime
+from Settings, with light, dark and themed palettes selectable. The choice
+**shall** apply application-wide without a restart while persisting through
+`ConfigManager`, so it is restored on the next launch. Palettes **shall** be
+defined as data (semantic role colours) rendered by a single style-sheet
+builder, so adding a palette adds no code paths. This mirrors the GTK runtime
+palette swap (ADR-0008 / REQ-ARCH-006) on the Qt toolkit.
+
+Verified by: manual run of `industrial-hmi-qt` (switching the Settings palette
+re-themes the app live; the choice survives a restart).
+
+ADR: 0008 (Runtime palette swap), 0020 (Qt frontend), 0021 (Qt palette manager).
+
 ---
 
 ## AUTH — Authentication & Authorisation

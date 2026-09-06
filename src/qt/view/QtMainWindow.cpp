@@ -15,7 +15,8 @@ constexpr int kWindowHeight = 640;
 
 QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
                            ProductsPresenter& productsPresenter,
-                           const config::ConfigManager& config, QWidget* parent)
+                           const config::ConfigManager& config,
+                           QtPaletteManager& paletteManager, QWidget* parent)
     : QMainWindow(parent) {
     tabs_ = new QTabWidget(this);
 
@@ -25,7 +26,7 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     productsPage_ = new QtProductsPage(productsPresenter);
     tabs_->addTab(productsPage_, tr("Products"));
 
-    tabs_->addTab(new QtSettingsPage(config), tr("Settings"));
+    tabs_->addTab(new QtSettingsPage(config, paletteManager), tr("Settings"));
 
     setCentralWidget(tabs_);
     setWindowTitle(tr("Industrial HMI (Qt)"));
