@@ -2,7 +2,7 @@
 
 #include <QMainWindow>
 
-class QTabWidget;
+class QStackedWidget;
 
 namespace app {
 class DashboardPresenter;
@@ -18,11 +18,11 @@ namespace app::view {
 class QtDashboardPage;
 class QtProductsPage;
 class QtPaletteManager;
+class QtSidebar;
 
-/// The Qt application shell: a QMainWindow hosting a QTabWidget, one tab per
-/// page. Slice 4 holds the dashboard; later slices add Settings and Products as
-/// further tabs. It owns the page widgets through the tab widget (Qt parent
-/// ownership) and exposes them so the composition root can attach observers.
+/// The Qt application shell: a custom QtSidebar rail beside a QStackedWidget,
+/// one stacked page per nav entry (the GTK-sidebar feel on Qt). It owns the
+/// page widgets and exposes them so the composition root can attach observers.
 class QtMainWindow : public QMainWindow {
 public:
     explicit QtMainWindow(DashboardPresenter& dashboardPresenter,
@@ -41,7 +41,8 @@ public:
     [[nodiscard]] QtProductsPage* productsPage() const { return productsPage_; }
 
 private:
-    QTabWidget*      tabs_{nullptr};
+    QtSidebar*       sidebar_{nullptr};
+    QStackedWidget*  stack_{nullptr};
     QtDashboardPage* dashboardPage_{nullptr};
     QtProductsPage*  productsPage_{nullptr};
 };

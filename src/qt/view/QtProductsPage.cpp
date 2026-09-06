@@ -29,7 +29,8 @@ QtProductsPage::QtProductsPage(ProductsPresenter& presenter, QWidget* parent)
 
     ui_->productsTable->setColumnCount(kColumnCount);
     ui_->productsTable->setHorizontalHeaderLabels(
-        {tr("Code"), tr("Name"), tr("Status"), tr("Stock"), tr("Quality %")});
+        {tr("SKU"), tr("Description"), tr("Status"), tr("On hand"),
+         tr("Quality %")});
     ui_->productsTable->horizontalHeader()->setStretchLastSection(true);
     ui_->productsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui_->productsTable->setSelectionBehavior(QAbstractItemView::SelectRows);

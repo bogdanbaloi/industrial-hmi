@@ -56,6 +56,14 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
         QProgressBar { background: @surface2; border: 1px solid @border;
             border-radius: 4px; text-align: center; color: @text; }
         QProgressBar::chunk { background: @accent; border-radius: 3px; }
+        #sidebar { background: @surface; border-right: 1px solid @border; }
+        #sidebar QPushButton { background: transparent; color: @text;
+            text-align: left; padding: 9px 12px; border: none; border-radius: 6px; }
+        #sidebar QPushButton:hover { background: @surface2; }
+        #sidebar QPushButton:checked { background: @accent; color: @accentInk; }
+        #sidebarBrand { color: @text; font-weight: bold; font-size: 15px;
+            padding: 4px 4px 8px; }
+        #sidebarUser { color: @muted; padding: 6px 4px; }
     )QSS");
 
     qss.replace("@surface2", palette.surface2)

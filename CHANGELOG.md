@@ -19,6 +19,7 @@ reusing the existing presenters through the ViewObserver seam.
 
 #### Changed
 - Card status colours moved to a QtTheme palette and card strings wrapped in tr().
+- Replaced the tab bar with a custom sidebar (`QtSidebar`) over a QStackedWidget. Nav reskinned to supply-chain (Overview, Inventory, Settings) and the products table relabelled as inventory (SKU, Description, On hand).
 
 ### Qt desktop frontend (dashboard) (REQ-ARCH-011)
 
