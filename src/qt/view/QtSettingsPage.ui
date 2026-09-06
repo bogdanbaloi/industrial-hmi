@@ -20,7 +20,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="paletteCombo"/>
+      <layout class="QHBoxLayout" name="paletteSwatches"/>
      </item>
      <item>
       <spacer name="paletteSpacer">
