@@ -18,7 +18,10 @@ namespace app::view {
 /// widget itself as `context` keeps the hop safe across teardown.
 template <typename Fn>
 void postToUi(QObject* context, Fn&& fn) {
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+    // The functor overload trips clang-analyzer-cplusplus.NewDeleteLeaks -- a
+    // Qt-internal slot allocation the analyzer mis-traces and reports inside
+    // qobjectdefs.h (a system header NOLINT cannot reach), so the check is
+    // disabled in .clang-tidy rather than suppressed per-line here.
     QMetaObject::invokeMethod(context, std::forward<Fn>(fn),
                               Qt::QueuedConnection);
 }

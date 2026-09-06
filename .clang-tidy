@@ -49,6 +49,12 @@
 #   raw malloc / free for portability). The check is a false-positive
 #   generator in our codebase; suppressing it surgically beats wrapping
 #   every stb call in NOLINT.
+# - clang-analyzer-cplusplus.NewDeleteLeaks: same path-sensitive story --
+#   Qt's QMetaObject::invokeMethod(functor, QueuedConnection) allocates an
+#   internal slot object that the analyzer mis-traces as a leak, reporting
+#   inside qobjectdefs.h (a system header NOLINT cannot reach). We use that
+#   overload deliberately to marshal onto the UI thread (QtUiDispatch), so
+#   the check is a false-positive generator here too.
 
 Checks: >
   *,
@@ -129,6 +135,7 @@ Checks: >
   -cert-dcl21-cpp,
   -concurrency-mt-unsafe,
   -clang-analyzer-unix.Malloc,
+  -clang-analyzer-cplusplus.NewDeleteLeaks,
   -portability-avoid-pragma-once,
   -hicpp-use-equals-delete,
   -modernize-use-equals-delete,

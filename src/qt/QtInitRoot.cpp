@@ -35,6 +35,24 @@
 
 namespace app::qt {
 
+namespace {
+// Canned confidences for the goods-receipt demo classifier. FakeImageClassifier
+// replays these regardless of the decoded image; the view labels them a demo.
+constexpr float kDemoConfIntact  = 0.93F;
+constexpr float kDemoConfScuff   = 0.045F;
+constexpr float kDemoConfCrushed = 0.018F;
+constexpr float kDemoConfWater   = 0.007F;
+
+std::vector<ml::Classification> makeDemoInspectionResults() {
+    return {
+        {0, "Intact packaging", kDemoConfIntact},
+        {1, "Minor surface scuff", kDemoConfScuff},
+        {2, "Crushed corner", kDemoConfCrushed},
+        {3, "Water damage", kDemoConfWater},
+    };
+}
+}  // namespace
+
 QtInitRoot::QtInitRoot(core::Bootstrap& bootstrap) : bootstrap_{bootstrap} {}
 
 QtInitRoot::~QtInitRoot() {
@@ -138,13 +156,7 @@ void QtInitRoot::run() {
     // classification is surfaced plainly as a demo in the view).
     imageDecoder_    = std::make_unique<ml::ImageDecoder>();
     imageClassifier_ = std::make_unique<ml::FakeImageClassifier>(
-        std::vector<ml::Classification>{
-            {0, "Intact packaging", 0.93F},
-            {1, "Minor surface scuff", 0.045F},
-            {2, "Crushed corner", 0.018F},
-            {3, "Water damage", 0.007F},
-        },
-        "Goods-receipt demo");
+        makeDemoInspectionResults(), "Goods-receipt demo");
     inspectionPresenter_ = std::make_unique<presenter::QualityInspectionPresenter>(
         *imageClassifier_, *imageDecoder_);
 
