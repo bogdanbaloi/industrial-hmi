@@ -21,6 +21,7 @@ namespace app::view {
 
 class QtDashboardPage;
 class QtProductsPage;
+class QtStatusStrip;
 class QtPaletteManager;
 class QtSidebar;
 
@@ -44,12 +45,17 @@ public:
 
     [[nodiscard]] QtDashboardPage* dashboardPage() const { return dashboardPage_; }
     [[nodiscard]] QtProductsPage* productsPage() const { return productsPage_; }
+    [[nodiscard]] QtStatusStrip* statusStrip() const { return statusStrip_; }
+
+    /// Set the active-alert count shown as a badge on the Alerts nav entry.
+    void setAlertsBadge(int count);
 
 private:
     QtSidebar*       sidebar_{nullptr};
     QStackedWidget*  stack_{nullptr};
     QtDashboardPage* dashboardPage_{nullptr};
     QtProductsPage*  productsPage_{nullptr};
+    QtStatusStrip*   statusStrip_{nullptr};
 };
 
 }  // namespace app::view

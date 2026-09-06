@@ -3,10 +3,12 @@
 #include "src/config/ConfigManager.h"
 #include "src/qt/view/QtAlertsPage.h"
 #include "src/qt/view/QtDashboardPage.h"
+#include "src/qt/view/QtIcons.h"
 #include "src/qt/view/QtLogPanel.h"
 #include "src/qt/view/QtProductsPage.h"
 #include "src/qt/view/QtSettingsPage.h"
 #include "src/qt/view/QtSidebar.h"
+#include "src/qt/view/QtStatusStrip.h"
 
 #include <QHBoxLayout>
 #include <QStackedWidget>
@@ -51,15 +53,20 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
 
     sidebar_ = new QtSidebar(
         [this](int index) { stack_->setCurrentIndex(index); }, content);
-    sidebar_->addItem(tr("Overview"));
-    sidebar_->addItem(tr("Alerts"));
-    sidebar_->addItem(tr("Inventory"));
-    sidebar_->addItem(tr("Settings"));
+    sidebar_->addItem(tr("Overview"), icons::overview());
+    sidebar_->addItem(tr("Alerts"), icons::alerts());
+    sidebar_->addItem(tr("Inventory"), icons::inventory());
+    sidebar_->addItem(tr("Settings"), icons::settings());
 
     row->addWidget(sidebar_);
     row->addWidget(stack_, 1);
 
     outer->addWidget(content, 1);
+
+    // Always-visible status strip (system state + backend health + clock), the
+    // Qt home for glanceable connectivity instead of a nav page.
+    statusStrip_ = new QtStatusStrip(central);
+    outer->addWidget(statusStrip_);
 
     // Bottom: live log panel tailing the log file (the GTK log-panel analog).
     auto* logPanel = new QtLogPanel(
@@ -74,5 +81,10 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
 }
 
 QtMainWindow::~QtMainWindow() = default;
+
+void QtMainWindow::setAlertsBadge(int count) {
+    constexpr int kNavAlerts = 1;  // matches the addItem order above
+    sidebar_->setBadge(kNavAlerts, count);
+}
 
 }  // namespace app::view

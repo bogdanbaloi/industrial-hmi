@@ -7,6 +7,7 @@
 #include "src/qt/view/QtAlertsPage.h"
 
 #include "src/qt/view/QtTheme.h"
+#include "src/qt/view/QtUiDispatch.h"
 
 #include "ui_QtAlertsPage.h"
 
@@ -78,14 +79,16 @@ QtAlertsPage::QtAlertsPage(presenter::AlertCenter& alertCenter, QWidget* parent)
     });
 
     // Any lifecycle change (raise / ack / clear / resolve) rebuilds the list.
-    // AlertCenter emits on the mutating thread; here that is always the UI
-    // thread, so the rebuild can touch widgets without marshalling. mem_fun
-    // (not a lambda) matches the GTK AlertsPanel and keeps the slot free of a
-    // captured `this` with static storage duration; we disconnect in the dtor.
+    // AlertCenter emits on the mutating thread, which -- with the integration
+    // backends running -- can be a backend Asio thread (the presenter raises an
+    // alarm while handling an ingested model change). So the slot marshals the
+    // rebuild onto the UI thread. mem_fun (not a lambda) matches the GTK
+    // AlertsPanel and keeps the slot free of a captured `this` with static
+    // storage duration; we disconnect in the dtor.
     alertsConn_ = alertCenter_.signalAlertsChanged().connect(
-        sigc::mem_fun(*this, &QtAlertsPage::rebuild));
+        sigc::mem_fun(*this, &QtAlertsPage::scheduleRebuild));
     historyConn_ = alertCenter_.signalHistoryChanged().connect(
-        sigc::mem_fun(*this, &QtAlertsPage::rebuild));
+        sigc::mem_fun(*this, &QtAlertsPage::scheduleRebuild));
 
     rebuild();
 }
@@ -93,6 +96,12 @@ QtAlertsPage::QtAlertsPage(presenter::AlertCenter& alertCenter, QWidget* parent)
 QtAlertsPage::~QtAlertsPage() {
     alertsConn_.disconnect();
     historyConn_.disconnect();
+}
+
+void QtAlertsPage::scheduleRebuild() {
+    // Hop onto the UI thread: the AlertCenter signal may fire on a backend
+    // thread, and rebuild() creates widgets.
+    postToUi(this, [this] { rebuild(); });
 }
 
 void QtAlertsPage::rebuild() {

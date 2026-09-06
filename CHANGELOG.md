@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Shared integration bootstrap and Qt connectivity (REQ-ARCH-013)
+
+Extracts the integration-layer composition into a shared, toolkit-agnostic
+module so every frontend builds the same protocol set, and surfaces backend
+health in the Qt frontend.
+
+#### Added
+- `IntegrationBootstrap` (`buildIntegrationServices` plus the `IntegrationServices` owning bundle, object library `objectsIntegrationBootstrap`): one place that builds every config-enabled backend (TCP / MQTT / OPC-UA / Modbus / multi-station) and keeps the side objects alive. ADR-0022.
+- Qt status strip (`QtStatusStrip`) along the bottom of the shell: a compact backend-health row reusing `BackendHealthPresenter` through the `ViewObserver` seam, plus the system-state pill and a live clock (the GTK SystemStatusBadge + BackendHealthBar + LiveClock gathered into one strip). Extends the toolkit-independence proof from the presenter layer to the integration layer.
+
+#### Changed
+- `main.cpp` (GTK + console) and `QtInitRoot` now compose the integration layer through the shared bootstrap instead of wiring backends inline; the Qt UI-thread tick polls backend health alongside the simulation tick.
+- Qt views now marshal presenter and AlertCenter callbacks onto the UI thread (`QtUiDispatch::postToUi`, a `QMetaObject::invokeMethod` queued hop -- the analog of the GTK `Glib::signal_idle`). Required once the integration backends run: an ingest bridge can drive a model change from a backend Asio thread, and touching widgets off the UI thread crashed.
+
 ### Qt frontend pages and runtime palettes (REQ-ARCH-012)
 
 Extends the Qt frontend with more pages and a runtime palette system, all
@@ -17,6 +31,8 @@ reusing the existing presenters through the ViewObserver seam.
 - Settings tab (`QtSettingsPage`): a read-only config overview plus the palette picker.
 - Runtime palettes (`QtPaletteManager`): light, dark, Nord and Cockpit, applied application-wide via a Qt style sheet built from semantic role colours and persisted through ConfigManager. ADR-0021.
 - Live log panel (`QtLogPanel`) at the bottom of the shell, tailing the log file (the GTK log-panel analog).
+- Overview KPI tiles (`QtKpiTile`): OEE, throughput, average quality, defects and lines-up, all aggregated live from the same view models the cards render (no fabricated figures).
+- SVG sidebar nav icons (rendered from inline SVG via `QSvgRenderer`, no shipped assets) plus a live active-alert count badge on the Alerts entry (fed from `AlertCenter`, marshalled to the UI thread).
 - Alerts tab (`QtAlertsPage`) reusing the shared ISA-18.2 `AlertCenter` (the same alarm store the GTK `AlertsPanel` renders): active alarms with priority and lifecycle badges, per-alarm Acknowledge, a history toggle and Clear. Reusing the alarm store unchanged behind a second toolkit extends the REQ-ARCH-011 toolkit-independence proof.
 
 #### Changed
@@ -24,6 +40,7 @@ reusing the existing presenters through the ViewObserver seam.
 - Replaced the tab bar with a custom sidebar (`QtSidebar`) over a QStackedWidget. Nav reskinned to supply-chain (Overview, Alerts, Inventory, Settings) and the products table relabelled as inventory (SKU, Description, On hand).
 
 #### Fixed
+- Removed the redundant dashboard state banner: it duplicated the always-visible status-strip state pill (and had read a `StatusZoneViewModel` placeholder that no presenter emits, so it was stuck on "System Idle"). The status-strip pill is now the single, global state indicator.
 - Equipment "Enabled" checkbox indicator was invisible: a global Qt style sheet suppresses the native `QCheckBox` indicator, and the palette QSS did not restyle it, so a checked (enabled) box rendered blank. The palette now styles `QCheckBox::indicator` from its role colours (checked = filled accent, unchecked = bordered surface).
 
 ### Qt desktop frontend (dashboard) (REQ-ARCH-011)

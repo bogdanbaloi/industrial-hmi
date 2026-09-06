@@ -1,8 +1,10 @@
 #include "src/qt/view/QtSidebar.h"
 
 #include <QButtonGroup>
+#include <QIcon>
 #include <QLabel>
 #include <QPushButton>
+#include <QSize>
 #include <QVBoxLayout>
 
 #include <utility>
@@ -12,6 +14,7 @@ namespace app::view {
 namespace {
 constexpr int kSidebarWidth = 220;
 constexpr int kNavSpacing   = 4;
+constexpr int kNavIconSize  = 18;
 }  // namespace
 
 QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
@@ -44,12 +47,22 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
     });
 }
 
-int QtSidebar::addItem(const QString& label) {
+int QtSidebar::addItem(const QString& label, const QIcon& icon) {
     auto* button = new QPushButton(label, this);
     button->setCheckable(true);
+    if (!icon.isNull()) {
+        button->setIcon(icon);
+        button->setIconSize(QSize(kNavIconSize, kNavIconSize));
+    }
     const int index = count_++;
     group_->addButton(button, index);
     navLayout_->addWidget(button);
+
+    // A count badge parented to the button, hidden until setBadge shows it.
+    auto* badge = new QLabel(button);
+    badge->setObjectName("navBadge");
+    badge->hide();
+    badges_.push_back(badge);
     return index;
 }
 
@@ -57,6 +70,26 @@ void QtSidebar::select(int index) {
     if (auto* button = group_->button(index)) {
         button->setChecked(true);
     }
+}
+
+void QtSidebar::setBadge(int index, int count) {
+    if (index < 0 || index >= static_cast<int>(badges_.size())) {
+        return;
+    }
+    auto* badge = badges_[index];
+    if (count <= 0) {
+        badge->hide();
+        return;
+    }
+    constexpr int kBadgeMargin = 8;
+    badge->setText(QString::number(count));
+    badge->adjustSize();
+    if (auto* button = group_->button(index)) {
+        badge->move(button->width() - badge->width() - kBadgeMargin,
+                    (button->height() - badge->height()) / 2);
+    }
+    badge->show();
+    badge->raise();
 }
 
 }  // namespace app::view

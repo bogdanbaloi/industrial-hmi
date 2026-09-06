@@ -40,6 +40,7 @@ public:
     QtAlertsPage& operator=(QtAlertsPage&&)      = delete;
 
 private:
+    void scheduleRebuild();
     void rebuild();
     QWidget* buildCard(const presenter::AlertViewModel& alert, bool historyMode,
                        const QString& resolvedAt);

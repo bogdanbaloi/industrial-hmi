@@ -7,11 +7,7 @@
   </property>
   <layout class="QVBoxLayout" name="rootLayout">
    <item>
-    <widget class="QLabel" name="statusBanner">
-     <property name="text">
-      <string>System Idle</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="kpiLayout"/>
    </item>
    <item>
     <widget class="QLabel" name="workUnitIdLabel">

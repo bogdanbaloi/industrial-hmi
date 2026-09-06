@@ -795,6 +795,40 @@ if(BUILD_MODBUS_BACKEND)
     )
 endif()
 
+# ----- objectsIntegrationBootstrap -----
+# Single composition point for the integration layer: builds the
+# IntegrationManager plus every config-enabled backend and bundles the owned
+# side objects. Shared by the GTK, console and Qt frontends so "what wire
+# protocols does this binary speak" has one answer instead of one per
+# composition root -- the toolkit-independence of the presenter layer
+# extended to the integration layer. Links every concrete protocol lib so the
+# INDUSTRIAL_HMI_HAS_* defines (PUBLIC on objectsOpcUa / objectsModbus) reach
+# this TU and, transitively, the frontends -- keeping the IntegrationServices
+# bundle layout (its #ifdef'd members) identical across all three binaries.
+add_library(objectsIntegrationBootstrap OBJECT)
+target_sources(objectsIntegrationBootstrap
+    PRIVATE
+        src/app/IntegrationBootstrap.cpp
+)
+target_link_libraries(objectsIntegrationBootstrap
+    PUBLIC
+        objectsCore
+        objectsConfig
+        objectsModel
+        objectsIntegrationCore
+        objectsTcp
+        objectsMqtt
+        ${BOOST_TARGET}
+        Threads::Threads
+)
+target_include_directories(objectsIntegrationBootstrap PUBLIC ${CMAKE_SOURCE_DIR})
+if(BUILD_OPCUA_BACKEND)
+    target_link_libraries(objectsIntegrationBootstrap PUBLIC objectsOpcUa)
+endif()
+if(BUILD_MODBUS_BACKEND)
+    target_link_libraries(objectsIntegrationBootstrap PUBLIC objectsModbus)
+endif()
+
 # ML Layer - Edge inference foundation. Image decoding (stb_image),
 # preprocessing (resize / centre-crop / ImageNet normalise), label
 # table, ImageClassifier interface + FakeImageClassifier test double.
@@ -1105,6 +1139,7 @@ target_link_libraries(industrial-hmi
         objectsAppGtk
         objectsPresenter
         objectsView
+        objectsIntegrationBootstrap
         objectsIntegrationCore
         objectsTcp
         objectsMqtt
@@ -1148,6 +1183,7 @@ target_link_libraries(industrial-hmi-console
         objectsCore
         objectsPresenter
         objectsConsole
+        objectsIntegrationBootstrap
         objectsIntegrationCore
         objectsTcp
         objectsMqtt
@@ -1186,7 +1222,7 @@ target_compile_definitions(industrial-hmi-console PRIVATE
 # adds only a new View layer (src/qt) plus its own composition root. No
 # gtkmm widget code and no Conan -- Qt6 comes from the system toolchain.
 if(BUILD_QT_FRONTEND)
-    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets Svg)
 
     # View-layer object library. AUTOMOC is scoped to THIS target only so
     # the GTK / console / test object libraries never run moc.
@@ -1196,6 +1232,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/QtMainWindow.cpp
         src/qt/view/QtDashboardPage.cpp
         src/qt/view/QtAlertsPage.cpp
+        src/qt/view/QtStatusStrip.cpp
         src/qt/view/QtSettingsPage.cpp
         src/qt/view/QtProductsPage.cpp
         src/qt/view/QtPaletteManager.cpp
@@ -1204,6 +1241,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/widgets/QtEquipmentCard.cpp
         src/qt/view/widgets/QtActuatorCard.cpp
         src/qt/view/widgets/QtQualityCard.cpp
+        src/qt/view/widgets/QtKpiTile.cpp
     )
     target_link_libraries(objectsQt
         PUBLIC
@@ -1212,6 +1250,7 @@ if(BUILD_QT_FRONTEND)
             objectsCore
             objectsPresenter
             Qt6::Widgets
+            Qt6::Svg
     )
     # AUTOMOC/AUTOUIC scoped to THIS target only: the GTK / console / test
     # object libraries never run moc or uic. AUTOUIC turns QtDashboardPage.ui
@@ -1226,12 +1265,26 @@ if(BUILD_QT_FRONTEND)
             objectsConfig
             objectsCore
             objectsPresenter
+            objectsIntegrationBootstrap
             objectsIntegrationCore
+            objectsTcp
+            objectsMqtt
             objectsMl
             objectsAuth
             Threads::Threads
             Qt6::Widgets
+            Qt6::Svg
     )
+    # OBJECT libraries do not contribute their object files transitively through
+    # another OBJECT library (objectsIntegrationBootstrap), so the concrete
+    # protocol libs must be linked directly here -- the same flat list the GTK
+    # and console executables carry.
+    if(BUILD_OPCUA_BACKEND)
+        target_link_libraries(industrial-hmi-qt PRIVATE objectsOpcUa)
+    endif()
+    if(BUILD_MODBUS_BACKEND)
+        target_link_libraries(industrial-hmi-qt PRIVATE objectsModbus)
+    endif()
     if(WIN32)
         # Winsock arrives transitively via objectsModel (PUBLIC ws2_32 /
         # mswsock), kept explicit for parity with the console target.
@@ -1435,6 +1488,7 @@ message(STATUS "  objectsIntegrationCore - Integration manager + serialisers + t
 message(STATUS "  objectsTcpBackend      - TCP wire backend (Boost.Asio)")
 message(STATUS "  objectsMqtt            - MQTT 3.1.1 client + backend (Boost.Asio)")
 message(STATUS "  objectsModbus          - Modbus TCP client + backend + ingest bridge")
+message(STATUS "  objectsIntegrationBootstrap - Shared integration composition (all frontends)")
 message(STATUS "  objectsOpcUa           - OPC-UA server + client + bridge (open62541, optional)")
 message(STATUS "  objectsAppGtk          - GTK application bootstrap (Application.cpp)")
 message(STATUS "  objectsPresenter       - Presenter layer (MVP orchestration)")

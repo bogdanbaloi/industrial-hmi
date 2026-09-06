@@ -27,6 +27,7 @@ namespace app::view {
 class QtEquipmentCard;
 class QtActuatorCard;
 class QtQualityCard;
+class QtKpiTile;
 
 /// Qt dashboard page. A QWidget (hosted in a QtMainWindow tab) that is also an
 /// app::ViewObserver, so the real DashboardPresenter drives it through the exact
@@ -53,12 +54,17 @@ public:
     // ViewObserver overrides. Called on the UI thread (see class note).
     void onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) override;
     void onControlPanelChanged(const presenter::ControlPanelViewModel& vm) override;
-    void onStatusZoneChanged(const presenter::StatusZoneViewModel& vm) override;
     void onEquipmentCardChanged(const presenter::EquipmentCardViewModel& vm) override;
     void onActuatorCardChanged(const presenter::ActuatorCardViewModel& vm) override;
     void onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& vm) override;
 
+    /// Update the big state banner. `state` is `static_cast<int>(SystemState)`;
+    /// fed from the presenter's state signal by the composition root (the
+    /// StatusZone placeholder VM the banner used to read is never emitted).
+    void setSystemState(int state);
+
 private:
+    void applyBanner(int state);
     DashboardPresenter&                  presenter_;
     std::unique_ptr<Ui::QtDashboardPage> ui_;
 
@@ -67,6 +73,23 @@ private:
     std::unordered_map<std::uint32_t, QtEquipmentCard*> equipmentCards_;
     std::unordered_map<std::uint32_t, QtActuatorCard*>  actuatorCards_;
     std::unordered_map<std::uint32_t, QtQualityCard*>   qualityCards_;
+
+    // KPI tiles across the top, refreshed from aggregated view-model data. All
+    // figures are derived from the same view models the cards render -- no
+    // fabricated numbers.
+    QtKpiTile* oeeTile_{nullptr};
+    QtKpiTile* throughputTile_{nullptr};
+    QtKpiTile* qualityTile_{nullptr};
+    QtKpiTile* defectsTile_{nullptr};
+    QtKpiTile* linesTile_{nullptr};
+
+    float  oeePct_{0.0F};
+    double throughputUph_{0.0};
+    std::unordered_map<std::uint32_t, float> qualityPassRate_;
+    std::unordered_map<std::uint32_t, int>   qualityDefects_;
+    std::unordered_map<std::uint32_t, bool>  equipmentEnabled_;
+
+    void updateKpis();
 };
 
 }  // namespace app::view
