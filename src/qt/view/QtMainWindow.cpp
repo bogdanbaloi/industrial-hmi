@@ -3,9 +3,11 @@
 #include "src/config/ConfigManager.h"
 #include "src/qt/view/QtAlertsPage.h"
 #include "src/qt/view/QtDashboardPage.h"
+#include "src/qt/view/QtAuditLogPage.h"
 #include "src/qt/view/QtGoodsReceiptPage.h"
 #include "src/qt/view/QtHistoryPage.h"
 #include "src/qt/view/QtIcons.h"
+#include "src/qt/view/QtUsersPage.h"
 #include "src/qt/view/QtLogPanel.h"
 #include "src/qt/view/QtProductsPage.h"
 #include "src/qt/view/QtSettingsPage.h"
@@ -19,6 +21,8 @@
 #include <QString>
 #include <QVBoxLayout>
 #include <QWidget>
+
+#include <utility>
 
 namespace app::view {
 
@@ -35,9 +39,7 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
                            presenter::QualityInspectionPresenter& inspectionPresenter,
                            const config::ConfigManager& config,
                            QtPaletteManager& paletteManager,
-                           historian::HistoryReader* historyReader,
-                           std::function<void(const std::string&)>
-                               onLanguageChanged)
+                           Context context)
     : QMainWindow(nullptr) {
     auto* central = new QWidget(this);
     auto* outer   = new QVBoxLayout(central);
@@ -58,8 +60,17 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     trendsPage_       = new QtTrendsPage();
     // Persisted-historian page: mounted only when the composition root opened
     // the store (degraded historian -> no History tab, same policy as GTK).
-    if (historyReader != nullptr) {
-        historyPage_ = new QtHistoryPage(*historyReader);
+    if (context.historyReader != nullptr) {
+        historyPage_ = new QtHistoryPage(*context.historyReader);
+    }
+    // Admin-only pages, mounted only when the composition root supplies their
+    // collaborators (Admin session). RBAC lives in UsersPresenter too, so this
+    // is the visible half of a defence-in-depth gate.
+    if (context.usersPresenter != nullptr) {
+        usersPage_ = new QtUsersPage(*context.usersPresenter);
+    }
+    if (context.auditReader != nullptr) {
+        auditLogPage_ = new QtAuditLogPage(*context.auditReader);
     }
     auto* settings    = new QtSettingsPage(
         config, paletteManager, [this](bool fullscreen) {
@@ -69,7 +80,7 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
                 showNormal();
             }
         },
-        std::move(onLanguageChanged));
+        std::move(context.onLanguageChanged));
 
     stack_->addWidget(dashboardPage_);    // index 0 -> Overview
     stack_->addWidget(alerts);            // index 1 -> Alerts
@@ -77,7 +88,13 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     stack_->addWidget(goodsReceiptPage_); // index 3 -> Goods receipt
     stack_->addWidget(trendsPage_);       // index 4 -> Trends
     if (historyPage_ != nullptr) {
-        stack_->addWidget(historyPage_);  // index 5 -> History (when enabled)
+        stack_->addWidget(historyPage_);  // History (when enabled)
+    }
+    if (usersPage_ != nullptr) {
+        stack_->addWidget(usersPage_);    // Users (admin)
+    }
+    if (auditLogPage_ != nullptr) {
+        stack_->addWidget(auditLogPage_); // Audit log (admin)
     }
     stack_->addWidget(settings);          // Settings (last)
 
@@ -91,7 +108,18 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     if (historyPage_ != nullptr) {
         sidebar_->addItem(tr("History"), icons::history());
     }
+    if (usersPage_ != nullptr) {
+        sidebar_->addItem(tr("Users"), icons::users());
+    }
+    if (auditLogPage_ != nullptr) {
+        sidebar_->addItem(tr("Audit log"), icons::auditLog());
+    }
     sidebar_->addItem(tr("Settings"), icons::settings());
+
+    // Wire the sign-out control only for an auth session (callback supplied).
+    if (context.onSignOut) {
+        sidebar_->enableSignOut(std::move(context.onSignOut));
+    }
 
     row->addWidget(sidebar_);
     row->addWidget(stack_, 1);
@@ -122,6 +150,10 @@ void QtMainWindow::setAlertsBadge(int count) {
     sidebar_->setBadge(kNavAlerts, count);
 }
 
+void QtMainWindow::setUserIdentity(const QString& text) {
+    sidebar_->setUserText(text);
+}
+
 void QtMainWindow::changeEvent(QEvent* event) {
     if (event != nullptr && event->type() == QEvent::LanguageChange) {
         setWindowTitle(tr("Industrial HMI (Qt)"));
@@ -135,6 +167,12 @@ void QtMainWindow::changeEvent(QEvent* event) {
         sidebar_->setItemLabel(index++, tr("Trends"));
         if (historyPage_ != nullptr) {
             sidebar_->setItemLabel(index++, tr("History"));
+        }
+        if (usersPage_ != nullptr) {
+            sidebar_->setItemLabel(index++, tr("Users"));
+        }
+        if (auditLogPage_ != nullptr) {
+            sidebar_->setItemLabel(index++, tr("Audit log"));
         }
         sidebar_->setItemLabel(index++, tr("Settings"));
     }

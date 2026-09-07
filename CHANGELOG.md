@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Qt authentication, admin pages and session footer (REQ-ARCH-016)
+
+Brings the auth stack behind the Qt frontend: a login gate, the admin
+user-management and audit-log pages, and a session-aware sidebar footer, all
+reusing the same toolkit-agnostic auth layer as GTK and console.
+
+#### Added
+- Modal login (`QtLoginDialog`) over the shared `AuthService` (Argon2id verify against the SQLite user store). Shown before the shell is built; a cancelled login exits cleanly with no window.
+- Admin user-management page (`QtUsersPage`) over `UsersPresenter`: a user table with add / edit / reset-password / delete, each through a `.ui` dialog (`QtUserFormDialog`, `QtResetPasswordDialog`) or a confirm box. Every mutation goes through the presenter, which enforces RBAC and writes the audit trail.
+- Admin audit-log page (`QtAuditLogPage`) over `AuditLogger`: category / result / range / user filters, an auto-refresh, and a total-events footer.
+- Session-aware sidebar footer showing the signed-in user + role, tracking `Session` changes.
+- Sign-out (switch user): clears + audits the session, re-shows the login, and rebuilds the shell so role-gated nav matches the newly signed-in user. A cancelled re-login exits. The rebuild reattaches a fresh window to the still-running simulation rather than resetting it.
+
+#### Changed
+- `QtInitRoot` builds the auth stack through the same config-gated, degraded-open path `main()`'s `registerAuth` uses, gates the shell behind the login, and mounts the Users + Audit pages only for an Admin session (visible half of a defence-in-depth gate). `run()` now returns a bool so `main()` skips the event loop on a cancelled login.
+- `objectsQt` is built with `QT_NO_KEYWORDS` so the shared sigc++ signals (`auth::Session`, the presenters) compile in a translation unit that also includes Qt headers -- Qt's `emit` macro would otherwise mangle sigc++'s `signal::emit()`.
+
 ### Qt language selection over the shared i18n catalog (REQ-ARCH-015)
 
 Adds a live language picker to the Qt frontend that reuses the same gettext

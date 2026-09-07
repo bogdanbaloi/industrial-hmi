@@ -58,6 +58,14 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
     userLabel_->setObjectName("sidebarUser");
     root->addWidget(userLabel_);
 
+    // Sign-out control: hidden until enableSignOut() wires it (auth builds only).
+    signOutButton_ = new QPushButton(tr("Sign out"), this);
+    signOutButton_->setObjectName("sidebarSignOut");
+    signOutButton_->setIcon(icons::signOut());
+    signOutButton_->setIconSize(QSize(kNavIconSize, kNavIconSize));
+    signOutButton_->hide();
+    root->addWidget(signOutButton_);
+
     // Kiosk mode has no title bar, so the shell provides its own quit control.
     quitButton_ = new QPushButton(tr("Exit application"), this);
     quitButton_->setObjectName("sidebarQuit");
@@ -100,10 +108,30 @@ void QtSidebar::setItemLabel(int index, const QString& label) {
     }
 }
 
+void QtSidebar::setUserText(const QString& text) {
+    userLabel_->setText(text);
+    userTextOverridden_ = true;
+}
+
+void QtSidebar::enableSignOut(std::function<void()> handler) {
+    connect(signOutButton_, &QPushButton::clicked, this,
+            [handler = std::move(handler)] {
+                if (handler) {
+                    handler();
+                }
+            });
+    signOutButton_->show();
+}
+
 void QtSidebar::changeEvent(QEvent* event) {
     if (event != nullptr && event->type() == QEvent::LanguageChange) {
         brandLabel_->setText(tr("Industrial HMI"));
-        userLabel_->setText(tr("Bogdan B. · Operations"));
+        // Leave a session identity in place; only the default placeholder is a
+        // translatable string.
+        if (!userTextOverridden_) {
+            userLabel_->setText(tr("Bogdan B. · Operations"));
+        }
+        signOutButton_->setText(tr("Sign out"));
         quitButton_->setText(tr("Exit application"));
     }
     QWidget::changeEvent(event);

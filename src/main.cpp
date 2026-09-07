@@ -286,7 +286,11 @@ int main(int argc, char* argv[]) {
         // headers never share a translation unit.
         QApplication qtApp(argc, argv);
         app::qt::QtInitRoot qtRoot(bootstrap);
-        qtRoot.run();
+        // run() returns false when the operator cancels the auth login gate;
+        // skip the event loop and exit cleanly, like the GTK path.
+        if (!qtRoot.run()) {
+            return 0;
+        }
         return QApplication::exec();
 #else
         // Integration backends -- opt-in per deployment via JSON.

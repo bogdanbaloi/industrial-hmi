@@ -1237,6 +1237,11 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/QtGoodsReceiptPage.cpp
         src/qt/view/QtTrendsPage.cpp
         src/qt/view/QtHistoryPage.cpp
+        src/qt/view/QtLoginDialog.cpp
+        src/qt/view/QtUsersPage.cpp
+        src/qt/view/QtUserFormDialog.cpp
+        src/qt/view/QtResetPasswordDialog.cpp
+        src/qt/view/QtAuditLogPage.cpp
         src/qt/view/QtSettingsPage.cpp
         src/qt/view/QtProductsPage.cpp
         src/qt/view/QtPaletteManager.cpp
@@ -1263,13 +1268,18 @@ if(BUILD_QT_FRONTEND)
     # object libraries never run moc or uic. AUTOUIC turns QtDashboardPage.ui
     # into ui_QtDashboardPage.h at build time (the Qt analog of GtkBuilder).
     set_target_properties(objectsQt PROPERTIES AUTOMOC ON AUTOUIC ON)
+    # QT_NO_KEYWORDS drops Qt's `emit` / `signals` / `slots` macros so the
+    # shared sigc++ signals (auth::Session, the presenters) compile in a TU that
+    # also includes Qt headers -- otherwise Qt's `#define emit` mangles sigc++'s
+    # `signal::emit()`. Our Qt code uses connect(), never those keyword macros.
+    target_compile_definitions(objectsQt PRIVATE QT_NO_KEYWORDS)
 
     # Shares src/main.cpp with the GTK / console binaries via #ifdef
     # QT_FRONTEND_MODE (the same pattern CONSOLE_MODE uses), so there is one
     # composition entry point rather than a separate src/qt/main.cpp.
     add_executable(industrial-hmi-qt)
     target_sources(industrial-hmi-qt PRIVATE src/main.cpp)
-    target_compile_definitions(industrial-hmi-qt PRIVATE QT_FRONTEND_MODE)
+    target_compile_definitions(industrial-hmi-qt PRIVATE QT_FRONTEND_MODE QT_NO_KEYWORDS)
     target_link_libraries(industrial-hmi-qt
         PRIVATE
             objectsQt

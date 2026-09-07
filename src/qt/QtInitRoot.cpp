@@ -21,6 +21,15 @@
 #include "src/historian/HistorianBridge.h"
 #include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
+#include "src/auth/Argon2PasswordHasher.h"
+#include "src/auth/AuthService.h"
+#include "src/auth/Role.h"
+#include "src/auth/Session.h"
+#include "src/auth/SqliteAuditLogger.h"
+#include "src/auth/SqliteUserRepository.h"
+#include "src/auth/User.h"
+#include "src/presenter/UsersPresenter.h"
+#include "src/qt/view/QtLoginDialog.h"
 #include "src/qt/view/QtDashboardPage.h"
 #include "src/qt/view/QtGettextTranslator.h"
 #include "src/qt/view/QtGoodsReceiptPage.h"
@@ -35,6 +44,8 @@
 #include <sigc++/functors/mem_fun.h>
 
 #include <QCoreApplication>
+#include <QDialog>
+#include <QString>
 #include <QTimer>
 
 #include <chrono>
@@ -64,36 +75,12 @@ std::vector<ml::Classification> makeDemoInspectionResults() {
 QtInitRoot::QtInitRoot(core::Bootstrap& bootstrap) : bootstrap_{bootstrap} {}
 
 QtInitRoot::~QtInitRoot() {
-    // Teardown in reverse order of run(). Stop the tick first so no further
-    // callbacks reach the window, then detach and drop.
-    tickTimer_.reset();
-    // Drop the sigc slot into the status strip before the window (and the strip)
-    // are destroyed.
-    systemStateConn_.disconnect();
-    dashboardStateConn_.disconnect();
-    alertsBadgeConn_.disconnect();
-
     // Stop the integration backends before any observer of them is torn down.
     if (integrationServices_ && integrationServices_->manager) {
         integrationServices_->manager->stopAll();
     }
-
-    if (window_) {
-        if (dashboardPresenter_) {
-            dashboardPresenter_->removeObserver(window_->dashboardPage());
-            dashboardPresenter_->removeObserver(window_->trendsPage());
-        }
-        if (productsPresenter_) {
-            productsPresenter_->removeObserver(window_->productsPage());
-        }
-        if (backendHealthPresenter_) {
-            backendHealthPresenter_->removeObserver(window_->statusStrip());
-        }
-        if (inspectionPresenter_) {
-            inspectionPresenter_->removeObserver(window_->goodsReceiptPage());
-        }
-    }
-    window_.reset();
+    // Stop the tick, drop the sigc slots + observers, and destroy the window.
+    teardownWindow();
     // Detach + drop the translator after the widgets that used it are gone.
     if (translator_) {
         if (QCoreApplication::instance() != nullptr) {
@@ -125,10 +112,45 @@ QtInitRoot::~QtInitRoot() {
     historianBridge_.reset();
     historyStore_.reset();
 
+    // Auth teardown in dependency order: presenter + service borrow the repo /
+    // hasher / audit / session, so drop them before the objects they reference,
+    // and the session last.
+    usersPresenter_.reset();
+    authService_.reset();
+    auditLogger_.reset();
+    authHasher_.reset();
+    authRepo_.reset();
+    authSession_.reset();
+
     // Mirror InitConsole's shutdown: drop model callbacks and stop the Asio
     // io_context worker before static teardown gets ambiguous.
     app::model::SimulatedModel::instance().clearCallbacks();
     app::model::ModelContext::instance().stop();
+}
+
+void QtInitRoot::teardownWindow() {
+    // Stop the tick first so no further callbacks reach the window.
+    tickTimer_.reset();
+    systemStateConn_.disconnect();
+    dashboardStateConn_.disconnect();
+    alertsBadgeConn_.disconnect();
+    sessionConn_.disconnect();
+    if (window_) {
+        if (dashboardPresenter_) {
+            dashboardPresenter_->removeObserver(window_->dashboardPage());
+            dashboardPresenter_->removeObserver(window_->trendsPage());
+        }
+        if (productsPresenter_) {
+            productsPresenter_->removeObserver(window_->productsPage());
+        }
+        if (backendHealthPresenter_) {
+            backendHealthPresenter_->removeObserver(window_->statusStrip());
+        }
+        if (inspectionPresenter_) {
+            inspectionPresenter_->removeObserver(window_->goodsReceiptPage());
+        }
+    }
+    window_.reset();
 }
 
 void QtInitRoot::refreshAlertsBadge() {
@@ -203,7 +225,82 @@ void QtInitRoot::changeLanguage(const std::string& code) {
     }
 }
 
-void QtInitRoot::run() {
+void QtInitRoot::buildAuth() {
+    auto& config = app::config::ConfigManager::instance();
+    if (!config.isAuthEnabled()) {
+        return;
+    }
+    auto& logger = bootstrap_.logger();
+
+    authSession_ = std::make_unique<auth::Session>();
+
+    auth::SqliteUserRepository::Config repoCfg;
+    repoCfg.dbPath = config.getAuthDbPath();
+    authRepo_ = std::make_unique<auth::SqliteUserRepository>(std::move(repoCfg));
+    authRepo_->setLogger(logger);
+    if (!authRepo_->initialize()) {
+        logger.warn("Auth disabled: user store failed to open '{}'",
+                    config.getAuthDbPath());
+        authRepo_.reset();
+        authSession_.reset();
+        return;
+    }
+
+    // Audit log shares the same SQLite file; a failed open downgrades to
+    // "auth without audit" rather than killing the feature.
+    auth::SqliteAuditLogger::Config auditCfg;
+    auditCfg.dbPath = config.getAuthDbPath();
+    auditLogger_ =
+        std::make_unique<auth::SqliteAuditLogger>(std::move(auditCfg));
+    auditLogger_->setLogger(logger);
+    if (!auditLogger_->initialize()) {
+        logger.warn("Audit log disabled: failed to open '{}'",
+                    config.getAuthDbPath());
+        auditLogger_.reset();
+    }
+
+    authHasher_  = std::make_unique<auth::Argon2PasswordHasher>();
+    authService_ = std::make_unique<auth::AuthService>(*authRepo_, *authHasher_,
+                                                       *authSession_);
+    authService_->setLogger(logger);
+    if (auditLogger_) {
+        authService_->setAuditLogger(*auditLogger_);
+    }
+    // Seed operator/maintenance/admin demo accounts on first run (idempotent).
+    authService_->seedDefaultUsersIfEmpty();
+
+    // The user-management presenter needs the audit sink, so build it only when
+    // audit opened -- no audit means no Users admin page (degraded, not a crash).
+    if (auditLogger_) {
+        usersPresenter_ = std::make_unique<presenter::UsersPresenter>(
+            *authRepo_, *authHasher_, *authSession_, *auditLogger_);
+    }
+}
+
+void QtInitRoot::refreshUserIdentity() {
+    if (!window_ || !authSession_) {
+        return;
+    }
+    // Named so the footer format + the signed-out placeholder are not bare
+    // literals (clang-tidy does not police magic strings).
+    const QString identityFormat = QStringLiteral("%1 · %2");
+    const QString signedOutLabel = QStringLiteral("Signed out");
+
+    const auto user = authSession_->currentUser();
+    QString text;
+    if (user.has_value()) {
+        const QString name = QString::fromStdString(
+            user->displayName.empty() ? user->username : user->displayName);
+        const QString role =
+            QString::fromStdString(std::string(auth::roleName(user->role)));
+        text = identityFormat.arg(name, role);
+    } else {
+        text = signedOutLabel;
+    }
+    window_->setUserIdentity(text);
+}
+
+bool QtInitRoot::run() {
     auto& logger = bootstrap_.logger();
     logger.info("Application starting (Qt frontend)");
 
@@ -214,6 +311,19 @@ void QtInitRoot::run() {
     translator_ = std::make_unique<view::QtGettextTranslator>();
     if (QCoreApplication::instance() != nullptr) {
         QCoreApplication::installTranslator(translator_.get());
+    }
+
+    // Auth gate: build the auth stack, then (when enabled) show the modal login
+    // before anything else is built or shown. A cancelled login means "operator
+    // declined" -- return false so main() skips the event loop and exits, the
+    // same contract as the GTK activation handler.
+    buildAuth();
+    if (authService_ != nullptr) {
+        view::QtLoginDialog login(*authService_);
+        if (login.exec() != QDialog::Accepted) {
+            logger.info("Auth: sign-in cancelled, exiting");
+            return false;
+        }
     }
 
     // Model: reuse the same SimulatedModel singleton the GTK and console
@@ -265,13 +375,37 @@ void QtInitRoot::run() {
     // (REQ-ARCH-014).
     buildHistorian();
 
+    // Build, wire, populate and show the shell.
+    buildAndShowWindow();
+    return true;
+}
+
+void QtInitRoot::buildAndShowWindow() {
     // Shell owns the page widgets; the presenters never learn they are talking
     // to Qt widgets rather than GTK pages or a terminal.
+    view::QtMainWindow::Context windowContext;
+    windowContext.historyReader     = historyStore_.get();
+    windowContext.onLanguageChanged = [this](const std::string& code) {
+        changeLanguage(code);
+    };
+    windowContext.session = authSession_.get();
+    // Sign-out control only when auth is active.
+    if (authService_) {
+        windowContext.onSignOut = [this] { signOut(); };
+    }
+    // Admin-only pages: pass their collaborators only for an Admin session, so
+    // Users + Audit mount for admins and stay hidden (and unbuilt) otherwise.
+    bool isAdmin = false;
+    if (authSession_) {
+        const auto user = authSession_->currentUser();
+        isAdmin = user.has_value() && auth::canManageUsers(user->role);
+    }
+    windowContext.usersPresenter = isAdmin ? usersPresenter_.get() : nullptr;
+    windowContext.auditReader    = isAdmin ? auditLogger_.get() : nullptr;
     window_ = std::make_unique<view::QtMainWindow>(
         *dashboardPresenter_, *productsPresenter_, *alertCenter_,
         *inspectionPresenter_, app::config::ConfigManager::instance(),
-        *paletteManager_, historyStore_.get(),
-        [this](const std::string& code) { changeLanguage(code); });
+        *paletteManager_, std::move(windowContext));
 
     dashboardPresenter_->addObserver(window_->dashboardPage());
     dashboardPresenter_->addObserver(window_->trendsPage());
@@ -289,27 +423,34 @@ void QtInitRoot::run() {
     // Keep the sidebar Alerts badge in sync with the active-alarm count.
     alertsBadgeConn_ = alertCenter_->signalAlertsChanged().connect(
         sigc::mem_fun(*this, &QtInitRoot::refreshAlertsBadge));
-    dashboardPresenter_->initialize();
-    productsPresenter_->initialize();
-    inspectionPresenter_->initialize();
-    model.initializeDemoData();
+    // Keep the sidebar footer in sync with the signed-in user (auth only).
+    if (authSession_) {
+        sessionConn_ = authSession_->signalChanged().connect(
+            sigc::mem_fun(*this, &QtInitRoot::refreshUserIdentity));
+        refreshUserIdentity();
+    }
 
-    // Populate the products table once (onProductsLoaded fires synchronously).
+    // One-time presenter + model bootstrap: only on the first build, so a
+    // sign-out rebuild re-attaches a fresh window to the STILL-RUNNING
+    // simulation rather than resetting it.
+    if (!windowBuiltOnce_) {
+        dashboardPresenter_->initialize();
+        productsPresenter_->initialize();
+        inspectionPresenter_->initialize();
+        app::model::SimulatedModel::instance().initializeDemoData();
+        windowBuiltOnce_ = true;
+    }
+
+    // Populate the fresh window's snapshot views. Safe on a rebuild: it does not
+    // reset the simulation, and the dashboard catches up on the next tick.
     productsPresenter_->loadProducts();
-
-    // First backend-health poll so the status strip is populated before the
-    // window paints (matches the GTK backend-health bar).
     backendHealthPresenter_->poll();
-    // Initial badge (demo data may already have raised alarms).
     refreshAlertsBadge();
 
-    // Drive the simulation from a UI-thread timer. Every tick runs on the Qt
-    // event loop, so the presenter callbacks reach the widgets on the UI thread
-    // with no cross-thread marshalling. A production build with a background
-    // producer would marshal via a queued signal, the Qt analog of the GTK
-    // frontend's Glib::signal_idle hop.
+    // Drive the simulation from a UI-thread timer. The timer is its own QObject
+    // context (not the window) so it is recreated cleanly on a sign-out swap.
     tickTimer_ = std::make_unique<QTimer>();
-    QObject::connect(tickTimer_.get(), &QTimer::timeout, window_.get(), [this] {
+    QObject::connect(tickTimer_.get(), &QTimer::timeout, tickTimer_.get(), [this] {
         app::model::SimulatedModel::instance().tickSimulation();
         // Drive alarm shelf auto-expiry and re-poll backend health on the same
         // UI-thread cadence the GTK frontend uses (no separate timers needed).
@@ -324,6 +465,29 @@ void QtInitRoot::run() {
     // Start in fullscreen (industrial kiosk mode), matching the GTK frontend.
     // The Settings Windowed toggle restores the 1920x1080 windowed size.
     window_->showFullScreen();
+}
+
+void QtInitRoot::signOut() {
+    if (!authService_) {
+        return;
+    }
+    auto& logger = bootstrap_.logger();
+    authService_->logout();  // clears the session (fires signalChanged) + audits
+    logger.info("Auth: operator signed out");
+
+    view::QtLoginDialog login(*authService_);
+    if (login.exec() != QDialog::Accepted) {
+        logger.info("Auth: no re-login after sign-out, exiting");
+        QCoreApplication::quit();
+        return;
+    }
+    // Rebuild the shell so role-gated nav matches the new user. Deferred to the
+    // next event-loop turn so we never delete the window from inside its own
+    // Sign out button's slot.
+    QTimer::singleShot(0, [this] {
+        teardownWindow();
+        buildAndShowWindow();
+    });
 }
 
 }  // namespace app::qt

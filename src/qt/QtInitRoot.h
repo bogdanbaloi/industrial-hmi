@@ -38,6 +38,18 @@ class HistorianBridge;
 class HistorianMaintenance;
 }
 
+namespace app::auth {
+class Session;
+class SqliteUserRepository;
+class Argon2PasswordHasher;
+class SqliteAuditLogger;
+class AuthService;
+}
+
+namespace app::presenter {
+class UsersPresenter;
+}
+
 namespace app::view {
 class QtMainWindow;
 class QtPaletteManager;
@@ -72,7 +84,11 @@ public:
     /// Build the presenter + shell, attach the observer, start the tick timer
     /// and show the window. Non-blocking: the Qt event loop is run by
     /// `QApplication::exec()` back in `main()`.
-    void run();
+    ///
+    /// Returns false when auth is enabled and the operator cancels the login
+    /// gate -- `main()` then skips `QApplication::exec()` and exits cleanly,
+    /// mirroring the GTK activation handler that bails with no window.
+    [[nodiscard]] bool run();
 
 private:
     /// Push the active-alarm count onto the sidebar Alerts badge, marshalled to
@@ -90,6 +106,29 @@ private:
     /// broadcasts QEvent::LanguageChange and every widget retranslates live.
     void changeLanguage(const std::string& code);
 
+    /// Build the auth stack (user store + password hasher + audit log + service
+    /// + session) when enabled in config. Same config-gated, degraded-open path
+    /// main()'s registerAuth uses.
+    void buildAuth();
+
+    /// Push the signed-in user's identity onto the sidebar footer (name + role),
+    /// or a signed-out placeholder. Connected to Session::signalChanged.
+    void refreshUserIdentity();
+
+    /// Build the shell window, attach observers + signals, populate it and show
+    /// it. Runs the one-time presenter initialize() on the first build only, so
+    /// a sign-out rebuild does not reset the running simulation.
+    void buildAndShowWindow();
+
+    /// Detach observers + signals and drop the window. Shared by the destructor
+    /// and the sign-out rebuild.
+    void teardownWindow();
+
+    /// Sign-out flow: log out (clears + audits the session), re-show the login,
+    /// then rebuild the shell so role-gated nav matches the new user. A cancelled
+    /// re-login quits the app. Wired to the sidebar's Sign out control.
+    void signOut();
+
     core::Bootstrap&                    bootstrap_;
     std::unique_ptr<integration::IntegrationServices> integrationServices_;
     std::unique_ptr<presenter::AlertCenter>           alertCenter_;
@@ -102,6 +141,12 @@ private:
     std::unique_ptr<historian::SqliteHistoryStore>   historyStore_;
     std::unique_ptr<historian::HistorianBridge>      historianBridge_;
     std::unique_ptr<historian::HistorianMaintenance> historianMaintenance_;
+    std::unique_ptr<auth::Session>                   authSession_;
+    std::unique_ptr<auth::SqliteUserRepository>      authRepo_;
+    std::unique_ptr<auth::Argon2PasswordHasher>      authHasher_;
+    std::unique_ptr<auth::SqliteAuditLogger>         auditLogger_;
+    std::unique_ptr<auth::AuthService>               authService_;
+    std::unique_ptr<presenter::UsersPresenter>       usersPresenter_;
     std::unique_ptr<view::QtGettextTranslator> translator_;
     std::unique_ptr<view::QtPaletteManager> paletteManager_;
     std::unique_ptr<view::QtMainWindow>     window_;
@@ -109,6 +154,8 @@ private:
     sigc::connection                        systemStateConn_;
     sigc::connection                        dashboardStateConn_;
     sigc::connection                        alertsBadgeConn_;
+    sigc::connection                        sessionConn_;
+    bool                                    windowBuiltOnce_{false};
 
     static constexpr std::chrono::milliseconds kTickPeriod{2000};
 };

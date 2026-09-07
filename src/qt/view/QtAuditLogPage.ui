@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QtAuditLogPage</class>
+ <widget class="QWidget" name="QtAuditLogPage">
+  <layout class="QVBoxLayout" name="rootLayout">
+   <item>
+    <widget class="QLabel" name="headerLabel">
+     <property name="text">
+      <string>Audit log</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="filterRow">
+     <item>
+      <widget class="QLabel" name="categoryLabel">
+       <property name="text">
+        <string>Category</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="categoryCombo"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="resultFilterLabel">
+       <property name="text">
+        <string>Result</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="resultCombo"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="rangeLabel">
+       <property name="text">
+        <string>Range</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="rangeCombo"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="userLabel">
+       <property name="text">
+        <string>User</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="userEdit"/>
+     </item>
+     <item>
+      <spacer name="filterSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="refreshButton">
+       <property name="text">
+        <string>Refresh</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="auditTable"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="footerLabel">
+     <property name="text">
+      <string>0 events</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

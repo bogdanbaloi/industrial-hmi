@@ -346,6 +346,32 @@ step; untranslated keys fall back to English.
 
 ADR: 0020 (Qt frontend).
 
+### REQ-ARCH-016 (SHOULD) — Qt frontend reuses the auth stack and admin pages
+
+`req~arch-016~1`
+
+The Qt frontend **shall** reuse the toolkit-agnostic auth stack (the SQLite user
+store, the Argon2id password hasher, the audit log, the AuthService + Session,
+and the UsersPresenter) through the same config-gated, degraded-open composition
+main()'s registerAuth uses. When auth is enabled a modal login **shall** gate the
+shell before it is built, and a cancelled login **shall** exit cleanly with no
+window. The sidebar footer **shall** show the signed-in user + role (replacing
+the static placeholder) and track Session changes, and a sign-out control
+**shall** clear + re-authenticate the session and rebuild the shell so
+role-gated nav matches the new user. The admin User-management and
+Audit-log pages **shall** mount only for an Admin session (RBAC also enforced in
+UsersPresenter, so this is the visible half of a defence-in-depth gate), each a
+pure View over the shared presenter / reader. Reusing the auth layer behind a
+third frontend extends the toolkit-independence proof to authentication
+(extends REQ-ARCH-011, builds on the AUTH requirements).
+
+Verified by: the existing auth tests cover the store, hasher, service, audit and
+UsersPresenter; CI builds the Qt frontend over the shared auth wiring; manual run
+of `industrial-hmi-qt` with auth enabled (login gate, admin sees Users + Audit,
+non-admin does not, footer shows the operator).
+
+ADR: 0006 (Auth defence in depth), 0020 (Qt frontend).
+
 ---
 
 ## AUTH — Authentication & Authorisation

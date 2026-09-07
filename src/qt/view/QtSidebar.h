@@ -40,6 +40,15 @@ public:
     /// it.
     void setBadge(int index, int count);
 
+    /// Replace the footer identity text (the signed-in user + role). Once set,
+    /// a language change leaves it alone -- a user's name + role code is not a
+    /// translatable string.
+    void setUserText(const QString& text);
+
+    /// Reveal the "Sign out" control and route its clicks to `handler`. Only
+    /// called when auth is enabled; the button stays hidden otherwise.
+    void enableSignOut(std::function<void()> handler);
+
 protected:
     /// Retranslate the sidebar's own static text (brand / user / quit) on a
     /// live language change. Nav labels are re-set by the shell via
@@ -53,7 +62,9 @@ private:
     std::vector<QLabel*> badges_;
     QLabel*              brandLabel_{nullptr};
     QLabel*              userLabel_{nullptr};
+    QPushButton*         signOutButton_{nullptr};
     QPushButton*         quitButton_{nullptr};
+    bool                 userTextOverridden_{false};
     int                  count_{0};
 };
 
