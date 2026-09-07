@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Qt language selection over the shared i18n catalog (REQ-ARCH-015)
+
+Adds a live language picker to the Qt frontend that reuses the same gettext
+catalog as the GTK and console frontends, instead of a parallel Qt `.qm` set.
+
+#### Added
+- `QtGettextTranslator`: a `QTranslator` adapter that resolves Qt's `translate()` (behind both `tr()` and the uic `.ui` strings) through the shared gettext catalog. One catalog now serves all three frontends.
+- Language picker in Settings (a LINGUAS code or "auto"): persists the choice through `ConfigManager`, rebinds the catalog, and retranslates the shell live via Qt's `QEvent::LanguageChange` broadcast, no restart.
+- Per-widget retranslate seams (`changeEvent`) across the pages, plus caption / series-name setters on the KPI tile, gauge and line chart, so C++-set labels re-read the catalog on a language change.
+
+#### Changed
+- `QtInitRoot` installs the translator before the first paint and owns the language-change flow. The status strip and the equipment / actuator / quality cards are data-driven, so they re-read the catalog on the next tick.
+- `po/POTFILES.in` lists the Qt sources for extraction. Populating the catalog with the Qt-authored strings (xgettext with `--keyword=tr:1`) is a follow-on content step; untranslated keys fall back to English.
+
 ### Qt persisted-historian History page (REQ-ARCH-014)
 
 Reuses the persisted historian behind the Qt frontend and surfaces the archive

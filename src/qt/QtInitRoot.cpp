@@ -22,6 +22,7 @@
 #include "src/historian/HistorianMaintenance.h"
 #include "src/historian/SqliteHistoryStore.h"
 #include "src/qt/view/QtDashboardPage.h"
+#include "src/qt/view/QtGettextTranslator.h"
 #include "src/qt/view/QtGoodsReceiptPage.h"
 #include "src/qt/view/QtProductsPage.h"
 #include "src/qt/view/QtTrendsPage.h"
@@ -33,6 +34,7 @@
 
 #include <sigc++/functors/mem_fun.h>
 
+#include <QCoreApplication>
 #include <QTimer>
 
 #include <chrono>
@@ -92,6 +94,13 @@ QtInitRoot::~QtInitRoot() {
         }
     }
     window_.reset();
+    // Detach + drop the translator after the widgets that used it are gone.
+    if (translator_) {
+        if (QCoreApplication::instance() != nullptr) {
+            QCoreApplication::removeTranslator(translator_.get());
+        }
+        translator_.reset();
+    }
     paletteManager_.reset();
     productsPresenter_.reset();
     dashboardPresenter_.reset();
@@ -177,9 +186,35 @@ void QtInitRoot::buildHistorian() {
     historianMaintenance_->start();
 }
 
+void QtInitRoot::changeLanguage(const std::string& code) {
+    auto& config = app::config::ConfigManager::instance();
+    if (!config.setLanguage(code)) {  // persist + update in-memory value
+        bootstrap_.logger().warn(
+            "Could not persist language selection '{}'; applying for this "
+            "session only", code);
+    }
+    config.applyI18n();  // rebind the gettext catalog + bump its cache
+    // Reinstall so Qt re-runs translate() on every widget (a QEvent::Language
+    // change broadcast): uic retranslateUi + our changeEvent seams repaint with
+    // the new catalog. removeTranslator alone would fall back to source strings.
+    if (QCoreApplication::instance() != nullptr) {
+        QCoreApplication::removeTranslator(translator_.get());
+        QCoreApplication::installTranslator(translator_.get());
+    }
+}
+
 void QtInitRoot::run() {
     auto& logger = bootstrap_.logger();
     logger.info("Application starting (Qt frontend)");
+
+    // Route Qt's translate() (tr + .ui strings) through the shared gettext
+    // catalog Bootstrap already bound, so the Qt frontend reuses the same
+    // translations as GTK / console. Installed before any widget is built so the
+    // first paint is already localised.
+    translator_ = std::make_unique<view::QtGettextTranslator>();
+    if (QCoreApplication::instance() != nullptr) {
+        QCoreApplication::installTranslator(translator_.get());
+    }
 
     // Model: reuse the same SimulatedModel singleton the GTK and console
     // frontends bind to. Logger injection follows the same pattern.
@@ -235,7 +270,8 @@ void QtInitRoot::run() {
     window_ = std::make_unique<view::QtMainWindow>(
         *dashboardPresenter_, *productsPresenter_, *alertCenter_,
         *inspectionPresenter_, app::config::ConfigManager::instance(),
-        *paletteManager_, historyStore_.get());
+        *paletteManager_, historyStore_.get(),
+        [this](const std::string& code) { changeLanguage(code); });
 
     dashboardPresenter_->addObserver(window_->dashboardPage());
     dashboardPresenter_->addObserver(window_->trendsPage());

@@ -10,6 +10,7 @@
 #include "ui_QtHistoryPage.h"
 
 #include <QComboBox>
+#include <QEvent>
 #include <QLabel>
 #include <QPushButton>
 #include <QSizePolicy>
@@ -98,6 +99,25 @@ QtHistoryPage::QtHistoryPage(historian::HistoryReader& reader, QWidget* parent)
 }
 
 QtHistoryPage::~QtHistoryPage() = default;
+
+void QtHistoryPage::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        ui_->retranslateUi(this);
+        // Range items and series names are C++-set, so retranslateUi does not
+        // reach them: re-apply here, then refresh re-reads the footer text.
+        ui_->rangeCombo->setItemText(0, tr("Last hour"));
+        ui_->rangeCombo->setItemText(1, tr("Last 24 hours"));
+        ui_->rangeCombo->setItemText(2, tr("Last 7 days"));
+        for (std::size_t i = 0; i < kSeriesCount; ++i) {
+            qualityChart_->setSeriesName(qualitySeries_.at(i),
+                                         tr("Checkpoint %1").arg(i));
+            supplyChart_->setSeriesName(supplySeries_.at(i),
+                                        tr("Equipment %1").arg(i));
+        }
+        refresh();
+    }
+    QWidget::changeEvent(event);
+}
 
 void QtHistoryPage::refresh() {
     const qint64 toMs     = nowMs();

@@ -9,6 +9,8 @@
 #include <memory>
 #include <unordered_map>
 
+class QEvent;
+
 // The Ui namespace name is fixed by Qt's uic generator, not our style.
 // NOLINTNEXTLINE(readability-identifier-naming)
 namespace Ui {
@@ -41,6 +43,9 @@ public:
     void onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) override;
     void onQualityCheckpointChanged(
         const presenter::QualityCheckpointViewModel& vm) override;
+
+protected:
+    void changeEvent(QEvent* event) override;
 
 private:
     std::unique_ptr<Ui::QtTrendsPage>        ui_;

@@ -1229,6 +1229,7 @@ if(BUILD_QT_FRONTEND)
     add_library(objectsQt OBJECT)
     target_sources(objectsQt PRIVATE
         src/qt/QtInitRoot.cpp
+        src/qt/view/QtGettextTranslator.cpp
         src/qt/view/QtMainWindow.cpp
         src/qt/view/QtDashboardPage.cpp
         src/qt/view/QtAlertsPage.cpp

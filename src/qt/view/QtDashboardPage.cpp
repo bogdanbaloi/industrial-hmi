@@ -16,6 +16,7 @@
 
 #include "ui_QtDashboardPage.h"
 
+#include <QEvent>
 #include <QPushButton>
 #include <QSizePolicy>
 #include <QString>
@@ -198,6 +199,21 @@ void QtDashboardPage::updateKpis() {
     }
     linesTile_->setValue(QString("%1/%2").arg(linesUp).arg(
         static_cast<int>(equipmentEnabled_.size())));
+}
+
+void QtDashboardPage::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        ui_->retranslateUi(this);
+        oeeTile_->setCaption(tr("OEE"));
+        throughputTile_->setCaption(tr("Throughput"));
+        qualityTile_->setCaption(tr("Avg quality"));
+        defectsTile_->setCaption(tr("Defects"));
+        linesTile_->setCaption(tr("Lines up"));
+        oeeGauge_->setCaption(tr("OEE"));
+        trendChart_->setSeriesName(oeeSeriesIdx_, tr("OEE %"));
+        trendChart_->setSeriesName(qualitySeriesIdx_, tr("Avg quality %"));
+    }
+    QWidget::changeEvent(event);
 }
 
 double QtDashboardPage::averageQuality() const {

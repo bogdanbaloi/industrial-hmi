@@ -322,6 +322,30 @@ Qt frontend over the shared historian wiring; manual run of `industrial-hmi-qt`
 
 ADR: 0007 (Historian degraded open), 0020 (Qt frontend).
 
+### REQ-ARCH-015 (SHOULD) — Qt frontend reuses the shared i18n catalog
+
+`req~arch-015~1`
+
+The Qt frontend **shall** resolve its translations through the same
+toolkit-agnostic gettext catalog (`src/core/i18n`) the GTK and console frontends
+use, rather than a parallel Qt `.qm` catalog, so a single set of `.po` files
+serves every frontend. Qt's own `translate()` (behind both `tr()` and the
+uic-generated `.ui` strings) **shall** be redirected onto the catalog through a
+`QTranslator` adapter. The Settings page **shall** offer a language picker
+(a LINGUAS code or "auto") that persists the choice and rebinds the catalog, and
+the interface **shall** retranslate live (no restart) via Qt's
+`QEvent::LanguageChange` broadcast. Reusing the i18n module behind a third
+frontend extends the toolkit-independence proof to the localisation layer
+(extends REQ-ARCH-011).
+
+Verified by: the existing `I18nTest` covers the gettext binding + live-switch
+cache flush; manual run of `industrial-hmi-qt` (pick a language in Settings and
+the shell retranslates for every catalogued string). Catalog population of the
+Qt-authored strings (extraction with `--keyword=tr:1`) is a separate content
+step; untranslated keys fall back to English.
+
+ADR: 0020 (Qt frontend).
+
 ---
 
 ## AUTH — Authentication & Authorisation

@@ -41,6 +41,11 @@ const char* tierColor(double value, double target) {
 QtGauge::QtGauge(const QString& caption, double targetPct, QWidget* parent)
     : QWidget(parent), caption_(caption), targetPct_(targetPct) {}
 
+void QtGauge::setCaption(const QString& caption) {
+    caption_ = caption;
+    update();
+}
+
 void QtGauge::setValue(double pct) {
     value_ = pct;
     update();
@@ -53,8 +58,8 @@ void QtGauge::paintEvent(QPaintEvent* /*event*/) {
     painter.setRenderHint(QPainter::Antialiasing, true);
 
     const int    side = std::min(width(), height());
-    const QRectF arcRect(kArcMargin, kArcMargin,
-                         side - kHalf * kArcMargin, side - kHalf * kArcMargin);
+    const QRectF arcRect(kArcMargin, kArcMargin, side - (kHalf * kArcMargin),
+                         side - (kHalf * kArcMargin));
 
     // Background track.
     QPen track{QColor(theme::kColorNeutral)};

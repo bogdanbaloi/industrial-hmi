@@ -27,11 +27,13 @@ QtKpiTile::QtKpiTile(const QString& caption, QWidget* parent) : QFrame(parent) {
     value_->setFont(valueFont);
     layout->addWidget(value_);
 
-    auto* captionLabel = new QLabel(caption);
-    captionLabel->setStyleSheet(theme::coloredBold(theme::kColorNeutral));
-    layout->addWidget(captionLabel);
+    caption_ = new QLabel(caption);
+    caption_->setStyleSheet(theme::coloredBold(theme::kColorNeutral));
+    layout->addWidget(caption_);
 }
 
 void QtKpiTile::setValue(const QString& value) { value_->setText(value); }
+
+void QtKpiTile::setCaption(const QString& caption) { caption_->setText(caption); }
 
 }  // namespace app::view

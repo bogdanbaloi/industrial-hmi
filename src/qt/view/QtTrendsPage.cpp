@@ -11,6 +11,7 @@
 
 #include "ui_QtTrendsPage.h"
 
+#include <QEvent>
 #include <QSizePolicy>
 
 #include <cstddef>
@@ -30,6 +31,15 @@ QtTrendsPage::QtTrendsPage(QWidget* parent)
 }
 
 QtTrendsPage::~QtTrendsPage() = default;
+
+void QtTrendsPage::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        ui_->retranslateUi(this);
+        chart_->setSeriesName(oeeSeries_, tr("OEE %"));
+        chart_->setSeriesName(qualitySeries_, tr("Avg quality %"));
+    }
+    QWidget::changeEvent(event);
+}
 
 void QtTrendsPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) {
     // One aligned sample per tick: OEE now, plus the latest average quality.

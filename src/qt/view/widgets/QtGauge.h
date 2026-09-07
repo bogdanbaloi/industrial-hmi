@@ -19,6 +19,9 @@ public:
 
     void setValue(double pct);
 
+    /// Re-set the caption (live language change).
+    void setCaption(const QString& caption);
+
     [[nodiscard]] QSize sizeHint() const override;
 
 protected:

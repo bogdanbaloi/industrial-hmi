@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QButtonGroup>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
@@ -11,6 +12,7 @@
 #include <QSize>
 #include <QVBoxLayout>
 
+#include <cstddef>
 #include <utility>
 
 namespace app::view {
@@ -39,9 +41,9 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
     logo->setPixmap(icons::appLogo());
     brandLayout->addWidget(logo);
 
-    auto* brand = new QLabel(tr("Industrial HMI"), brandRow);
-    brand->setObjectName("sidebarBrand");
-    brandLayout->addWidget(brand);
+    brandLabel_ = new QLabel(tr("Industrial HMI"), brandRow);
+    brandLabel_->setObjectName("sidebarBrand");
+    brandLayout->addWidget(brandLabel_);
     brandLayout->addStretch();
 
     root->addWidget(brandRow);
@@ -52,17 +54,17 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
 
     root->addStretch(1);
 
-    auto* user = new QLabel(tr("Bogdan B. · Operations"), this);
-    user->setObjectName("sidebarUser");
-    root->addWidget(user);
+    userLabel_ = new QLabel(tr("Bogdan B. · Operations"), this);
+    userLabel_->setObjectName("sidebarUser");
+    root->addWidget(userLabel_);
 
     // Kiosk mode has no title bar, so the shell provides its own quit control.
-    auto* quit = new QPushButton(tr("Exit application"), this);
-    quit->setObjectName("sidebarQuit");
-    quit->setIcon(icons::quit());
-    quit->setIconSize(QSize(kNavIconSize, kNavIconSize));
-    connect(quit, &QPushButton::clicked, qApp, &QCoreApplication::quit);
-    root->addWidget(quit);
+    quitButton_ = new QPushButton(tr("Exit application"), this);
+    quitButton_->setObjectName("sidebarQuit");
+    quitButton_->setIcon(icons::quit());
+    quitButton_->setIconSize(QSize(kNavIconSize, kNavIconSize));
+    connect(quitButton_, &QPushButton::clicked, qApp, &QCoreApplication::quit);
+    root->addWidget(quitButton_);
 
     group_ = new QButtonGroup(this);
     group_->setExclusive(true);
@@ -92,6 +94,21 @@ int QtSidebar::addItem(const QString& label, const QIcon& icon) {
     return index;
 }
 
+void QtSidebar::setItemLabel(int index, const QString& label) {
+    if (auto* button = group_->button(index)) {
+        button->setText(label);
+    }
+}
+
+void QtSidebar::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        brandLabel_->setText(tr("Industrial HMI"));
+        userLabel_->setText(tr("Bogdan B. · Operations"));
+        quitButton_->setText(tr("Exit application"));
+    }
+    QWidget::changeEvent(event);
+}
+
 void QtSidebar::select(int index) {
     if (auto* button = group_->button(index)) {
         button->setChecked(true);
@@ -99,7 +116,7 @@ void QtSidebar::select(int index) {
 }
 
 void QtSidebar::setBadge(int index, int count) {
-    if (index < 0 || index >= static_cast<int>(badges_.size())) {
+    if (index < 0 || static_cast<std::size_t>(index) >= badges_.size()) {
         return;
     }
     auto* badge = badges_[index];

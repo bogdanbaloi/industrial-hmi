@@ -12,6 +12,8 @@
 #include <memory>
 #include <unordered_map>
 
+class QEvent;
+
 // The Ui namespace name is fixed by Qt's uic generator, not our style.
 // NOLINTNEXTLINE(readability-identifier-naming)
 namespace Ui {
@@ -64,6 +66,11 @@ public:
     /// Feed the uptime donut from the presenter's system-state signal
     /// (0 Idle / 1 Running / 2 Error / 3 Calibration); marshals to the UI thread.
     void setSystemState(int state);
+
+protected:
+    /// Retranslate the .ui chrome plus the C++-set captions (tile / gauge /
+    /// chart legends) on a live language change.
+    void changeEvent(QEvent* event) override;
 
 private:
     DashboardPresenter&                  presenter_;

@@ -13,6 +13,7 @@
 #include "src/qt/view/QtStatusStrip.h"
 #include "src/qt/view/QtTrendsPage.h"
 
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QStackedWidget>
 #include <QString>
@@ -35,8 +36,9 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
                            const config::ConfigManager& config,
                            QtPaletteManager& paletteManager,
                            historian::HistoryReader* historyReader,
-                           QWidget* parent)
-    : QMainWindow(parent) {
+                           std::function<void(const std::string&)>
+                               onLanguageChanged)
+    : QMainWindow(nullptr) {
     auto* central = new QWidget(this);
     auto* outer   = new QVBoxLayout(central);
     outer->setContentsMargins(0, 0, 0, 0);
@@ -66,7 +68,8 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
             } else {
                 showNormal();
             }
-        });
+        },
+        std::move(onLanguageChanged));
 
     stack_->addWidget(dashboardPage_);    // index 0 -> Overview
     stack_->addWidget(alerts);            // index 1 -> Alerts
@@ -117,6 +120,25 @@ QtMainWindow::~QtMainWindow() = default;
 void QtMainWindow::setAlertsBadge(int count) {
     constexpr int kNavAlerts = 1;  // matches the addItem order above
     sidebar_->setBadge(kNavAlerts, count);
+}
+
+void QtMainWindow::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        setWindowTitle(tr("Industrial HMI (Qt)"));
+        // Re-apply the nav labels in the exact order they were added, skipping
+        // History when it is not mounted so the indices stay aligned.
+        int index = 0;
+        sidebar_->setItemLabel(index++, tr("Overview"));
+        sidebar_->setItemLabel(index++, tr("Alerts"));
+        sidebar_->setItemLabel(index++, tr("Inventory"));
+        sidebar_->setItemLabel(index++, tr("Goods receipt"));
+        sidebar_->setItemLabel(index++, tr("Trends"));
+        if (historyPage_ != nullptr) {
+            sidebar_->setItemLabel(index++, tr("History"));
+        }
+        sidebar_->setItemLabel(index++, tr("Settings"));
+    }
+    QMainWindow::changeEvent(event);
 }
 
 }  // namespace app::view

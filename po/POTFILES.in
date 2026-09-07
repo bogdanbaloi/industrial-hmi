@@ -21,3 +21,19 @@ src/gtk/view/widgets/SystemStatusBadge.h
 [type: gettext/glade]assets/ui/dashboard-page.ui
 [type: gettext/glade]assets/ui/products-page.ui
 [type: gettext/glade]assets/ui/settings-page.ui
+
+# Qt frontend C++ sources. These mark strings with Qt's tr() rather than _(),
+# so the catalog regen must add --keyword=tr:1 for them (the Qt frontend routes
+# tr() through the same gettext catalog via QtGettextTranslator). The Qt .ui
+# files are not listed: uic emits their strings into generated ui_*.h, so they
+# are extracted from the build tree, not from source.
+src/qt/view/QtMainWindow.cpp
+src/qt/view/QtSidebar.cpp
+src/qt/view/QtDashboardPage.cpp
+src/qt/view/QtSettingsPage.cpp
+src/qt/view/QtProductsPage.cpp
+src/qt/view/QtAlertsPage.cpp
+src/qt/view/QtGoodsReceiptPage.cpp
+src/qt/view/QtHistoryPage.cpp
+src/qt/view/QtTrendsPage.cpp
+src/qt/view/QtStatusStrip.cpp

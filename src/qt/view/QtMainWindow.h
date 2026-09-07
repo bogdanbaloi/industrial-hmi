@@ -2,7 +2,11 @@
 
 #include <QMainWindow>
 
+#include <functional>
+#include <string>
+
 class QStackedWidget;
+class QEvent;
 
 namespace app {
 class DashboardPresenter;
@@ -45,7 +49,8 @@ public:
                           const config::ConfigManager& config,
                           QtPaletteManager& paletteManager,
                           historian::HistoryReader* historyReader = nullptr,
-                          QWidget* parent = nullptr);
+                          std::function<void(const std::string&)>
+                              onLanguageChanged = {});
     ~QtMainWindow() override;
 
     QtMainWindow(const QtMainWindow&)            = delete;
@@ -63,6 +68,11 @@ public:
 
     /// Set the active-alert count shown as a badge on the Alerts nav entry.
     void setAlertsBadge(int count);
+
+protected:
+    /// Retranslate the window title and the nav labels (whose source strings
+    /// this shell owns) on a live language change.
+    void changeEvent(QEvent* event) override;
 
 private:
     QtSidebar*       sidebar_{nullptr};

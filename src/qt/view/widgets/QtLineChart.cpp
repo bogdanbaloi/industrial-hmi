@@ -36,12 +36,20 @@ constexpr int    kFontPoints    = 9;
 QtLineChart::QtLineChart(QWidget* parent) : QWidget(parent) {}
 
 int QtLineChart::addSeries(const QString& name, const char* color) {
-    series_.push_back(Series{name, color, {}});
+    series_.push_back(Series{.name = name, .color = color, .points = {}});
     return static_cast<int>(series_.size()) - 1;
 }
 
+void QtLineChart::setSeriesName(int series, const QString& name) {
+    if (series < 0 || static_cast<std::size_t>(series) >= series_.size()) {
+        return;
+    }
+    series_[static_cast<std::size_t>(series)].name = name;
+    update();
+}
+
 void QtLineChart::append(int series, double value) {
-    if (series < 0 || series >= static_cast<int>(series_.size())) {
+    if (series < 0 || static_cast<std::size_t>(series) >= series_.size()) {
         return;
     }
     auto& points = series_[static_cast<std::size_t>(series)].points;
@@ -53,7 +61,7 @@ void QtLineChart::append(int series, double value) {
 }
 
 void QtLineChart::setPoints(int series, const std::vector<double>& values) {
-    if (series < 0 || series >= static_cast<int>(series_.size())) {
+    if (series < 0 || static_cast<std::size_t>(series) >= series_.size()) {
         return;
     }
     auto& points = series_[static_cast<std::size_t>(series)].points;
@@ -87,12 +95,12 @@ void QtLineChart::paintEvent(QPaintEvent* /*event*/) {
     // Gridlines + Y labels at 0 / 50 / 100.
     const QColor gridColor(theme::kColorNeutral);
     for (int pct = 0; pct <= static_cast<int>(kAxisMax); pct += kGridStep) {
-        const double y = bottom - (pct / kAxisMax) * plotH;
+        const double y = bottom - ((pct / kAxisMax) * plotH);
         QPen gridPen(gridColor);
         gridPen.setWidth(1);
         painter.setPen(gridPen);
         painter.drawLine(QPointF(left, y), QPointF(right, y));
-        painter.drawText(QRectF(0, y - kMarginTop / 2.0, left - kLegendGap,
+        painter.drawText(QRectF(0, y - (kMarginTop / 2.0), left - kLegendGap,
                                 kMarginTop),
                          Qt::AlignRight | Qt::AlignVCenter,
                          QString::number(pct));
@@ -110,7 +118,7 @@ void QtLineChart::paintEvent(QPaintEvent* /*event*/) {
         painter.drawLine(QPointF(legendX, top - kLegendGap),
                          QPointF(legendX + kLegendSwatch, top - kLegendGap));
         painter.drawText(
-            QPointF(legendX + kLegendSwatch + kLegendGap, top - kLegendGap / 2),
+            QPointF(legendX + kLegendSwatch + kLegendGap, top - (kLegendGap / 2.0)),
             series.name);
         legendX += kLegendSwatch + kLegendGap + kLegendSpacing +
                    (series.name.size() * kFontPoints);
@@ -123,9 +131,10 @@ void QtLineChart::paintEvent(QPaintEvent* /*event*/) {
         QPolygonF line;
         for (std::size_t i = 0; i < count; ++i) {
             const double x =
-                left + (static_cast<double>(i) / static_cast<double>(count - 1)) *
-                           plotW;
-            const double y = bottom - (series.points[i] / kAxisMax) * plotH;
+                left + ((static_cast<double>(i) /
+                         static_cast<double>(count - 1)) *
+                        plotW);
+            const double y = bottom - ((series.points[i] / kAxisMax) * plotH);
             line << QPointF(x, y);
         }
         QPen linePen(color);

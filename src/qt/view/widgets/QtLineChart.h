@@ -22,6 +22,10 @@ public:
     /// Register a series; returns its index for `append`.
     int addSeries(const QString& name, const char* color);
 
+    /// Rename a series' legend label (live language change); no-op if the index
+    /// is out of range.
+    void setSeriesName(int series, const QString& name);
+
     /// Append a point (clamped to 0..100) to a series and repaint. The live
     /// feed path (Overview / Trends): keeps a rolling window of recent points.
     void append(int series, double value);

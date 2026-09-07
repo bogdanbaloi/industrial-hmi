@@ -77,8 +77,8 @@ void QtUptimeDonut::paintEvent(QPaintEvent* /*event*/) {
     painter.setRenderHint(QPainter::Antialiasing, true);
 
     const int    side = std::min(width(), height());
-    const QRectF ring(kRingMargin, kRingMargin, side - kHalf * kRingMargin,
-                      side - kHalf * kRingMargin);
+    const QRectF ring(kRingMargin, kRingMargin, side - (kHalf * kRingMargin),
+                      side - (kHalf * kRingMargin));
 
     const double total =
         std::accumulate(seconds_.begin(), seconds_.end(), 0.0);

@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <memory>
 
+class QEvent;
+
 // The Ui namespace name is fixed by Qt's uic generator, not our style.
 // NOLINTNEXTLINE(readability-identifier-naming)
 namespace Ui {
@@ -42,6 +44,9 @@ public:
     QtHistoryPage& operator=(const QtHistoryPage&) = delete;
     QtHistoryPage(QtHistoryPage&&)                 = delete;
     QtHistoryPage& operator=(QtHistoryPage&&)      = delete;
+
+protected:
+    void changeEvent(QEvent* event) override;
 
 private:
     /// Query every series for the selected range and repaint both charts.
