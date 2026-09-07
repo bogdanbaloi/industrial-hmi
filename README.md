@@ -2,9 +2,9 @@
 
 Cross-platform industrial Human-Machine Interface in modern C++20.
 Equipment monitoring, quality control, and product database management
-for manufacturing-floor terminals -- shipped as both a GTK4 desktop UI
-and a headless console binary, sharing one tested Model + Presenter
-core.
+for manufacturing-floor terminals -- shipped as three front-ends (a GTK4
+desktop UI, a headless console binary, and an opt-in Qt6 desktop UI) over
+one tested Model + Presenter core.
 
 [![CI](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml)
 ![Coverage](https://img.shields.io/badge/coverage-67%25-green)
@@ -15,11 +15,14 @@ core.
 
 ## Highlights
 
-- **Two front-ends, one core**: GTK4 desktop (`industrial-hmi`) +
-  headless console (`industrial-hmi-console`) built from the same
-  `main.cpp` via `#ifdef CONSOLE_MODE`. The console binary links
-  **zero gtkmm** -- concrete proof that the `ViewObserver` abstraction
-  is a real View-swap seam, not just marketing.
+- **Three front-ends, one core**: GTK4 desktop (`industrial-hmi`) +
+  headless console (`industrial-hmi-console`) + opt-in Qt6 desktop
+  (`industrial-hmi-qt`), all built from the same `main.cpp` via `#ifdef`
+  (`CONSOLE_MODE` / `QT_FRONTEND_MODE` / default GTK). The console binary
+  links **zero gtkmm**; the Qt binary links **zero gtkmm** and reuses the
+  identical Model + Presenter + integration + historian + auth + i18n
+  layers -- concrete proof that the `ViewObserver` abstraction is a real
+  View-swap seam, not just marketing. See the Qt front-end section below.
 - **ISA-18.2 / IEC 62682 alarm lifecycle** -- UnackActive / AckActive
   / RtnUnack states + operator acknowledge + shelve with auto-expiry
   + priority (P1..P4 distinct from severity) + audit journal of every
@@ -96,8 +99,8 @@ core.
   into a logging tool -- zero rewrites, just composition root
   changes.
 - **Staged Bootstrap** resolves the classic config-vs-logger
-  chicken-and-egg with a two-phase logger; both front-ends share the
-  same `Bootstrap` orchestrator (logger -> config -> configured
+  chicken-and-egg with a two-phase logger; all three front-ends share
+  the same `Bootstrap` orchestrator (logger -> config -> configured
   logger -> i18n -> SQLite).
 - **Fail-fast typed startup errors** -- `ConfigMissing`,
   `ConfigCorrupt`, `DatabaseInit`, `LoggerBootstrap` -- caught in
@@ -197,6 +200,20 @@ pacman -S mingw-w64-clang-x86_64-{toolchain,cmake,ninja,gtkmm-4.0,sqlite3,boost,
 printf 'start\nstatus\nquit\n' | ./build/release/industrial-hmi-console
 ```
 
+### Qt6 desktop front-end (opt-in)
+
+```bash
+sudo apt install qt6-base-dev libqt6svg6-dev   # extra Qt deps
+cmake --preset release -DBUILD_QT_FRONTEND=ON
+cmake --build build/release --target industrial-hmi-qt -- -j$(nproc)
+./build/release/industrial-hmi-qt
+```
+
+The Qt binary is off by default (`BUILD_QT_FRONTEND=OFF`) so the standard
+build needs no Qt toolchain. It shares `src/main.cpp` with the GTK and
+console binaries via `#ifdef QT_FRONTEND_MODE`. See the Qt front-end
+section under "Extending the system" for what it ships.
+
 ### Client scripts (Python)
 
 The [`examples/`](examples/) directory ships a Python script per
@@ -225,8 +242,8 @@ catalog regeneration.
 ## Architecture
 
 Model-View-Presenter with dependency injection, observer pattern, and
-interface-based testing. The View can be swapped wholesale (GTK4 or
-console) without touching Presenter / Model.
+interface-based testing. The View can be swapped wholesale (GTK4,
+console, or Qt6) without touching Presenter / Model.
 
 ```
                  +-------------------+
@@ -535,18 +552,58 @@ agnostic.
 
 This is what the project is built for. The architecture promise:
 
-1. Implement `ViewObserver` in your toolkit (Qt: a `QObject`
-   subclass; web: a websocket endpoint serialising ViewModels
-   as JSON; REST: a polling adapter).
+1. Implement `ViewObserver` in your toolkit (Qt: a `QWidget` that is
+   also a `ViewObserver`; web: a websocket endpoint serialising
+   ViewModels as JSON; REST: a polling adapter).
 2. Wire your presenters from a new composition root -- copy
    `src/main.cpp` minus the GTK-specific bits, replace
    `MainWindow` construction with your toolkit's window.
 3. Done. Auth, model, integration, historian, presenters --
    every module under `src/` works unchanged.
 
-The console front-end (`industrial-hmi-console`) is the
+The console front-end (`industrial-hmi-console`) is the first
 existence proof: it links **zero gtkmm** and uses the same
-presenters as the GTK binary.
+presenters as the GTK binary. The **Qt6 front-end** below is the
+second, and a far larger one.
+
+### Qt6 desktop front-end (`industrial-hmi-qt`)
+
+An opt-in third front-end (CMake `-DBUILD_QT_FRONTEND=ON`) built from
+the same `src/main.cpp` via `#ifdef QT_FRONTEND_MODE`, packaged as a
+supply-chain operations dashboard. It links **zero gtkmm** and reuses
+every layer under `src/` unchanged -- the same presenters, alarm store,
+integration backends, historian, auth stack and gettext catalog the GTK
+and console binaries use. It carries the same engineering bar as the GTK
+side: declarative Qt Designer `.ui` files compiled by uic (the analog of
+GtkBuilder), `tr()` i18n, named constants over magic values, and the
+`ViewObserver` seam for every live page. What it ships:
+
+- **Supply-chain Overview** -- KPI tiles (OEE / throughput / quality /
+  defects / lines-up), a QPainter OEE gauge + session-uptime donut, a
+  live OEE / quality trend chart, and the equipment / actuator / quality
+  cards, all from the real view models (no fabricated numbers).
+- **Alerts** page over the shared ISA-18.2 `AlertCenter`, with a live
+  active-alarm badge on the nav.
+- **Inventory** (products) and an **Edge-AI Goods-receipt** inspection
+  page reusing the real `QualityInspectionPresenter`.
+- **Trends** (in-memory session chart) and a **History** page over the
+  persisted historian (SQLite), with a range picker.
+- **Runtime palettes** (light / dark / Nord / Cockpit) + a **language
+  picker** that retranslates the shell live off the shared gettext
+  catalog via a `QTranslator` adapter (one catalog, three front-ends).
+- **Authentication**: a modal login gate over the shared `AuthService`
+  (Argon2id + SQLite), a session-aware sidebar footer, sign-out /
+  switch-user, and Admin-only **User-management** and **Audit-log** pages
+  over `UsersPresenter` / `AuditLogger` (RBAC enforced in the presenter
+  as well -- defence in depth).
+- A bottom **status strip** (system state + backend-health dots + clock)
+  and a live **log panel**.
+
+Always-on backends drive the model from Asio threads, so every Qt view
+marshals presenter callbacks onto the UI thread through
+`QtUiDispatch::postToUi` (a queued `QMetaObject::invokeMethod`, the Qt
+analog of the GTK `Glib::signal_idle` hop). See REQ-ARCH-011 through
+REQ-ARCH-016 and ADR-0020.
 
 ---
 
@@ -622,7 +679,7 @@ commands into `industrial-hmi-console` and diffs stdout against a
 (`tests/scenarios/run-scenario.cmake`) strips logger timestamp lines
 so only structural events participate in the byte-exact comparison.
 
-## Two front-ends, one core
+## Three front-ends, one core
 
 ```bash
 # GTK desktop binary
@@ -630,11 +687,15 @@ so only structural events participate in the byte-exact comparison.
 
 # Headless console binary -- same Bootstrap, same Presenter, same DB
 ./build/release/industrial-hmi-console
+
+# Opt-in Qt6 desktop binary (-DBUILD_QT_FRONTEND=ON) -- same core again
+./build/release/industrial-hmi-qt
 ```
 
-Both binaries share `main.cpp` via an `#ifdef CONSOLE_MODE` switch and
-link the same Model + Presenter + Bootstrap libraries. The console
-binary links **zero gtkmm**:
+All three binaries share `main.cpp` via an `#ifdef` switch
+(`CONSOLE_MODE` / `QT_FRONTEND_MODE` / default GTK) and link the same
+Model + Presenter + Bootstrap libraries. The console and Qt binaries
+link **zero gtkmm**:
 
 ```bash
 # Linux
@@ -647,7 +708,10 @@ nm -D ./build/release/industrial-hmi-console | grep -E 'gtk_'
 
 The console front-end exists not as a fallback but as a **swap proof**:
 it forces the View seam to be honest. If the presenter ever leaks GTK
-into its API, the console binary won't link. CI catches it.
+into its API, the console binary won't link. CI catches it. The Qt
+front-end raises the bar from proof to product: it reuses not just the
+presenters but the integration, historian, auth and i18n layers too, and
+still links zero gtkmm.
 
 ## Integration Layer (industrial framework, not just an HMI)
 
@@ -1102,12 +1166,12 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Layer | Technology |
 |---|---|
 | Language | C++20 (concepts, format, jthread, source_location, ranges) |
-| UI | GTK4 / gtkmm-4.0, Cairo for custom widgets |
+| UI | GTK4 / gtkmm-4.0, Cairo for custom widgets; opt-in Qt6 Widgets front-end (QPainter custom widgets, uic `.ui`), plus a headless console |
 | Database | SQLite3 (in-memory, prepared statements) |
 | Async I/O | Boost.Asio io_context with work guard, posted via std::jthread |
 | Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled client (full duplex, no paho dep) + OPC-UA via open62541 |
 | Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
-| i18n | GNU gettext, custom adapter (no glibmm i18n macros) |
+| i18n | GNU gettext, custom adapter (no glibmm i18n macros); one catalog serves all three front-ends (Qt routes `tr()` through a `QTranslator` -> gettext adapter) |
 | Testing | GoogleTest + gmock (80 ctest targets) + google/benchmark (p50/p90/p99 hot-path microbenchmarks) + libFuzzer (wire-parser fuzz harnesses) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
