@@ -52,6 +52,18 @@ void QtLineChart::append(int series, double value) {
     update();
 }
 
+void QtLineChart::setPoints(int series, const std::vector<double>& values) {
+    if (series < 0 || series >= static_cast<int>(series_.size())) {
+        return;
+    }
+    auto& points = series_[static_cast<std::size_t>(series)].points;
+    points.assign(values.begin(), values.end());
+    for (auto& point : points) {
+        point = std::clamp(point, 0.0, kAxisMax);
+    }
+    update();
+}
+
 QSize QtLineChart::sizeHint() const { return {kMinW, kMinH}; }
 
 void QtLineChart::paintEvent(QPaintEvent* /*event*/) {

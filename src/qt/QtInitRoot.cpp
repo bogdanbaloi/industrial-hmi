@@ -18,6 +18,9 @@
 #include "src/config/ConfigManager.h"
 #include "src/core/Bootstrap.h"
 #include "src/core/LoggerBase.h"
+#include "src/historian/HistorianBridge.h"
+#include "src/historian/HistorianMaintenance.h"
+#include "src/historian/SqliteHistoryStore.h"
 #include "src/qt/view/QtDashboardPage.h"
 #include "src/qt/view/QtGoodsReceiptPage.h"
 #include "src/qt/view/QtProductsPage.h"
@@ -32,6 +35,8 @@
 
 #include <QTimer>
 
+#include <chrono>
+#include <cstddef>
 #include <vector>
 
 namespace app::qt {
@@ -103,6 +108,14 @@ QtInitRoot::~QtInitRoot() {
     backendHealthPresenter_.reset();
     integrationServices_.reset();
 
+    // Historian teardown in dependency order: stop the retention worker (jthread
+    // on the store), then drop the bridge (its destructor flushes pending rows),
+    // then close the store. All must precede clearCallbacks so the bridge is off
+    // the model before the model's callbacks vanish.
+    historianMaintenance_.reset();
+    historianBridge_.reset();
+    historyStore_.reset();
+
     // Mirror InitConsole's shutdown: drop model callbacks and stop the Asio
     // io_context worker before static teardown gets ambiguous.
     app::model::SimulatedModel::instance().clearCallbacks();
@@ -116,6 +129,52 @@ void QtInitRoot::refreshAlertsBadge() {
     const int count = static_cast<int>(alertCenter_->snapshot().size());
     auto* window = window_.get();
     view::postToUi(window, [window, count] { window->setAlertsBadge(count); });
+}
+
+void QtInitRoot::buildHistorian() {
+    auto& config = app::config::ConfigManager::instance();
+    if (!config.isHistorianEnabled()) {
+        return;
+    }
+    auto& logger = bootstrap_.logger();
+
+    historian::SqliteHistoryStore::Config storeCfg;
+    storeCfg.dbPath = config.getHistorianDbPath();
+    historyStore_   = std::make_unique<historian::SqliteHistoryStore>(
+        std::move(storeCfg));
+    historyStore_->setLogger(logger);
+    if (!historyStore_->initialize()) {
+        logger.warn("Historian disabled: SqliteHistoryStore failed to open '{}'",
+                    config.getHistorianDbPath());
+        historyStore_.reset();
+        return;
+    }
+
+    // Bridge: persist model scalar changes. Same wiring main()'s
+    // registerHistorian performs for the GTK / console frontends.
+    historian::HistorianBridge::Config bridgeCfg;
+    bridgeCfg.maxBatchSize =
+        static_cast<std::size_t>(config.getHistorianBatchSize());
+    bridgeCfg.maxBatchAge =
+        std::chrono::milliseconds{config.getHistorianBatchAgeMs()};
+    historianBridge_ = std::make_unique<historian::HistorianBridge>(
+        *historyStore_, app::model::SimulatedModel::instance(), bridgeCfg);
+    historianBridge_->setLogger(logger);
+    historianBridge_->wire();
+
+    // Tiered-retention worker (raw -> 1m -> 1h) on a cadence.
+    historian::HistorianMaintenance::Config mainCfg;
+    mainCfg.sweepInterval =
+        std::chrono::milliseconds{config.getHistorianSweepIntervalMs()};
+    mainCfg.rawRetention =
+        std::chrono::milliseconds{config.getHistorianRawRetentionMs()};
+    mainCfg.minuteRetention =
+        std::chrono::milliseconds{config.getHistorianMinuteRetentionMs()};
+    historianMaintenance_ =
+        std::make_unique<historian::HistorianMaintenance>(*historyStore_,
+                                                          mainCfg);
+    historianMaintenance_->setLogger(logger);
+    historianMaintenance_->start();
 }
 
 void QtInitRoot::run() {
@@ -163,12 +222,20 @@ void QtInitRoot::run() {
     inspectionPresenter_ = std::make_unique<presenter::QualityInspectionPresenter>(
         *imageClassifier_, *imageDecoder_);
 
+    // Historian: persisted time-series store + model bridge + retention worker,
+    // built through the same config-gated, degraded-open path main() uses. The
+    // read side (or null) flows into the window, which mounts the History page
+    // only when the store opened. Reusing the historian behind a third frontend
+    // extends the toolkit-independence proof to the persistence layer
+    // (REQ-ARCH-014).
+    buildHistorian();
+
     // Shell owns the page widgets; the presenters never learn they are talking
     // to Qt widgets rather than GTK pages or a terminal.
     window_ = std::make_unique<view::QtMainWindow>(
         *dashboardPresenter_, *productsPresenter_, *alertCenter_,
         *inspectionPresenter_, app::config::ConfigManager::instance(),
-        *paletteManager_);
+        *paletteManager_, historyStore_.get());
 
     dashboardPresenter_->addObserver(window_->dashboardPage());
     dashboardPresenter_->addObserver(window_->trendsPage());

@@ -22,8 +22,15 @@ public:
     /// Register a series; returns its index for `append`.
     int addSeries(const QString& name, const char* color);
 
-    /// Append a point (clamped to 0..100) to a series and repaint.
+    /// Append a point (clamped to 0..100) to a series and repaint. The live
+    /// feed path (Overview / Trends): keeps a rolling window of recent points.
     void append(int series, double value);
+
+    /// Replace a series' points wholesale from a batch (each clamped to
+    /// 0..100) and repaint. The query path (the historian History page loads a
+    /// whole result set on Refresh); unlike `append`, no rolling-window cap is
+    /// applied -- the caller bounds the point count (the reader already caps it).
+    void setPoints(int series, const std::vector<double>& values);
 
     [[nodiscard]] QSize sizeHint() const override;
 

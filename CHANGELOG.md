@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Qt persisted-historian History page (REQ-ARCH-014)
+
+Reuses the persisted historian behind the Qt frontend and surfaces the archive
+in a read-only History page, extending the toolkit-independence proof to the
+persistence layer.
+
+#### Added
+- History page (`QtHistoryPage`): a pure View over the `HistoryReader` interface. Pick a range (last hour / 24 hours / 7 days), Refresh, and it queries the store and plots the quality pass-rate and equipment supply-level series in two grouped charts, with a total-samples footer. Mounts only when the historian opened. History nav entry + icon.
+- `QtLineChart::setPoints`: batch-load a whole series from a query result (no rolling-window cap), beside the existing live-append path the Overview and Trends charts use.
+
+#### Changed
+- `QtInitRoot` now builds the historian stack (SQLite store + `HistorianBridge` + `HistorianMaintenance`) through the same config-gated, degraded-open path `main()`'s `registerHistorian` uses, and passes the read side to the window. A disabled or failed store degrades to no History tab. Teardown stops the retention worker, flushes the bridge and closes the store in dependency order.
+
 ### Shared integration bootstrap and Qt connectivity (REQ-ARCH-013)
 
 Extracts the integration-layer composition into a shared, toolkit-agnostic

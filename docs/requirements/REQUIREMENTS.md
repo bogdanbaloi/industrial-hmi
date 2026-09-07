@@ -299,6 +299,29 @@ run of `industrial-hmi-qt` (the bottom status strip lists each backend's state).
 
 ADR: 0008 (Runtime palette swap), 0020 (Qt frontend), 0021 (Qt palette manager).
 
+### REQ-ARCH-014 (SHOULD) — Qt frontend surfaces the persisted historian
+
+`req~arch-014~1`
+
+The Qt frontend **shall** reuse the persisted historian (the SQLite store, the
+model-to-store bridge and the tiered-retention worker) through the same
+config-gated, degraded-open composition the GTK and console frontends use, and
+**shall** present the archive through a read-only History page that depends only
+on the `HistoryReader` interface (pick a time range, query, plot). The page
+**shall** mount only when the store opens successfully, so a disabled or failed
+historian degrades to a missing tab rather than a crash. Reusing the persistence
+layer behind a third frontend extends the toolkit-independence proof from the
+presenter and integration layers to the historian (extends REQ-ARCH-011 and
+REQ-ARCH-013, builds on the HISTORIAN requirements).
+
+Verified by: the existing historian tests cover the store, bridge and
+maintenance worker (`SqliteHistoryStoreTest`, `HistorianBridgeTest`,
+`HistorianMaintenanceTest`, `HistorianRoundTripIntegrationTest`); CI builds the
+Qt frontend over the shared historian wiring; manual run of `industrial-hmi-qt`
+(the History page queries each range and plots the quality / supply series).
+
+ADR: 0007 (Historian degraded open), 0020 (Qt frontend).
+
 ---
 
 ## AUTH — Authentication & Authorisation

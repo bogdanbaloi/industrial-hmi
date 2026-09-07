@@ -31,6 +31,12 @@ namespace app::integration {
 struct IntegrationServices;
 }
 
+namespace app::historian {
+class SqliteHistoryStore;
+class HistorianBridge;
+class HistorianMaintenance;
+}
+
 namespace app::view {
 class QtMainWindow;
 class QtPaletteManager;
@@ -71,6 +77,12 @@ private:
     /// the UI thread (the AlertCenter signal may fire on a backend thread).
     void refreshAlertsBadge();
 
+    /// Build the historian stack (SQLite store + model bridge + retention
+    /// worker) when enabled in config. Degraded-open policy: a store that fails
+    /// to open is dropped and the History page never mounts, matching the GTK
+    /// frontend and main()'s registerHistorian.
+    void buildHistorian();
+
     core::Bootstrap&                    bootstrap_;
     std::unique_ptr<integration::IntegrationServices> integrationServices_;
     std::unique_ptr<presenter::AlertCenter>           alertCenter_;
@@ -80,6 +92,9 @@ private:
     std::unique_ptr<ml::ImageDecoder>            imageDecoder_;
     std::unique_ptr<ml::FakeImageClassifier>     imageClassifier_;
     std::unique_ptr<presenter::QualityInspectionPresenter> inspectionPresenter_;
+    std::unique_ptr<historian::SqliteHistoryStore>   historyStore_;
+    std::unique_ptr<historian::HistorianBridge>      historianBridge_;
+    std::unique_ptr<historian::HistorianMaintenance> historianMaintenance_;
     std::unique_ptr<view::QtPaletteManager> paletteManager_;
     std::unique_ptr<view::QtMainWindow>     window_;
     std::unique_ptr<QTimer>                 tickTimer_;

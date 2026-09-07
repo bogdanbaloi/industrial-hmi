@@ -18,12 +18,17 @@ namespace app::config {
 class ConfigManager;
 }
 
+namespace app::historian {
+class HistoryReader;
+}
+
 namespace app::view {
 
 class QtDashboardPage;
 class QtProductsPage;
 class QtGoodsReceiptPage;
 class QtTrendsPage;
+class QtHistoryPage;
 class QtStatusStrip;
 class QtPaletteManager;
 class QtSidebar;
@@ -39,6 +44,7 @@ public:
                           presenter::QualityInspectionPresenter& inspectionPresenter,
                           const config::ConfigManager& config,
                           QtPaletteManager& paletteManager,
+                          historian::HistoryReader* historyReader = nullptr,
                           QWidget* parent = nullptr);
     ~QtMainWindow() override;
 
@@ -65,6 +71,7 @@ private:
     QtProductsPage*  productsPage_{nullptr};
     QtGoodsReceiptPage* goodsReceiptPage_{nullptr};
     QtTrendsPage*    trendsPage_{nullptr};
+    QtHistoryPage*   historyPage_{nullptr};
     QtStatusStrip*   statusStrip_{nullptr};
 };
 

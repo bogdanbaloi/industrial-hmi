@@ -4,6 +4,7 @@
 #include "src/qt/view/QtAlertsPage.h"
 #include "src/qt/view/QtDashboardPage.h"
 #include "src/qt/view/QtGoodsReceiptPage.h"
+#include "src/qt/view/QtHistoryPage.h"
 #include "src/qt/view/QtIcons.h"
 #include "src/qt/view/QtLogPanel.h"
 #include "src/qt/view/QtProductsPage.h"
@@ -32,7 +33,9 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
                            presenter::AlertCenter& alertCenter,
                            presenter::QualityInspectionPresenter& inspectionPresenter,
                            const config::ConfigManager& config,
-                           QtPaletteManager& paletteManager, QWidget* parent)
+                           QtPaletteManager& paletteManager,
+                           historian::HistoryReader* historyReader,
+                           QWidget* parent)
     : QMainWindow(parent) {
     auto* central = new QWidget(this);
     auto* outer   = new QVBoxLayout(central);
@@ -51,6 +54,11 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     auto* alerts      = new QtAlertsPage(alertCenter);
     goodsReceiptPage_ = new QtGoodsReceiptPage(inspectionPresenter);
     trendsPage_       = new QtTrendsPage();
+    // Persisted-historian page: mounted only when the composition root opened
+    // the store (degraded historian -> no History tab, same policy as GTK).
+    if (historyReader != nullptr) {
+        historyPage_ = new QtHistoryPage(*historyReader);
+    }
     auto* settings    = new QtSettingsPage(
         config, paletteManager, [this](bool fullscreen) {
             if (fullscreen) {
@@ -65,7 +73,10 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     stack_->addWidget(productsPage_);     // index 2 -> Inventory
     stack_->addWidget(goodsReceiptPage_); // index 3 -> Goods receipt
     stack_->addWidget(trendsPage_);       // index 4 -> Trends
-    stack_->addWidget(settings);          // index 5 -> Settings
+    if (historyPage_ != nullptr) {
+        stack_->addWidget(historyPage_);  // index 5 -> History (when enabled)
+    }
+    stack_->addWidget(settings);          // Settings (last)
 
     sidebar_ = new QtSidebar(
         [this](int index) { stack_->setCurrentIndex(index); }, content);
@@ -74,6 +85,9 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     sidebar_->addItem(tr("Inventory"), icons::inventory());
     sidebar_->addItem(tr("Goods receipt"), icons::goodsReceipt());
     sidebar_->addItem(tr("Trends"), icons::trends());
+    if (historyPage_ != nullptr) {
+        sidebar_->addItem(tr("History"), icons::history());
+    }
     sidebar_->addItem(tr("Settings"), icons::settings());
 
     row->addWidget(sidebar_);
