@@ -4,17 +4,20 @@
 
 #include "src/qt/view/QtDashboardPage.h"
 
+#include "src/qt/view/QtTheme.h"
 #include "src/qt/view/QtUiDispatch.h"
 #include "src/qt/view/widgets/QtActuatorCard.h"
 #include "src/qt/view/widgets/QtEquipmentCard.h"
 #include "src/qt/view/widgets/QtGauge.h"
 #include "src/qt/view/widgets/QtKpiTile.h"
+#include "src/qt/view/widgets/QtLineChart.h"
 #include "src/qt/view/widgets/QtQualityCard.h"
 #include "src/qt/view/widgets/QtUptimeDonut.h"
 
 #include "ui_QtDashboardPage.h"
 
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QString>
 
 namespace app::view {
@@ -35,6 +38,14 @@ QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
       ui_(std::make_unique<Ui::QtDashboardPage>()) {
     ui_->setupUi(this);
 
+    // Keep the work-unit text rows at their natural height so the tall window's
+    // spare vertical space collects in the trailing spacer instead of stretching
+    // the gaps between these labels.
+    for (auto* label : {ui_->workUnitIdLabel, ui_->productLabel,
+                        ui_->statusMessageLabel}) {
+        label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    }
+
     // KPI tiles across the top, sharing the row width equally.
     oeeTile_        = new QtKpiTile(tr("OEE"));
     throughputTile_ = new QtKpiTile(tr("Throughput"));
@@ -52,6 +63,16 @@ QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
     ui_->visualsLayout->addWidget(oeeGauge_);
     ui_->visualsLayout->addWidget(uptimeDonut_);
     ui_->visualsLayout->addStretch(1);
+
+    // Live trend chart fills the vertical slack above the button row, so the
+    // page has no dead space on the tall kiosk window. Both series are derived
+    // from the same view models the tiles use -- no fabricated numbers.
+    trendChart_ = new QtLineChart();
+    trendChart_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    oeeSeriesIdx_     = trendChart_->addSeries(tr("OEE %"), theme::kColorInfo);
+    qualitySeriesIdx_ =
+        trendChart_->addSeries(tr("Avg quality %"), theme::kColorOk);
+    ui_->trendLayout->addWidget(trendChart_);
 
     // Back-channel: buttons call the SAME presenter methods the GTK page and the
     // console view call.
@@ -79,9 +100,9 @@ void QtDashboardPage::setSystemState(int state) {
 void QtDashboardPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) {
     postToUi(this, [this, vm] {
         ui_->workUnitIdLabel->setText(
-            tr("Work unit: %1").arg(QString::fromStdString(vm.workUnitId)));
+            tr("Order: %1").arg(QString::fromStdString(vm.workUnitId)));
         ui_->productLabel->setText(
-            tr("Product: %1")
+            tr("Shipment: %1")
                 .arg(QString::fromStdString(vm.productDescription)));
         ui_->statusMessageLabel->setText(
             tr("Status: %1").arg(QString::fromStdString(vm.statusMessage)));
@@ -91,6 +112,8 @@ void QtDashboardPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) 
         throughputUph_ = vm.throughputUph;
         oeeGauge_->setValue(oeePct_);
         updateKpis();
+        trendChart_->append(oeeSeriesIdx_, oeePct_);
+        trendChart_->append(qualitySeriesIdx_, averageQuality());
     });
 }
 
@@ -158,16 +181,8 @@ void QtDashboardPage::updateKpis() {
     throughputTile_->setValue(
         tr("%1 uph").arg(QString::number(throughputUph_, 'f', kOeeDecimals)));
 
-    float passRateSum = 0.0F;
-    for (const auto& entry : qualityPassRate_) {
-        passRateSum += entry.second;
-    }
-    const float avgQuality =
-        qualityPassRate_.empty()
-            ? 0.0F
-            : passRateSum / static_cast<float>(qualityPassRate_.size());
-    qualityTile_->setValue(QString::number(avgQuality, 'f', kQualityDecimals) +
-                           "%");
+    qualityTile_->setValue(
+        QString::number(averageQuality(), 'f', kQualityDecimals) + "%");
 
     int defects = 0;
     for (const auto& entry : qualityDefects_) {
@@ -183,6 +198,17 @@ void QtDashboardPage::updateKpis() {
     }
     linesTile_->setValue(QString("%1/%2").arg(linesUp).arg(
         static_cast<int>(equipmentEnabled_.size())));
+}
+
+double QtDashboardPage::averageQuality() const {
+    if (qualityPassRate_.empty()) {
+        return 0.0;
+    }
+    double passRateSum = 0.0;
+    for (const auto& entry : qualityPassRate_) {
+        passRateSum += entry.second;
+    }
+    return passRateSum / static_cast<double>(qualityPassRate_.size());
 }
 
 }  // namespace app::view

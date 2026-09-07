@@ -30,6 +30,7 @@ class QtQualityCard;
 class QtKpiTile;
 class QtGauge;
 class QtUptimeDonut;
+class QtLineChart;
 
 /// Qt dashboard page. A QWidget (hosted in a QtMainWindow tab) that is also an
 /// app::ViewObserver, so the real DashboardPresenter drives it through the exact
@@ -85,6 +86,9 @@ private:
 
     QtGauge*       oeeGauge_{nullptr};
     QtUptimeDonut* uptimeDonut_{nullptr};
+    QtLineChart*   trendChart_{nullptr};
+    int            oeeSeriesIdx_{0};
+    int            qualitySeriesIdx_{0};
 
     float  oeePct_{0.0F};
     double throughputUph_{0.0};
@@ -92,7 +96,8 @@ private:
     std::unordered_map<std::uint32_t, int>   qualityDefects_;
     std::unordered_map<std::uint32_t, bool>  equipmentEnabled_;
 
-    void updateKpis();
+    void   updateKpis();
+    [[nodiscard]] double averageQuality() const;
 };
 
 }  // namespace app::view

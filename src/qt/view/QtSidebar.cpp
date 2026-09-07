@@ -2,6 +2,7 @@
 
 #include "src/qt/view/QtIcons.h"
 
+#include <QApplication>
 #include <QButtonGroup>
 #include <QHBoxLayout>
 #include <QIcon>
@@ -54,6 +55,14 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
     auto* user = new QLabel(tr("Bogdan B. · Operations"), this);
     user->setObjectName("sidebarUser");
     root->addWidget(user);
+
+    // Kiosk mode has no title bar, so the shell provides its own quit control.
+    auto* quit = new QPushButton(tr("Exit application"), this);
+    quit->setObjectName("sidebarQuit");
+    quit->setIcon(icons::quit());
+    quit->setIconSize(QSize(kNavIconSize, kNavIconSize));
+    connect(quit, &QPushButton::clicked, qApp, &QCoreApplication::quit);
+    root->addWidget(quit);
 
     group_ = new QButtonGroup(this);
     group_->setExclusive(true);

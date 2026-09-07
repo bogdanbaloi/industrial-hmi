@@ -1262,7 +1262,12 @@ if(BUILD_QT_FRONTEND)
     # into ui_QtDashboardPage.h at build time (the Qt analog of GtkBuilder).
     set_target_properties(objectsQt PROPERTIES AUTOMOC ON AUTOUIC ON)
 
-    add_executable(industrial-hmi-qt src/qt/main.cpp)
+    # Shares src/main.cpp with the GTK / console binaries via #ifdef
+    # QT_FRONTEND_MODE (the same pattern CONSOLE_MODE uses), so there is one
+    # composition entry point rather than a separate src/qt/main.cpp.
+    add_executable(industrial-hmi-qt)
+    target_sources(industrial-hmi-qt PRIVATE src/main.cpp)
+    target_compile_definitions(industrial-hmi-qt PRIVATE QT_FRONTEND_MODE)
     target_link_libraries(industrial-hmi-qt
         PRIVATE
             objectsQt
@@ -1276,6 +1281,7 @@ if(BUILD_QT_FRONTEND)
             objectsMqtt
             objectsMl
             objectsAuth
+            objectsHistorian
             Threads::Threads
             Qt6::Widgets
             Qt6::Svg

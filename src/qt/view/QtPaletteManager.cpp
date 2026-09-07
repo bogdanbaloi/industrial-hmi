@@ -72,6 +72,10 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
         #sidebarBrand { color: @text; font-weight: bold; font-size: 15px;
             padding: 4px 4px 8px; }
         #sidebarUser { color: @muted; padding: 6px 4px; }
+        #sidebarQuit { background: @surface2; color: @text; font-weight: bold;
+            padding: 10px 12px; border: 1px solid @border; border-radius: 6px;
+            margin-top: 6px; }
+        #sidebarQuit:hover { background: @accent; color: @accentInk; }
         #navBadge { background: #c62828; color: white; border-radius: 8px;
             padding: 0 5px; font-weight: bold; }
         #kpiTile { background: @surface; border: 1px solid @border;
