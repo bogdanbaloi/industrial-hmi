@@ -9,15 +9,20 @@
 #include <QComboBox>
 #include <QDateTime>
 #include <QEvent>
+#include <QFile>
+#include <QFileDialog>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QString>
+#include <QStringConverter>
 #include <QStringList>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QTextStream>
 #include <QTimer>
 #include <QVariant>
 #include <Qt>
@@ -49,6 +54,21 @@ constexpr qint64 kRangeWeek = 7LL * kRangeDay;
 // Auto-refresh cadence, matching the History page's live feel.
 constexpr int kAutoRefreshMs = 5000;
 
+// UTF-8 byte-order mark, written first so Excel detects the CSV encoding.
+constexpr char16_t kUtf8Bom = 0xFEFF;
+
+// RFC 4180 field: quote when the value contains a comma, quote, or newline, and
+// double any embedded quotes.
+QString csvField(const QString& value) {
+    if (value.contains(',') || value.contains('"') || value.contains('\n') ||
+        value.contains('\r')) {
+        QString escaped = value;
+        escaped.replace('"', QStringLiteral("\"\""));
+        return '"' + escaped + '"';
+    }
+    return value;
+}
+
 }  // namespace
 
 QtAuditLogPage::QtAuditLogPage(auth::AuditLogger& reader, QWidget* parent)
@@ -76,6 +96,8 @@ QtAuditLogPage::QtAuditLogPage(auth::AuditLogger& reader, QWidget* parent)
             [this] { refresh(); });
     connect(ui_->userEdit, &QLineEdit::returnPressed, this,
             [this] { refresh(); });
+    connect(ui_->exportButton, &QPushButton::clicked, this,
+            [this] { exportCsv(); });
 
     // Auto-refresh so newly-audited actions appear without an operator click.
     autoRefresh_ = new QTimer(this);
@@ -169,6 +191,41 @@ void QtAuditLogPage::refresh() {
     ui_->footerLabel->setText(tr("%1 events shown (of %2 total)")
                                   .arg(events.size())
                                   .arg(reader_.totalEvents()));
+}
+
+void QtAuditLogPage::exportCsv() {
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export audit log"), QStringLiteral("audit-log.csv"),
+        tr("CSV files (*.csv)"));
+    if (path.isEmpty()) {
+        return;  // operator cancelled the save dialog
+    }
+
+    auto query  = buildQuery();
+    query.limit = 0;  // no cap: export every matching row, not just the UI slice
+    const auto events = reader_.query(query);
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Export failed"),
+                             tr("Could not open the file for writing."));
+        return;
+    }
+    QTextStream out(&file);
+    out.setEncoding(QStringConverter::Utf8);
+    out << QChar(kUtf8Bom);  // BOM first so Excel detects the encoding
+    out << "timestamp,username,role,category,action,result,details\n";
+    for (const auto& event : events) {
+        out << csvField(QString::fromStdString(event.timestamp)) << ','
+            << csvField(QString::fromStdString(event.username)) << ','
+            << csvField(QString::fromStdString(event.role)) << ','
+            << csvField(QString::fromStdString(event.category)) << ','
+            << csvField(QString::fromStdString(event.action)) << ','
+            << csvField(QString::fromStdString(event.result)) << ','
+            << csvField(QString::fromStdString(event.details)) << '\n';
+    }
+    file.close();
+    ui_->footerLabel->setText(tr("Exported %1 events").arg(events.size()));
 }
 
 void QtAuditLogPage::changeEvent(QEvent* event) {

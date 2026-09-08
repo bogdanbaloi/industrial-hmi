@@ -116,9 +116,13 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     }
     sidebar_->addItem(tr("Settings"), icons::settings());
 
-    // Wire the sign-out control only for an auth session (callback supplied).
+    // Wire the sign-out + change-password controls only when the composition
+    // root supplied their callbacks (auth session).
     if (context.onSignOut) {
         sidebar_->enableSignOut(std::move(context.onSignOut));
+    }
+    if (context.onChangePassword) {
+        sidebar_->enableChangePassword(std::move(context.onChangePassword));
     }
 
     row->addWidget(sidebar_);

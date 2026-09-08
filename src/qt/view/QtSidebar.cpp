@@ -58,6 +58,12 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
     userLabel_->setObjectName("sidebarUser");
     root->addWidget(userLabel_);
 
+    // Self-service change-password: hidden until enableChangePassword() wires it.
+    changePasswordButton_ = new QPushButton(tr("Change password"), this);
+    changePasswordButton_->setObjectName("sidebarChangePassword");
+    changePasswordButton_->hide();
+    root->addWidget(changePasswordButton_);
+
     // Sign-out control: hidden until enableSignOut() wires it (auth builds only).
     signOutButton_ = new QPushButton(tr("Sign out"), this);
     signOutButton_->setObjectName("sidebarSignOut");
@@ -123,6 +129,16 @@ void QtSidebar::enableSignOut(std::function<void()> handler) {
     signOutButton_->show();
 }
 
+void QtSidebar::enableChangePassword(std::function<void()> handler) {
+    connect(changePasswordButton_, &QPushButton::clicked, this,
+            [handler = std::move(handler)] {
+                if (handler) {
+                    handler();
+                }
+            });
+    changePasswordButton_->show();
+}
+
 void QtSidebar::changeEvent(QEvent* event) {
     if (event != nullptr && event->type() == QEvent::LanguageChange) {
         brandLabel_->setText(tr("Industrial HMI"));
@@ -131,6 +147,7 @@ void QtSidebar::changeEvent(QEvent* event) {
         if (!userTextOverridden_) {
             userLabel_->setText(tr("Bogdan B. · Operations"));
         }
+        changePasswordButton_->setText(tr("Change password"));
         signOutButton_->setText(tr("Sign out"));
         quitButton_->setText(tr("Exit application"));
     }

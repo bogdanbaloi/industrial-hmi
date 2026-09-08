@@ -49,6 +49,10 @@ public:
     /// called when auth is enabled; the button stays hidden otherwise.
     void enableSignOut(std::function<void()> handler);
 
+    /// Reveal the "Change password" control and route its clicks to `handler`.
+    /// Only called for an authenticated session with a users presenter.
+    void enableChangePassword(std::function<void()> handler);
+
 protected:
     /// Retranslate the sidebar's own static text (brand / user / quit) on a
     /// live language change. Nav labels are re-set by the shell via
@@ -62,6 +66,7 @@ private:
     std::vector<QLabel*> badges_;
     QLabel*              brandLabel_{nullptr};
     QLabel*              userLabel_{nullptr};
+    QPushButton*         changePasswordButton_{nullptr};
     QPushButton*         signOutButton_{nullptr};
     QPushButton*         quitButton_{nullptr};
     bool                 userTextOverridden_{false};

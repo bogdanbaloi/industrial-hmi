@@ -29,6 +29,7 @@
 #include "src/auth/SqliteUserRepository.h"
 #include "src/auth/User.h"
 #include "src/presenter/UsersPresenter.h"
+#include "src/qt/view/QtChangePasswordDialog.h"
 #include "src/qt/view/QtLoginDialog.h"
 #include "src/qt/view/QtDashboardPage.h"
 #include "src/qt/view/QtGettextTranslator.h"
@@ -45,8 +46,12 @@
 
 #include <QCoreApplication>
 #include <QDialog>
+#include <QMessageBox>
 #include <QString>
 #include <QTimer>
+
+#include <libintl.h>
+#include <string>
 
 #include <chrono>
 #include <cstddef>
@@ -393,6 +398,11 @@ void QtInitRoot::buildAndShowWindow() {
     if (authService_) {
         windowContext.onSignOut = [this] { signOut(); };
     }
+    // Change-password control needs the users presenter (built only when the
+    // audit log opened); any authenticated role may change its own password.
+    if (usersPresenter_) {
+        windowContext.onChangePassword = [this] { changePassword(); };
+    }
     // Admin-only pages: pass their collaborators only for an Admin session, so
     // Users + Audit mount for admins and stay hidden (and unbuilt) otherwise.
     bool isAdmin = false;
@@ -488,6 +498,31 @@ void QtInitRoot::signOut() {
         teardownWindow();
         buildAndShowWindow();
     });
+}
+
+void QtInitRoot::changePassword() {
+    if (!usersPresenter_ || !window_) {
+        return;
+    }
+    view::QtChangePasswordDialog dialog(window_.get());
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    const auto status = usersPresenter_->changeOwnPassword(
+        dialog.currentPassword().toStdString(),
+        dialog.newPassword().toStdString());
+
+    // QtInitRoot is not a QObject, so translate through the shared gettext
+    // catalog directly rather than tr().
+    const QString title = QString::fromUtf8(gettext("Change password"));
+    if (status == presenter::UsersStatus::Ok) {
+        QMessageBox::information(window_.get(), title,
+                                 QString::fromUtf8(gettext("Password changed.")));
+    } else {
+        const std::string msgid{presenter::statusMessage(status)};
+        QMessageBox::warning(window_.get(), title,
+                             QString::fromUtf8(gettext(msgid.c_str())));
+    }
 }
 
 }  // namespace app::qt

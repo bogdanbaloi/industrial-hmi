@@ -59,6 +59,7 @@ public:
         historian::HistoryReader*                historyReader{nullptr};
         std::function<void(const std::string&)>  onLanguageChanged;
         std::function<void()>                    onSignOut;
+        std::function<void()>                    onChangePassword;
         auth::Session*                           session{nullptr};
         // Admin-only pages: the composition root passes these non-null only for
         // an Admin session, so they mount for admins and stay hidden otherwise.

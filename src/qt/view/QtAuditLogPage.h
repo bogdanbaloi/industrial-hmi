@@ -42,6 +42,9 @@ private:
     void applyHeaderLabels();
     void populateFilters();
     void refresh();
+    /// Save the currently-filtered events (no row cap) as RFC 4180 CSV at an
+    /// operator-chosen path. Native save dialog -- the operator picks the file.
+    void exportCsv();
     [[nodiscard]] auth::AuditQuery buildQuery() const;
 
     std::unique_ptr<Ui::QtAuditLogPage> ui_;

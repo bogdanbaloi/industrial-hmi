@@ -1238,6 +1238,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/QtTrendsPage.cpp
         src/qt/view/QtHistoryPage.cpp
         src/qt/view/QtLoginDialog.cpp
+        src/qt/view/QtChangePasswordDialog.cpp
         src/qt/view/QtUsersPage.cpp
         src/qt/view/QtUserFormDialog.cpp
         src/qt/view/QtResetPasswordDialog.cpp

@@ -66,6 +66,13 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="exportButton">
+       <property name="text">
+        <string>Export CSV</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>

@@ -16,6 +16,7 @@ Layout + readability refinements to the Qt frontend (no new requirement).
 - The Order / Shipment / Status lines are grouped into a "Current work unit" card with a two-column label / value form.
 - The bottom status strip fills its middle with a centred "N of M backends online" summary rather than a blank gap between the health dots and the clock.
 - KPI tiles colour their value by state (green ok / amber warn / red alarm) so OEE, quality and defects read at a glance.
+- Every page carries a consistent title header (shared `#headerLabel` style), including the Overview and Inventory pages that previously had none.
 
 ### Qt authentication, admin pages and session footer (REQ-ARCH-016)
 
@@ -26,7 +27,8 @@ reusing the same toolkit-agnostic auth layer as GTK and console.
 #### Added
 - Modal login (`QtLoginDialog`) over the shared `AuthService` (Argon2id verify against the SQLite user store). Shown before the shell is built; a cancelled login exits cleanly with no window.
 - Admin user-management page (`QtUsersPage`) over `UsersPresenter`: a user table with add / edit / reset-password / delete, each through a `.ui` dialog (`QtUserFormDialog`, `QtResetPasswordDialog`) or a confirm box. Every mutation goes through the presenter, which enforces RBAC and writes the audit trail.
-- Admin audit-log page (`QtAuditLogPage`) over `AuditLogger`: category / result / range / user filters, an auto-refresh, and a total-events footer.
+- Admin audit-log page (`QtAuditLogPage`) over `AuditLogger`: category / result / range / user filters, an auto-refresh, a total-events footer, and a CSV export (RFC 4180, UTF-8 BOM) of the filtered events to an operator-chosen file.
+- Self-service change-password (`QtChangePasswordDialog`) in the sidebar for any signed-in user, through `UsersPresenter::changeOwnPassword` (verifies the old password, hashes the new one, audits the change).
 - Session-aware sidebar footer showing the signed-in user + role, tracking `Session` changes.
 - Sign-out (switch user): clears + audits the session, re-shows the login, and rebuilds the shell so role-gated nav matches the newly signed-in user. A cancelled re-login exits. The rebuild reattaches a fresh window to the still-running simulation rather than resetting it.
 

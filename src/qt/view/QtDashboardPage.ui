@@ -7,6 +7,13 @@
   </property>
   <layout class="QVBoxLayout" name="rootLayout">
    <item>
+    <widget class="QLabel" name="headerLabel">
+     <property name="text">
+      <string>Overview</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="kpiLayout"/>
    </item>
    <item>

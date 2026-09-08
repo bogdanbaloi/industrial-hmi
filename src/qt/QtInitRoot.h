@@ -129,6 +129,10 @@ private:
     /// re-login quits the app. Wired to the sidebar's Sign out control.
     void signOut();
 
+    /// Self-service change-password flow: show the dialog and, on accept, run it
+    /// through UsersPresenter::changeOwnPassword (verify old, hash new, audit).
+    void changePassword();
+
     core::Bootstrap&                    bootstrap_;
     std::unique_ptr<integration::IntegrationServices> integrationServices_;
     std::unique_ptr<presenter::AlertCenter>           alertCenter_;
