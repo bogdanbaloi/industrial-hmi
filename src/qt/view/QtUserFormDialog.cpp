@@ -1,6 +1,7 @@
 #include "src/qt/view/QtUserFormDialog.h"
 
 #include "src/auth/User.h"
+#include "src/qt/view/QtRoleLabel.h"
 
 #include "ui_QtUserFormDialog.h"
 
@@ -18,17 +19,10 @@ namespace app::view {
 
 namespace {
 
-// Role choices for the combo, paired with their enum code (stored as combo
-// userData). Endonym-free: role labels are translatable via tr().
-struct RoleChoice {
-    auth::Role  role;
-    const char* label;
-};
-constexpr std::array<RoleChoice, 3> kRoleChoices{{
-    {.role = auth::Role::Operator, .label = QT_TR_NOOP("Operator")},
-    {.role = auth::Role::Maintenance, .label = QT_TR_NOOP("Maintenance")},
-    {.role = auth::Role::Admin, .label = QT_TR_NOOP("Admin")},
-}};
+// The roles offered in the combo. Their labels come from the shared
+// roleLabel() so the dialog and the Users table never disagree.
+constexpr std::array<auth::Role, 3> kRoles{
+    auth::Role::Operator, auth::Role::Maintenance, auth::Role::Admin};
 
 }  // namespace
 
@@ -39,9 +33,8 @@ QtUserFormDialog::QtUserFormDialog(std::optional<auth::User> existing,
       editMode_(existing.has_value()) {
     ui_->setupUi(this);
 
-    for (const auto& choice : kRoleChoices) {
-        ui_->roleCombo->addItem(tr(choice.label),
-                                static_cast<int>(choice.role));
+    for (const auto role : kRoles) {
+        ui_->roleCombo->addItem(roleLabel(role), static_cast<int>(role));
     }
 
     if (editMode_) {

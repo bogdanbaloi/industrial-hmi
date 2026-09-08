@@ -6,6 +6,7 @@
 
 #include "src/auth/Role.h"
 #include "src/qt/view/QtResetPasswordDialog.h"
+#include "src/qt/view/QtRoleLabel.h"
 #include "src/qt/view/QtTheme.h"
 #include "src/qt/view/QtUserFormDialog.h"
 
@@ -40,16 +41,6 @@ constexpr int kColRole        = 2;
 constexpr int kColEnabled     = 3;
 constexpr int kColCreated     = 4;
 constexpr int kColumnCount    = 5;
-
-// Human label for a role, translated (the roleName() codes are the wire form).
-QString roleLabel(auth::Role role) {
-    switch (role) {
-        case auth::Role::Operator:    return QObject::tr("Operator");
-        case auth::Role::Maintenance: return QObject::tr("Maintenance");
-        case auth::Role::Admin:       return QObject::tr("Admin");
-    }
-    return {};
-}
 
 // A presenter status maps to a localised message via the same gettext catalog
 // the rest of the UI uses (statusMessage returns the msgid).
