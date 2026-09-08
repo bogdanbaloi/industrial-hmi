@@ -92,6 +92,7 @@ private:
     QtKpiTile* linesTile_{nullptr};
 
     QtGauge*       oeeGauge_{nullptr};
+    QtGauge*       qualityGauge_{nullptr};
     QtUptimeDonut* uptimeDonut_{nullptr};
     QtLineChart*   trendChart_{nullptr};
     int            oeeSeriesIdx_{0};

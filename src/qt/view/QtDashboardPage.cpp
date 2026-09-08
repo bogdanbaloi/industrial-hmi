@@ -31,6 +31,22 @@ constexpr float kPercentScale = 100.0F;
 // OEE gauge target -- the "world class" 85% benchmark the GTK dashboard uses.
 constexpr double kOeeTargetPct = 85.0;
 
+// Quality gauge target -- the pass-rate an operator should hold the line to.
+constexpr double kQualityTargetPct = 95.0;
+
+// Tier colour for a value against a target: green at/above, amber just below,
+// red otherwise. Same banding the OEE gauge uses, for the KPI tiles.
+const char* tierColor(double value, double target) {
+    constexpr double kWarnBandPct = 5.0;
+    if (value >= target) {
+        return theme::kColorOk;
+    }
+    if (value >= target - kWarnBandPct) {
+        return theme::kColorWarning;
+    }
+    return theme::kColorAlarm;
+}
+
 }  // namespace
 
 QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
@@ -58,12 +74,17 @@ QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
         ui_->kpiLayout->addWidget(tile, 1);
     }
 
-    // Rich circular visuals (GTK dashboard parity): OEE gauge + uptime donut.
-    oeeGauge_    = new QtGauge(tr("OEE"), kOeeTargetPct);
-    uptimeDonut_ = new QtUptimeDonut();
+    // Rich circular visuals (GTK dashboard parity): OEE + Quality gauges and a
+    // session-uptime donut, spread across the row so it fills the width instead
+    // of leaving a gap on the right.
+    oeeGauge_     = new QtGauge(tr("OEE"), kOeeTargetPct);
+    qualityGauge_ = new QtGauge(tr("Quality"), kQualityTargetPct);
+    uptimeDonut_  = new QtUptimeDonut();
     ui_->visualsLayout->addWidget(oeeGauge_);
-    ui_->visualsLayout->addWidget(uptimeDonut_);
     ui_->visualsLayout->addStretch(1);
+    ui_->visualsLayout->addWidget(qualityGauge_);
+    ui_->visualsLayout->addStretch(1);
+    ui_->visualsLayout->addWidget(uptimeDonut_);
 
     // Live trend chart fills the vertical slack above the button row, so the
     // page has no dead space on the tall kiosk window. Both series are derived
@@ -100,13 +121,13 @@ void QtDashboardPage::setSystemState(int state) {
 
 void QtDashboardPage::onWorkUnitChanged(const presenter::WorkUnitViewModel& vm) {
     postToUi(this, [this, vm] {
-        ui_->workUnitIdLabel->setText(
-            tr("Order: %1").arg(QString::fromStdString(vm.workUnitId)));
+        // Value-only text now that the "Order / Shipment / Status" captions are
+        // the form's row labels in the .ui.
+        ui_->workUnitIdLabel->setText(QString::fromStdString(vm.workUnitId));
         ui_->productLabel->setText(
-            tr("Shipment: %1")
-                .arg(QString::fromStdString(vm.productDescription)));
+            QString::fromStdString(vm.productDescription));
         ui_->statusMessageLabel->setText(
-            tr("Status: %1").arg(QString::fromStdString(vm.statusMessage)));
+            QString::fromStdString(vm.statusMessage));
         ui_->progressBar->setValue(
             static_cast<int>(vm.progress * kPercentScale));
         oeePct_        = vm.oeePct;
@@ -179,17 +200,23 @@ void QtDashboardPage::updateKpis() {
     constexpr int kQualityDecimals = 1;
 
     oeeTile_->setValue(QString::number(oeePct_, 'f', kOeeDecimals) + "%");
+    oeeTile_->setValueColor(tierColor(oeePct_, kOeeTargetPct));
     throughputTile_->setValue(
         tr("%1 uph").arg(QString::number(throughputUph_, 'f', kOeeDecimals)));
 
-    qualityTile_->setValue(
-        QString::number(averageQuality(), 'f', kQualityDecimals) + "%");
+    const double avgQuality = averageQuality();
+    qualityTile_->setValue(QString::number(avgQuality, 'f', kQualityDecimals) +
+                           "%");
+    qualityTile_->setValueColor(tierColor(avgQuality, kQualityTargetPct));
+    qualityGauge_->setValue(avgQuality);
 
     int defects = 0;
     for (const auto& entry : qualityDefects_) {
         defects += entry.second;
     }
     defectsTile_->setValue(QString::number(defects));
+    defectsTile_->setValueColor(defects > 0 ? theme::kColorAlarm
+                                            : theme::kColorOk);
 
     int linesUp = 0;
     for (const auto& entry : equipmentEnabled_) {
@@ -210,6 +237,7 @@ void QtDashboardPage::changeEvent(QEvent* event) {
         defectsTile_->setCaption(tr("Defects"));
         linesTile_->setCaption(tr("Lines up"));
         oeeGauge_->setCaption(tr("OEE"));
+        qualityGauge_->setCaption(tr("Quality"));
         trendChart_->setSeriesName(oeeSeriesIdx_, tr("OEE %"));
         trendChart_->setSeriesName(qualitySeriesIdx_, tr("Avg quality %"));
     }

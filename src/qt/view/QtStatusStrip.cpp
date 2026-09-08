@@ -40,28 +40,36 @@ struct Style {
 
 Style systemStyle(int state) {
     switch (state) {
-        case kStateRunning:     return {QObject::tr("Running"), theme::kColorOk};
-        case kStateError:       return {QObject::tr("Error"), theme::kColorAlarm};
-        case kStateCalibration: return {QObject::tr("Calibration"),
-                                        theme::kColorInfo};
+        case kStateRunning:
+            return {.text = QObject::tr("Running"), .color = theme::kColorOk};
+        case kStateError:
+            return {.text = QObject::tr("Error"), .color = theme::kColorAlarm};
+        case kStateCalibration:
+            return {.text  = QObject::tr("Calibration"),
+                    .color = theme::kColorInfo};
         case kStateIdle:
-        default:                return {QObject::tr("Idle"),
-                                        theme::kColorNeutral};
+        default:
+            return {.text  = QObject::tr("Idle"),
+                    .color = theme::kColorNeutral};
     }
 }
 
 Style backendStyle(integration::BackendState state) {
     using State = integration::BackendState;
     switch (state) {
-        case State::Connected:    return {QObject::tr("online"), theme::kColorOk};
-        case State::Connecting:   return {QObject::tr("connecting"),
-                                          theme::kColorWarning};
-        case State::Degraded:     return {QObject::tr("degraded"),
-                                          theme::kColorWarning};
-        case State::Disconnected: return {QObject::tr("offline"),
-                                          theme::kColorNeutral};
+        case State::Connected:
+            return {.text = QObject::tr("online"), .color = theme::kColorOk};
+        case State::Connecting:
+            return {.text  = QObject::tr("connecting"),
+                    .color = theme::kColorWarning};
+        case State::Degraded:
+            return {.text  = QObject::tr("degraded"),
+                    .color = theme::kColorWarning};
+        case State::Disconnected:
+            return {.text  = QObject::tr("offline"),
+                    .color = theme::kColorNeutral};
     }
-    return {QObject::tr("offline"), theme::kColorNeutral};
+    return {.text = QObject::tr("offline"), .color = theme::kColorNeutral};
 }
 
 }  // namespace
@@ -83,6 +91,12 @@ QtStatusStrip::QtStatusStrip(QWidget* parent) : QWidget(parent) {
     backendsLayout_->setSpacing(kDotSpacing);
     layout->addWidget(backends);
 
+    // Centred connectivity summary fills the strip's middle instead of leaving a
+    // gap between the left dots and the right clock.
+    layout->addStretch();
+    summaryLabel_ = new QLabel();
+    summaryLabel_->setStyleSheet(theme::coloredBold(theme::kColorNeutral));
+    layout->addWidget(summaryLabel_);
     layout->addStretch();
 
     clock_ = new QLabel();
@@ -129,6 +143,17 @@ void QtStatusStrip::applyBackendHealth(
         delete item->widget();
         delete item;
     }
+
+    int online = 0;
+    for (const auto& entry : viewModel.entries) {
+        if (entry.state == integration::BackendState::Connected) {
+            ++online;
+        }
+    }
+    const auto total = static_cast<int>(viewModel.entries.size());
+    summaryLabel_->setText(
+        total == 0 ? tr("No backends configured")
+                   : tr("%1 of %2 backends online").arg(online).arg(total));
 
     for (const auto& entry : viewModel.entries) {
         const Style style = backendStyle(entry.state);

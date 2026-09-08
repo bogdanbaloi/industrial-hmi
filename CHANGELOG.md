@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Qt overview and status-strip polish
+
+Layout + readability refinements to the Qt frontend (no new requirement).
+
+#### Changed
+- Overview visuals row now spreads an OEE gauge, a new Quality gauge and the uptime donut across its width instead of leaving a gap on the right.
+- The Order / Shipment / Status lines are grouped into a "Current work unit" card with a two-column label / value form.
+- The bottom status strip fills its middle with a centred "N of M backends online" summary rather than a blank gap between the health dots and the clock.
+- KPI tiles colour their value by state (green ok / amber warn / red alarm) so OEE, quality and defects read at a glance.
+
 ### Qt authentication, admin pages and session footer (REQ-ARCH-016)
 
 Brings the auth stack behind the Qt frontend: a login gate, the admin

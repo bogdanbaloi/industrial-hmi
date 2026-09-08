@@ -49,6 +49,7 @@ private:
 
     QLabel*      stateBadge_{nullptr};
     QHBoxLayout* backendsLayout_{nullptr};
+    QLabel*      summaryLabel_{nullptr};
     QLabel*      clock_{nullptr};
     QTimer*      clockTimer_{nullptr};
 };

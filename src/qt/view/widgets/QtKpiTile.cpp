@@ -4,6 +4,7 @@
 
 #include <QFont>
 #include <QLabel>
+#include <QString>
 #include <QVBoxLayout>
 
 namespace app::view {
@@ -33,6 +34,10 @@ QtKpiTile::QtKpiTile(const QString& caption, QWidget* parent) : QFrame(parent) {
 }
 
 void QtKpiTile::setValue(const QString& value) { value_->setText(value); }
+
+void QtKpiTile::setValueColor(const char* color) {
+    value_->setStyleSheet(QString("color: %1;").arg(color));
+}
 
 void QtKpiTile::setCaption(const QString& caption) { caption_->setText(caption); }
 

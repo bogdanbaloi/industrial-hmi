@@ -13,31 +13,65 @@
     <layout class="QHBoxLayout" name="visualsLayout"/>
    </item>
    <item>
-    <widget class="QLabel" name="workUnitIdLabel">
-     <property name="text">
-      <string>Work unit: -</string>
+    <widget class="QGroupBox" name="workUnitBox">
+     <property name="title">
+      <string>Current work unit</string>
      </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="productLabel">
-     <property name="text">
-      <string>Product: -</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="statusMessageLabel">
-     <property name="text">
-      <string>Status: -</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QProgressBar" name="progressBar">
-     <property name="value">
-      <number>0</number>
-     </property>
+     <layout class="QVBoxLayout" name="workUnitBoxLayout">
+      <item>
+       <layout class="QFormLayout" name="workUnitForm">
+        <item row="0" column="0">
+         <widget class="QLabel" name="orderCaption">
+          <property name="text">
+           <string>Order</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="workUnitIdLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="shipmentCaption">
+          <property name="text">
+           <string>Shipment</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="productLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="statusCaption">
+          <property name="text">
+           <string>Status</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="statusMessageLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="value">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
