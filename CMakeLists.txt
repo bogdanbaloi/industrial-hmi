@@ -1237,6 +1237,7 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/QtGoodsReceiptPage.cpp
         src/qt/view/QtTrendsPage.cpp
         src/qt/view/QtHistoryPage.cpp
+        src/qt/view/QtMultiStationPage.cpp
         src/qt/view/QtLoginDialog.cpp
         src/qt/view/QtChangePasswordDialog.cpp
         src/qt/view/QtUsersPage.cpp

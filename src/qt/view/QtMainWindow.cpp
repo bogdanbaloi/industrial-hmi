@@ -7,6 +7,7 @@
 #include "src/qt/view/QtGoodsReceiptPage.h"
 #include "src/qt/view/QtHistoryPage.h"
 #include "src/qt/view/QtIcons.h"
+#include "src/qt/view/QtMultiStationPage.h"
 #include "src/qt/view/QtUsersPage.h"
 #include "src/qt/view/QtLogPanel.h"
 #include "src/qt/view/QtProductsPage.h"
@@ -63,6 +64,12 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     if (context.historyReader != nullptr) {
         historyPage_ = new QtHistoryPage(*context.historyReader);
     }
+    // Multi-station: two dashboard panes, mounted only when a secondary model
+    // exists (ui.multistation_enabled).
+    if (context.secondaryDashboardPresenter != nullptr) {
+        multiStationPage_ = new QtMultiStationPage(
+            dashboardPresenter, *context.secondaryDashboardPresenter);
+    }
     // Admin-only pages, mounted only when the composition root supplies their
     // collaborators (Admin session). RBAC lives in UsersPresenter too, so this
     // is the visible half of a defence-in-depth gate.
@@ -90,6 +97,9 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     if (historyPage_ != nullptr) {
         stack_->addWidget(historyPage_);  // History (when enabled)
     }
+    if (multiStationPage_ != nullptr) {
+        stack_->addWidget(multiStationPage_);  // Multi-station (when enabled)
+    }
     if (usersPage_ != nullptr) {
         stack_->addWidget(usersPage_);    // Users (admin)
     }
@@ -107,6 +117,9 @@ QtMainWindow::QtMainWindow(DashboardPresenter& dashboardPresenter,
     sidebar_->addItem(tr("Trends"), icons::trends());
     if (historyPage_ != nullptr) {
         sidebar_->addItem(tr("History"), icons::history());
+    }
+    if (multiStationPage_ != nullptr) {
+        sidebar_->addItem(tr("Multi-station"), icons::multiStation());
     }
     if (usersPage_ != nullptr) {
         sidebar_->addItem(tr("Users"), icons::users());
@@ -171,6 +184,9 @@ void QtMainWindow::changeEvent(QEvent* event) {
         sidebar_->setItemLabel(index++, tr("Trends"));
         if (historyPage_ != nullptr) {
             sidebar_->setItemLabel(index++, tr("History"));
+        }
+        if (multiStationPage_ != nullptr) {
+            sidebar_->setItemLabel(index++, tr("Multi-station"));
         }
         if (usersPage_ != nullptr) {
             sidebar_->setItemLabel(index++, tr("Users"));

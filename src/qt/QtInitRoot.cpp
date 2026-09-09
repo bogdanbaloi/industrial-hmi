@@ -38,8 +38,10 @@
 #include "src/qt/view/QtTrendsPage.h"
 #include "src/qt/view/QtPaletteManager.h"
 #include "src/qt/view/QtMainWindow.h"
+#include "src/qt/view/QtMultiStationPage.h"
 #include "src/qt/view/QtStatusStrip.h"
 #include "src/qt/view/QtUiDispatch.h"
+#include "src/model/MirrorModel.h"
 #include "src/model/ModelContext.h"
 
 #include <sigc++/functors/mem_fun.h>
@@ -95,6 +97,9 @@ QtInitRoot::~QtInitRoot() {
     }
     paletteManager_.reset();
     productsPresenter_.reset();
+    // Secondary dashboard presenter borrows the MirrorModel (in
+    // integrationServices_) and the AlertCenter, so drop it before both.
+    secondaryDashboardPresenter_.reset();
     dashboardPresenter_.reset();
     // Inspection presenter holds references to the classifier + decoder, so
     // drop it before them.
@@ -153,6 +158,13 @@ void QtInitRoot::teardownWindow() {
         }
         if (inspectionPresenter_) {
             inspectionPresenter_->removeObserver(window_->goodsReceiptPage());
+        }
+        if (secondaryDashboardPresenter_ &&
+            window_->multiStationPage() != nullptr) {
+            dashboardPresenter_->removeObserver(
+                window_->multiStationPage()->primaryPane());
+            secondaryDashboardPresenter_->removeObserver(
+                window_->multiStationPage()->secondaryPane());
         }
     }
     window_.reset();
@@ -361,6 +373,16 @@ bool QtInitRoot::run() {
     backendHealthPresenter_ = std::make_unique<BackendHealthPresenter>(
         *integrationServices_->manager);
 
+    // Multi-station: when the integration layer built a secondary MirrorModel
+    // (ui.multistation_enabled), give it its own DashboardPresenter so a second
+    // pane can render it. The PrimaryToSecondaryBridge in the integration bundle
+    // keeps the mirror in step with the primary station (ADR-0011).
+    if (integrationServices_->secondaryModel) {
+        secondaryDashboardPresenter_ = std::make_unique<DashboardPresenter>(
+            *integrationServices_->secondaryModel);
+        secondaryDashboardPresenter_->setAlertCenter(*alertCenter_);
+    }
+
     // Edge-AI goods-receipt inspection: the real QualityInspectionPresenter
     // (decode -> classify -> top-K) driven by the project's FakeImageClassifier
     // as a demo model. Reusing the ML presenter behind Qt continues the
@@ -412,6 +434,8 @@ void QtInitRoot::buildAndShowWindow() {
     }
     windowContext.usersPresenter = isAdmin ? usersPresenter_.get() : nullptr;
     windowContext.auditReader    = isAdmin ? auditLogger_.get() : nullptr;
+    windowContext.secondaryDashboardPresenter =
+        secondaryDashboardPresenter_.get();
     window_ = std::make_unique<view::QtMainWindow>(
         *dashboardPresenter_, *productsPresenter_, *alertCenter_,
         *inspectionPresenter_, app::config::ConfigManager::instance(),
@@ -422,6 +446,14 @@ void QtInitRoot::buildAndShowWindow() {
     productsPresenter_->addObserver(window_->productsPage());
     backendHealthPresenter_->addObserver(window_->statusStrip());
     inspectionPresenter_->addObserver(window_->goodsReceiptPage());
+    // Multi-station panes each observe their own presenter (primary live model,
+    // secondary mirror).
+    if (window_->multiStationPage() != nullptr) {
+        dashboardPresenter_->addObserver(
+            window_->multiStationPage()->primaryPane());
+        secondaryDashboardPresenter_->addObserver(
+            window_->multiStationPage()->secondaryPane());
+    }
     // Feed the status-strip system-state pill from the presenter's state signal
     // (the same signal the GTK SystemStatusBadge listens to).
     systemStateConn_ = dashboardPresenter_->signalSystemStateChanged().connect(
@@ -445,6 +477,9 @@ void QtInitRoot::buildAndShowWindow() {
     // simulation rather than resetting it.
     if (!windowBuiltOnce_) {
         dashboardPresenter_->initialize();
+        if (secondaryDashboardPresenter_) {
+            secondaryDashboardPresenter_->initialize();
+        }
         productsPresenter_->initialize();
         inspectionPresenter_->initialize();
         app::model::SimulatedModel::instance().initializeDemoData();

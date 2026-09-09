@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Qt multi-station dashboard (REQ-ARCH-017)
+
+#### Added
+- Multi-station view (`QtMultiStationPage`): two full dashboard panes side by side, the primary station over the live model and the secondary over the `MirrorModel` the `PrimaryToSecondaryBridge` feeds. Reuses `QtDashboardPage` over a second `DashboardPresenter`; mounts a "Multi-station" tab only when a secondary model exists (`ui.multistation_enabled`). The Qt counterpart to the GTK MultiStationDashboardPage.
+
 ### Qt overview and status-strip polish
 
 Layout + readability refinements to the Qt frontend (no new requirement).

@@ -41,6 +41,7 @@ class QtTrendsPage;
 class QtHistoryPage;
 class QtUsersPage;
 class QtAuditLogPage;
+class QtMultiStationPage;
 class QtStatusStrip;
 class QtPaletteManager;
 class QtSidebar;
@@ -65,6 +66,10 @@ public:
         // an Admin session, so they mount for admins and stay hidden otherwise.
         presenter::UsersPresenter*               usersPresenter{nullptr};
         auth::AuditLogger*                       auditReader{nullptr};
+        // Non-null only when the integration layer built a secondary model
+        // (ui.multistation_enabled); mounts the two-pane Multi-station page.
+        DashboardPresenter*                      secondaryDashboardPresenter{
+            nullptr};
     };
 
     QtMainWindow(DashboardPresenter& dashboardPresenter,
@@ -88,6 +93,9 @@ public:
         return goodsReceiptPage_;
     }
     [[nodiscard]] QtTrendsPage* trendsPage() const { return trendsPage_; }
+    [[nodiscard]] QtMultiStationPage* multiStationPage() const {
+        return multiStationPage_;
+    }
 
     /// Set the active-alert count shown as a badge on the Alerts nav entry.
     void setAlertsBadge(int count);
@@ -111,6 +119,7 @@ private:
     QtHistoryPage*   historyPage_{nullptr};
     QtUsersPage*     usersPage_{nullptr};
     QtAuditLogPage*  auditLogPage_{nullptr};
+    QtMultiStationPage* multiStationPage_{nullptr};
     QtStatusStrip*   statusStrip_{nullptr};
 };
 

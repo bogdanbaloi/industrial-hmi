@@ -372,6 +372,28 @@ non-admin does not, footer shows the operator).
 
 ADR: 0006 (Auth defence in depth), 0020 (Qt frontend).
 
+### REQ-ARCH-017 (SHOULD) — Qt frontend multi-station view
+
+`req~arch-017~1`
+
+When the integration layer builds a secondary model (a `MirrorModel` fed by the
+`PrimaryToSecondaryBridge`, enabled by `ui.multistation_enabled`), the Qt
+frontend **shall** present a multi-station view of two full dashboard panes side
+by side -- the primary station over the live model and the secondary over the
+mirror -- reusing the same `QtDashboardPage` over a second `DashboardPresenter`
+(composition over duplication, the Qt counterpart to the GTK
+MultiStationDashboardPage). The view **shall** mount only when the secondary
+model exists. Reusing the dashboard View and presenter for a second station,
+linked purely at the model layer, is another slice of the toolkit-independence
+proof (extends REQ-ARCH-011, builds on ADR-0011).
+
+Verified by: the PrimaryToSecondaryBridge + MirrorModel are covered by the
+existing integration tests (PrimaryToSecondary); CI builds the Qt frontend over
+the shared secondary-model wiring; manual run of `industrial-hmi-qt` with
+`ui.multistation_enabled` (the Multi-station tab shows both stations live).
+
+ADR: 0011 (Primary/secondary bridge), 0020 (Qt frontend).
+
 ---
 
 ## AUTH — Authentication & Authorisation

@@ -138,6 +138,7 @@ private:
     std::unique_ptr<presenter::AlertCenter>           alertCenter_;
     std::unique_ptr<BackendHealthPresenter>           backendHealthPresenter_;
     std::unique_ptr<DashboardPresenter>     dashboardPresenter_;
+    std::unique_ptr<DashboardPresenter>     secondaryDashboardPresenter_;
     std::unique_ptr<ProductsPresenter>      productsPresenter_;
     std::unique_ptr<ml::ImageDecoder>            imageDecoder_;
     std::unique_ptr<ml::FakeImageClassifier>     imageClassifier_;
