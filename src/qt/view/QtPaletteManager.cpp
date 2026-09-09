@@ -78,7 +78,7 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
         #sidebar #sidebarQuit {
             background: @surface2; color: @text; font-weight: bold;
             padding: 10px 12px; border: 1px solid @border; border-radius: 6px;
-            margin-top: 6px; }
+            margin-top: 6px; text-align: center; }
         #sidebar #sidebarChangePassword:hover, #sidebar #sidebarSignOut:hover,
         #sidebar #sidebarQuit:hover { background: @accent; color: @accentInk; }
         #navBadge { background: #c62828; color: white; border-radius: 8px;
