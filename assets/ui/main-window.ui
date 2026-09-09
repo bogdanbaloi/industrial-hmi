@@ -21,7 +21,7 @@
         <property name="width-request">200</property>
         <property name="css-classes">sidebar</property>
 
-        <!-- Brand header -- logo + app title + subtitle in a single
+        <!-- Brand header - logo + app title + subtitle in a single
              card at the top. The `sidebar-brand` CSS class draws the
              card chrome; the `app-logo` child is an empty box that
              carries an inline SVG via CSS background-image, so the
@@ -67,7 +67,7 @@
           </object>
         </child>
 
-        <!-- USER card -- MainWindow appends the UserBadge here when
+        <!-- USER card - MainWindow appends the UserBadge here when
              auth is enabled. The card chrome lives on the badge
              itself (sidebar-card class on the UserBadge Box). -->
         <child>
@@ -76,7 +76,7 @@
           </object>
         </child>
 
-        <!-- STATUS section -- small section label + card containing
+        <!-- STATUS section - small section label + card containing
              the SystemStatusBadge (coloured LED + state text). -->
         <child>
           <object class="GtkLabel" id="status_section_header">
@@ -92,7 +92,7 @@
           </object>
         </child>
 
-        <!-- AlertsPanel mount -- the panel renders its own header
+        <!-- AlertsPanel mount - the panel renders its own header
              (toggleable Alerts / History + Clear all button) so we
              don't add a static section header here. vexpand on this
              container pushes Close + footer to the bottom of the
@@ -104,7 +104,7 @@
           </object>
         </child>
 
-        <!-- I/O section -- section label + the BackendHealthBar.
+        <!-- I/O section - section label + the BackendHealthBar.
              MainWindow appends the bar only when an
              IntegrationManager was injected; the header label is
              part of the layout regardless so the bar visually
