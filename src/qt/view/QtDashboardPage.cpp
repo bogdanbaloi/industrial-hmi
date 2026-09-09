@@ -17,9 +17,12 @@
 #include "ui_QtDashboardPage.h"
 
 #include <QEvent>
+#include <QFrame>
 #include <QPushButton>
 #include <QSizePolicy>
 #include <QString>
+#include <QVBoxLayout>
+#include <Qt>
 
 namespace app::view {
 
@@ -75,16 +78,22 @@ QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
     }
 
     // Rich circular visuals (GTK dashboard parity): OEE + Quality gauges and a
-    // session-uptime donut, kept together as a centred group (a stretch on each
-    // side) rather than pinned to the row's edges.
+    // session-uptime donut. Each sits centred in its own card, and the three
+    // cards share the row width equally (like the KPI tiles above), so the row
+    // is filled and each gauge keeps its full size instead of being clipped.
     oeeGauge_     = new QtGauge(tr("OEE"), kOeeTargetPct);
     qualityGauge_ = new QtGauge(tr("Quality"), kQualityTargetPct);
     uptimeDonut_  = new QtUptimeDonut();
-    ui_->visualsLayout->addStretch(1);
-    ui_->visualsLayout->addWidget(oeeGauge_);
-    ui_->visualsLayout->addWidget(qualityGauge_);
-    ui_->visualsLayout->addWidget(uptimeDonut_);
-    ui_->visualsLayout->addStretch(1);
+    for (QWidget* visual : {static_cast<QWidget*>(oeeGauge_),
+                            static_cast<QWidget*>(qualityGauge_),
+                            static_cast<QWidget*>(uptimeDonut_)}) {
+        auto* card = new QFrame();
+        card->setObjectName("kpiTile");
+        card->setFrameShape(QFrame::StyledPanel);
+        auto* cardLayout = new QVBoxLayout(card);
+        cardLayout->addWidget(visual, 0, Qt::AlignCenter);
+        ui_->visualsLayout->addWidget(card, 1);
+    }
 
     // Live trend chart fills the vertical slack above the button row, so the
     // page has no dead space on the tall kiosk window. Both series are derived
