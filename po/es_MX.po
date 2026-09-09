@@ -27,11 +27,12 @@ msgstr ""
 #: src/core/Bootstrap.cpp:107
 msgid "Configuration is syntactically valid but semantically rejected:\n"
 msgstr ""
+"La configuración es sintácticamente válida pero rechazada semánticamente:\n"
 
 #: src/core/Bootstrap.cpp:170
 msgid ""
-"SQLite initialisation failed. Check logs for details and verify disk space / "
-"permissions for the database path."
+"SQLite initialisation failed. Check logs for details and verify disk space /"
+" permissions for the database path."
 msgstr ""
 "La inicialización de SQLite falló. Consulte los logs y verifique espacio en "
 "disco / permisos de la ruta de la base de datos."
@@ -61,50 +62,45 @@ msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Tasa de aprobación {:.1f}% (objetivo {:.0f}%)"
 
 #: src/presenter/DashboardPresenter.cpp:360
-#, fuzzy
 msgid "System fault"
-msgstr "Sistema inactivo"
+msgstr "Fallo del sistema"
 
 #: src/presenter/DashboardPresenter.cpp:362
 msgid "Production locked out."
-msgstr ""
+msgstr "Producción bloqueada."
 
 #: src/presenter/ProductsPresenter.cpp:270
 msgid "Recipe loading is not available."
-msgstr ""
+msgstr "La carga de recetas no está disponible."
 
 #: src/presenter/ProductsPresenter.cpp:278
-#, fuzzy
 msgid "Product not found."
-msgstr "Código de producto"
+msgstr "Producto no encontrado."
 
 #: src/presenter/ProductsPresenter.cpp:288
 msgid "No recipe defined for {}."
-msgstr ""
+msgstr "No hay receta definida para {}."
 
 #: src/presenter/ProductsPresenter.cpp:299
 msgid "Loaded recipe for {}."
-msgstr ""
+msgstr "Receta cargada para {}."
 
 #: src/gtk/view/MainWindow.cpp:336 src/qt/view/QtSidebar.cpp:44
 #: src/qt/view/QtSidebar.cpp:147 assets/ui/main-window.ui:52
-#, fuzzy
 msgid "Industrial HMI"
-msgstr "[BB] HMI Industrial"
+msgstr "HMI industrial"
 
 #: src/gtk/view/MainWindow.cpp:337 assets/ui/main-window.ui:60
-#, fuzzy
 msgid "Production Monitor"
-msgstr "Código de producto"
+msgstr "Monitor de producción"
 
 #: src/gtk/view/MainWindow.cpp:338 assets/ui/main-window.ui:145
 msgid "Close Application"
 msgstr "Cerrar aplicación"
 
 #: src/gtk/view/MainWindow.cpp:339 assets/ui/main-window.ui:172
-#, fuzzy
 msgid "Version 1.2.0"
-msgstr "Versión 1.0.0"
+msgstr "Versión 1.2.0"
 
 #: src/gtk/view/MainWindow.cpp:340 assets/ui/main-window.ui:180
 msgid "Portfolio Demo"
@@ -190,7 +186,7 @@ msgstr ""
 #: src/gtk/view/pages/DashboardPage.cpp:165
 #: src/gtk/view/pages/ProductsPage.cpp:59
 msgid "Requires Maintenance role"
-msgstr ""
+msgstr "Requiere rol de Mantenimiento"
 
 #: src/gtk/view/pages/DashboardPage.cpp:337
 #: src/gtk/view/pages/DashboardPage.cpp:927
@@ -213,7 +209,7 @@ msgstr ""
 
 #: src/gtk/view/pages/DashboardPage.cpp:378
 msgid "THROUGHPUT"
-msgstr ""
+msgstr "RENDIMIENTO"
 
 #: src/gtk/view/pages/DashboardPage.cpp:379
 msgid "u/h"
@@ -221,7 +217,7 @@ msgstr ""
 
 #: src/gtk/view/pages/DashboardPage.cpp:389
 msgid "PASS RATE"
-msgstr ""
+msgstr "TASA DE APROBACIÓN"
 
 #: src/gtk/view/pages/DashboardPage.cpp:532
 msgid "Confirm Reset"
@@ -254,17 +250,18 @@ msgstr ""
 "Esta operación puede tomar varios minutos."
 
 #: src/gtk/view/pages/DashboardPage.cpp:574
-#, fuzzy
 msgid "Confirm Fault Injection"
-msgstr "Confirmar calibración"
+msgstr "Confirmar inyección de fallo"
 
 #: src/gtk/view/pages/DashboardPage.cpp:575
 msgid ""
 "Inject a system fault?\n"
 "\n"
-"This drives the system to the ERROR safe-state and raises a priority-1 "
-"alarm. Use Acknowledge + Reset to recover."
+"This drives the system to the ERROR safe-state and raises a priority-1 alarm. Use Acknowledge + Reset to recover."
 msgstr ""
+"¿Inyectar un fallo del sistema?\n"
+"\n"
+"Esto lleva el sistema al estado seguro ERROR y genera una alarma de prioridad 1. Use Reconocer + Restablecer para recuperar."
 
 #: src/gtk/view/pages/DashboardPage.cpp:678
 msgid "ONLINE"
@@ -325,21 +322,20 @@ msgstr "INACTIVO"
 #: src/gtk/view/pages/DashboardPage.cpp:936
 #: src/gtk/view/pages/DashboardPage.cpp:942
 msgid "uptime"
-msgstr ""
+msgstr "tiempo activo"
 
 #: src/gtk/view/pages/DashboardPage.cpp:925 src/qt/view/QtStatusStrip.cpp:53
 #: src/qt/view/widgets/QtActuatorCard.cpp:19
 msgid "Idle"
-msgstr ""
+msgstr "Inactivo"
 
 #: src/gtk/view/pages/DashboardPage.cpp:926 src/qt/view/QtStatusStrip.cpp:45
 msgid "Running"
-msgstr ""
+msgstr "En marcha"
 
 #: src/gtk/view/pages/DashboardPage.cpp:928 src/qt/view/QtStatusStrip.cpp:49
-#, fuzzy
 msgid "Calibration"
-msgstr "Confirmar calibración"
+msgstr "Calibración"
 
 #: src/gtk/view/pages/ProductsPage.cpp:39 assets/ui/products-page.ui:24
 msgid "Products Database"
@@ -413,7 +409,7 @@ msgstr "Estado: %1"
 
 #: src/gtk/view/pages/ProductsPage.cpp:361 assets/ui/products-page.ui:131
 msgid "Edit Recipe"
-msgstr ""
+msgstr "Editar receta"
 
 #: src/gtk/view/pages/ProductsPage.cpp:376
 #: src/gtk/view/pages/ProductsPage.cpp:469
@@ -423,7 +419,7 @@ msgstr "Código de producto:"
 
 #: src/gtk/view/pages/ProductsPage.cpp:385
 msgid "Operations:"
-msgstr ""
+msgstr "Operaciones:"
 
 #: src/gtk/view/pages/ProductsPage.cpp:416
 #: src/gtk/view/pages/ProductsPage.cpp:524
@@ -432,9 +428,8 @@ msgid "Save"
 msgstr "Guardar"
 
 #: src/gtk/view/pages/ProductsPage.cpp:434
-#, fuzzy
 msgid "Failed to save recipe."
-msgstr "No se pudo actualizar el producto."
+msgstr "No se pudo guardar la receta."
 
 #: src/gtk/view/pages/ProductsPage.cpp:457
 #: src/gtk/view/pages/ProductsPage.cpp:458
@@ -521,11 +516,11 @@ msgstr ""
 
 #: src/gtk/view/pages/SettingsPage.cpp:138
 msgid "This palette is light-only by design."
-msgstr ""
+msgstr "Esta paleta es solo clara por diseño."
 
 #: src/gtk/view/pages/SettingsPage.cpp:144
 msgid "This palette is dark-only by design."
-msgstr ""
+msgstr "Esta paleta es solo oscura por diseño."
 
 #: src/gtk/view/pages/SettingsPage.cpp:196
 msgid "Light only"
@@ -588,41 +583,43 @@ msgstr "Sin historial"
 #: src/gtk/view/widgets/AlertsPanel.h:294
 #: src/gtk/view/widgets/AlertsPanel.h:429
 msgid "ISA-18.2 priority (1 = most urgent)"
-msgstr ""
+msgstr "Prioridad ISA-18.2 (1 = más urgente)"
 
 #: src/gtk/view/widgets/AlertsPanel.h:333
 msgid "Shelve (auto-unshelves after 5 min)"
-msgstr ""
+msgstr "Aplazar (se reactiva tras 5 min)"
 
 #: src/gtk/view/widgets/AlertsPanel.h:345
 #: src/gtk/view/widgets/AlertsPanel.h:456
 msgid "Unshelve"
-msgstr ""
+msgstr "Reactivar"
 
 #: src/gtk/view/widgets/AlertsPanel.h:361 src/qt/view/QtAlertsPage.cpp:192
 msgid "Acknowledge"
-msgstr ""
+msgstr "Reconocer"
 
 #: src/gtk/view/widgets/AlertsPanel.h:395
 #: src/gtk/view/widgets/AlertsPanel.h:523 src/qt/view/QtAlertsPage.cpp:53
 msgid "SHELVED"
-msgstr ""
+msgstr "APLAZADA"
 
 #: src/gtk/view/widgets/AlertsPanel.h:397
 msgid "Alarms operator-shelved; auto-unshelve at the listed deadline"
 msgstr ""
+"Alarmas aplazadas por el operador; reactivación automática en el plazo "
+"indicado"
 
 #: src/gtk/view/widgets/AlertsPanel.h:442
 msgid "Time remaining until auto-unshelve"
-msgstr ""
+msgstr "Tiempo restante hasta la reactivación automática"
 
 #: src/gtk/view/widgets/AlertsPanel.h:490
 msgid "EXPIRED"
-msgstr ""
+msgstr "CADUCADO"
 
 #: src/gtk/view/widgets/AlertsPanel.h:502
 msgid "left"
-msgstr ""
+msgstr "restante"
 
 #: src/gtk/view/widgets/AlertsPanel.h:520 src/qt/view/QtAlertsPage.cpp:50
 msgid "UNACK"
@@ -638,99 +635,95 @@ msgstr ""
 
 #: src/gtk/view/widgets/AlertsPanel.h:531
 msgid "Active, unacknowledged"
-msgstr ""
+msgstr "Activa, sin reconocer"
 
 #: src/gtk/view/widgets/AlertsPanel.h:533
 msgid "Active, acknowledged"
-msgstr ""
+msgstr "Activa, reconocida"
 
 #: src/gtk/view/widgets/AlertsPanel.h:535
 msgid "Returned to normal, awaiting acknowledgement"
-msgstr ""
+msgstr "Vuelta a la normalidad, esperando reconocimiento"
 
 #: src/gtk/view/widgets/AlertsPanel.h:537
 msgid "Shelved (auto-unshelves at deadline)"
-msgstr ""
+msgstr "Aplazada (se reactiva en el plazo)"
 
 #: src/qt/QtInitRoot.cpp:552 src/qt/view/QtSidebar.cpp:65
 #: src/qt/view/QtSidebar.cpp:150
 #: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:129
 msgid "Change password"
-msgstr ""
+msgstr "Cambiar contraseña"
 
 #: src/qt/QtInitRoot.cpp:555
 msgid "Password changed."
-msgstr ""
+msgstr "Contraseña cambiada."
 
 #: src/qt/view/QtMainWindow.cpp:113 src/qt/view/QtMainWindow.cpp:180
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:178
 msgid "Overview"
-msgstr ""
+msgstr "Resumen"
 
 #: src/qt/view/QtMainWindow.cpp:115 src/qt/view/QtMainWindow.cpp:182
 #: build-qt/objectsQt_autogen/include/ui_QtProductsPage.h:60
 msgid "Inventory"
-msgstr ""
+msgstr "Inventario"
 
 #: src/qt/view/QtMainWindow.cpp:116 src/qt/view/QtMainWindow.cpp:183
 msgid "Goods receipt"
-msgstr ""
+msgstr "Recepción de mercancías"
 
 #: src/qt/view/QtMainWindow.cpp:117 src/qt/view/QtMainWindow.cpp:184
 #: build-qt/objectsQt_autogen/include/ui_QtTrendsPage.h:57
 msgid "Trends"
-msgstr ""
+msgstr "Tendencias"
 
 #: src/qt/view/QtMainWindow.cpp:122 src/qt/view/QtMainWindow.cpp:189
 #: src/qt/view/QtSettingsPage.cpp:192
 #: build-qt/objectsQt_autogen/include/ui_QtMultiStationPage.h:71
 msgid "Multi-station"
-msgstr ""
+msgstr "Multiestación"
 
 #: src/qt/view/QtMainWindow.cpp:125 src/qt/view/QtMainWindow.cpp:192
 msgid "Users"
-msgstr ""
+msgstr "Usuarios"
 
 #: src/qt/view/QtMainWindow.cpp:128 src/qt/view/QtMainWindow.cpp:195
 #: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:135
 msgid "Audit log"
-msgstr ""
+msgstr "Registro de auditoría"
 
 #: src/qt/view/QtMainWindow.cpp:159 src/qt/view/QtMainWindow.cpp:176
-#, fuzzy
 msgid "Industrial HMI (Qt)"
-msgstr "[BB] HMI Industrial"
+msgstr "HMI industrial (Qt)"
 
 #: src/qt/view/QtSidebar.cpp:71 src/qt/view/QtSidebar.cpp:151
 msgid "Sign out"
-msgstr ""
+msgstr "Cerrar sesión"
 
 #: src/qt/view/QtSidebar.cpp:79 src/qt/view/QtSidebar.cpp:152
-#, fuzzy
 msgid "Exit application"
-msgstr "Cerrar aplicación"
+msgstr "Salir de la aplicación"
 
 #: src/qt/view/QtDashboardPage.cpp:75 src/qt/view/QtDashboardPage.cpp:250
 msgid "Throughput"
-msgstr ""
+msgstr "Rendimiento"
 
 #: src/qt/view/QtDashboardPage.cpp:76 src/qt/view/QtDashboardPage.cpp:251
-#, fuzzy
 msgid "Avg quality"
-msgstr "Calidad %"
+msgstr "Calidad media"
 
 #: src/qt/view/QtDashboardPage.cpp:77 src/qt/view/QtDashboardPage.cpp:252
 msgid "Defects"
-msgstr ""
+msgstr "Defectos"
 
 #: src/qt/view/QtDashboardPage.cpp:78 src/qt/view/QtDashboardPage.cpp:253
 msgid "Lines up"
-msgstr ""
+msgstr "Líneas activas"
 
 #: src/qt/view/QtDashboardPage.cpp:89 src/qt/view/QtDashboardPage.cpp:255
-#, fuzzy
 msgid "Quality"
-msgstr "Calidad %"
+msgstr "Calidad"
 
 #: src/qt/view/QtDashboardPage.cpp:109 src/qt/view/QtDashboardPage.cpp:256
 #: src/qt/view/QtTrendsPage.cpp:29 src/qt/view/QtTrendsPage.cpp:38
@@ -739,65 +732,60 @@ msgstr ""
 
 #: src/qt/view/QtDashboardPage.cpp:111 src/qt/view/QtDashboardPage.cpp:257
 #: src/qt/view/QtTrendsPage.cpp:30 src/qt/view/QtTrendsPage.cpp:39
-#, fuzzy
 msgid "Avg quality %"
-msgstr "Calidad %"
+msgstr "Calidad media %"
 
 #: src/qt/view/QtDashboardPage.cpp:220
 msgid "%1 uph"
 msgstr ""
 
 #: src/qt/view/QtSettingsPage.cpp:33
-#, fuzzy
 msgid "on"
-msgstr "Lun"
+msgstr "activado"
 
 #: src/qt/view/QtSettingsPage.cpp:33
 msgid "off"
-msgstr ""
+msgstr "desactivado"
 
 #: src/qt/view/QtSettingsPage.cpp:142
-#, fuzzy
 msgid "System default"
-msgstr "Sistema inactivo"
+msgstr "Predeterminado del sistema"
 
 #: src/qt/view/QtSettingsPage.cpp:169
-#, fuzzy
 msgid "Application"
-msgstr "Cerrar aplicación"
+msgstr "Aplicación"
 
 #: src/qt/view/QtSettingsPage.cpp:173
 msgid "TCP backend"
-msgstr ""
+msgstr "Backend TCP"
 
 #: src/qt/view/QtSettingsPage.cpp:175
 msgid "on (port %1)"
-msgstr ""
+msgstr "activado (puerto %1)"
 
 #: src/qt/view/QtSettingsPage.cpp:177
 msgid "MQTT backend"
-msgstr ""
+msgstr "Backend MQTT"
 
 #: src/qt/view/QtSettingsPage.cpp:179 src/qt/view/QtSettingsPage.cpp:186
 msgid "on (%1:%2)"
-msgstr ""
+msgstr "activado (%1:%2)"
 
 #: src/qt/view/QtSettingsPage.cpp:183
 msgid "OPC-UA backend"
-msgstr ""
+msgstr "Backend OPC-UA"
 
 #: src/qt/view/QtSettingsPage.cpp:184
 msgid "Modbus backend"
-msgstr ""
+msgstr "Backend Modbus"
 
 #: src/qt/view/QtSettingsPage.cpp:191
-#, fuzzy
 msgid "Historian"
-msgstr "Historial"
+msgstr "Historiador"
 
 #: src/qt/view/QtSettingsPage.cpp:193
 msgid "Auth"
-msgstr ""
+msgstr "Autenticación"
 
 #: src/qt/view/QtProductsPage.cpp:45
 msgid "SKU"
@@ -805,51 +793,50 @@ msgstr ""
 
 #: src/qt/view/QtProductsPage.cpp:45
 msgid "Description"
-msgstr ""
+msgstr "Descripción"
 
 #: src/qt/view/QtProductsPage.cpp:45
 msgid "On hand"
-msgstr ""
+msgstr "Existencias"
 
 #: src/qt/view/QtGoodsReceiptPage.cpp:55
 msgid "Choose an image"
-msgstr ""
+msgstr "Elegir una imagen"
 
 #: src/qt/view/QtGoodsReceiptPage.cpp:56
 msgid "Images (*.png *.jpg *.jpeg *.bmp)"
-msgstr ""
+msgstr "Imágenes (*.png *.jpg *.jpeg *.bmp)"
 
 #: src/qt/view/QtGoodsReceiptPage.cpp:75
 msgid "Inspecting..."
-msgstr ""
+msgstr "Inspeccionando…"
 
 #: src/qt/view/QtGoodsReceiptPage.cpp:82
 msgid "Inspection complete"
-msgstr ""
+msgstr "Inspección completa"
 
 #: src/qt/view/QtGoodsReceiptPage.cpp:109
-#, fuzzy
 msgid "Latency: %1 ms"
-msgstr "Último: %1"
+msgstr "Latencia: %1 ms"
 
 #: src/qt/view/QtGoodsReceiptPage.cpp:118
 msgid "Inspection failed: %1"
-msgstr ""
+msgstr "Inspección fallida: %1"
 
 #: src/qt/view/QtHistoryPage.cpp:72 src/qt/view/QtHistoryPage.cpp:108
 #: src/qt/view/QtAuditLogPage.cpp:144
 msgid "Last hour"
-msgstr ""
+msgstr "Última hora"
 
 #: src/qt/view/QtHistoryPage.cpp:73 src/qt/view/QtHistoryPage.cpp:109
 #: src/qt/view/QtAuditLogPage.cpp:145
 msgid "Last 24 hours"
-msgstr ""
+msgstr "Últimas 24 horas"
 
 #: src/qt/view/QtHistoryPage.cpp:75 src/qt/view/QtHistoryPage.cpp:110
 #: src/qt/view/QtAuditLogPage.cpp:147
 msgid "Last 7 days"
-msgstr ""
+msgstr "Últimos 7 días"
 
 #: src/qt/view/QtHistoryPage.cpp:90 src/qt/view/QtHistoryPage.cpp:113
 #: src/qt/view/widgets/QtQualityCard.cpp:41
@@ -858,44 +845,42 @@ msgstr "Punto de inspección %1"
 
 #: src/qt/view/QtHistoryPage.cpp:92 src/qt/view/QtHistoryPage.cpp:115
 #: src/qt/view/widgets/QtEquipmentCard.cpp:57
-#, fuzzy
 msgid "Equipment %1"
-msgstr "Equipo {} con error"
+msgstr "Equipo %1"
 
 #: src/qt/view/QtHistoryPage.cpp:141
 msgid "No samples recorded yet"
-msgstr ""
+msgstr "Aún no hay muestras registradas"
 
 #: src/qt/view/QtHistoryPage.cpp:142
 msgid "Total: %1 samples"
-msgstr ""
+msgstr "Total: %1 muestras"
 
 #: src/qt/view/QtStatusStrip.cpp:62
 msgid "online"
-msgstr ""
+msgstr "en línea"
 
 #: src/qt/view/QtStatusStrip.cpp:64
 msgid "connecting"
-msgstr ""
+msgstr "conectando"
 
 #: src/qt/view/QtStatusStrip.cpp:67
 msgid "degraded"
-msgstr ""
+msgstr "degradado"
 
 #: src/qt/view/QtStatusStrip.cpp:70 src/qt/view/QtStatusStrip.cpp:73
 msgid "offline"
-msgstr ""
+msgstr "sin conexión"
 
 #: src/qt/view/QtStatusStrip.cpp:160
 msgid "No backends configured"
-msgstr ""
+msgstr "No hay backends configurados"
 
 #: src/qt/view/QtStatusStrip.cpp:161
 msgid "%1 of %2 backends online"
-msgstr ""
+msgstr "%1 de %2 backends en línea"
 
 #: src/qt/view/QtLogPanel.cpp:27
-#, fuzzy
 msgid "Log"
 msgstr "Registro"
 
@@ -903,270 +888,256 @@ msgstr "Registro"
 #: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:117
 #: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:143
 msgid "Username"
-msgstr ""
+msgstr "Nombre de usuario"
 
 #: src/qt/view/QtUsersPage.cpp:86
 #: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:144
-#, fuzzy
 msgid "Display name"
-msgstr "Modo de pantalla:"
+msgstr "Nombre visible"
 
 #: src/qt/view/QtUsersPage.cpp:86 src/qt/view/QtAuditLogPage.cpp:114
 #: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:145
 msgid "Role"
-msgstr ""
+msgstr "Rol"
 
 #: src/qt/view/QtUsersPage.cpp:86 src/qt/view/widgets/QtEquipmentCard.cpp:64
 msgid "Enabled"
-msgstr ""
+msgstr "Habilitado"
 
 #: src/qt/view/QtUsersPage.cpp:87
-#, fuzzy
 msgid "Created"
-msgstr "Creado: %1"
+msgstr "Creado"
 
 #: src/qt/view/QtUsersPage.cpp:108
 msgid "Yes"
-msgstr ""
+msgstr "Sí"
 
 #: src/qt/view/QtUsersPage.cpp:108
-#, fuzzy
 msgid "No"
-msgstr "Nov"
+msgstr "No"
 
 #: src/qt/view/QtUsersPage.cpp:113
 msgid "%1 users"
-msgstr ""
+msgstr "%1 usuarios"
 
 #: src/qt/view/QtUsersPage.cpp:153
 msgid "User created."
-msgstr ""
+msgstr "Usuario creado."
 
 #: src/qt/view/QtUsersPage.cpp:175
-#, fuzzy
 msgid "User updated."
-msgstr "Actualizar"
+msgstr "Usuario actualizado."
 
 #: src/qt/view/QtUsersPage.cpp:192
 msgid "Password reset."
-msgstr ""
+msgstr "Contraseña restablecida."
 
 #: src/qt/view/QtUsersPage.cpp:205
-#, fuzzy
 msgid "Delete user"
-msgstr "Eliminar"
+msgstr "Eliminar usuario"
 
 #: src/qt/view/QtUsersPage.cpp:206
 msgid "Delete user \"%1\"? This cannot be undone."
-msgstr ""
+msgstr "¿Eliminar el usuario «%1»? Esto no se puede deshacer."
 
 #: src/qt/view/QtUsersPage.cpp:212
 msgid "User deleted."
-msgstr ""
+msgstr "Usuario eliminado."
 
 #: src/qt/view/QtUserFormDialog.cpp:41
-#, fuzzy
 msgid "Edit user"
-msgstr "Editar"
+msgstr "Editar usuario"
 
 #: src/qt/view/QtUserFormDialog.cpp:53
 #: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:124
 msgid "Add user"
-msgstr ""
+msgstr "Añadir usuario"
 
 #: src/qt/view/QtResetPasswordDialog.cpp:32
 msgid "Password cannot be empty."
-msgstr ""
+msgstr "La contraseña no puede estar vacía."
 
 #: src/qt/view/QtResetPasswordDialog.cpp:37
 msgid "Passwords do not match."
-msgstr ""
+msgstr "Las contraseñas no coinciden."
 
 #: src/qt/view/QtChangePasswordDialog.cpp:42
 msgid "All fields are required."
-msgstr ""
+msgstr "Todos los campos son obligatorios."
 
 #: src/qt/view/QtChangePasswordDialog.cpp:46
 msgid "New passwords do not match."
-msgstr ""
+msgstr "Las nuevas contraseñas no coinciden."
 
 #: src/qt/view/QtLoginDialog.cpp:39
 msgid "Username and password are required."
-msgstr ""
+msgstr "El nombre de usuario y la contraseña son obligatorios."
 
 #: src/qt/view/QtLoginDialog.cpp:51
 msgid "Invalid username or password."
-msgstr ""
+msgstr "Nombre de usuario o contraseña no válidos."
 
 #: src/qt/view/QtLoginDialog.cpp:54
 msgid "Account is disabled. Contact your administrator."
-msgstr ""
+msgstr "La cuenta está deshabilitada. Contacte con su administrador."
 
 #: src/qt/view/QtLoginDialog.cpp:57
 msgid "Too many failed attempts. Try again later."
-msgstr ""
+msgstr "Demasiados intentos fallidos. Inténtelo más tarde."
 
 #: src/qt/view/QtLoginDialog.cpp:60
 msgid "Internal error during sign-in. See logs."
-msgstr ""
+msgstr "Error interno durante el inicio de sesión. Consulte los registros."
 
 #: src/qt/view/QtAuditLogPage.cpp:114
 msgid "Timestamp"
-msgstr ""
+msgstr "Marca de tiempo"
 
 #: src/qt/view/QtAuditLogPage.cpp:114
 #: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:139
 #: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:142
 msgid "User"
-msgstr ""
+msgstr "Usuario"
 
 #: src/qt/view/QtAuditLogPage.cpp:114
 #: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:136
 msgid "Category"
-msgstr ""
+msgstr "Categoría"
 
 #: src/qt/view/QtAuditLogPage.cpp:114
-#, fuzzy
 msgid "Action"
-msgstr "Activo"
+msgstr "Acción"
 
 #: src/qt/view/QtAuditLogPage.cpp:115
 #: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:137
 msgid "Result"
-msgstr ""
+msgstr "Resultado"
 
 #: src/qt/view/QtAuditLogPage.cpp:115
-#, fuzzy
 msgid "Details"
-msgstr "Ver detalles"
+msgstr "Detalles"
 
 #: src/qt/view/QtAuditLogPage.cpp:124 src/qt/view/QtAuditLogPage.cpp:134
 msgid "All"
-msgstr ""
+msgstr "Todos"
 
 #: src/qt/view/QtAuditLogPage.cpp:136
 msgid "Success"
-msgstr ""
+msgstr "Éxito"
 
 #: src/qt/view/QtAuditLogPage.cpp:139
 msgid "Failure"
-msgstr ""
+msgstr "Fallo"
 
 #: src/qt/view/QtAuditLogPage.cpp:143
 msgid "All time"
-msgstr ""
+msgstr "Todo el tiempo"
 
 #: src/qt/view/QtAuditLogPage.cpp:191
 msgid "%1 events shown (of %2 total)"
-msgstr ""
+msgstr "%1 eventos mostrados (de %2 en total)"
 
 #: src/qt/view/QtAuditLogPage.cpp:198
 msgid "Export audit log"
-msgstr ""
+msgstr "Exportar registro de auditoría"
 
 #: src/qt/view/QtAuditLogPage.cpp:199
-#, fuzzy
 msgid "CSV files (*.csv)"
-msgstr "Archivos CSV"
+msgstr "Archivos CSV (*.csv)"
 
 #: src/qt/view/QtAuditLogPage.cpp:210
-#, fuzzy
 msgid "Export failed"
-msgstr "Exportación completa"
+msgstr "Exportación fallida"
 
 #: src/qt/view/QtAuditLogPage.cpp:211
-#, fuzzy
 msgid "Could not open the file for writing."
-msgstr "No se pudo escribir el archivo CSV."
+msgstr "No se pudo abrir el archivo para escritura."
 
 #: src/qt/view/QtAuditLogPage.cpp:228
 msgid "Exported %1 events"
-msgstr ""
+msgstr "%1 eventos exportados"
 
 #: src/qt/view/QtRoleLabel.h:16
 msgid "Operator"
-msgstr ""
+msgstr "Operador"
 
 #: src/qt/view/QtRoleLabel.h:17
 msgid "Maintenance"
-msgstr ""
+msgstr "Mantenimiento"
 
 #: src/qt/view/QtRoleLabel.h:18
 msgid "Admin"
-msgstr ""
+msgstr "Administrador"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:18
 #: src/qt/view/widgets/QtEquipmentCard.cpp:21
 msgid "Offline"
-msgstr ""
+msgstr "Sin conexión"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:20
 msgid "Working"
-msgstr ""
+msgstr "Funcionando"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:22
 msgid "Homing"
-msgstr ""
+msgstr "Referenciando"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:23
-#, fuzzy
 msgid "Calibrating"
-msgstr "Confirmar calibración"
+msgstr "Calibrando"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:24
 #: src/qt/view/widgets/QtActuatorCard.cpp:26
 #: src/qt/view/widgets/QtEquipmentCard.cpp:31
 #: src/qt/view/widgets/QtEquipmentCard.cpp:33
 msgid "Unknown"
-msgstr ""
+msgstr "Desconocido"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:46
 msgid "Actuator %1"
-msgstr ""
+msgstr "Actuador %1"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:50
 #: src/qt/view/widgets/QtEquipmentCard.cpp:61
 #: src/qt/view/widgets/QtQualityCard.cpp:45
-#, fuzzy
 msgid "Status: -"
-msgstr "Estado:"
+msgstr "Estado: -"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:68
 msgid "AUTO"
-msgstr ""
+msgstr "AUTO"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:68
 msgid "MANUAL"
-msgstr ""
+msgstr "MANUAL"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:70
 msgid "HOME"
-msgstr ""
+msgstr "INICIO"
 
 #: src/qt/view/widgets/QtActuatorCard.cpp:73
 msgid "ALERT"
-msgstr ""
+msgstr "ALERTA"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:22
-#, fuzzy
 msgid "Starting up"
-msgstr "Configuración"
+msgstr "Iniciando"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:23
 msgid "Self-check"
-msgstr ""
+msgstr "Autocomprobación"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:24
 msgid "Online"
-msgstr ""
+msgstr "En línea"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:25
 msgid "Processing"
-msgstr ""
+msgstr "Procesando"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:26
 msgid "Warming up"
-msgstr ""
+msgstr "Calentando"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:27 assets/ui/dashboard-page.ui:169
 msgid "Ready"
@@ -1174,61 +1145,56 @@ msgstr "Listo"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:28
 msgid "Reboot"
-msgstr ""
+msgstr "Reiniciar"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:30
 msgid "Disabled"
-msgstr ""
+msgstr "Deshabilitado"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:62
 msgid "Supplies: -"
-msgstr ""
+msgstr "Suministros: -"
 
 #: src/qt/view/widgets/QtEquipmentCard.cpp:87
-#, fuzzy
 msgid "Supplies: %1"
-msgstr "Estado: %1"
+msgstr "Suministros: %1"
 
 #: src/qt/view/widgets/QtQualityCard.cpp:20
 #: src/qt/view/widgets/QtQualityCard.cpp:24
 msgid "Passing"
-msgstr ""
+msgstr "Aprobado"
 
 #: src/qt/view/widgets/QtQualityCard.cpp:21
 msgid "Warning"
-msgstr ""
+msgstr "Advertencia"
 
 #: src/qt/view/widgets/QtQualityCard.cpp:22
-#, fuzzy
 msgid "Critical"
-msgstr "{} crítico"
+msgstr "Crítico"
 
 #: src/qt/view/widgets/QtQualityCard.cpp:46
 msgid "Pass rate: -"
-msgstr ""
+msgstr "Tasa de aprobación: -"
 
 #: src/qt/view/widgets/QtQualityCard.cpp:66
-#, fuzzy
 msgid "Pass rate: %1%"
-msgstr "Creado: %1"
+msgstr "Tasa de aprobación: %1 %"
 
 #: src/qt/view/widgets/QtQualityCard.cpp:69
-#, fuzzy
 msgid "Inspected: %1  Defects: %2"
-msgstr "0 inspeccionados • 0 defectos"
+msgstr "Inspeccionados: %1  Defectos: %2"
 
 #: src/qt/view/widgets/QtQualityCard.cpp:75
-#, fuzzy
 msgid "No defects"
-msgstr "No se detectaron defectos"
+msgstr "Sin defectos"
 
 #: src/qt/view/widgets/QtUptimeDonut.cpp:134
 msgid "Uptime"
-msgstr ""
+msgstr "Tiempo activo"
 
 #: assets/ui/main-window.ui:83
 msgid "STATUS"
-msgstr ""
+msgstr "ESTADO"
 
 #: assets/ui/main-window.ui:114
 msgid "I/O"
@@ -1252,15 +1218,15 @@ msgstr "ESTACIONES DE EQUIPO"
 
 #: assets/ui/dashboard-page.ui:228
 msgid "MIXER"
-msgstr ""
+msgstr "MEZCLADORA"
 
 #: assets/ui/dashboard-page.ui:250
 msgid "PRESS"
-msgstr ""
+msgstr "PRENSA"
 
 #: assets/ui/dashboard-page.ui:272
 msgid "PACKAGING"
-msgstr ""
+msgstr "EMBALAJE"
 
 #: assets/ui/dashboard-page.ui:289
 msgid "QUALITY CHECKPOINTS"
@@ -1293,7 +1259,7 @@ msgstr "REINICIAR"
 
 #: assets/ui/dashboard-page.ui:396
 msgid "INJECT FAULT"
-msgstr ""
+msgstr "INYECTAR FALLO"
 
 #: assets/ui/products-page.ui:33
 msgid "+ Add New Product"
@@ -1336,15 +1302,17 @@ msgstr "Eliminar"
 
 #: assets/ui/products-page.ui:123
 msgid "Load Recipe"
-msgstr ""
+msgstr "Cargar receta"
 
 #: assets/ui/products-page.ui:125
 msgid "Load this product's recipe onto the production line"
-msgstr ""
+msgstr "Cargar la receta de este producto en la línea de producción"
 
 #: assets/ui/products-page.ui:133
 msgid "Create or edit this product's recipe (operations + quality targets)"
 msgstr ""
+"Crear o editar la receta de este producto (operaciones + objetivos de "
+"calidad)"
 
 #: assets/ui/settings-page.ui:41
 msgid "General"
@@ -1372,7 +1340,7 @@ msgstr "Claro"
 
 #: assets/ui/settings-page.ui:122
 msgid "Palette:"
-msgstr ""
+msgstr "Paleta:"
 
 #: assets/ui/settings-page.ui:143
 #: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:152
@@ -1419,45 +1387,44 @@ msgstr "Mostrar el panel de registro en la parte inferior de la ventana"
 
 #: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:138
 msgid "Range"
-msgstr ""
+msgstr "Rango"
 
 #: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:142
 msgid "0 events"
-msgstr ""
+msgstr "0 eventos"
 
 #: build-qt/objectsQt_autogen/include/ui_QtBackendHealthPage.h:57
 msgid "Connectivity"
-msgstr ""
+msgstr "Conectividad"
 
 #: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:130
 msgid "Change your password"
-msgstr ""
+msgstr "Cambie su contraseña"
 
 #: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:131
 msgid "Current password"
-msgstr ""
+msgstr "Contraseña actual"
 
 #: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:132
 #: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:118
 msgid "New password"
-msgstr ""
+msgstr "Nueva contraseña"
 
 #: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:133
-#, fuzzy
 msgid "Confirm new password"
-msgstr "Confirmar reinicio"
+msgstr "Confirmar nueva contraseña"
 
 #: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:136
 msgid "Change"
-msgstr ""
+msgstr "Cambiar"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:179
 msgid "Current work unit"
-msgstr ""
+msgstr "Unidad de trabajo actual"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:180
 msgid "Order"
-msgstr ""
+msgstr "Pedido"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:181
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:183
@@ -1467,156 +1434,151 @@ msgstr ""
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:182
 msgid "Shipment"
-msgstr ""
+msgstr "Envío"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:186
-#, fuzzy
 msgid "Equipment"
-msgstr "Equipo {} con error"
+msgstr "Equipo"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:187
 msgid "Actuators"
-msgstr ""
+msgstr "Actuadores"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:188
 msgid "Quality checkpoints"
-msgstr ""
+msgstr "Puntos de control de calidad"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:189
 msgid "Start"
-msgstr ""
+msgstr "Iniciar"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:190
 msgid "Stop"
-msgstr ""
+msgstr "Detener"
 
 #: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:191
 #: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:122
 msgid "Reset"
-msgstr ""
+msgstr "Restablecer"
 
 #: build-qt/objectsQt_autogen/include/ui_QtGoodsReceiptPage.h:101
 msgid "Goods-receipt inspection"
-msgstr ""
+msgstr "Inspección de recepción de mercancías"
 
 #: build-qt/objectsQt_autogen/include/ui_QtGoodsReceiptPage.h:102
 msgid ""
 "Demo mode: the image is decoded locally, but the classification is a fixed "
 "sample (no trained model loaded)."
 msgstr ""
+"Modo demo: la imagen se decodifica localmente, pero la clasificación es una "
+"muestra fija (sin modelo entrenado cargado)."
 
 #: build-qt/objectsQt_autogen/include/ui_QtGoodsReceiptPage.h:103
 msgid "Inspect image..."
-msgstr ""
+msgstr "Inspeccionar imagen…"
 
 #: build-qt/objectsQt_autogen/include/ui_QtGoodsReceiptPage.h:104
-#, fuzzy
 msgid "No image selected"
-msgstr "No se detectaron defectos"
+msgstr "Ninguna imagen seleccionada"
 
 #: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:110
 msgid "Persisted time-series from the historian archive (SQLite)."
-msgstr ""
+msgstr "Series temporales persistidas del archivo del historiador (SQLite)."
 
 #: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:111
 msgid "Range:"
-msgstr ""
+msgstr "Rango:"
 
 #: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:113
 msgid "Total: 0 samples"
-msgstr ""
+msgstr "Total: 0 muestras"
 
 #: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:114
-#, fuzzy
 msgid "Quality pass rate (%)"
-msgstr "Control de calidad"
+msgstr "Tasa de aprobación de calidad (%)"
 
 #: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:115
 msgid "Equipment supply level (%)"
-msgstr ""
+msgstr "Nivel de suministro del equipo (%)"
 
 #: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:114
 #: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:122
 msgid "Sign in"
-msgstr ""
+msgstr "Iniciar sesión"
 
 #: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:115
-#, fuzzy
 msgid "Industrial HMI sign in"
-msgstr "[BB] HMI Industrial"
+msgstr "Inicio de sesión de HMI industrial"
 
 #: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:116
 msgid "Operator / Maintenance / Admin"
-msgstr ""
+msgstr "Operador / Mantenimiento / Administrador"
 
 #: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:118
 msgid "e.g. operator"
-msgstr ""
+msgstr "p. ej. operator"
 
 #: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:119
 #: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:146
 msgid "Password"
-msgstr ""
+msgstr "Contraseña"
 
 #: build-qt/objectsQt_autogen/include/ui_QtMultiStationPage.h:72
 msgid "Primary station"
-msgstr ""
+msgstr "Estación primaria"
 
 #: build-qt/objectsQt_autogen/include/ui_QtMultiStationPage.h:73
 msgid "Secondary station"
-msgstr ""
+msgstr "Estación secundaria"
 
 #: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:116
 #: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:126
 msgid "Reset password"
-msgstr ""
+msgstr "Restablecer contraseña"
 
 #: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:117
 msgid "Set a new password"
-msgstr ""
+msgstr "Establecer una nueva contraseña"
 
 #: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:119
-#, fuzzy
 msgid "Confirm password"
-msgstr "Confirmar reinicio"
+msgstr "Confirmar contraseña"
 
 #: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:150
 msgid "Appearance"
-msgstr ""
+msgstr "Apariencia"
 
 #: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:151
 msgid "Palette"
-msgstr ""
+msgstr "Paleta"
 
 #: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:155
-#, fuzzy
 msgid "Language"
-msgstr "Idioma:"
+msgstr "Idioma"
 
 #: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:156
 msgid "Interface language"
-msgstr ""
+msgstr "Idioma de la interfaz"
 
 #: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:157
-#, fuzzy
 msgid "Configuration"
-msgstr "Confirmar calibración"
+msgstr "Configuración"
 
 #: build-qt/objectsQt_autogen/include/ui_QtTrendsPage.h:58
 msgid "Live session metrics since the app started (in-memory)."
-msgstr ""
+msgstr "Métricas de sesión en vivo desde el inicio de la app (en memoria)."
 
 #: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:147
 msgid "Account enabled"
-msgstr ""
+msgstr "Cuenta habilitada"
 
 #: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:123
 msgid "User management"
-msgstr ""
+msgstr "Gestión de usuarios"
 
 #: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:129
 msgid "0 users"
-msgstr ""
+msgstr "0 usuarios"
 
 #~ msgid "MVP Architecture"
 #~ msgstr "Arquitectura MVP"
