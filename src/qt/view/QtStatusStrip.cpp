@@ -7,12 +7,12 @@
 #include "src/qt/view/QtTheme.h"
 #include "src/qt/view/QtUiDispatch.h"
 
+#include <QDateTime>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLayoutItem>
 #include <QObject>
 #include <QString>
-#include <QTime>
 #include <QTimer>
 
 namespace app::view {
@@ -91,13 +91,13 @@ QtStatusStrip::QtStatusStrip(QWidget* parent) : QWidget(parent) {
     backendsLayout_->setSpacing(kDotSpacing);
     layout->addWidget(backends);
 
-    // Centred connectivity summary fills the strip's middle instead of leaving a
-    // gap between the left dots and the right clock.
+    // Connectivity (state pill + backend chips) sits on the left; the summary +
+    // clock sit on the right, with the slack between the two groups.
     layout->addStretch();
     summaryLabel_ = new QLabel();
     summaryLabel_->setStyleSheet(theme::coloredBold(theme::kColorNeutral));
     layout->addWidget(summaryLabel_);
-    layout->addStretch();
+    layout->addSpacing(kBarSpacing);
 
     clock_ = new QLabel();
     clock_->setStyleSheet(theme::coloredBold(theme::kColorNeutral));
@@ -157,21 +157,27 @@ void QtStatusStrip::applyBackendHealth(
 
     for (const auto& entry : viewModel.entries) {
         const Style style = backendStyle(entry.state);
-        auto* dot = new QLabel(QStringLiteral("● ") +
-                               QString::fromStdString(entry.name));
-        dot->setStyleSheet(theme::coloredBold(style.color));
+        // Each backend is a bordered chip carrying its name in its state colour
+        // (green online / amber connecting / grey offline), with the state word
+        // + metrics in the tooltip. Clearer than a run of coloured bullets.
+        auto* chip = new QLabel(QString::fromStdString(entry.name));
+        chip->setStyleSheet(
+            QString("border: 1px solid %1; color: %1; border-radius: 8px;"
+                    " padding: 1px 8px; font-weight: bold;")
+                .arg(style.color));
         QString tip = style.text;
         if (!entry.metricsLine.empty()) {
             tip += QStringLiteral(" · ") +
                    QString::fromStdString(entry.metricsLine);
         }
-        dot->setToolTip(tip);
-        backendsLayout_->addWidget(dot);
+        chip->setToolTip(tip);
+        backendsLayout_->addWidget(chip);
     }
 }
 
 void QtStatusStrip::updateClock() {
-    clock_->setText(QTime::currentTime().toString(QStringLiteral("HH:mm:ss")));
+    clock_->setText(QDateTime::currentDateTime().toString(
+        QStringLiteral("yyyy-MM-dd  HH:mm:ss")));
 }
 
 }  // namespace app::view

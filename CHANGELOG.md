@@ -19,7 +19,7 @@ Layout + readability refinements to the Qt frontend (no new requirement).
 #### Changed
 - Overview visuals row now spreads an OEE gauge, a new Quality gauge and the uptime donut across its width instead of leaving a gap on the right.
 - The Order / Shipment / Status lines are grouped into a "Current work unit" card with a two-column label / value form.
-- The bottom status strip fills its middle with a centred "N of M backends online" summary rather than a blank gap between the health dots and the clock.
+- The bottom status strip shows each backend as a bordered state-coloured chip, groups connectivity on the left with the "N of M backends online" summary and a date + time clock on the right, and no longer leaves a blank gap in the middle.
 - KPI tiles colour their value by state (green ok / amber warn / red alarm) so OEE, quality and defects read at a glance.
 - Every page carries a consistent title header (shared `#headerLabel` style), including the Overview and Inventory pages that previously had none.
 
