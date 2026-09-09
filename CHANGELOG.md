@@ -25,6 +25,7 @@ Layout + readability refinements to the Qt frontend (no new requirement).
 
 #### Fixed
 - The status strip now retranslates on a live language change: it caches the last state and backend health and re-renders the pill and "N of M backends online" summary through a `changeEvent(LanguageChange)` seam, instead of staying in the old language until the next presenter signal (which never arrives while Idle).
+- The Qt frontend now compiles the gettext catalogs: `industrial-hmi-qt` depends on the `translations` target, so a target-specific build fills `build/locale` with the `.mo` files instead of leaving it empty. Without this the language selector changed nothing because the runtime had no catalog to load.
 
 ### Qt authentication, admin pages and session footer (REQ-ARCH-016)
 

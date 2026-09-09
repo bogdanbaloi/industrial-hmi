@@ -1397,6 +1397,13 @@ if(GETTEXT_MSGFMT_EXECUTABLE AND EXISTS "${PO_DIR}/LINGUAS")
     if(MO_FILES)
         add_custom_target(translations ALL DEPENDS ${MO_FILES})
         add_dependencies(industrial-hmi translations)
+        # The Qt frontend reads the same compiled catalogs from
+        # <exe-dir>/locale, so it must build them too. Without this a
+        # target-specific `--build --target industrial-hmi-qt` never triggers
+        # the ALL-target, leaving build/locale empty and every string in English.
+        if(TARGET industrial-hmi-qt)
+            add_dependencies(industrial-hmi-qt translations)
+        endif()
     endif()
 else()
     message(STATUS "gettext msgfmt not found - translations will not be compiled")
