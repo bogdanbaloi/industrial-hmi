@@ -75,16 +75,16 @@ QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
     }
 
     // Rich circular visuals (GTK dashboard parity): OEE + Quality gauges and a
-    // session-uptime donut, spread across the row so it fills the width instead
-    // of leaving a gap on the right.
+    // session-uptime donut, kept together as a centred group (a stretch on each
+    // side) rather than pinned to the row's edges.
     oeeGauge_     = new QtGauge(tr("OEE"), kOeeTargetPct);
     qualityGauge_ = new QtGauge(tr("Quality"), kQualityTargetPct);
     uptimeDonut_  = new QtUptimeDonut();
+    ui_->visualsLayout->addStretch(1);
     ui_->visualsLayout->addWidget(oeeGauge_);
-    ui_->visualsLayout->addStretch(1);
     ui_->visualsLayout->addWidget(qualityGauge_);
-    ui_->visualsLayout->addStretch(1);
     ui_->visualsLayout->addWidget(uptimeDonut_);
+    ui_->visualsLayout->addStretch(1);
 
     // Live trend chart fills the vertical slack above the button row, so the
     // page has no dead space on the tall kiosk window. Both series are derived

@@ -69,7 +69,6 @@ private:
     QPushButton*         changePasswordButton_{nullptr};
     QPushButton*         signOutButton_{nullptr};
     QPushButton*         quitButton_{nullptr};
-    bool                 userTextOverridden_{false};
     int                  count_{0};
 };
 

@@ -54,8 +54,11 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
 
     root->addStretch(1);
 
-    userLabel_ = new QLabel(tr("Bogdan B. · Operations"), this);
+    // Footer identity: empty + hidden until a real session sets it (auth on).
+    // With auth off there is no user, so we show no placeholder name.
+    userLabel_ = new QLabel(this);
     userLabel_->setObjectName("sidebarUser");
+    userLabel_->hide();
     root->addWidget(userLabel_);
 
     // Self-service change-password: hidden until enableChangePassword() wires it.
@@ -116,7 +119,7 @@ void QtSidebar::setItemLabel(int index, const QString& label) {
 
 void QtSidebar::setUserText(const QString& text) {
     userLabel_->setText(text);
-    userTextOverridden_ = true;
+    userLabel_->show();
 }
 
 void QtSidebar::enableSignOut(std::function<void()> handler) {
@@ -142,11 +145,8 @@ void QtSidebar::enableChangePassword(std::function<void()> handler) {
 void QtSidebar::changeEvent(QEvent* event) {
     if (event != nullptr && event->type() == QEvent::LanguageChange) {
         brandLabel_->setText(tr("Industrial HMI"));
-        // Leave a session identity in place; only the default placeholder is a
-        // translatable string.
-        if (!userTextOverridden_) {
-            userLabel_->setText(tr("Bogdan B. · Operations"));
-        }
+        // The footer identity (name + role code) is not a translatable string,
+        // so it is left untouched on a language change.
         changePasswordButton_->setText(tr("Change password"));
         signOutButton_->setText(tr("Sign out"));
         quitButton_->setText(tr("Exit application"));
