@@ -8,6 +8,7 @@
 #include "src/qt/view/QtUiDispatch.h"
 
 #include <QDateTime>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLayoutItem>
@@ -121,6 +122,7 @@ void QtStatusStrip::setSystemState(int state) {
 }
 
 void QtStatusStrip::applySystemState(int state) {
+    lastState_        = state;
     const Style style = systemStyle(state);
     stateBadge_->setText(style.text);
     stateBadge_->setStyleSheet(
@@ -137,6 +139,9 @@ void QtStatusStrip::onBackendHealthChanged(
 
 void QtStatusStrip::applyBackendHealth(
     const presenter::BackendHealthViewModel& viewModel) {
+    lastHealth_ = viewModel;
+    haveHealth_ = true;
+
     // Compact one-line inventory: a coloured "name" per backend, tooltip
     // carrying the state word + metrics. Full rebuild (tiny list).
     while (QLayoutItem* item = backendsLayout_->takeAt(0)) {
@@ -173,6 +178,18 @@ void QtStatusStrip::applyBackendHealth(
         chip->setToolTip(tip);
         backendsLayout_->addWidget(chip);
     }
+}
+
+void QtStatusStrip::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        // Re-render the pill + summary in the new language from the cached
+        // values; the clock is locale-independent (numeric).
+        applySystemState(lastState_);
+        if (haveHealth_) {
+            applyBackendHealth(lastHealth_);
+        }
+    }
+    QWidget::changeEvent(event);
 }
 
 void QtStatusStrip::updateClock() {

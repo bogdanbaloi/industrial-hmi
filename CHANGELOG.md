@@ -23,6 +23,9 @@ Layout + readability refinements to the Qt frontend (no new requirement).
 - KPI tiles colour their value by state (green ok / amber warn / red alarm) so OEE, quality and defects read at a glance.
 - Every page carries a consistent title header (shared `#headerLabel` style), including the Overview and Inventory pages that previously had none.
 
+#### Fixed
+- The status strip now retranslates on a live language change: it caches the last state and backend health and re-renders the pill and "N of M backends online" summary through a `changeEvent(LanguageChange)` seam, instead of staying in the old language until the next presenter signal (which never arrives while Idle).
+
 ### Qt authentication, admin pages and session footer (REQ-ARCH-016)
 
 Brings the auth stack behind the Qt frontend: a login gate, the admin
@@ -52,7 +55,7 @@ catalog as the GTK and console frontends, instead of a parallel Qt `.qm` set.
 - Per-widget retranslate seams (`changeEvent`) across the pages, plus caption / series-name setters on the KPI tile, gauge and line chart, so C++-set labels re-read the catalog on a language change.
 
 #### Changed
-- `QtInitRoot` installs the translator before the first paint and owns the language-change flow. The status strip and the equipment / actuator / quality cards are data-driven, so they re-read the catalog on the next tick.
+- `QtInitRoot` installs the translator before the first paint and owns the language-change flow. The equipment / actuator / quality cards are data-driven, so they re-read the catalog on the next tick; the status strip caches its last values and retranslates them through its own `changeEvent` seam.
 - `po/POTFILES.in` lists the Qt sources for extraction. Populating the catalog with the Qt-authored strings (xgettext with `--keyword=tr:1`) is a follow-on content step; untranslated keys fall back to English.
 
 ### Qt persisted-historian History page (REQ-ARCH-014)
