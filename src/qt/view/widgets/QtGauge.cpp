@@ -57,9 +57,14 @@ void QtGauge::paintEvent(QPaintEvent* /*event*/) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
 
-    const int    side = std::min(width(), height());
-    const QRectF arcRect(kArcMargin, kArcMargin, side - (kHalf * kArcMargin),
-                         side - (kHalf * kArcMargin));
+    // Centre the gauge square in the widget so a wide host (e.g. a card) does
+    // not push the arc + text off to one side and clip them.
+    const int    side    = std::min(width(), height());
+    const double originX = (width() - side) / 2.0;
+    const double originY = (height() - side) / 2.0;
+    const QRectF square(originX, originY, side, side);
+    const QRectF arcRect(square.left() + kArcMargin, square.top() + kArcMargin,
+                         side - (kHalf * kArcMargin), side - (kHalf * kArcMargin));
 
     // Background track.
     QPen track{QColor(theme::kColorNeutral)};
@@ -85,7 +90,7 @@ void QtGauge::paintEvent(QPaintEvent* /*event*/) {
     valueFont.setBold(true);
     painter.setFont(valueFont);
     painter.setPen(tier);
-    painter.drawText(rect().adjusted(0, 0, 0, -side / kQuarter),
+    painter.drawText(square.adjusted(0, 0, 0, -static_cast<double>(side) / kQuarter),
                      Qt::AlignCenter, QString::number(value_, 'f', 0) + "%");
 
     // Caption below.
@@ -93,7 +98,7 @@ void QtGauge::paintEvent(QPaintEvent* /*event*/) {
     captionFont.setPointSize(kCaptionPointSize);
     painter.setFont(captionFont);
     painter.setPen(QColor(theme::kColorNeutral));
-    painter.drawText(rect().adjusted(0, side / kQuarter, 0, 0),
+    painter.drawText(square.adjusted(0, static_cast<double>(side) / kQuarter, 0, 0),
                      Qt::AlignCenter, caption_);
 }
 

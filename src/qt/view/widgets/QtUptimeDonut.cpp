@@ -76,9 +76,14 @@ void QtUptimeDonut::paintEvent(QPaintEvent* /*event*/) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
 
-    const int    side = std::min(width(), height());
-    const QRectF ring(kRingMargin, kRingMargin, side - (kHalf * kRingMargin),
-                      side - (kHalf * kRingMargin));
+    // Centre the donut square in the widget so a wide host (e.g. a card) does
+    // not push the ring + text off to one side and clip them.
+    const int    side    = std::min(width(), height());
+    const double originX = (width() - side) / 2.0;
+    const double originY = (height() - side) / 2.0;
+    const QRectF square(originX, originY, side, side);
+    const QRectF ring(square.left() + kRingMargin, square.top() + kRingMargin,
+                      side - (kHalf * kRingMargin), side - (kHalf * kRingMargin));
 
     const double total =
         std::accumulate(seconds_.begin(), seconds_.end(), 0.0);
@@ -118,14 +123,14 @@ void QtUptimeDonut::paintEvent(QPaintEvent* /*event*/) {
     valueFont.setBold(true);
     painter.setFont(valueFont);
     painter.setPen(QColor(theme::kColorNeutral));
-    painter.drawText(rect().adjusted(0, 0, 0, -kCaptionOffset),
+    painter.drawText(square.adjusted(0, 0, 0, -kCaptionOffset),
                      Qt::AlignCenter, elapsed);
 
     QFont captionFont = font();
     captionFont.setPointSize(kCaptionPoints);
     painter.setFont(captionFont);
     painter.setPen(QColor(theme::kColorNeutral));
-    painter.drawText(rect().adjusted(0, kCaptionOffset, 0, 0),
+    painter.drawText(square.adjusted(0, kCaptionOffset, 0, 0),
                      Qt::AlignCenter, tr("Uptime"));
 }
 

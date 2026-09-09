@@ -37,6 +37,10 @@ constexpr double kOeeTargetPct = 85.0;
 // Quality gauge target -- the pass-rate an operator should hold the line to.
 constexpr double kQualityTargetPct = 95.0;
 
+// Minimum height for the circular visuals so their arc + labels always render
+// at a legible size inside their cards.
+constexpr int kVisualMinHeight = 150;
+
 // Tier colour for a value against a target: green at/above, amber just below,
 // red otherwise. Same banding the OEE gauge uses, for the KPI tiles.
 const char* tierColor(double value, double target) {
@@ -87,11 +91,13 @@ QtDashboardPage::QtDashboardPage(DashboardPresenter& presenter, QWidget* parent)
     for (QWidget* visual : {static_cast<QWidget*>(oeeGauge_),
                             static_cast<QWidget*>(qualityGauge_),
                             static_cast<QWidget*>(uptimeDonut_)}) {
+        visual->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        visual->setMinimumHeight(kVisualMinHeight);
         auto* card = new QFrame();
         card->setObjectName("kpiTile");
         card->setFrameShape(QFrame::StyledPanel);
         auto* cardLayout = new QVBoxLayout(card);
-        cardLayout->addWidget(visual, 0, Qt::AlignCenter);
+        cardLayout->addWidget(visual);
         ui_->visualsLayout->addWidget(card, 1);
     }
 
