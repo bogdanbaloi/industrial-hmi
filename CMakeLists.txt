@@ -1348,9 +1348,13 @@ if(BUILD_MCP_SERVER OR BUILD_TESTS)
 endif()
 
 if(BUILD_MCP_SERVER)
+    # Shares src/main.cpp with the GTK / console / Qt binaries, selected by
+    # MCP_MODE (like QT_FRONTEND_MODE), so all four consumers enter from one
+    # main. The MCP branch skips the integration backends and links no GUI lib.
     add_executable(industrial-hmi-mcp
-        src/mcp/main.cpp
+        src/main.cpp
         src/mcp/McpInitRoot.cpp)
+    target_compile_definitions(industrial-hmi-mcp PRIVATE MCP_MODE)
     target_link_libraries(industrial-hmi-mcp
         PRIVATE
             objectsMcp

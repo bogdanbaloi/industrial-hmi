@@ -28,12 +28,20 @@ discover the callable tools, then `tools/call` to invoke one.
 ## Decision
 
 Add an opt-in executable `industrial-hmi-mcp`, gated by `BUILD_MCP_SERVER`
-(default OFF), built as a sibling of `industrial-hmi-console`: it links the
-shared model, historian and presenter object libraries and adds only a new
-`src/mcp` layer plus its own composition root. There is no View toolkit: like
-the console binary it links no GUI widget library (GTK or Qt). It does use
-sigc++ -- the signal library `AlertCenter`'s change signal is built on -- which
-comes header-only through `objectsModel`, exactly as the console binary gets it.
+(default OFF). It enters from the shared `src/main.cpp` selected by a
+compile-time `MCP_MODE`, the same way the Qt binary uses `QT_FRONTEND_MODE`, so
+all four consumers share one entry point rather than a separate main. The
+`MCP_MODE` branch skips the integration-backend build the GTK / console path
+does and runs the MCP composition root instead. It links the shared model,
+historian and presenter object libraries and adds only a new `src/mcp` layer
+plus that composition root. There is no View toolkit: like the console binary it
+links no GUI widget library (GTK or Qt). It does use sigc++ -- the signal
+library `AlertCenter`'s change signal is built on -- which comes header-only
+through `objectsModel`, exactly as the console binary gets it.
+
+Because stdout is the JSON-RPC channel, `main()` under `MCP_MODE` redirects
+`std::cout` (where the logger writes) to stderr and hands the server a stream
+bound to the real stdout, so no log line can corrupt the protocol.
 
 - **Two read-only tools in v1.** `alarms_snapshot` wraps
   `presenter::AlertCenter::snapshot()`; `historian_query` wraps
