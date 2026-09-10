@@ -176,7 +176,9 @@ historian the human frontends use, over the Model Context Protocol
    > (where the official Node is on PATH), not from MSYS2 bash:
    >
    > ```powershell
-   > npx @modelcontextprotocol/inspector .\build-qt\industrial-hmi-mcp.exe
+   > # use npx.cmd, not npx: PowerShell's default execution policy blocks the
+   > # npx.ps1 shim. Run from the worktree that holds build-qt.
+   > npx.cmd @modelcontextprotocol/inspector .\build-qt\industrial-hmi-mcp.exe
    > ```
    >
    > The **CLI mode works from MSYS2 bash** (it needs none of those native
