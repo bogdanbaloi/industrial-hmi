@@ -166,6 +166,27 @@ historian the human frontends use, over the Model Context Protocol
    command to the absolute path of your built binary, restart, then ask e.g.
    "are there any active alarms?" and Claude calls the tool for you.
 
+3. **MCP Inspector** -- the official interactive client (web UI + CLI).
+
+   > Windows note: the Inspector's **web UI** needs official Windows Node
+   > (from nodejs.org / `winget install OpenJS.NodeJS`), NOT the MSYS2 mingw
+   > Node. The web UI's native modules (rolldown, lightningcss, keyring) ship
+   > only `win32-x64-msvc` bindings, so MSYS2's mingw/gnu Node fails with
+   > "Cannot find native binding". So launch the **web UI from PowerShell**
+   > (where the official Node is on PATH), not from MSYS2 bash:
+   >
+   > ```powershell
+   > npx @modelcontextprotocol/inspector .\build-qt\industrial-hmi-mcp.exe
+   > ```
+   >
+   > The **CLI mode works from MSYS2 bash** (it needs none of those native
+   > modules), so quick checks stay in the same shell as the build:
+   >
+   > ```bash
+   > mcp-inspector --cli ./build-qt/industrial-hmi-mcp.exe --method tools/list
+   > mcp-inspector --cli ./build-qt/industrial-hmi-mcp.exe --method tools/call --tool-name alarms_snapshot
+   > ```
+
 The server logs to stderr and writes JSON-RPC to stdout, so the protocol
 stream stays clean for any client. Tool output is localized through the same
 gettext catalog as the UI, so alarm text comes back in the configured
