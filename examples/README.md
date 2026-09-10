@@ -144,3 +144,29 @@ every time.
 - **Bug reproduction**: pin `--seed` and `--duration`, share the
   command in the bug report. The maintainer reproduces by running
   the same line.
+
+## MCP server (LLM client)
+
+The opt-in MCP server (`industrial-hmi-mcp`, built with
+`-DBUILD_MCP_SERVER=ON`) lets an LLM agent query the same alarms and
+historian the human frontends use, over the Model Context Protocol
+(JSON-RPC on stdio). Two ways to exercise it:
+
+1. **`mcp_client.py`** -- a dependency-free Python MCP client. Spawns the
+   server, runs `initialize` / `tools/list` / `tools/call`, pretty-prints the
+   responses. No Node, no `npx` needed:
+
+   ```bash
+   cmake --build build-qt --target industrial-hmi-mcp
+   python examples/mcp_client.py            # or --exe PATH, --quiet
+   ```
+
+2. **Claude Desktop** -- copy the `mcpServers` entry from
+   `mcp_claude_desktop_config.json` into your Claude Desktop config, set the
+   command to the absolute path of your built binary, restart, then ask e.g.
+   "are there any active alarms?" and Claude calls the tool for you.
+
+The server logs to stderr and writes JSON-RPC to stdout, so the protocol
+stream stays clean for any client. Tool output is localized through the same
+gettext catalog as the UI, so alarm text comes back in the configured
+language.
