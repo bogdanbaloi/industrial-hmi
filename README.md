@@ -2,9 +2,10 @@
 
 Cross-platform industrial Human-Machine Interface in modern C++20.
 Equipment monitoring, quality control, and product database management
-for manufacturing-floor terminals -- shipped as three front-ends (a GTK4
-desktop UI, a headless console binary, and an opt-in Qt6 desktop UI) over
-one tested Model + Presenter core.
+for manufacturing-floor terminals -- shipped as three human front-ends (a
+GTK4 desktop UI, a headless console binary, and an opt-in Qt6 desktop UI),
+plus an opt-in MCP server that lets an LLM agent drive the same tested Model
++ Presenter core.
 
 [![CI](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml)
 ![Coverage](https://img.shields.io/badge/coverage-67%25-green)
@@ -15,14 +16,17 @@ one tested Model + Presenter core.
 
 ## Highlights
 
-- **Three front-ends, one core**: GTK4 desktop (`industrial-hmi`) +
+- **Four consumers, one core**: GTK4 desktop (`industrial-hmi`) +
   headless console (`industrial-hmi-console`) + opt-in Qt6 desktop
   (`industrial-hmi-qt`), all built from the same `main.cpp` via `#ifdef`
-  (`CONSOLE_MODE` / `QT_FRONTEND_MODE` / default GTK). The console binary
-  links **zero gtkmm**; the Qt binary links **zero gtkmm** and reuses the
-  identical Model + Presenter + integration + historian + auth + i18n
-  layers -- concrete proof that the `ViewObserver` abstraction is a real
-  View-swap seam, not just marketing. See the Qt front-end section below.
+  (`CONSOLE_MODE` / `QT_FRONTEND_MODE` / default GTK), plus an opt-in **MCP
+  server** (`industrial-hmi-mcp`) that exposes the same `AlertCenter` and
+  historian to an LLM agent over the Model Context Protocol. The console and
+  Qt binaries link **zero gtkmm**, the MCP server links **no GUI toolkit at
+  all**, and each reuses the identical Model + Presenter + integration +
+  historian + auth + i18n layers -- concrete proof that the `ViewObserver`
+  seam is toolkit- and consumer-agnostic, not just marketing. See the Qt and
+  MCP front-end sections below.
 - **ISA-18.2 / IEC 62682 alarm lifecycle** -- UnackActive / AckActive
   / RtnUnack states + operator acknowledge + shelve with auto-expiry
   + priority (P1..P4 distinct from severity) + audit journal of every
@@ -213,6 +217,29 @@ The Qt binary is off by default (`BUILD_QT_FRONTEND=OFF`) so the standard
 build needs no Qt toolchain. It shares `src/main.cpp` with the GTK and
 console binaries via `#ifdef QT_FRONTEND_MODE`. See the Qt front-end
 section under "Extending the system" for what it ships.
+
+### MCP server (opt-in)
+
+A fourth consumer of the same core, for an LLM agent rather than a human.
+`industrial-hmi-mcp` speaks the Model Context Protocol (JSON-RPC over stdio)
+and exposes two read-only tools -- `alarms_snapshot` (over
+`AlertCenter::snapshot()`) and `historian_query` (over
+`HistoryReader::query()`) -- driving the exact objects the human front-ends
+use. It links no GUI toolkit and adds no state-changing tool in v1.
+
+```bash
+cmake --preset release -DBUILD_MCP_SERVER=ON
+cmake --build build/release --target industrial-hmi-mcp -- -j$(nproc)
+# stdin is the JSON-RPC channel; try the three MCP methods:
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+  '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"alarms_snapshot"}}' \
+  | ./build/release/industrial-hmi-mcp
+```
+
+Point an MCP client (e.g. Claude Desktop) at the binary to let an agent query
+live alarms and history. Design record in ADR-0023, requirement REQ-ARCH-018.
 
 ### Client scripts (Python)
 

@@ -35,6 +35,10 @@
 #ifdef QT_FRONTEND_MODE
 #  include "src/qt/QtInitRoot.h"
 #  include <QApplication>
+#elif defined(MCP_MODE)
+#  include "src/mcp/McpInitRoot.h"
+#  include <iostream>
+#  include <ostream>
 #elif defined(CONSOLE_MODE)
 #  include "src/console/InitConsole.h"
 #else
@@ -43,10 +47,10 @@
 
 namespace {
 
-// Compile-time tag: true for the console binary, false for the GTK one.
-// Drives the fatal-reporter between stderr and MessageBoxW.
+// Compile-time tag: true for the headless binaries (console, MCP), false for
+// the GTK one. Drives the fatal-reporter between stderr and MessageBoxW.
 constexpr bool kConsoleMode =
-#ifdef CONSOLE_MODE
+#if defined(CONSOLE_MODE) || defined(MCP_MODE)
     true;
 #else
     false;
@@ -205,7 +209,7 @@ void initWindowsConsole() {
 #endif
 
 
-#if !defined(CONSOLE_MODE) && !defined(QT_FRONTEND_MODE)
+#if !defined(CONSOLE_MODE) && !defined(QT_FRONTEND_MODE) && !defined(MCP_MODE)
 /// Composition-root bundle passed to wireApplicationServices().
 /// Grouped into a struct (rather than a long parameter list) so the
 /// helper stays under the clang-tidy 8-parameter readability threshold.
@@ -262,13 +266,22 @@ void wireApplicationServices(
         app.setUsersPresenter(root.usersPresenterOut.get());
     }
 }
-#endif  // GTK only (not console, not Qt)
+#endif  // GTK only (not console, not Qt, not MCP)
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
     initWindowsConsole();
+#endif
+
+#ifdef MCP_MODE
+    // stdout is the JSON-RPC channel. Capture it, then point std::cout at
+    // stderr so every log line the app writes to std::cout lands on stderr
+    // instead of corrupting the protocol stream. The MCP server is handed the
+    // captured real stdout.
+    std::ostream protocolOut(std::cout.rdbuf());
+    std::cout.rdbuf(std::cerr.rdbuf());
 #endif
 
     // Top-level exception guard. Exit codes:
@@ -292,6 +305,13 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         return QApplication::exec();
+#elif defined(MCP_MODE)
+        // MCP server: a fourth, headless consumer. Its own composition root
+        // builds the same model + presenters + historian the other frontends
+        // use, then serves the Model Context Protocol over stdio. It does not
+        // build the integration backends, so this branch skips them entirely.
+        app::mcp::McpInitRoot mcpRoot(bootstrap);
+        return mcpRoot.run(protocolOut);
 #else
         // Integration backends -- opt-in per deployment via JSON.
         // Stack-owned through main() so RAII shuts them down on exit.

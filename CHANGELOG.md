@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### MCP server (REQ-ARCH-018)
+
+A fourth, headless consumer of the existing presenter/model core: an opt-in MCP
+server (`industrial-hmi-mcp`, `BUILD_MCP_SERVER=ON`) that lets an LLM agent query
+the same `AlertCenter` and historian the human frontends use, over two read-only
+tools. Extends the toolkit-independence proof (ADR-0020) from human GUI toolkits
+to an AI agent. ADR-0023.
+
+#### Added
+- `industrial-hmi-mcp`: a hand-rolled C++ MCP server speaking JSON-RPC over stdio (`initialize` / `tools/list` / `tools/call`), exposing `alarms_snapshot` (over `AlertCenter::snapshot()`) and `historian_query` (over `HistoryReader::query()`). No state-changing tool ships in v1; a write tool is deferred behind an authorization story. Boundary errors are values (`Result<json, McpErrorCode>`, ADR-0014) mapped to spec JSON-RPC error codes. Links no GUI widget toolkit, like the console binary.
+
 ### Qt multi-station dashboard (REQ-ARCH-017)
 
 #### Added
