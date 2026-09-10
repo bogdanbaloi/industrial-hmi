@@ -6,8 +6,10 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 
 class QCheckBox;
+class QEvent;
 class QLabel;
 
 namespace app::view {
@@ -24,6 +26,12 @@ public:
 
     void applyViewModel(const presenter::EquipmentCardViewModel& viewModel);
 
+protected:
+    // Re-render the code-set text (title, status frame, "Enabled") in the new
+    // language on a live switch, since the card otherwise only refreshes when a
+    // fresh view model arrives -- and equipment state rarely changes.
+    void changeEvent(QEvent* event) override;
+
 private:
     std::uint32_t  equipmentId_;
     ToggleCallback onToggle_;
@@ -32,6 +40,9 @@ private:
     QLabel*    consumablesLabel_{nullptr};
     QLabel*    messageLabel_{nullptr};
     QCheckBox* enableCheck_{nullptr};
+
+    // Last rendered model, so a language change can re-render from it.
+    std::optional<presenter::EquipmentCardViewModel> lastViewModel_;
 };
 
 }  // namespace app::view

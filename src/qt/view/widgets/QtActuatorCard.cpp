@@ -2,6 +2,7 @@
 
 #include "src/qt/view/QtTheme.h"
 
+#include <QEvent>
 #include <QLabel>
 #include <QObject>
 #include <QString>
@@ -58,6 +59,7 @@ QtActuatorCard::QtActuatorCard(std::uint32_t actuatorId, QWidget* parent)
 
 void QtActuatorCard::applyViewModel(
     const presenter::ActuatorCardViewModel& viewModel) {
+    lastViewModel_ = viewModel;
     statusLabel_->setText(tr("Status: %1").arg(statusText(viewModel.status)));
     statusLabel_->setStyleSheet(theme::coloredBold(statusColor(viewModel.status)));
 
@@ -73,6 +75,18 @@ void QtActuatorCard::applyViewModel(
         flags << tr("ALERT");
     }
     flagsLabel_->setText(flags.join(" | "));
+}
+
+void QtActuatorCard::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        setTitle(tr("Actuator %1").arg(actuatorId_));
+        if (lastViewModel_) {
+            applyViewModel(*lastViewModel_);
+        } else {
+            statusLabel_->setText(tr("Status: -"));
+        }
+    }
+    QGroupBox::changeEvent(event);
 }
 
 }  // namespace app::view

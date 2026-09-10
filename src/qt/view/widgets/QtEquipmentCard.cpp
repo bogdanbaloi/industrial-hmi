@@ -3,6 +3,7 @@
 #include "src/qt/view/QtTheme.h"
 
 #include <QCheckBox>
+#include <QEvent>
 #include <QLabel>
 #include <QObject>
 #include <QSignalBlocker>
@@ -80,6 +81,7 @@ QtEquipmentCard::QtEquipmentCard(std::uint32_t equipmentId,
 
 void QtEquipmentCard::applyViewModel(
     const presenter::EquipmentCardViewModel& viewModel) {
+    lastViewModel_ = viewModel;
     statusLabel_->setText(tr("Status: %1").arg(statusText(viewModel.status)));
     statusLabel_->setStyleSheet(theme::coloredBold(statusColor(viewModel.status)));
 
@@ -90,6 +92,20 @@ void QtEquipmentCard::applyViewModel(
     // Reflect the enabled flag without re-triggering the toggled signal.
     const QSignalBlocker blocker(enableCheck_);
     enableCheck_->setChecked(viewModel.enabled);
+}
+
+void QtEquipmentCard::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        setTitle(tr("Equipment %1").arg(equipmentId_));
+        enableCheck_->setText(tr("Enabled"));
+        if (lastViewModel_) {
+            applyViewModel(*lastViewModel_);
+        } else {
+            statusLabel_->setText(tr("Status: -"));
+            consumablesLabel_->setText(tr("Supplies: -"));
+        }
+    }
+    QGroupBox::changeEvent(event);
 }
 
 }  // namespace app::view

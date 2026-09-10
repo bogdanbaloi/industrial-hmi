@@ -404,7 +404,7 @@ msgstr "Criado: %1"
 #: src/qt/view/widgets/QtEquipmentCard.cpp:83
 #: src/qt/view/widgets/QtQualityCard.cpp:62
 msgid "Status: %1"
-msgstr "Status: %1"
+msgstr "Estado: %1"
 
 #: src/gtk/view/pages/ProductsPage.cpp:361 assets/ui/products-page.ui:131
 msgid "Edit Recipe"
