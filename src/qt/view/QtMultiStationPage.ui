@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QtMultiStationPage</class>
+ <widget class="QWidget" name="QtMultiStationPage">
+  <layout class="QVBoxLayout" name="rootLayout">
+   <item>
+    <widget class="QLabel" name="headerLabel">
+     <property name="text">
+      <string>Multi-station</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="stationsLayout">
+     <item>
+      <widget class="QGroupBox" name="primaryBox">
+       <property name="title">
+        <string>Primary station</string>
+       </property>
+       <layout class="QVBoxLayout" name="primaryLayout"/>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="secondaryBox">
+       <property name="title">
+        <string>Secondary station</string>
+       </property>
+       <layout class="QVBoxLayout" name="secondaryLayout"/>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

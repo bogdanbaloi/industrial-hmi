@@ -1,12 +1,18 @@
 #include "src/qt/view/QtSidebar.h"
 
+#include "src/qt/view/QtIcons.h"
+
+#include <QApplication>
 #include <QButtonGroup>
+#include <QEvent>
+#include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
 #include <QPushButton>
 #include <QSize>
 #include <QVBoxLayout>
 
+#include <cstddef>
 #include <utility>
 
 namespace app::view {
@@ -15,6 +21,7 @@ namespace {
 constexpr int kSidebarWidth = 220;
 constexpr int kNavSpacing   = 4;
 constexpr int kNavIconSize  = 18;
+constexpr int kBrandSpacing = 8;
 }  // namespace
 
 QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
@@ -24,9 +31,22 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
 
     auto* root = new QVBoxLayout(this);
 
-    auto* brand = new QLabel(tr("Nordwind SC"), this);
-    brand->setObjectName("sidebarBrand");
-    root->addWidget(brand);
+    // Brand row: logo + title, mirroring the GTK sidebar's app-logo + title.
+    auto* brandRow    = new QWidget(this);
+    auto* brandLayout = new QHBoxLayout(brandRow);
+    brandLayout->setContentsMargins(0, 0, 0, 0);
+    brandLayout->setSpacing(kBrandSpacing);
+
+    auto* logo = new QLabel(brandRow);
+    logo->setPixmap(icons::appLogo());
+    brandLayout->addWidget(logo);
+
+    brandLabel_ = new QLabel(tr("Industrial HMI"), brandRow);
+    brandLabel_->setObjectName("sidebarBrand");
+    brandLayout->addWidget(brandLabel_);
+    brandLayout->addStretch();
+
+    root->addWidget(brandRow);
 
     navLayout_ = new QVBoxLayout();
     navLayout_->setSpacing(kNavSpacing);
@@ -34,9 +54,34 @@ QtSidebar::QtSidebar(SelectCallback onSelect, QWidget* parent)
 
     root->addStretch(1);
 
-    auto* user = new QLabel(tr("Bogdan B. · Operations"), this);
-    user->setObjectName("sidebarUser");
-    root->addWidget(user);
+    // Footer identity: empty + hidden until a real session sets it (auth on).
+    // With auth off there is no user, so we show no placeholder name.
+    userLabel_ = new QLabel(this);
+    userLabel_->setObjectName("sidebarUser");
+    userLabel_->hide();
+    root->addWidget(userLabel_);
+
+    // Self-service change-password: hidden until enableChangePassword() wires it.
+    changePasswordButton_ = new QPushButton(tr("Change password"), this);
+    changePasswordButton_->setObjectName("sidebarChangePassword");
+    changePasswordButton_->hide();
+    root->addWidget(changePasswordButton_);
+
+    // Sign-out control: hidden until enableSignOut() wires it (auth builds only).
+    signOutButton_ = new QPushButton(tr("Sign out"), this);
+    signOutButton_->setObjectName("sidebarSignOut");
+    signOutButton_->setIcon(icons::signOut());
+    signOutButton_->setIconSize(QSize(kNavIconSize, kNavIconSize));
+    signOutButton_->hide();
+    root->addWidget(signOutButton_);
+
+    // Kiosk mode has no title bar, so the shell provides its own quit control.
+    quitButton_ = new QPushButton(tr("Exit application"), this);
+    quitButton_->setObjectName("sidebarQuit");
+    quitButton_->setIcon(icons::quit());
+    quitButton_->setIconSize(QSize(kNavIconSize, kNavIconSize));
+    connect(quitButton_, &QPushButton::clicked, qApp, &QCoreApplication::quit);
+    root->addWidget(quitButton_);
 
     group_ = new QButtonGroup(this);
     group_->setExclusive(true);
@@ -66,6 +111,49 @@ int QtSidebar::addItem(const QString& label, const QIcon& icon) {
     return index;
 }
 
+void QtSidebar::setItemLabel(int index, const QString& label) {
+    if (auto* button = group_->button(index)) {
+        button->setText(label);
+    }
+}
+
+void QtSidebar::setUserText(const QString& text) {
+    userLabel_->setText(text);
+    userLabel_->show();
+}
+
+void QtSidebar::enableSignOut(std::function<void()> handler) {
+    connect(signOutButton_, &QPushButton::clicked, this,
+            [handler = std::move(handler)] {
+                if (handler) {
+                    handler();
+                }
+            });
+    signOutButton_->show();
+}
+
+void QtSidebar::enableChangePassword(std::function<void()> handler) {
+    connect(changePasswordButton_, &QPushButton::clicked, this,
+            [handler = std::move(handler)] {
+                if (handler) {
+                    handler();
+                }
+            });
+    changePasswordButton_->show();
+}
+
+void QtSidebar::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        brandLabel_->setText(tr("Industrial HMI"));
+        // The footer identity (name + role code) is not a translatable string,
+        // so it is left untouched on a language change.
+        changePasswordButton_->setText(tr("Change password"));
+        signOutButton_->setText(tr("Sign out"));
+        quitButton_->setText(tr("Exit application"));
+    }
+    QWidget::changeEvent(event);
+}
+
 void QtSidebar::select(int index) {
     if (auto* button = group_->button(index)) {
         button->setChecked(true);
@@ -73,7 +161,7 @@ void QtSidebar::select(int index) {
 }
 
 void QtSidebar::setBadge(int index, int count) {
-    if (index < 0 || index >= static_cast<int>(badges_.size())) {
+    if (index < 0 || static_cast<std::size_t>(index) >= badges_.size()) {
         return;
     }
     auto* badge = badges_[index];

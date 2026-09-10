@@ -13,6 +13,7 @@
 
 #include <sigc++/functors/mem_fun.h>
 
+#include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -96,6 +97,20 @@ QtAlertsPage::QtAlertsPage(presenter::AlertCenter& alertCenter, QWidget* parent)
 QtAlertsPage::~QtAlertsPage() {
     alertsConn_.disconnect();
     historyConn_.disconnect();
+}
+
+void QtAlertsPage::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        ui_->retranslateUi(this);
+        // The header + action button text depend on the active/history toggle,
+        // so re-derive them rather than trusting retranslateUi; then rebuild the
+        // cards so their badges + empty-state labels re-read the catalog.
+        ui_->headerLabel->setText(showingHistory_ ? tr("History") : tr("Alerts"));
+        ui_->clearButton->setText(showingHistory_ ? tr("Clear history")
+                                                  : tr("Clear all"));
+        rebuild();
+    }
+    QWidget::changeEvent(event);
 }
 
 void QtAlertsPage::scheduleRebuild() {

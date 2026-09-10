@@ -2,6 +2,7 @@
 
 #include "src/qt/view/QtTheme.h"
 
+#include <QEvent>
 #include <QLabel>
 #include <QObject>
 #include <QString>
@@ -55,6 +56,7 @@ QtQualityCard::QtQualityCard(std::uint32_t checkpointId, QWidget* parent)
 
 void QtQualityCard::applyViewModel(
     const presenter::QualityCheckpointViewModel& viewModel) {
+    lastViewModel_ = viewModel;
     if (!viewModel.checkpointName.empty()) {
         setTitle(QString::fromStdString(viewModel.checkpointName));
     }
@@ -74,6 +76,19 @@ void QtQualityCard::applyViewModel(
         viewModel.lastDefect.empty()
             ? tr("No defects")
             : tr("Last: %1").arg(QString::fromStdString(viewModel.lastDefect)));
+}
+
+void QtQualityCard::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        if (lastViewModel_) {
+            applyViewModel(*lastViewModel_);
+        } else {
+            setTitle(tr("Checkpoint %1").arg(checkpointId_));
+            statusLabel_->setText(tr("Status: -"));
+            passRateLabel_->setText(tr("Pass rate: -"));
+        }
+    }
+    QGroupBox::changeEvent(event);
 }
 
 }  // namespace app::view

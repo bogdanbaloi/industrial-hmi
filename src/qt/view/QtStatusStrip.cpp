@@ -7,12 +7,13 @@
 #include "src/qt/view/QtTheme.h"
 #include "src/qt/view/QtUiDispatch.h"
 
+#include <QDateTime>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLayoutItem>
 #include <QObject>
 #include <QString>
-#include <QTime>
 #include <QTimer>
 
 namespace app::view {
@@ -40,28 +41,36 @@ struct Style {
 
 Style systemStyle(int state) {
     switch (state) {
-        case kStateRunning:     return {QObject::tr("Running"), theme::kColorOk};
-        case kStateError:       return {QObject::tr("Error"), theme::kColorAlarm};
-        case kStateCalibration: return {QObject::tr("Calibration"),
-                                        theme::kColorInfo};
+        case kStateRunning:
+            return {.text = QObject::tr("Running"), .color = theme::kColorOk};
+        case kStateError:
+            return {.text = QObject::tr("Error"), .color = theme::kColorAlarm};
+        case kStateCalibration:
+            return {.text  = QObject::tr("Calibration"),
+                    .color = theme::kColorInfo};
         case kStateIdle:
-        default:                return {QObject::tr("Idle"),
-                                        theme::kColorNeutral};
+        default:
+            return {.text  = QObject::tr("Idle"),
+                    .color = theme::kColorNeutral};
     }
 }
 
 Style backendStyle(integration::BackendState state) {
     using State = integration::BackendState;
     switch (state) {
-        case State::Connected:    return {QObject::tr("online"), theme::kColorOk};
-        case State::Connecting:   return {QObject::tr("connecting"),
-                                          theme::kColorWarning};
-        case State::Degraded:     return {QObject::tr("degraded"),
-                                          theme::kColorWarning};
-        case State::Disconnected: return {QObject::tr("offline"),
-                                          theme::kColorNeutral};
+        case State::Connected:
+            return {.text = QObject::tr("online"), .color = theme::kColorOk};
+        case State::Connecting:
+            return {.text  = QObject::tr("connecting"),
+                    .color = theme::kColorWarning};
+        case State::Degraded:
+            return {.text  = QObject::tr("degraded"),
+                    .color = theme::kColorWarning};
+        case State::Disconnected:
+            return {.text  = QObject::tr("offline"),
+                    .color = theme::kColorNeutral};
     }
-    return {QObject::tr("offline"), theme::kColorNeutral};
+    return {.text = QObject::tr("offline"), .color = theme::kColorNeutral};
 }
 
 }  // namespace
@@ -83,7 +92,13 @@ QtStatusStrip::QtStatusStrip(QWidget* parent) : QWidget(parent) {
     backendsLayout_->setSpacing(kDotSpacing);
     layout->addWidget(backends);
 
+    // Connectivity (state pill + backend chips) sits on the left; the summary +
+    // clock sit on the right, with the slack between the two groups.
     layout->addStretch();
+    summaryLabel_ = new QLabel();
+    summaryLabel_->setStyleSheet(theme::coloredBold(theme::kColorNeutral));
+    layout->addWidget(summaryLabel_);
+    layout->addSpacing(kBarSpacing);
 
     clock_ = new QLabel();
     clock_->setStyleSheet(theme::coloredBold(theme::kColorNeutral));
@@ -107,6 +122,7 @@ void QtStatusStrip::setSystemState(int state) {
 }
 
 void QtStatusStrip::applySystemState(int state) {
+    lastState_        = state;
     const Style style = systemStyle(state);
     stateBadge_->setText(style.text);
     stateBadge_->setStyleSheet(
@@ -123,6 +139,9 @@ void QtStatusStrip::onBackendHealthChanged(
 
 void QtStatusStrip::applyBackendHealth(
     const presenter::BackendHealthViewModel& viewModel) {
+    lastHealth_ = viewModel;
+    haveHealth_ = true;
+
     // Compact one-line inventory: a coloured "name" per backend, tooltip
     // carrying the state word + metrics. Full rebuild (tiny list).
     while (QLayoutItem* item = backendsLayout_->takeAt(0)) {
@@ -130,23 +149,52 @@ void QtStatusStrip::applyBackendHealth(
         delete item;
     }
 
+    int online = 0;
+    for (const auto& entry : viewModel.entries) {
+        if (entry.state == integration::BackendState::Connected) {
+            ++online;
+        }
+    }
+    const auto total = static_cast<int>(viewModel.entries.size());
+    summaryLabel_->setText(
+        total == 0 ? tr("No backends configured")
+                   : tr("%1 of %2 backends online").arg(online).arg(total));
+
     for (const auto& entry : viewModel.entries) {
         const Style style = backendStyle(entry.state);
-        auto* dot = new QLabel(QStringLiteral("● ") +
-                               QString::fromStdString(entry.name));
-        dot->setStyleSheet(theme::coloredBold(style.color));
+        // Each backend is a bordered chip carrying its name in its state colour
+        // (green online / amber connecting / grey offline), with the state word
+        // + metrics in the tooltip. Clearer than a run of coloured bullets.
+        auto* chip = new QLabel(QString::fromStdString(entry.name));
+        chip->setStyleSheet(
+            QString("border: 1px solid %1; color: %1; border-radius: 8px;"
+                    " padding: 1px 8px; font-weight: bold;")
+                .arg(style.color));
         QString tip = style.text;
         if (!entry.metricsLine.empty()) {
             tip += QStringLiteral(" · ") +
                    QString::fromStdString(entry.metricsLine);
         }
-        dot->setToolTip(tip);
-        backendsLayout_->addWidget(dot);
+        chip->setToolTip(tip);
+        backendsLayout_->addWidget(chip);
     }
 }
 
+void QtStatusStrip::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        // Re-render the pill + summary in the new language from the cached
+        // values; the clock is locale-independent (numeric).
+        applySystemState(lastState_);
+        if (haveHealth_) {
+            applyBackendHealth(lastHealth_);
+        }
+    }
+    QWidget::changeEvent(event);
+}
+
 void QtStatusStrip::updateClock() {
-    clock_->setText(QTime::currentTime().toString(QStringLiteral("HH:mm:ss")));
+    clock_->setText(QDateTime::currentDateTime().toString(
+        QStringLiteral("yyyy-MM-dd  HH:mm:ss")));
 }
 
 }  // namespace app::view

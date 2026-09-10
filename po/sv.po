@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: industrial-hmi 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-22 11:14+0300\n"
+"POT-Creation-Date: 2026-09-10 16:48+0300\n"
 "PO-Revision-Date: 2026-04-15 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
@@ -16,83 +16,187 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: src/core/Bootstrap.cpp:81
 msgid ""
 "Could not load configuration from {}. Re-install the application or restore "
 "the config file."
-msgstr "Kunde inte läsa konfigurationen från {}. Installera om applikationen eller återställ konfigurationsfilen."
+msgstr ""
+"Kunde inte läsa konfigurationen från {}. Installera om applikationen eller "
+"återställ konfigurationsfilen."
 
+#: src/core/Bootstrap.cpp:107
+msgid "Configuration is syntactically valid but semantically rejected:\n"
+msgstr "Konfigurationen är syntaktiskt giltig men semantiskt avvisad:\n"
+
+#: src/core/Bootstrap.cpp:170
 msgid ""
-"SQLite initialisation failed. Check logs for details and verify disk space / "
-"permissions for the database path."
-msgstr "SQLite-initiering misslyckades. Kontrollera loggarna och verifiera diskutrymme / behörigheter för databassökvägen."
+"SQLite initialisation failed. Check logs for details and verify disk space /"
+" permissions for the database path."
+msgstr ""
+"SQLite-initiering misslyckades. Kontrollera loggarna och verifiera "
+"diskutrymme / behörigheter för databassökvägen."
 
+#: src/presenter/DashboardPresenter.cpp:269
 msgid "Equipment {} error"
 msgstr "Utrustning {} fel"
 
+#: src/presenter/DashboardPresenter.cpp:270
 msgid "Equipment {} offline"
 msgstr "Utrustning {} offline"
 
+#: src/presenter/DashboardPresenter.cpp:273
 msgid "Line unavailable for production."
 msgstr "Linjen är inte tillgänglig för produktion."
 
+#: src/presenter/DashboardPresenter.cpp:325
 msgid "{} critical"
 msgstr "{} kritisk"
 
+#: src/presenter/DashboardPresenter.cpp:326
 msgid "{} below target"
 msgstr "{} under mål"
 
+#: src/presenter/DashboardPresenter.cpp:330
 msgid "Pass rate {:.1f}% (target {:.0f}%)"
 msgstr "Godkänd andel {:.1f}% (mål {:.0f}%)"
 
-msgid "[BB] Industrial HMI"
-msgstr "[BB] Industriellt HMI"
+#: src/presenter/DashboardPresenter.cpp:360
+msgid "System fault"
+msgstr "Systemfel"
 
-msgid "MVP Architecture"
-msgstr "MVP-arkitektur"
+#: src/presenter/DashboardPresenter.cpp:362
+msgid "Production locked out."
+msgstr "Produktion låst."
 
+#: src/presenter/DashboardPresenter.cpp:409
+msgid "Not connected"
+msgstr "Ej ansluten"
+
+#: src/presenter/DashboardPresenter.cpp:414
+msgid "Supply level: 85%"
+msgstr "Förrådsnivå: 85 %"
+
+#: src/presenter/DashboardPresenter.cpp:419
+msgid "Supply level: 60%"
+msgstr "Förrådsnivå: 60 %"
+
+#: src/presenter/DashboardPresenter.cpp:424
+msgid "Low supply (12%)"
+msgstr "Lågt förråd (12 %)"
+
+#: src/presenter/DashboardPresenter.cpp:439
+msgid "Idle - At home position"
+msgstr "Vilande - I hemläge"
+
+#: src/presenter/DashboardPresenter.cpp:446
+msgid "Working - Position X:150 Y:200"
+msgstr "Arbetar - Position X:150 Y:200"
+
+#: src/presenter/DashboardPresenter.cpp:453
+msgid "Error - Position fault"
+msgstr "Fel - Positionsfel"
+
+#: src/presenter/DashboardPresenter.cpp:457
+msgid "Position timeout detected"
+msgstr "Positionstimeout upptäckt"
+
+#: src/presenter/ProductsPresenter.cpp:270
+msgid "Recipe loading is not available."
+msgstr "Receptinläsning är inte tillgänglig."
+
+#: src/presenter/ProductsPresenter.cpp:278
+msgid "Product not found."
+msgstr "Produkten hittades inte."
+
+#: src/presenter/ProductsPresenter.cpp:288
+msgid "No recipe defined for {}."
+msgstr "Inget recept definierat för {}."
+
+#: src/presenter/ProductsPresenter.cpp:299
+msgid "Loaded recipe for {}."
+msgstr "Recept laddat för {}."
+
+#: src/gtk/view/MainWindow.cpp:336 src/qt/view/QtSidebar.cpp:44
+#: src/qt/view/QtSidebar.cpp:147 assets/ui/main-window.ui:52
+msgid "Industrial HMI"
+msgstr "Industriell HMI"
+
+#: src/gtk/view/MainWindow.cpp:337 assets/ui/main-window.ui:60
+msgid "Production Monitor"
+msgstr "Produktionsövervakning"
+
+#: src/gtk/view/MainWindow.cpp:338 assets/ui/main-window.ui:145
 msgid "Close Application"
 msgstr "Stäng programmet"
 
-msgid "Version 1.0.0"
-msgstr "Version 1.0.0"
+#: src/gtk/view/MainWindow.cpp:339 assets/ui/main-window.ui:172
+msgid "Version 1.2.0"
+msgstr "Version 1.2.0"
 
+#: src/gtk/view/MainWindow.cpp:340 assets/ui/main-window.ui:180
 msgid "Portfolio Demo"
 msgstr "Portfoliodemo"
 
+#: src/gtk/view/MainWindow.cpp:343 assets/ui/main-window.ui:134
 msgid "E-STOP"
 msgstr "NÖDSTOPP"
 
+#: src/gtk/view/MainWindow.cpp:759 src/gtk/view/pages/SettingsPage.cpp:62
+#: src/qt/view/QtMainWindow.cpp:130 src/qt/view/QtMainWindow.cpp:197
+#: assets/ui/settings-page.ui:32
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:149
 msgid "Settings"
 msgstr "Inställningar"
 
+#: src/gtk/view/MainWindow.cpp:760 src/gtk/view/pages/DashboardPage.cpp:125
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:177
 msgid "Dashboard"
 msgstr "Översikt"
 
+#: src/gtk/view/DialogManager.cpp:56 src/gtk/view/DialogManager.cpp:81
+#: src/gtk/view/DialogManager.cpp:121 src/gtk/view/DialogManager.cpp:184
+#: src/gtk/view/pages/ProductsPage.cpp:415
+#: src/gtk/view/pages/ProductsPage.cpp:523
+#: src/gtk/view/pages/ProductsPage.cpp:655
+#: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:135
+#: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:121
+#: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:121
+#: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:149
 msgid "Cancel"
 msgstr "Avbryt"
 
+#: src/gtk/view/DialogManager.cpp:57 src/gtk/view/DialogManager.cpp:82
+#: src/gtk/view/DialogManager.cpp:122 src/gtk/view/DialogManager.cpp:185
+#: src/gtk/view/AboutDialog.cpp:118
 msgid "OK"
 msgstr "OK"
 
 # About dialog
+#: src/gtk/view/AboutDialog.cpp:15
 msgid "About"
 msgstr "Om"
 
+#: src/gtk/view/AboutDialog.cpp:36
 msgid "Version %1"
 msgstr "Version %1"
 
+#: src/gtk/view/AboutDialog.cpp:48
 msgid "Architecture"
 msgstr "Arkitektur"
 
+#: src/gtk/view/AboutDialog.cpp:62
 msgid "Build Info"
 msgstr "Bygginformation"
 
+#: src/gtk/view/AboutDialog.cpp:74
 msgid "Supported Languages"
 msgstr "Språk som stöds"
 
+#: src/gtk/view/AboutDialog.cpp:87
 msgid "Quality Assurance"
 msgstr "Kvalitetssäkring"
 
+#: src/gtk/view/AboutDialog.cpp:93
 msgid ""
 "86+ unit tests (GoogleTest + gmock)\n"
 "9 test binaries, CI/CD with coverage reporting"
@@ -100,6 +204,7 @@ msgstr ""
 "86+ enhetstester (GoogleTest + gmock)\n"
 "9 testbinärer, CI/CD med täckningsrapportering"
 
+#: src/gtk/view/AboutDialog.cpp:107
 msgid ""
 "Proprietary - All Rights Reserved.\n"
 "For interview evaluation purposes only."
@@ -107,12 +212,49 @@ msgstr ""
 "Proprietär - Alla rättigheter förbehållna.\n"
 "Endast för utvärdering vid anställningsintervju."
 
+#: src/gtk/view/pages/DashboardPage.cpp:151
+#: src/gtk/view/pages/DashboardPage.cpp:158
+#: src/gtk/view/pages/DashboardPage.cpp:165
+#: src/gtk/view/pages/ProductsPage.cpp:59
+msgid "Requires Maintenance role"
+msgstr "Kräver underhållsroll"
+
+#: src/gtk/view/pages/DashboardPage.cpp:337
+#: src/gtk/view/pages/DashboardPage.cpp:927
+#: src/gtk/view/pages/ProductsPage.cpp:434
+#: src/gtk/view/pages/ProductsPage.cpp:544
+#: src/gtk/view/pages/ProductsPage.cpp:573
+#: src/gtk/view/pages/ProductsPage.cpp:675
+#: src/gtk/view/pages/ProductsPage.cpp:711
+#: src/gtk/view/pages/SettingsPage.cpp:328 src/qt/view/QtStatusStrip.cpp:47
+#: src/qt/view/widgets/QtActuatorCard.cpp:22
+#: src/qt/view/widgets/QtEquipmentCard.cpp:30
 msgid "Error"
 msgstr "Fel"
 
+#: src/gtk/view/pages/DashboardPage.cpp:368 src/qt/view/QtDashboardPage.cpp:74
+#: src/qt/view/QtDashboardPage.cpp:88 src/qt/view/QtDashboardPage.cpp:249
+#: src/qt/view/QtDashboardPage.cpp:254
+msgid "OEE"
+msgstr ""
+
+#: src/gtk/view/pages/DashboardPage.cpp:378
+msgid "THROUGHPUT"
+msgstr "GENOMSTRÖMNING"
+
+#: src/gtk/view/pages/DashboardPage.cpp:379
+msgid "u/h"
+msgstr ""
+
+#: src/gtk/view/pages/DashboardPage.cpp:389
+msgid "PASS RATE"
+msgstr "GODKÄNDGRAD"
+
+#: src/gtk/view/pages/DashboardPage.cpp:532
 msgid "Confirm Reset"
 msgstr "Bekräfta återställning"
 
+#: src/gtk/view/pages/DashboardPage.cpp:533
 msgid ""
 "Reset the system?\n"
 "\n"
@@ -122,9 +264,11 @@ msgstr ""
 "\n"
 "Alla åtgärder stoppas och utrustningen återgår till ursprungsläget."
 
+#: src/gtk/view/pages/DashboardPage.cpp:551
 msgid "Confirm Calibration"
 msgstr "Bekräfta kalibrering"
 
+#: src/gtk/view/pages/DashboardPage.cpp:552
 msgid ""
 "Start calibration procedure?\n"
 "\n"
@@ -136,112 +280,227 @@ msgstr ""
 "All utrustning flyttas till utgångsläget.\n"
 "Detta kan ta flera minuter."
 
+#: src/gtk/view/pages/DashboardPage.cpp:574
+msgid "Confirm Fault Injection"
+msgstr "Bekräfta felinjektion"
+
+#: src/gtk/view/pages/DashboardPage.cpp:575
+msgid ""
+"Inject a system fault?\n"
+"\n"
+"This drives the system to the ERROR safe-state and raises a priority-1 alarm. Use Acknowledge + Reset to recover."
+msgstr ""
+"Injicera ett systemfel?\n"
+"\n"
+"Detta för systemet till det säkra ERROR-tillståndet och utlöser ett prioritet 1-larm. Använd Kvittera + Återställ för att återhämta."
+
+#: src/gtk/view/pages/DashboardPage.cpp:678
 msgid "ONLINE"
 msgstr "ANSLUTEN"
 
+#: src/gtk/view/pages/DashboardPage.cpp:679
 msgid "PROCESSING"
 msgstr "BEARBETAR"
 
+#: src/gtk/view/pages/DashboardPage.cpp:680
+#: src/gtk/view/widgets/SystemStatusBadge.h:56
 msgid "ERROR"
 msgstr "FEL"
 
+#: src/gtk/view/pages/DashboardPage.cpp:681 assets/ui/dashboard-page.ui:232
+#: assets/ui/dashboard-page.ui:254 assets/ui/dashboard-page.ui:276
 msgid "OFFLINE"
 msgstr "FRÅNKOPPLAD"
 
+#: src/gtk/view/pages/DashboardPage.cpp:682
+#: src/gtk/view/widgets/SystemStatusBadge.h:60
 msgid "UNKNOWN"
 msgstr "OKÄND"
 
+#: src/gtk/view/pages/DashboardPage.cpp:737
 msgid "%1 inspected • %2 defects"
 msgstr "%1 inspekterade • %2 defekter"
 
+#: src/gtk/view/pages/DashboardPage.cpp:743
+#: src/qt/view/widgets/QtQualityCard.cpp:78
 msgid "Last: %1"
 msgstr "Senaste: %1"
 
+#: src/gtk/view/pages/DashboardPage.cpp:745
 msgid "No defects detected"
 msgstr "Inga defekter upptäckta"
 
+#: src/gtk/view/pages/DashboardPage.cpp:777
+#: src/gtk/view/widgets/SystemStatusBadge.h:54
 msgid "RUNNING"
 msgstr "I DRIFT"
 
+#: src/gtk/view/pages/DashboardPage.cpp:780
 msgid "STOPPED"
 msgstr "STOPPAD"
 
+#: src/gtk/view/pages/DashboardPage.cpp:783
+#: src/gtk/view/widgets/SystemStatusBadge.h:58 assets/ui/dashboard-page.ui:395
 msgid "CALIBRATION"
 msgstr "KALIBRERING"
 
+#: src/gtk/view/pages/DashboardPage.cpp:786
+#: src/gtk/view/widgets/SystemStatusBadge.h:52
 msgid "IDLE"
 msgstr "INAKTIV"
 
+#: src/gtk/view/pages/DashboardPage.cpp:873
+#: src/gtk/view/pages/DashboardPage.cpp:936
+#: src/gtk/view/pages/DashboardPage.cpp:942
+msgid "uptime"
+msgstr "drifttid"
+
+#: src/gtk/view/pages/DashboardPage.cpp:925 src/qt/view/QtStatusStrip.cpp:53
+#: src/qt/view/widgets/QtActuatorCard.cpp:20
+msgid "Idle"
+msgstr "Vilande"
+
+#: src/gtk/view/pages/DashboardPage.cpp:926 src/qt/view/QtStatusStrip.cpp:45
+msgid "Running"
+msgstr "Kör"
+
+#: src/gtk/view/pages/DashboardPage.cpp:928 src/qt/view/QtStatusStrip.cpp:49
+msgid "Calibration"
+msgstr "Kalibrering"
+
+#: src/gtk/view/pages/ProductsPage.cpp:39 assets/ui/products-page.ui:24
 msgid "Products Database"
 msgstr "Produktdatabas"
 
+#: src/gtk/view/pages/ProductsPage.cpp:141
+#: src/gtk/view/pages/ProductsPage.cpp:703
 msgid "Product Code"
 msgstr "Produktkod"
 
+#: src/gtk/view/pages/ProductsPage.cpp:143
+#: src/gtk/view/pages/ProductsPage.cpp:703
 msgid "Name"
 msgstr "Namn"
 
+#: src/gtk/view/pages/ProductsPage.cpp:145
+#: src/gtk/view/pages/ProductsPage.cpp:703 src/qt/view/QtProductsPage.cpp:45
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:184
 msgid "Status"
 msgstr "Status"
 
+#: src/gtk/view/pages/ProductsPage.cpp:148
+#: src/gtk/view/pages/ProductsPage.cpp:244
+#: src/gtk/view/pages/ProductsPage.cpp:490
+#: src/gtk/view/pages/ProductsPage.cpp:621
 msgid "Active"
 msgstr "Aktiv"
 
+#: src/gtk/view/pages/ProductsPage.cpp:149
+#: src/gtk/view/pages/ProductsPage.cpp:244
+#: src/gtk/view/pages/ProductsPage.cpp:491
+#: src/gtk/view/pages/ProductsPage.cpp:622
 msgid "Inactive"
 msgstr "Inaktiv"
 
+#: src/gtk/view/pages/ProductsPage.cpp:150
+#: src/gtk/view/pages/ProductsPage.cpp:492
+#: src/gtk/view/pages/ProductsPage.cpp:623
 msgid "Low Stock"
 msgstr "Lågt lager"
 
+#: src/gtk/view/pages/ProductsPage.cpp:153
+#: src/gtk/view/pages/ProductsPage.cpp:704
 msgid "Stock"
 msgstr "Lager"
 
+#: src/gtk/view/pages/ProductsPage.cpp:155
+#: src/gtk/view/pages/ProductsPage.cpp:704 src/qt/view/QtProductsPage.cpp:46
 msgid "Quality %"
 msgstr "Kvalitet %"
 
+#: src/gtk/view/pages/ProductsPage.cpp:232
+#: src/gtk/view/pages/ProductsPage.cpp:235
 msgid "Product Details"
 msgstr "Produktdetaljer"
 
+#: src/gtk/view/pages/ProductsPage.cpp:240
 msgid "Product ID: %1"
 msgstr "Produkt-ID: %1"
 
+#: src/gtk/view/pages/ProductsPage.cpp:242
 msgid "Created: %1"
 msgstr "Skapad: %1"
 
+#: src/gtk/view/pages/ProductsPage.cpp:243
+#: src/qt/view/widgets/QtActuatorCard.cpp:63
+#: src/qt/view/widgets/QtEquipmentCard.cpp:85
+#: src/qt/view/widgets/QtQualityCard.cpp:64
 msgid "Status: %1"
 msgstr "Status: %1"
 
-msgid "Add New Product"
-msgstr "Lägg till ny produkt"
+#: src/gtk/view/pages/ProductsPage.cpp:361 assets/ui/products-page.ui:131
+msgid "Edit Recipe"
+msgstr "Redigera recept"
 
+#: src/gtk/view/pages/ProductsPage.cpp:376
+#: src/gtk/view/pages/ProductsPage.cpp:469
+#: src/gtk/view/pages/ProductsPage.cpp:600
 msgid "Product Code:"
 msgstr "Produktkod:"
 
-msgid "Name:"
-msgstr "Namn:"
+#: src/gtk/view/pages/ProductsPage.cpp:385
+msgid "Operations:"
+msgstr "Åtgärder:"
 
-msgid "Product G"
-msgstr "Produkt G"
-
-msgid "Status:"
-msgstr "Status:"
-
-msgid "Stock (units):"
-msgstr "Lager (enheter):"
-
-msgid "Quality (%):"
-msgstr "Kvalitet (%):"
-
+#: src/gtk/view/pages/ProductsPage.cpp:416
+#: src/gtk/view/pages/ProductsPage.cpp:524
+#: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:150
 msgid "Save"
 msgstr "Spara"
 
+#: src/gtk/view/pages/ProductsPage.cpp:434
+msgid "Failed to save recipe."
+msgstr "Det gick inte att spara receptet."
+
+#: src/gtk/view/pages/ProductsPage.cpp:457
+#: src/gtk/view/pages/ProductsPage.cpp:458
+msgid "Add New Product"
+msgstr "Lägg till ny produkt"
+
+#: src/gtk/view/pages/ProductsPage.cpp:478
+#: src/gtk/view/pages/ProductsPage.cpp:609
+msgid "Name:"
+msgstr "Namn:"
+
+#: src/gtk/view/pages/ProductsPage.cpp:481
+msgid "Product G"
+msgstr "Produkt G"
+
+#: src/gtk/view/pages/ProductsPage.cpp:487
+#: src/gtk/view/pages/ProductsPage.cpp:618
+msgid "Status:"
+msgstr "Status:"
+
+#: src/gtk/view/pages/ProductsPage.cpp:498
+#: src/gtk/view/pages/ProductsPage.cpp:631
+msgid "Stock (units):"
+msgstr "Lager (enheter):"
+
+#: src/gtk/view/pages/ProductsPage.cpp:510
+#: src/gtk/view/pages/ProductsPage.cpp:642
+msgid "Quality (%):"
+msgstr "Kvalitet (%):"
+
+#: src/gtk/view/pages/ProductsPage.cpp:545
 msgid "Failed to add product. Product code may already exist."
 msgstr ""
 "Det gick inte att lägga till produkten. Produktkoden finns kanske redan."
 
+#: src/gtk/view/pages/ProductsPage.cpp:561
 msgid "Confirm Delete"
 msgstr "Bekräfta borttagning"
 
+#: src/gtk/view/pages/ProductsPage.cpp:562
 msgid ""
 "Delete \"%1\"?\n"
 "\n"
@@ -253,24 +512,32 @@ msgstr ""
 "Produkten markeras som inaktiv (mjuk borttagning).\n"
 "Den visas inte längre i listan."
 
+#: src/gtk/view/pages/ProductsPage.cpp:574
 msgid "Failed to delete product."
 msgstr "Det gick inte att ta bort produkten."
 
+#: src/gtk/view/pages/ProductsPage.cpp:588
+#: src/gtk/view/pages/ProductsPage.cpp:589
 msgid "Edit Product"
 msgstr "Redigera produkt"
 
+#: src/gtk/view/pages/ProductsPage.cpp:656
 msgid "Update"
 msgstr "Uppdatera"
 
+#: src/gtk/view/pages/ProductsPage.cpp:676
 msgid "Failed to update product."
 msgstr "Det gick inte att uppdatera produkten."
 
+#: src/gtk/view/pages/ProductsPage.cpp:712
 msgid "Could not write the CSV file."
 msgstr "Det gick inte att skriva CSV-filen."
 
+#: src/gtk/view/pages/ProductsPage.cpp:723
 msgid "Export Complete"
 msgstr "Export klar"
 
+#: src/gtk/view/pages/ProductsPage.cpp:725
 msgid ""
 "Products exported to:\n"
 "%1"
@@ -278,161 +545,1083 @@ msgstr ""
 "Produkter exporterade till:\n"
 "%1"
 
+#: src/gtk/view/pages/SettingsPage.cpp:138
 msgid "This palette is light-only by design."
-msgstr ""
+msgstr "Denna palett är endast ljus enligt design."
 
+#: src/gtk/view/pages/SettingsPage.cpp:144
 msgid "This palette is dark-only by design."
-msgstr ""
+msgstr "Denna palett är endast mörk enligt design."
 
+#: src/gtk/view/pages/SettingsPage.cpp:196
 msgid "Light only"
 msgstr "Endast ljust"
 
+#: src/gtk/view/pages/SettingsPage.cpp:198
 msgid "Dark only"
 msgstr "Endast mörkt"
 
+#: src/gtk/view/pages/SettingsPage.cpp:199
 msgid "Dark + Light"
 msgstr "Mörkt + Ljust"
 
+#: src/gtk/view/pages/SettingsPage.cpp:329
 msgid "Could not save the language preference."
 msgstr "Det gick inte att spara språkinställningen."
 
+#: src/gtk/view/widgets/AlertsPanel.h:160 src/qt/view/QtMainWindow.cpp:119
+#: src/qt/view/QtMainWindow.cpp:186 src/qt/view/QtAlertsPage.cpp:69
+#: src/qt/view/QtAlertsPage.cpp:108
+#: build-qt/objectsQt_autogen/include/ui_QtAlertsPage.h:88
+#: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:109
 msgid "History"
 msgstr "Historik"
 
+#: src/gtk/view/widgets/AlertsPanel.h:160 src/qt/view/QtMainWindow.cpp:114
+#: src/qt/view/QtMainWindow.cpp:181 src/qt/view/QtAlertsPage.cpp:69
+#: src/qt/view/QtAlertsPage.cpp:108
+#: build-qt/objectsQt_autogen/include/ui_QtAlertsPage.h:87
 msgid "Alerts"
 msgstr "Varningar"
 
+#: src/gtk/view/widgets/AlertsPanel.h:171 src/qt/view/QtAlertsPage.cpp:70
+#: src/qt/view/QtAlertsPage.cpp:109
 msgid "Clear history"
 msgstr "Rensa historik"
 
+#: src/gtk/view/widgets/AlertsPanel.h:172 src/qt/view/QtAlertsPage.cpp:70
+#: src/qt/view/QtAlertsPage.cpp:110
+#: build-qt/objectsQt_autogen/include/ui_QtAlertsPage.h:89
 msgid "Clear all"
 msgstr "Rensa alla"
 
+#: src/gtk/view/widgets/AlertsPanel.h:176
 msgid "Show active alerts"
 msgstr "Visa aktiva varningar"
 
+#: src/gtk/view/widgets/AlertsPanel.h:177
 msgid "Show history"
 msgstr "Visa historik"
 
+#: src/gtk/view/widgets/AlertsPanel.h:236 src/qt/view/QtAlertsPage.cpp:145
 msgid "No alerts"
 msgstr "Inga varningar"
 
+#: src/gtk/view/widgets/AlertsPanel.h:255 src/qt/view/QtAlertsPage.cpp:134
 msgid "No history"
 msgstr "Ingen historik"
 
-msgid "Dismiss"
-msgstr "Avfärda"
+#: src/gtk/view/widgets/AlertsPanel.h:294
+#: src/gtk/view/widgets/AlertsPanel.h:429
+msgid "ISA-18.2 priority (1 = most urgent)"
+msgstr "ISA-18.2-prioritet (1 = mest brådskande)"
 
-msgid "WORK UNIT"
-msgstr "ARBETSENHET"
+#: src/gtk/view/widgets/AlertsPanel.h:333
+msgid "Shelve (auto-unshelves after 5 min)"
+msgstr "Hyllägg (avhylls automatiskt efter 5 min)"
 
-msgid "Work Unit:"
-msgstr "Arbetsenhet:"
+#: src/gtk/view/widgets/AlertsPanel.h:345
+#: src/gtk/view/widgets/AlertsPanel.h:456
+msgid "Unshelve"
+msgstr "Avhylls"
 
-msgid "Product:"
-msgstr "Produkt:"
+#: src/gtk/view/widgets/AlertsPanel.h:361 src/qt/view/QtAlertsPage.cpp:192
+msgid "Acknowledge"
+msgstr "Kvittera"
 
+#: src/gtk/view/widgets/AlertsPanel.h:395
+#: src/gtk/view/widgets/AlertsPanel.h:523 src/qt/view/QtAlertsPage.cpp:53
+msgid "SHELVED"
+msgstr "HYLLAGD"
+
+#: src/gtk/view/widgets/AlertsPanel.h:397
+msgid "Alarms operator-shelved; auto-unshelve at the listed deadline"
+msgstr ""
+"Larm hyllagda av operatören; avhylls automatiskt vid angiven tidsgräns"
+
+#: src/gtk/view/widgets/AlertsPanel.h:442
+msgid "Time remaining until auto-unshelve"
+msgstr "Tid kvar till automatisk avhyllning"
+
+#: src/gtk/view/widgets/AlertsPanel.h:490
+msgid "EXPIRED"
+msgstr "UTGÅNGEN"
+
+#: src/gtk/view/widgets/AlertsPanel.h:502
+msgid "left"
+msgstr "kvar"
+
+#: src/gtk/view/widgets/AlertsPanel.h:520 src/qt/view/QtAlertsPage.cpp:50
+msgid "UNACK"
+msgstr ""
+
+#: src/gtk/view/widgets/AlertsPanel.h:521 src/qt/view/QtAlertsPage.cpp:51
+msgid "ACK"
+msgstr ""
+
+#: src/gtk/view/widgets/AlertsPanel.h:522 src/qt/view/QtAlertsPage.cpp:52
+msgid "RTN"
+msgstr ""
+
+#: src/gtk/view/widgets/AlertsPanel.h:531
+msgid "Active, unacknowledged"
+msgstr "Aktivt, ej kvitterat"
+
+#: src/gtk/view/widgets/AlertsPanel.h:533
+msgid "Active, acknowledged"
+msgstr "Aktivt, kvitterat"
+
+#: src/gtk/view/widgets/AlertsPanel.h:535
+msgid "Returned to normal, awaiting acknowledgement"
+msgstr "Åter normalt, väntar på kvittering"
+
+#: src/gtk/view/widgets/AlertsPanel.h:537
+msgid "Shelved (auto-unshelves at deadline)"
+msgstr "Hyllagd (avhylls vid tidsgräns)"
+
+#: src/qt/QtInitRoot.cpp:556 src/qt/view/QtSidebar.cpp:65
+#: src/qt/view/QtSidebar.cpp:150
+#: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:129
+msgid "Change password"
+msgstr "Byt lösenord"
+
+#: src/qt/QtInitRoot.cpp:559
+msgid "Password changed."
+msgstr "Lösenordet ändrat."
+
+#: src/qt/view/QtMainWindow.cpp:113 src/qt/view/QtMainWindow.cpp:180
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:178
+msgid "Overview"
+msgstr "Översikt"
+
+#: src/qt/view/QtMainWindow.cpp:115 src/qt/view/QtMainWindow.cpp:182
+#: build-qt/objectsQt_autogen/include/ui_QtProductsPage.h:60
+msgid "Inventory"
+msgstr "Lager"
+
+#: src/qt/view/QtMainWindow.cpp:116 src/qt/view/QtMainWindow.cpp:183
+msgid "Goods receipt"
+msgstr "Godsmottagning"
+
+#: src/qt/view/QtMainWindow.cpp:117 src/qt/view/QtMainWindow.cpp:184
+#: build-qt/objectsQt_autogen/include/ui_QtTrendsPage.h:57
+msgid "Trends"
+msgstr "Trender"
+
+#: src/qt/view/QtMainWindow.cpp:122 src/qt/view/QtMainWindow.cpp:189
+#: src/qt/view/QtSettingsPage.cpp:192
+#: build-qt/objectsQt_autogen/include/ui_QtMultiStationPage.h:71
+msgid "Multi-station"
+msgstr "Flerstation"
+
+#: src/qt/view/QtMainWindow.cpp:125 src/qt/view/QtMainWindow.cpp:192
+msgid "Users"
+msgstr "Användare"
+
+#: src/qt/view/QtMainWindow.cpp:128 src/qt/view/QtMainWindow.cpp:195
+#: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:135
+msgid "Audit log"
+msgstr "Granskningslogg"
+
+#: src/qt/view/QtMainWindow.cpp:159 src/qt/view/QtMainWindow.cpp:176
+msgid "Industrial HMI (Qt)"
+msgstr "Industriell HMI (Qt)"
+
+#: src/qt/view/QtSidebar.cpp:71 src/qt/view/QtSidebar.cpp:151
+msgid "Sign out"
+msgstr "Logga ut"
+
+#: src/qt/view/QtSidebar.cpp:79 src/qt/view/QtSidebar.cpp:152
+msgid "Exit application"
+msgstr "Avsluta programmet"
+
+#: src/qt/view/QtDashboardPage.cpp:75 src/qt/view/QtDashboardPage.cpp:250
+msgid "Throughput"
+msgstr "Genomströmning"
+
+#: src/qt/view/QtDashboardPage.cpp:76 src/qt/view/QtDashboardPage.cpp:251
+msgid "Avg quality"
+msgstr "Snittkvalitet"
+
+#: src/qt/view/QtDashboardPage.cpp:77 src/qt/view/QtDashboardPage.cpp:252
+msgid "Defects"
+msgstr "Defekter"
+
+#: src/qt/view/QtDashboardPage.cpp:78 src/qt/view/QtDashboardPage.cpp:253
+msgid "Lines up"
+msgstr "Linjer uppe"
+
+#: src/qt/view/QtDashboardPage.cpp:89 src/qt/view/QtDashboardPage.cpp:255
+msgid "Quality"
+msgstr "Kvalitet"
+
+#: src/qt/view/QtDashboardPage.cpp:109 src/qt/view/QtDashboardPage.cpp:256
+#: src/qt/view/QtTrendsPage.cpp:29 src/qt/view/QtTrendsPage.cpp:38
+msgid "OEE %"
+msgstr ""
+
+#: src/qt/view/QtDashboardPage.cpp:111 src/qt/view/QtDashboardPage.cpp:257
+#: src/qt/view/QtTrendsPage.cpp:30 src/qt/view/QtTrendsPage.cpp:39
+msgid "Avg quality %"
+msgstr "Snittkvalitet %"
+
+#: src/qt/view/QtDashboardPage.cpp:220
+msgid "%1 uph"
+msgstr ""
+
+#: src/qt/view/QtSettingsPage.cpp:33
+msgid "on"
+msgstr "på"
+
+#: src/qt/view/QtSettingsPage.cpp:33
+msgid "off"
+msgstr "av"
+
+#: src/qt/view/QtSettingsPage.cpp:142
+msgid "System default"
+msgstr "Systemstandard"
+
+#: src/qt/view/QtSettingsPage.cpp:169
+msgid "Application"
+msgstr "Program"
+
+#: src/qt/view/QtSettingsPage.cpp:173
+msgid "TCP backend"
+msgstr "TCP-backend"
+
+#: src/qt/view/QtSettingsPage.cpp:175
+msgid "on (port %1)"
+msgstr "på (port %1)"
+
+#: src/qt/view/QtSettingsPage.cpp:177
+msgid "MQTT backend"
+msgstr "MQTT-backend"
+
+#: src/qt/view/QtSettingsPage.cpp:179 src/qt/view/QtSettingsPage.cpp:186
+msgid "on (%1:%2)"
+msgstr "på (%1:%2)"
+
+#: src/qt/view/QtSettingsPage.cpp:183
+msgid "OPC-UA backend"
+msgstr "OPC-UA-backend"
+
+#: src/qt/view/QtSettingsPage.cpp:184
+msgid "Modbus backend"
+msgstr "Modbus-backend"
+
+#: src/qt/view/QtSettingsPage.cpp:191
+msgid "Historian"
+msgstr "Historik"
+
+#: src/qt/view/QtSettingsPage.cpp:193
+msgid "Auth"
+msgstr "Autentisering"
+
+#: src/qt/view/QtProductsPage.cpp:45
+msgid "SKU"
+msgstr ""
+
+#: src/qt/view/QtProductsPage.cpp:45
+msgid "Description"
+msgstr "Beskrivning"
+
+#: src/qt/view/QtProductsPage.cpp:45
+msgid "On hand"
+msgstr "I lager"
+
+#: src/qt/view/QtGoodsReceiptPage.cpp:55
+msgid "Choose an image"
+msgstr "Välj en bild"
+
+#: src/qt/view/QtGoodsReceiptPage.cpp:56
+msgid "Images (*.png *.jpg *.jpeg *.bmp)"
+msgstr "Bilder (*.png *.jpg *.jpeg *.bmp)"
+
+#: src/qt/view/QtGoodsReceiptPage.cpp:75
+msgid "Inspecting..."
+msgstr "Inspekterar…"
+
+#: src/qt/view/QtGoodsReceiptPage.cpp:82
+msgid "Inspection complete"
+msgstr "Inspektion klar"
+
+#: src/qt/view/QtGoodsReceiptPage.cpp:109
+msgid "Latency: %1 ms"
+msgstr "Latens: %1 ms"
+
+#: src/qt/view/QtGoodsReceiptPage.cpp:118
+msgid "Inspection failed: %1"
+msgstr "Inspektionen misslyckades: %1"
+
+#: src/qt/view/QtHistoryPage.cpp:72 src/qt/view/QtHistoryPage.cpp:108
+#: src/qt/view/QtAuditLogPage.cpp:144
+msgid "Last hour"
+msgstr "Senaste timmen"
+
+#: src/qt/view/QtHistoryPage.cpp:73 src/qt/view/QtHistoryPage.cpp:109
+#: src/qt/view/QtAuditLogPage.cpp:145
+msgid "Last 24 hours"
+msgstr "Senaste 24 timmarna"
+
+#: src/qt/view/QtHistoryPage.cpp:75 src/qt/view/QtHistoryPage.cpp:110
+#: src/qt/view/QtAuditLogPage.cpp:147
+msgid "Last 7 days"
+msgstr "Senaste 7 dagarna"
+
+#: src/qt/view/QtHistoryPage.cpp:90 src/qt/view/QtHistoryPage.cpp:113
+#: src/qt/view/widgets/QtQualityCard.cpp:42
+#: src/qt/view/widgets/QtQualityCard.cpp:86
+msgid "Checkpoint %1"
+msgstr "Kontrollpunkt %1"
+
+#: src/qt/view/QtHistoryPage.cpp:92 src/qt/view/QtHistoryPage.cpp:115
+#: src/qt/view/widgets/QtEquipmentCard.cpp:58
+#: src/qt/view/widgets/QtEquipmentCard.cpp:99
+msgid "Equipment %1"
+msgstr "Utrustning %1"
+
+#: src/qt/view/QtHistoryPage.cpp:141
+msgid "No samples recorded yet"
+msgstr "Inga prover registrerade ännu"
+
+#: src/qt/view/QtHistoryPage.cpp:142
+msgid "Total: %1 samples"
+msgstr "Totalt: %1 prover"
+
+#: src/qt/view/QtStatusStrip.cpp:62
+msgid "online"
+msgstr "uppkopplad"
+
+#: src/qt/view/QtStatusStrip.cpp:64
+msgid "connecting"
+msgstr "ansluter"
+
+#: src/qt/view/QtStatusStrip.cpp:67
+msgid "degraded"
+msgstr "försämrad"
+
+#: src/qt/view/QtStatusStrip.cpp:70 src/qt/view/QtStatusStrip.cpp:73
+msgid "offline"
+msgstr "frånkopplad"
+
+#: src/qt/view/QtStatusStrip.cpp:160
+msgid "No backends configured"
+msgstr "Inga backend konfigurerade"
+
+#: src/qt/view/QtStatusStrip.cpp:161
+msgid "%1 of %2 backends online"
+msgstr "%1 av %2 backend uppkopplade"
+
+#: src/qt/view/QtLogPanel.cpp:27
+msgid "Log"
+msgstr "Logg"
+
+#: src/qt/view/QtUsersPage.cpp:86
+#: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:117
+#: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:143
+msgid "Username"
+msgstr "Användarnamn"
+
+#: src/qt/view/QtUsersPage.cpp:86
+#: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:144
+msgid "Display name"
+msgstr "Visningsnamn"
+
+#: src/qt/view/QtUsersPage.cpp:86 src/qt/view/QtAuditLogPage.cpp:114
+#: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:145
+msgid "Role"
+msgstr "Roll"
+
+#: src/qt/view/QtUsersPage.cpp:86 src/qt/view/widgets/QtEquipmentCard.cpp:65
+#: src/qt/view/widgets/QtEquipmentCard.cpp:100
+msgid "Enabled"
+msgstr "Aktiverad"
+
+#: src/qt/view/QtUsersPage.cpp:87
+msgid "Created"
+msgstr "Skapad"
+
+#: src/qt/view/QtUsersPage.cpp:108
+msgid "Yes"
+msgstr "Ja"
+
+#: src/qt/view/QtUsersPage.cpp:108
+msgid "No"
+msgstr "Nej"
+
+#: src/qt/view/QtUsersPage.cpp:113
+msgid "%1 users"
+msgstr "%1 användare"
+
+#: src/qt/view/QtUsersPage.cpp:153
+msgid "User created."
+msgstr "Användare skapad."
+
+#: src/qt/view/QtUsersPage.cpp:175
+msgid "User updated."
+msgstr "Användare uppdaterad."
+
+#: src/qt/view/QtUsersPage.cpp:192
+msgid "Password reset."
+msgstr "Lösenord återställt."
+
+#: src/qt/view/QtUsersPage.cpp:205
+msgid "Delete user"
+msgstr "Ta bort användare"
+
+#: src/qt/view/QtUsersPage.cpp:206
+msgid "Delete user \"%1\"? This cannot be undone."
+msgstr "Ta bort användaren ”%1”? Detta kan inte ångras."
+
+#: src/qt/view/QtUsersPage.cpp:212
+msgid "User deleted."
+msgstr "Användare borttagen."
+
+#: src/qt/view/QtUserFormDialog.cpp:41
+msgid "Edit user"
+msgstr "Redigera användare"
+
+#: src/qt/view/QtUserFormDialog.cpp:53
+#: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:124
+msgid "Add user"
+msgstr "Lägg till användare"
+
+#: src/qt/view/QtResetPasswordDialog.cpp:32
+msgid "Password cannot be empty."
+msgstr "Lösenordet får inte vara tomt."
+
+#: src/qt/view/QtResetPasswordDialog.cpp:37
+msgid "Passwords do not match."
+msgstr "Lösenorden matchar inte."
+
+#: src/qt/view/QtChangePasswordDialog.cpp:42
+msgid "All fields are required."
+msgstr "Alla fält är obligatoriska."
+
+#: src/qt/view/QtChangePasswordDialog.cpp:46
+msgid "New passwords do not match."
+msgstr "De nya lösenorden matchar inte."
+
+#: src/qt/view/QtLoginDialog.cpp:39
+msgid "Username and password are required."
+msgstr "Användarnamn och lösenord krävs."
+
+#: src/qt/view/QtLoginDialog.cpp:51
+msgid "Invalid username or password."
+msgstr "Ogiltigt användarnamn eller lösenord."
+
+#: src/qt/view/QtLoginDialog.cpp:54
+msgid "Account is disabled. Contact your administrator."
+msgstr "Kontot är inaktiverat. Kontakta din administratör."
+
+#: src/qt/view/QtLoginDialog.cpp:57
+msgid "Too many failed attempts. Try again later."
+msgstr "För många misslyckade försök. Försök igen senare."
+
+#: src/qt/view/QtLoginDialog.cpp:60
+msgid "Internal error during sign-in. See logs."
+msgstr "Internt fel vid inloggning. Se loggarna."
+
+#: src/qt/view/QtAuditLogPage.cpp:114
+msgid "Timestamp"
+msgstr "Tidsstämpel"
+
+#: src/qt/view/QtAuditLogPage.cpp:114
+#: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:139
+#: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:142
+msgid "User"
+msgstr "Användare"
+
+#: src/qt/view/QtAuditLogPage.cpp:114
+#: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:136
+msgid "Category"
+msgstr "Kategori"
+
+#: src/qt/view/QtAuditLogPage.cpp:114
+msgid "Action"
+msgstr "Åtgärd"
+
+#: src/qt/view/QtAuditLogPage.cpp:115
+#: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:137
+msgid "Result"
+msgstr "Resultat"
+
+#: src/qt/view/QtAuditLogPage.cpp:115
+msgid "Details"
+msgstr "Detaljer"
+
+#: src/qt/view/QtAuditLogPage.cpp:124 src/qt/view/QtAuditLogPage.cpp:134
+msgid "All"
+msgstr "Alla"
+
+#: src/qt/view/QtAuditLogPage.cpp:136
+msgid "Success"
+msgstr "Lyckades"
+
+#: src/qt/view/QtAuditLogPage.cpp:139
+msgid "Failure"
+msgstr "Misslyckades"
+
+#: src/qt/view/QtAuditLogPage.cpp:143
+msgid "All time"
+msgstr "All tid"
+
+#: src/qt/view/QtAuditLogPage.cpp:191
+msgid "%1 events shown (of %2 total)"
+msgstr "%1 händelser visas (av %2 totalt)"
+
+#: src/qt/view/QtAuditLogPage.cpp:198
+msgid "Export audit log"
+msgstr "Exportera granskningslogg"
+
+#: src/qt/view/QtAuditLogPage.cpp:199
+msgid "CSV files (*.csv)"
+msgstr "CSV-filer (*.csv)"
+
+#: src/qt/view/QtAuditLogPage.cpp:210
+msgid "Export failed"
+msgstr "Exporten misslyckades"
+
+#: src/qt/view/QtAuditLogPage.cpp:211
+msgid "Could not open the file for writing."
+msgstr "Det gick inte att öppna filen för skrivning."
+
+#: src/qt/view/QtAuditLogPage.cpp:228
+msgid "Exported %1 events"
+msgstr "%1 händelser exporterade"
+
+#: src/qt/view/QtRoleLabel.h:16
+msgid "Operator"
+msgstr "Operatör"
+
+#: src/qt/view/QtRoleLabel.h:17
+msgid "Maintenance"
+msgstr "Underhåll"
+
+#: src/qt/view/QtRoleLabel.h:18
+msgid "Admin"
+msgstr "Administratör"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:19
+#: src/qt/view/widgets/QtEquipmentCard.cpp:22
+msgid "Offline"
+msgstr "Frånkopplad"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:21
+msgid "Working"
+msgstr "Arbetar"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:23
+msgid "Homing"
+msgstr "Referenskörning"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:24
+msgid "Calibrating"
+msgstr "Kalibrerar"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:25
+#: src/qt/view/widgets/QtActuatorCard.cpp:27
+#: src/qt/view/widgets/QtEquipmentCard.cpp:32
+#: src/qt/view/widgets/QtEquipmentCard.cpp:34
+msgid "Unknown"
+msgstr "Okänd"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:47
+#: src/qt/view/widgets/QtActuatorCard.cpp:82
+msgid "Actuator %1"
+msgstr "Ställdon %1"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:51
+#: src/qt/view/widgets/QtActuatorCard.cpp:86
+#: src/qt/view/widgets/QtEquipmentCard.cpp:62
+#: src/qt/view/widgets/QtEquipmentCard.cpp:104
+#: src/qt/view/widgets/QtQualityCard.cpp:46
+#: src/qt/view/widgets/QtQualityCard.cpp:87
+msgid "Status: -"
+msgstr "Status: -"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:70
+msgid "AUTO"
+msgstr "AUTO"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:70
+msgid "MANUAL"
+msgstr "MANUELL"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:72
+msgid "HOME"
+msgstr "HEM"
+
+#: src/qt/view/widgets/QtActuatorCard.cpp:75
+msgid "ALERT"
+msgstr "LARM"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:23
+msgid "Starting up"
+msgstr "Startar"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:24
+msgid "Self-check"
+msgstr "Självtest"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:25
+msgid "Online"
+msgstr "Uppkopplad"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:26
+msgid "Processing"
+msgstr "Bearbetar"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:27
+msgid "Warming up"
+msgstr "Värmer upp"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:28 assets/ui/dashboard-page.ui:169
 msgid "Ready"
 msgstr "Klar"
 
+#: src/qt/view/widgets/QtEquipmentCard.cpp:29
+msgid "Reboot"
+msgstr "Omstart"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:31
+msgid "Disabled"
+msgstr "Inaktiverad"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:63
+#: src/qt/view/widgets/QtEquipmentCard.cpp:105
+msgid "Supplies: -"
+msgstr "Förråd: -"
+
+#: src/qt/view/widgets/QtEquipmentCard.cpp:89
+msgid "Supplies: %1"
+msgstr "Förråd: %1"
+
+#: src/qt/view/widgets/QtQualityCard.cpp:21
+#: src/qt/view/widgets/QtQualityCard.cpp:25
+msgid "Passing"
+msgstr "Godkänd"
+
+#: src/qt/view/widgets/QtQualityCard.cpp:22
+msgid "Warning"
+msgstr "Varning"
+
+#: src/qt/view/widgets/QtQualityCard.cpp:23
+msgid "Critical"
+msgstr "Kritisk"
+
+#: src/qt/view/widgets/QtQualityCard.cpp:47
+#: src/qt/view/widgets/QtQualityCard.cpp:88
+msgid "Pass rate: -"
+msgstr "Godkändgrad: -"
+
+#: src/qt/view/widgets/QtQualityCard.cpp:68
+msgid "Pass rate: %1%"
+msgstr "Godkändgrad: %1 %"
+
+#: src/qt/view/widgets/QtQualityCard.cpp:71
+msgid "Inspected: %1  Defects: %2"
+msgstr "Inspekterade: %1  Defekter: %2"
+
+#: src/qt/view/widgets/QtQualityCard.cpp:77
+msgid "No defects"
+msgstr "Inga defekter"
+
+#: src/qt/view/widgets/QtUptimeDonut.cpp:134
+msgid "Uptime"
+msgstr "Drifttid"
+
+#: assets/ui/main-window.ui:83
+msgid "STATUS"
+msgstr "STATUS"
+
+#: assets/ui/main-window.ui:114
+msgid "I/O"
+msgstr ""
+
+#: assets/ui/dashboard-page.ui:63
+msgid "WORK UNIT"
+msgstr "ARBETSENHET"
+
+#: assets/ui/dashboard-page.ui:104
+msgid "Work Unit:"
+msgstr "Arbetsenhet:"
+
+#: assets/ui/dashboard-page.ui:130
+msgid "Product:"
+msgstr "Produkt:"
+
+#: assets/ui/dashboard-page.ui:202
 msgid "EQUIPMENT STATIONS"
 msgstr "UTRUSTNINGSSTATIONER"
 
+#: assets/ui/dashboard-page.ui:228
+msgid "MIXER"
+msgstr "BLANDARE"
+
+#: assets/ui/dashboard-page.ui:250
+msgid "PRESS"
+msgstr "PRESS"
+
+#: assets/ui/dashboard-page.ui:272
+msgid "PACKAGING"
+msgstr "FÖRPACKNING"
+
+#: assets/ui/dashboard-page.ui:289
 msgid "QUALITY CHECKPOINTS"
 msgstr "KVALITETSKONTROLLPUNKTER"
 
+#: assets/ui/dashboard-page.ui:322 assets/ui/dashboard-page.ui:345
+#: assets/ui/dashboard-page.ui:367
 msgid "0 inspected • 0 defects"
 msgstr "0 inspekterade • 0 defekter"
 
+#: assets/ui/dashboard-page.ui:380
 msgid "Control Panel"
 msgstr "Kontrollpanel"
 
+#: assets/ui/dashboard-page.ui:391
 msgid "System Idle"
 msgstr "Systemet i viloläge"
 
+#: assets/ui/dashboard-page.ui:392
 msgid "START"
 msgstr "STARTA"
 
+#: assets/ui/dashboard-page.ui:393
 msgid "STOP"
 msgstr "STOPPA"
 
+#: assets/ui/dashboard-page.ui:394
 msgid "RESET"
 msgstr "ÅTERSTÄLL"
 
+#: assets/ui/dashboard-page.ui:396
+msgid "INJECT FAULT"
+msgstr "INJICERA FEL"
+
+#: assets/ui/products-page.ui:33
 msgid "+ Add New Product"
 msgstr "+ Lägg till ny produkt"
 
+#: assets/ui/products-page.ui:40
+#: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:140
+#: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:112
+#: build-qt/objectsQt_autogen/include/ui_QtProductsPage.h:61
+#: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:128
 msgid "Refresh"
 msgstr "Uppdatera"
 
+#: assets/ui/products-page.ui:47
+#: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:141
 msgid "Export CSV"
 msgstr "Exportera CSV"
 
+#: assets/ui/products-page.ui:65
 msgid "Search:"
 msgstr "Sök:"
 
+#: assets/ui/products-page.ui:72
 msgid "Search by Product ID or Name..."
 msgstr "Sök efter produkt-ID eller namn..."
 
+#: assets/ui/products-page.ui:102
 msgid "View Details"
 msgstr "Visa detaljer"
 
+#: assets/ui/products-page.ui:109
+#: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:125
 msgid "Edit"
 msgstr "Redigera"
 
+#: assets/ui/products-page.ui:116
+#: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:127
 msgid "Delete"
 msgstr "Ta bort"
 
+#: assets/ui/products-page.ui:123
+msgid "Load Recipe"
+msgstr "Ladda recept"
+
+#: assets/ui/products-page.ui:125
+msgid "Load this product's recipe onto the production line"
+msgstr "Ladda produktens recept till produktionslinjen"
+
+#: assets/ui/products-page.ui:133
+msgid "Create or edit this product's recipe (operations + quality targets)"
+msgstr "Skapa eller redigera produktens recept (åtgärder + kvalitetsmål)"
+
+#: assets/ui/settings-page.ui:41
 msgid "General"
 msgstr "Allmänt"
 
+#: assets/ui/settings-page.ui:57
 msgid "Language:"
 msgstr "Språk:"
 
+#: assets/ui/settings-page.ui:66
 msgid "Auto (System)"
 msgstr "Automatiskt (System)"
 
+#: assets/ui/settings-page.ui:90
 msgid "Theme:"
 msgstr "Tema:"
 
+#: assets/ui/settings-page.ui:101
 msgid "Dark"
 msgstr "Mörkt"
 
+#: assets/ui/settings-page.ui:107
 msgid "Light"
 msgstr "Ljust"
 
+#: assets/ui/settings-page.ui:122
 msgid "Palette:"
-msgstr ""
+msgstr "Palett:"
 
+#: assets/ui/settings-page.ui:143
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:152
 msgid "Display"
 msgstr "Skärm"
 
+#: assets/ui/settings-page.ui:159
 msgid "Display mode:"
 msgstr "Visningsläge:"
 
+#: assets/ui/settings-page.ui:170
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:154
 msgid "Fullscreen"
 msgstr "Helskärm"
 
+#: assets/ui/settings-page.ui:176
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:153
 msgid "Windowed"
 msgstr "Fönster"
 
+#: assets/ui/settings-page.ui:192
 msgid "Data"
 msgstr "Data"
 
+#: assets/ui/settings-page.ui:204
 msgid "Auto refresh simulation"
 msgstr "Automatisk uppdatering av simulering"
 
+#: assets/ui/settings-page.ui:215
 msgid "Refresh interval (ms):"
 msgstr "Uppdateringsintervall (ms):"
 
+#: assets/ui/settings-page.ui:237
 msgid "Logging"
 msgstr "Loggning"
 
+#: assets/ui/settings-page.ui:253
 msgid "Log level:"
 msgstr "Loggnivå:"
 
+#: assets/ui/settings-page.ui:276
 msgid "Show log panel at the bottom of the window"
 msgstr "Visa loggpanelen längst ned i fönstret"
+
+#: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:138
+msgid "Range"
+msgstr "Intervall"
+
+#: build-qt/objectsQt_autogen/include/ui_QtAuditLogPage.h:142
+msgid "0 events"
+msgstr "0 händelser"
+
+#: build-qt/objectsQt_autogen/include/ui_QtBackendHealthPage.h:57
+msgid "Connectivity"
+msgstr "Anslutning"
+
+#: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:130
+msgid "Change your password"
+msgstr "Byt ditt lösenord"
+
+#: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:131
+msgid "Current password"
+msgstr "Nuvarande lösenord"
+
+#: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:132
+#: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:118
+msgid "New password"
+msgstr "Nytt lösenord"
+
+#: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:133
+msgid "Confirm new password"
+msgstr "Bekräfta nytt lösenord"
+
+#: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:136
+msgid "Change"
+msgstr "Ändra"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:179
+msgid "Current work unit"
+msgstr "Aktuell arbetsenhet"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:180
+msgid "Order"
+msgstr "Order"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:181
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:183
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:185
+msgid "-"
+msgstr ""
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:182
+msgid "Shipment"
+msgstr "Leverans"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:186
+msgid "Equipment"
+msgstr "Utrustning"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:187
+msgid "Actuators"
+msgstr "Ställdon"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:188
+msgid "Quality checkpoints"
+msgstr "Kvalitetskontrollpunkter"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:189
+msgid "Start"
+msgstr "Starta"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:190
+msgid "Stop"
+msgstr "Stoppa"
+
+#: build-qt/objectsQt_autogen/include/ui_QtDashboardPage.h:191
+#: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:122
+msgid "Reset"
+msgstr "Återställ"
+
+#: build-qt/objectsQt_autogen/include/ui_QtGoodsReceiptPage.h:101
+msgid "Goods-receipt inspection"
+msgstr "Godsmottagningsinspektion"
+
+#: build-qt/objectsQt_autogen/include/ui_QtGoodsReceiptPage.h:102
+msgid ""
+"Demo mode: the image is decoded locally, but the classification is a fixed "
+"sample (no trained model loaded)."
+msgstr ""
+"Demoläge: bilden avkodas lokalt, men klassificeringen är ett fast exempel "
+"(ingen tränad modell laddad)."
+
+#: build-qt/objectsQt_autogen/include/ui_QtGoodsReceiptPage.h:103
+msgid "Inspect image..."
+msgstr "Inspektera bild…"
+
+#: build-qt/objectsQt_autogen/include/ui_QtGoodsReceiptPage.h:104
+msgid "No image selected"
+msgstr "Ingen bild vald"
+
+#: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:110
+msgid "Persisted time-series from the historian archive (SQLite)."
+msgstr "Persisterade tidsserier från historikarkivet (SQLite)."
+
+#: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:111
+msgid "Range:"
+msgstr "Intervall:"
+
+#: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:113
+msgid "Total: 0 samples"
+msgstr "Totalt: 0 prover"
+
+#: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:114
+msgid "Quality pass rate (%)"
+msgstr "Kvalitetsgodkändgrad (%)"
+
+#: build-qt/objectsQt_autogen/include/ui_QtHistoryPage.h:115
+msgid "Equipment supply level (%)"
+msgstr "Utrustningens förrådsnivå (%)"
+
+#: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:114
+#: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:122
+msgid "Sign in"
+msgstr "Logga in"
+
+#: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:115
+msgid "Industrial HMI sign in"
+msgstr "Inloggning industriell HMI"
+
+#: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:116
+msgid "Operator / Maintenance / Admin"
+msgstr "Operatör / Underhåll / Administratör"
+
+#: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:118
+msgid "e.g. operator"
+msgstr "t.ex. operator"
+
+#: build-qt/objectsQt_autogen/include/ui_QtLoginDialog.h:119
+#: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:146
+msgid "Password"
+msgstr "Lösenord"
+
+#: build-qt/objectsQt_autogen/include/ui_QtMultiStationPage.h:72
+msgid "Primary station"
+msgstr "Primär station"
+
+#: build-qt/objectsQt_autogen/include/ui_QtMultiStationPage.h:73
+msgid "Secondary station"
+msgstr "Sekundär station"
+
+#: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:116
+#: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:126
+msgid "Reset password"
+msgstr "Återställ lösenord"
+
+#: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:117
+msgid "Set a new password"
+msgstr "Ange ett nytt lösenord"
+
+#: build-qt/objectsQt_autogen/include/ui_QtResetPasswordDialog.h:119
+msgid "Confirm password"
+msgstr "Bekräfta lösenord"
+
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:150
+msgid "Appearance"
+msgstr "Utseende"
+
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:151
+msgid "Palette"
+msgstr "Palett"
+
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:155
+msgid "Language"
+msgstr "Språk"
+
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:156
+msgid "Interface language"
+msgstr "Gränssnittsspråk"
+
+#: build-qt/objectsQt_autogen/include/ui_QtSettingsPage.h:157
+msgid "Configuration"
+msgstr "Konfiguration"
+
+#: build-qt/objectsQt_autogen/include/ui_QtTrendsPage.h:58
+msgid "Live session metrics since the app started (in-memory)."
+msgstr "Live-sessionsmått sedan appen startade (i minnet)."
+
+#: build-qt/objectsQt_autogen/include/ui_QtUserFormDialog.h:147
+msgid "Account enabled"
+msgstr "Konto aktiverat"
+
+#: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:123
+msgid "User management"
+msgstr "Användarhantering"
+
+#: build-qt/objectsQt_autogen/include/ui_QtUsersPage.h:129
+msgid "0 users"
+msgstr "0 användare"
+
+#~ msgid "MVP Architecture"
+#~ msgstr "MVP-arkitektur"
+
+#~ msgid "Dismiss"
+#~ msgstr "Avfärda"
 
 #~ msgid "DISPLAY MODE"
 #~ msgstr "VISNINGSLÄGE"
@@ -470,23 +1659,14 @@ msgstr "Visa loggpanelen längst ned i fönstret"
 #~ msgid "Verbose Logging"
 #~ msgstr "Detaljerad loggning"
 
-#~ msgid "Checkpoint %1"
-#~ msgstr "Kontrollpunkt %1"
-
 #~ msgid "Export Products"
 #~ msgstr "Exportera produkter"
-
-#~ msgid "CSV files"
-#~ msgstr "CSV-filer"
 
 #~ msgid "QUALITY TRENDS"
 #~ msgstr "KVALITETSTRENDER"
 
 #~ msgid "Sun"
 #~ msgstr "Sön"
-
-#~ msgid "Mon"
-#~ msgstr "Mån"
 
 #~ msgid "Tue"
 #~ msgstr "Tis"
@@ -532,9 +1712,6 @@ msgstr "Visa loggpanelen längst ned i fönstret"
 
 #~ msgid "Oct"
 #~ msgstr "Okt"
-
-#~ msgid "Nov"
-#~ msgstr "Nov"
 
 #~ msgid "Dec"
 #~ msgstr "Dec"

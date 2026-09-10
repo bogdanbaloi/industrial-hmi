@@ -49,6 +49,10 @@ requirements may be smoke-tested.
 | REQ-ARCH-011 | SHOULD | `src/qt/main.cpp`, `src/qt/QtInitRoot.cpp`, `src/qt/view/QtDashboardWindow.cpp`, `src/qt/view/widgets/QtEquipmentCard.cpp`, `src/qt/view/widgets/QtActuatorCard.cpp`, `src/qt/view/widgets/QtQualityCard.cpp`, `CMakeLists.txt` (`BUILD_QT_FRONTEND` option + `objectsQt` / `industrial-hmi-qt` targets) | manual run of `industrial-hmi-qt` (Start/Stop/Reset drive state, tick updates work-unit + status zone); DashboardPresenterTest (presenter logic already covered) | 0001, 0002, 0003, 0020 |
 | REQ-ARCH-012 | SHOULD | `src/qt/view/QtPaletteManager.h`, `src/qt/view/QtPaletteManager.cpp`, `src/qt/view/QtSettingsPage.cpp` (palette picker), `src/qt/QtInitRoot.cpp` (applyInitial), `CMakeLists.txt` | manual run of `industrial-hmi-qt` (switch palette in Settings, app re-themes live and the choice persists across restart) | 0008, 0020, 0021 |
 | REQ-ARCH-013 | SHOULD | `src/app/IntegrationBootstrap.h`, `src/app/IntegrationBootstrap.cpp` (shared `buildIntegrationServices` + `IntegrationServices` bundle), `src/main.cpp` (uses it), `src/qt/QtInitRoot.cpp` (uses it + `BackendHealthPresenter`), `src/qt/view/QtStatusStrip.cpp` (status strip), `CMakeLists.txt` (`objectsIntegrationBootstrap`) | CI: builds GTK / console / Qt frontends over the shared bootstrap; existing backend tests (Tcp / Mqtt / Modbus / OpcUa / PrimaryToSecondary); manual run of `industrial-hmi-qt` status strip | 0005, 0011, 0020, 0022 |
+| REQ-ARCH-014 | SHOULD | `src/qt/QtInitRoot.cpp` (`buildHistorian`: config-gated SQLite store + bridge + retention worker, degraded-open, reader flows to the window), `src/qt/view/QtHistoryPage.h/.cpp/.ui` (read-only History page over `HistoryReader`), `src/qt/view/QtMainWindow.cpp` (mounts History page + nav only when the store opened), `src/qt/view/widgets/QtLineChart.cpp` (`setPoints` batch-load), `src/qt/view/QtIcons.h` (history icon), `CMakeLists.txt` (`QtHistoryPage.cpp` in `objectsQt`) | existing historian tests (SqliteHistoryStoreTest, HistorianBridgeTest, HistorianMaintenanceTest, HistorianRoundTripIntegrationTest); CI builds the Qt frontend over the shared historian wiring; manual run of `industrial-hmi-qt` History page | 0007, 0020 |
+| REQ-ARCH-015 | SHOULD | `src/qt/view/QtGettextTranslator.h/.cpp` (QTranslator adapter onto the gettext catalog), `src/qt/QtInitRoot.cpp` (installs it + `changeLanguage`), `src/qt/view/QtSettingsPage.cpp` (language picker + changeEvent), `src/qt/view/QtMainWindow.cpp` + `QtSidebar.cpp` + `QtDashboardPage.cpp` + `QtProductsPage.cpp` + `QtAlertsPage.cpp` + `QtTrendsPage.cpp` + `QtHistoryPage.cpp` + `QtGoodsReceiptPage.cpp` (per-widget `changeEvent` retranslate), `src/qt/view/widgets/QtKpiTile.cpp` + `QtGauge.cpp` + `QtLineChart.cpp` (caption / series setters), `po/POTFILES.in` (Qt sources for extraction) | I18nTest (gettext bind + live-switch cache flush); manual run of `industrial-hmi-qt` (Settings language picker retranslates the shell live) | 0020 |
+| REQ-ARCH-016 | SHOULD | `src/qt/QtInitRoot.cpp` (`buildAuth`: config-gated user store + hasher + audit + AuthService + Session + UsersPresenter, login gate, run() returns bool, Admin gating, session-footer sync), `src/qt/view/QtLoginDialog.h/.cpp/.ui` (modal login over AuthService), `src/qt/view/QtUsersPage.h/.cpp/.ui` + `QtUserFormDialog.*` + `QtResetPasswordDialog.*` (admin user CRUD over UsersPresenter), `src/qt/view/QtAuditLogPage.h/.cpp/.ui` (audit viewer over AuditLogger), `src/qt/view/QtMainWindow.cpp` (Admin-gated mount), `src/qt/view/QtSidebar.cpp` (session footer), `src/main.cpp` (skip exec on cancel), `CMakeLists.txt` (QT_NO_KEYWORDS + Qt auth sources) | existing auth tests (AuthServiceTest, SqliteUserRepositoryTest, Argon2 / SqliteAuditLogger / UsersPresenter tests); CI builds the Qt frontend over the shared auth wiring; manual run of `industrial-hmi-qt` with auth enabled | 0006, 0020 |
+| REQ-ARCH-017 | SHOULD | `src/qt/view/QtMultiStationPage.h/.cpp/.ui` (two QtDashboardPage panes side by side), `src/qt/QtInitRoot.cpp` (builds a secondary DashboardPresenter over `integrationServices_->secondaryModel`, attaches both panes as observers), `src/qt/view/QtMainWindow.cpp` (mounts the Multi-station tab when a secondary model exists), `CMakeLists.txt` | PrimaryToSecondaryBridgeTest / MirrorModel tests cover the model link; CI builds the Qt frontend over the shared secondary-model wiring; manual run of `industrial-hmi-qt` with `ui.multistation_enabled` | 0011, 0020 |
 
 ## AUTH
 
@@ -189,7 +193,7 @@ requirements may be smoke-tested.
 
 | Category | Total | MUST | SHOULD | NICE | Fully tested | Manual-only |
 |---|---|---|---|---|---|---|
-| ARCH | 13 | 5 | 6 | 2 | 8 | 5 (REQ-ARCH-006, REQ-ARCH-011, REQ-ARCH-012, REQ-ARCH-013, manual smoke) |
+| ARCH | 17 | 5 | 10 | 2 | 8 | 9 (REQ-ARCH-006, REQ-ARCH-011, REQ-ARCH-012, REQ-ARCH-013, REQ-ARCH-014, REQ-ARCH-015, REQ-ARCH-016, REQ-ARCH-017, manual smoke) |
 | AUTH | 6 | 3 | 2 | 1 | 6 | 0 |
 | CORE | 9 | 2 | 3 | 4 | 9 | 0 |
 | DASHBOARD | 7 | 3 | 3 | 1 | 7 | 0 |
@@ -201,7 +205,7 @@ requirements may be smoke-tested.
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **61** | **24** | **25** | **12** | **53** | **8** |
+| **TOTAL** | **65** | **24** | **29** | **12** | **53** | **12** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE

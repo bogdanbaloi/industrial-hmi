@@ -406,22 +406,22 @@ presenter::EquipmentCardViewModel DashboardPresenter::buildEquipmentVM(uint32_t 
     switch (status) {
         case 0:  // Offline
             vm.status = presenter::EquipmentCardStatus::Offline;
-            vm.consumables = "Not connected";
+            vm.consumables = _("Not connected");
             vm.enabled = false;
             break;
         case 1:  // Online
             vm.status = presenter::EquipmentCardStatus::Online;
-            vm.consumables = "Supply level: 85%";
+            vm.consumables = _("Supply level: 85%");
             vm.enabled = true;
             break;
         case 2:  // Processing
             vm.status = presenter::EquipmentCardStatus::Processing;
-            vm.consumables = "Supply level: 60%";
+            vm.consumables = _("Supply level: 60%");
             vm.enabled = true;
             break;
         case 3:  // Error
             vm.status = presenter::EquipmentCardStatus::Error;
-            vm.consumables = "Low supply (12%)";
+            vm.consumables = _("Low supply (12%)");
             vm.enabled = false;
             break;
     }
@@ -436,25 +436,25 @@ presenter::ActuatorCardViewModel DashboardPresenter::buildActuatorVM(uint32_t ac
     switch (status) {
         case 0:  // Idle
             vm.status = presenter::ActuatorCardStatus::Idle;
-            vm.statusMessage = "Idle - At home position";
+            vm.statusMessage = _("Idle - At home position");
             vm.autoMode = true;
             vm.atHomePosition = true;
             vm.hasAlert = false;
             break;
         case 1:  // Working
             vm.status = presenter::ActuatorCardStatus::Working;
-            vm.statusMessage = "Working - Position X:150 Y:200";
+            vm.statusMessage = _("Working - Position X:150 Y:200");
             vm.autoMode = true;
             vm.atHomePosition = false;
             vm.hasAlert = false;
             break;
         case 2:  // Error
             vm.status = presenter::ActuatorCardStatus::Error;
-            vm.statusMessage = "Error - Position fault";
+            vm.statusMessage = _("Error - Position fault");
             vm.autoMode = true;
             vm.atHomePosition = false;
             vm.hasAlert = true;
-            vm.alertMessage = "Position timeout detected";
+            vm.alertMessage = _("Position timeout detected");
             break;
     }
 

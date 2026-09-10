@@ -38,7 +38,7 @@
     <!-- = -->
     <!-- KPI TOP STRIP                                                -->
     <!-- Three BigNumberCard widgets injected programmatically by    -->
-    <!-- DashboardPage::buildUI -- OEE / Throughput / Pass Rate.     -->
+    <!-- DashboardPage::buildUI - OEE / Throughput / Pass Rate.     -->
     <!-- Hidden by setCompact(true) in multi-station mode since the  -->
     <!-- two side-by-side panes already make the KPI duplication a   -->
     <!-- visual repetition without information gain.                 -->

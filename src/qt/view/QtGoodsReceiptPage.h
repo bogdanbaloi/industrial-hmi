@@ -9,6 +9,8 @@
 #include <memory>
 #include <string>
 
+class QEvent;
+
 // The Ui namespace name is fixed by Qt's uic generator, not our style.
 // NOLINTNEXTLINE(readability-identifier-naming)
 namespace Ui {
@@ -51,6 +53,9 @@ public:
         const presenter::InspectionResultViewModel& viewModel) override;
     void onInspectionFailed(const std::string& sourcePath,
                             const std::string& message) override;
+
+protected:
+    void changeEvent(QEvent* event) override;
 
 private:
     void chooseAndInspect();

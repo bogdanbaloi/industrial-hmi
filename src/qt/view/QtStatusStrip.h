@@ -7,6 +7,7 @@
 
 #include <QWidget>
 
+class QEvent;
 class QHBoxLayout;
 class QLabel;
 class QTimer;
@@ -42,15 +43,31 @@ public:
     void onBackendHealthChanged(
         const presenter::BackendHealthViewModel& viewModel) override;
 
+protected:
+    // Live language switch: re-render the pill + summary from the cached state
+    // in the new language, since those strings only refresh when a fresh signal
+    // arrives otherwise. Same seam the pages use.
+    void changeEvent(QEvent* event) override;
+
 private:
     void applySystemState(int state);
     void applyBackendHealth(const presenter::BackendHealthViewModel& viewModel);
     void updateClock();
 
+    // System-state code (0 Idle) mirroring model::SystemState; the initial pill.
+    static constexpr int kInitialState = 0;
+
     QLabel*      stateBadge_{nullptr};
     QHBoxLayout* backendsLayout_{nullptr};
+    QLabel*      summaryLabel_{nullptr};
     QLabel*      clock_{nullptr};
     QTimer*      clockTimer_{nullptr};
+
+    // Last values shown, so a language change can re-render them in the new
+    // locale without waiting for the next presenter signal.
+    int                                lastState_{kInitialState};
+    presenter::BackendHealthViewModel  lastHealth_{};
+    bool                               haveHealth_{false};
 };
 
 }  // namespace app::view

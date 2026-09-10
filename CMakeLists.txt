@@ -1229,11 +1229,21 @@ if(BUILD_QT_FRONTEND)
     add_library(objectsQt OBJECT)
     target_sources(objectsQt PRIVATE
         src/qt/QtInitRoot.cpp
+        src/qt/view/QtGettextTranslator.cpp
         src/qt/view/QtMainWindow.cpp
         src/qt/view/QtDashboardPage.cpp
         src/qt/view/QtAlertsPage.cpp
         src/qt/view/QtStatusStrip.cpp
         src/qt/view/QtGoodsReceiptPage.cpp
+        src/qt/view/QtTrendsPage.cpp
+        src/qt/view/QtHistoryPage.cpp
+        src/qt/view/QtMultiStationPage.cpp
+        src/qt/view/QtLoginDialog.cpp
+        src/qt/view/QtChangePasswordDialog.cpp
+        src/qt/view/QtUsersPage.cpp
+        src/qt/view/QtUserFormDialog.cpp
+        src/qt/view/QtResetPasswordDialog.cpp
+        src/qt/view/QtAuditLogPage.cpp
         src/qt/view/QtSettingsPage.cpp
         src/qt/view/QtProductsPage.cpp
         src/qt/view/QtPaletteManager.cpp
@@ -1243,6 +1253,9 @@ if(BUILD_QT_FRONTEND)
         src/qt/view/widgets/QtActuatorCard.cpp
         src/qt/view/widgets/QtQualityCard.cpp
         src/qt/view/widgets/QtKpiTile.cpp
+        src/qt/view/widgets/QtGauge.cpp
+        src/qt/view/widgets/QtUptimeDonut.cpp
+        src/qt/view/widgets/QtLineChart.cpp
     )
     target_link_libraries(objectsQt
         PUBLIC
@@ -1257,8 +1270,18 @@ if(BUILD_QT_FRONTEND)
     # object libraries never run moc or uic. AUTOUIC turns QtDashboardPage.ui
     # into ui_QtDashboardPage.h at build time (the Qt analog of GtkBuilder).
     set_target_properties(objectsQt PROPERTIES AUTOMOC ON AUTOUIC ON)
+    # QT_NO_KEYWORDS drops Qt's `emit` / `signals` / `slots` macros so the
+    # shared sigc++ signals (auth::Session, the presenters) compile in a TU that
+    # also includes Qt headers -- otherwise Qt's `#define emit` mangles sigc++'s
+    # `signal::emit()`. Our Qt code uses connect(), never those keyword macros.
+    target_compile_definitions(objectsQt PRIVATE QT_NO_KEYWORDS)
 
-    add_executable(industrial-hmi-qt src/qt/main.cpp)
+    # Shares src/main.cpp with the GTK / console binaries via #ifdef
+    # QT_FRONTEND_MODE (the same pattern CONSOLE_MODE uses), so there is one
+    # composition entry point rather than a separate src/qt/main.cpp.
+    add_executable(industrial-hmi-qt)
+    target_sources(industrial-hmi-qt PRIVATE src/main.cpp)
+    target_compile_definitions(industrial-hmi-qt PRIVATE QT_FRONTEND_MODE QT_NO_KEYWORDS)
     target_link_libraries(industrial-hmi-qt
         PRIVATE
             objectsQt
@@ -1272,6 +1295,7 @@ if(BUILD_QT_FRONTEND)
             objectsMqtt
             objectsMl
             objectsAuth
+            objectsHistorian
             Threads::Threads
             Qt6::Widgets
             Qt6::Svg
@@ -1373,6 +1397,13 @@ if(GETTEXT_MSGFMT_EXECUTABLE AND EXISTS "${PO_DIR}/LINGUAS")
     if(MO_FILES)
         add_custom_target(translations ALL DEPENDS ${MO_FILES})
         add_dependencies(industrial-hmi translations)
+        # The Qt frontend reads the same compiled catalogs from
+        # <exe-dir>/locale, so it must build them too. Without this a
+        # target-specific `--build --target industrial-hmi-qt` never triggers
+        # the ALL-target, leaving build/locale empty and every string in English.
+        if(TARGET industrial-hmi-qt)
+            add_dependencies(industrial-hmi-qt translations)
+        endif()
     endif()
 else()
     message(STATUS "gettext msgfmt not found - translations will not be compiled")

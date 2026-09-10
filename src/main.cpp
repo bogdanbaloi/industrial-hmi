@@ -32,7 +32,10 @@
 #  include <clocale>
 #endif
 
-#ifdef CONSOLE_MODE
+#ifdef QT_FRONTEND_MODE
+#  include "src/qt/QtInitRoot.h"
+#  include <QApplication>
+#elif defined(CONSOLE_MODE)
 #  include "src/console/InitConsole.h"
 #else
 #  include "src/core/Application.h"
@@ -70,7 +73,7 @@ constexpr bool kConsoleMode =
 /// store is dropped and the bridge stays unconstructed -- the rest of
 /// the binary keeps running with a missing History tab, matching the
 /// project-wide "degraded > crash" policy.
-void registerHistorian(
+[[maybe_unused]] void registerHistorian(
         app::config::ConfigManager& config,
         app::core::Logger& logger,
         std::unique_ptr<app::historian::SqliteHistoryStore>& storeOut,
@@ -128,7 +131,7 @@ void registerHistorian(
 /// without auth -- matches the project-wide degraded-over-crash
 /// policy. Seeded default users (operator / maintenance / admin) are
 /// only inserted on first run; a populated table is left alone.
-void registerAuth(
+[[maybe_unused]] void registerAuth(
         app::config::ConfigManager& config,
         app::core::Logger& logger,
         std::unique_ptr<app::auth::SqliteUserRepository>& repoOut,
@@ -202,7 +205,7 @@ void initWindowsConsole() {
 #endif
 
 
-#ifndef CONSOLE_MODE
+#if !defined(CONSOLE_MODE) && !defined(QT_FRONTEND_MODE)
 /// Composition-root bundle passed to wireApplicationServices().
 /// Grouped into a struct (rather than a long parameter list) so the
 /// helper stays under the clang-tidy 8-parameter readability threshold.
@@ -259,7 +262,7 @@ void wireApplicationServices(
         app.setUsersPresenter(root.usersPresenterOut.get());
     }
 }
-#endif  // !CONSOLE_MODE
+#endif  // GTK only (not console, not Qt)
 
 }  // namespace
 
@@ -276,6 +279,20 @@ int main(int argc, char* argv[]) {
         app::core::Bootstrap bootstrap;
         bootstrap.run();
 
+#ifdef QT_FRONTEND_MODE
+        // Qt frontend: its own composition root (QtInitRoot) builds the same
+        // model + presenters + integration the GTK/console paths do, but over a
+        // QApplication event loop. Isolated behind this #ifdef so gtkmm and Qt
+        // headers never share a translation unit.
+        QApplication qtApp(argc, argv);
+        app::qt::QtInitRoot qtRoot(bootstrap);
+        // run() returns false when the operator cancels the auth login gate;
+        // skip the event loop and exit cleanly, like the GTK path.
+        if (!qtRoot.run()) {
+            return 0;
+        }
+        return QApplication::exec();
+#else
         // Integration backends -- opt-in per deployment via JSON.
         // Stack-owned through main() so RAII shuts them down on exit.
         auto& config = app::config::ConfigManager::instance();
@@ -345,6 +362,7 @@ int main(int argc, char* argv[]) {
         app.shutdown();
         return result;
 #endif
+#endif  // QT_FRONTEND_MODE
     } catch (const app::core::CriticalStartupError& e) {
         app::core::reportFatalStartup(e, kConsoleMode);
         return kExitStartupFatal;

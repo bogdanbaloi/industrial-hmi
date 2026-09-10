@@ -53,6 +53,10 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
             border: 1px solid @border; border-radius: 3px; background: @surface; }
         QCheckBox::indicator:checked { background: @accent; border-color: @accent; }
         QCheckBox::indicator:disabled { border-color: @muted; }
+        QRadioButton::indicator { width: 15px; height: 15px;
+            border: 1px solid @border; border-radius: 8px; background: @surface; }
+        QRadioButton::indicator:checked { background: @accent;
+            border-color: @accent; }
         QTableWidget { background: @surface; alternate-background-color: @surface2;
             gridline-color: @border; border: 1px solid @border; }
         QHeaderView::section { background: @surface2; color: @muted;
@@ -60,6 +64,8 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
         QProgressBar { background: @surface2; border: 1px solid @border;
             border-radius: 4px; text-align: center; color: @text; }
         QProgressBar::chunk { background: @accent; border-radius: 3px; }
+        #headerLabel { color: @text; font-size: 16px; font-weight: bold;
+            padding: 2px 0 8px; }
         #sidebar { background: @surface; border-right: 1px solid @border; }
         #sidebar QPushButton { background: transparent; color: @text;
             text-align: left; padding: 9px 12px; border: none; border-radius: 6px; }
@@ -68,6 +74,13 @@ QString QtPaletteManager::buildStyleSheet(const PaletteDef& palette) {
         #sidebarBrand { color: @text; font-weight: bold; font-size: 15px;
             padding: 4px 4px 8px; }
         #sidebarUser { color: @muted; padding: 6px 4px; }
+        #sidebar #sidebarChangePassword, #sidebar #sidebarSignOut,
+        #sidebar #sidebarQuit {
+            background: @surface2; color: @text; font-weight: bold;
+            padding: 10px 12px; border: 1px solid @border; border-radius: 6px;
+            margin-top: 6px; text-align: center; }
+        #sidebar #sidebarChangePassword:hover, #sidebar #sidebarSignOut:hover,
+        #sidebar #sidebarQuit:hover { background: @accent; color: @accentInk; }
         #navBadge { background: #c62828; color: white; border-radius: 8px;
             padding: 0 5px; font-weight: bold; }
         #kpiTile { background: @surface; border: 1px solid @border;

@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Qt multi-station dashboard (REQ-ARCH-017)
+
+#### Added
+- Multi-station view (`QtMultiStationPage`): two full dashboard panes side by side, the primary station over the live model and the secondary over the `MirrorModel` the `PrimaryToSecondaryBridge` feeds. Reuses `QtDashboardPage` over a second `DashboardPresenter`; mounts a "Multi-station" tab only when a secondary model exists (`ui.multistation_enabled`). The Qt counterpart to the GTK MultiStationDashboardPage.
+
+### Qt overview and status-strip polish
+
+Layout + readability refinements to the Qt frontend (no new requirement).
+
+#### Changed
+- Overview visuals row now spreads an OEE gauge, a new Quality gauge and the uptime donut across its width instead of leaving a gap on the right.
+- The Order / Shipment / Status lines are grouped into a "Current work unit" card with a two-column label / value form.
+- The bottom status strip shows each backend as a bordered state-coloured chip, groups connectivity on the left with the "N of M backends online" summary and a date + time clock on the right, and no longer leaves a blank gap in the middle.
+- KPI tiles colour their value by state (green ok / amber warn / red alarm) so OEE, quality and defects read at a glance.
+- Every page carries a consistent title header (shared `#headerLabel` style), including the Overview and Inventory pages that previously had none.
+
+#### Fixed
+- The status strip now retranslates on a live language change: it caches the last state and backend health and re-renders the pill and "N of M backends online" summary through a `changeEvent(LanguageChange)` seam, instead of staying in the old language until the next presenter signal (which never arrives while Idle).
+- The Qt frontend now compiles the gettext catalogs: `industrial-hmi-qt` depends on the `translations` target, so a target-specific build fills `build/locale` with the `.mo` files instead of leaving it empty. Without this the language selector changed nothing because the runtime had no catalog to load.
+- Regenerated the shared catalog and translated the Qt strings into all ten languages, so the language selector now retranslates the whole Qt UI (the nav, dashboard, admin pages and dialogs), not just the handful of strings that happened to overlap the GTK catalog. Pure acronyms and protocol names (OEE, ACK, SKU, I/O, the backend protocol labels) stay in English by design. Added `po/regen.sh` so the catalog can be rebuilt with one command.
+- The equipment, actuator and quality cards now retranslate their code-set text (title, "Status: %1" frame, status word, "Enabled") on a live language change instead of holding the pre-switch language until their next view-model arrives, which for equipment and actuators rarely happens. Each caches its last view model and re-renders through a `changeEvent(LanguageChange)` seam.
+- The presenter-formatted card strings (equipment consumables such as "Supply level: 85%", actuator messages such as "Working - Position X:150 Y:200") are now marked translatable with `_()` and translated, so they localize like the rest of the UI instead of staying English in every frontend. On a Qt language switch the model re-broadcasts its current state (new `SimulatedModel::republishAll`) so these rebuild in the new locale at once rather than on the next state change. The embedded demo values (percentages, positions) are fixed sample data.
+
+### Qt authentication, admin pages and session footer (REQ-ARCH-016)
+
+Brings the auth stack behind the Qt frontend: a login gate, the admin
+user-management and audit-log pages, and a session-aware sidebar footer, all
+reusing the same toolkit-agnostic auth layer as GTK and console.
+
+#### Added
+- Modal login (`QtLoginDialog`) over the shared `AuthService` (Argon2id verify against the SQLite user store). Shown before the shell is built; a cancelled login exits cleanly with no window.
+- Admin user-management page (`QtUsersPage`) over `UsersPresenter`: a user table with add / edit / reset-password / delete, each through a `.ui` dialog (`QtUserFormDialog`, `QtResetPasswordDialog`) or a confirm box. Every mutation goes through the presenter, which enforces RBAC and writes the audit trail.
+- Admin audit-log page (`QtAuditLogPage`) over `AuditLogger`: category / result / range / user filters, an auto-refresh, a total-events footer, and a CSV export (RFC 4180, UTF-8 BOM) of the filtered events to an operator-chosen file.
+- Self-service change-password (`QtChangePasswordDialog`) in the sidebar for any signed-in user, through `UsersPresenter::changeOwnPassword` (verifies the old password, hashes the new one, audits the change).
+- Session-aware sidebar footer showing the signed-in user + role, tracking `Session` changes.
+- Sign-out (switch user): clears + audits the session, re-shows the login, and rebuilds the shell so role-gated nav matches the newly signed-in user. A cancelled re-login exits. The rebuild reattaches a fresh window to the still-running simulation rather than resetting it.
+
+#### Changed
+- `QtInitRoot` builds the auth stack through the same config-gated, degraded-open path `main()`'s `registerAuth` uses, gates the shell behind the login, and mounts the Users + Audit pages only for an Admin session (visible half of a defence-in-depth gate). `run()` now returns a bool so `main()` skips the event loop on a cancelled login.
+- `objectsQt` is built with `QT_NO_KEYWORDS` so the shared sigc++ signals (`auth::Session`, the presenters) compile in a translation unit that also includes Qt headers -- Qt's `emit` macro would otherwise mangle sigc++'s `signal::emit()`.
+
+### Qt language selection over the shared i18n catalog (REQ-ARCH-015)
+
+Adds a live language picker to the Qt frontend that reuses the same gettext
+catalog as the GTK and console frontends, instead of a parallel Qt `.qm` set.
+
+#### Added
+- `QtGettextTranslator`: a `QTranslator` adapter that resolves Qt's `translate()` (behind both `tr()` and the uic `.ui` strings) through the shared gettext catalog. One catalog now serves all three frontends.
+- Language picker in Settings (a LINGUAS code or "auto"): persists the choice through `ConfigManager`, rebinds the catalog, and retranslates the shell live via Qt's `QEvent::LanguageChange` broadcast, no restart.
+- Per-widget retranslate seams (`changeEvent`) across the pages, plus caption / series-name setters on the KPI tile, gauge and line chart, so C++-set labels re-read the catalog on a language change.
+
+#### Changed
+- `QtInitRoot` installs the translator before the first paint and owns the language-change flow. The equipment / actuator / quality cards are data-driven, so they re-read the catalog on the next tick; the status strip caches its last values and retranslates them through its own `changeEvent` seam.
+- `po/POTFILES.in` lists the Qt sources for extraction. Populating the catalog with the Qt-authored strings (xgettext with `--keyword=tr:1`) is a follow-on content step; untranslated keys fall back to English.
+
+### Qt persisted-historian History page (REQ-ARCH-014)
+
+Reuses the persisted historian behind the Qt frontend and surfaces the archive
+in a read-only History page, extending the toolkit-independence proof to the
+persistence layer.
+
+#### Added
+- History page (`QtHistoryPage`): a pure View over the `HistoryReader` interface. Pick a range (last hour / 24 hours / 7 days), Refresh, and it queries the store and plots the quality pass-rate and equipment supply-level series in two grouped charts, with a total-samples footer. Mounts only when the historian opened. History nav entry + icon.
+- `QtLineChart::setPoints`: batch-load a whole series from a query result (no rolling-window cap), beside the existing live-append path the Overview and Trends charts use.
+
+#### Changed
+- `QtInitRoot` now builds the historian stack (SQLite store + `HistorianBridge` + `HistorianMaintenance`) through the same config-gated, degraded-open path `main()`'s `registerHistorian` uses, and passes the read side to the window. A disabled or failed store degrades to no History tab. Teardown stops the retention worker, flushes the bridge and closes the store in dependency order.
+
 ### Shared integration bootstrap and Qt connectivity (REQ-ARCH-013)
 
 Extracts the integration-layer composition into a shared, toolkit-agnostic
@@ -28,10 +96,12 @@ reusing the existing presenters through the ViewObserver seam.
 
 #### Added
 - Products tab (`QtProductsPage`) reusing `ProductsPresenter`, with a Refresh action and a products table.
-- Settings tab (`QtSettingsPage`): a read-only config overview plus the palette picker.
+- Settings tab (`QtSettingsPage`): grouped into Appearance (palette swatches), Display (windowed / fullscreen toggle wired to the window through an injected callback) and a read-only Configuration overview.
 - Runtime palettes (`QtPaletteManager`): light, dark, Nord and Cockpit, applied application-wide via a Qt style sheet built from semantic role colours and persisted through ConfigManager. ADR-0021.
 - Live log panel (`QtLogPanel`) at the bottom of the shell, tailing the log file (the GTK log-panel analog).
 - Overview KPI tiles (`QtKpiTile`): OEE, throughput, average quality, defects and lines-up, all aggregated live from the same view models the cards render (no fabricated figures).
+- Overview circular visuals matching the GTK dashboard: an OEE gauge (`QtGauge`) and a session-uptime donut (`QtUptimeDonut`), both custom-painted with QPainter (no charting dependency).
+- Trends page (`QtTrendsPage`) with a live rolling line chart (`QtLineChart`, custom QPainter) of OEE and average quality, buffered from the DashboardPresenter as a second observer (in-memory session trend; the persisted historian is a separate path). The window starts fullscreen (kiosk mode, like GTK), restoring to 1920x1080 when the Settings toggle switches to windowed.
 - SVG sidebar nav icons (rendered from inline SVG via `QSvgRenderer`, no shipped assets) plus a live active-alert count badge on the Alerts entry (fed from `AlertCenter`, marshalled to the UI thread).
 - Goods-receipt inspection page (`QtGoodsReceiptPage`) reusing the real `QualityInspectionPresenter` (decode, classify, top-K) with the project's `FakeImageClassifier` as a clearly-labelled demo model. Extends the toolkit-independence proof to the Edge-AI inspection presenter.
 - Alerts tab (`QtAlertsPage`) reusing the shared ISA-18.2 `AlertCenter` (the same alarm store the GTK `AlertsPanel` renders): active alarms with priority and lifecycle badges, per-alarm Acknowledge, a history toggle and Clear. Reusing the alarm store unchanged behind a second toolkit extends the REQ-ARCH-011 toolkit-independence proof.

@@ -7,6 +7,7 @@
 #include "ui_QtProductsPage.h"
 
 #include <QAbstractItemView>
+#include <QEvent>
 #include <QHeaderView>
 #include <QPushButton>
 #include <QString>
@@ -28,9 +29,7 @@ QtProductsPage::QtProductsPage(ProductsPresenter& presenter, QWidget* parent)
     ui_->setupUi(this);
 
     ui_->productsTable->setColumnCount(kColumnCount);
-    ui_->productsTable->setHorizontalHeaderLabels(
-        {tr("SKU"), tr("Description"), tr("Status"), tr("On hand"),
-         tr("Quality %")});
+    applyHeaderLabels();
     ui_->productsTable->horizontalHeader()->setStretchLastSection(true);
     ui_->productsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui_->productsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -40,6 +39,20 @@ QtProductsPage::QtProductsPage(ProductsPresenter& presenter, QWidget* parent)
 }
 
 QtProductsPage::~QtProductsPage() = default;
+
+void QtProductsPage::applyHeaderLabels() {
+    ui_->productsTable->setHorizontalHeaderLabels(
+        {tr("SKU"), tr("Description"), tr("Status"), tr("On hand"),
+         tr("Quality %")});
+}
+
+void QtProductsPage::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        ui_->retranslateUi(this);
+        applyHeaderLabels();
+    }
+    QWidget::changeEvent(event);
+}
 
 void QtProductsPage::onProductsLoaded(const presenter::ProductsViewModel& vm) {
     auto* table = ui_->productsTable;

@@ -299,6 +299,101 @@ run of `industrial-hmi-qt` (the bottom status strip lists each backend's state).
 
 ADR: 0008 (Runtime palette swap), 0020 (Qt frontend), 0021 (Qt palette manager).
 
+### REQ-ARCH-014 (SHOULD) — Qt frontend surfaces the persisted historian
+
+`req~arch-014~1`
+
+The Qt frontend **shall** reuse the persisted historian (the SQLite store, the
+model-to-store bridge and the tiered-retention worker) through the same
+config-gated, degraded-open composition the GTK and console frontends use, and
+**shall** present the archive through a read-only History page that depends only
+on the `HistoryReader` interface (pick a time range, query, plot). The page
+**shall** mount only when the store opens successfully, so a disabled or failed
+historian degrades to a missing tab rather than a crash. Reusing the persistence
+layer behind a third frontend extends the toolkit-independence proof from the
+presenter and integration layers to the historian (extends REQ-ARCH-011 and
+REQ-ARCH-013, builds on the HISTORIAN requirements).
+
+Verified by: the existing historian tests cover the store, bridge and
+maintenance worker (`SqliteHistoryStoreTest`, `HistorianBridgeTest`,
+`HistorianMaintenanceTest`, `HistorianRoundTripIntegrationTest`); CI builds the
+Qt frontend over the shared historian wiring; manual run of `industrial-hmi-qt`
+(the History page queries each range and plots the quality / supply series).
+
+ADR: 0007 (Historian degraded open), 0020 (Qt frontend).
+
+### REQ-ARCH-015 (SHOULD) — Qt frontend reuses the shared i18n catalog
+
+`req~arch-015~1`
+
+The Qt frontend **shall** resolve its translations through the same
+toolkit-agnostic gettext catalog (`src/core/i18n`) the GTK and console frontends
+use, rather than a parallel Qt `.qm` catalog, so a single set of `.po` files
+serves every frontend. Qt's own `translate()` (behind both `tr()` and the
+uic-generated `.ui` strings) **shall** be redirected onto the catalog through a
+`QTranslator` adapter. The Settings page **shall** offer a language picker
+(a LINGUAS code or "auto") that persists the choice and rebinds the catalog, and
+the interface **shall** retranslate live (no restart) via Qt's
+`QEvent::LanguageChange` broadcast. Reusing the i18n module behind a third
+frontend extends the toolkit-independence proof to the localisation layer
+(extends REQ-ARCH-011).
+
+Verified by: the existing `I18nTest` covers the gettext binding + live-switch
+cache flush; manual run of `industrial-hmi-qt` (pick a language in Settings and
+the shell retranslates for every catalogued string). Catalog population of the
+Qt-authored strings (extraction with `--keyword=tr:1`) is a separate content
+step; untranslated keys fall back to English.
+
+ADR: 0020 (Qt frontend).
+
+### REQ-ARCH-016 (SHOULD) — Qt frontend reuses the auth stack and admin pages
+
+`req~arch-016~1`
+
+The Qt frontend **shall** reuse the toolkit-agnostic auth stack (the SQLite user
+store, the Argon2id password hasher, the audit log, the AuthService + Session,
+and the UsersPresenter) through the same config-gated, degraded-open composition
+main()'s registerAuth uses. When auth is enabled a modal login **shall** gate the
+shell before it is built, and a cancelled login **shall** exit cleanly with no
+window. The sidebar footer **shall** show the signed-in user + role (replacing
+the static placeholder) and track Session changes, and a sign-out control
+**shall** clear + re-authenticate the session and rebuild the shell so
+role-gated nav matches the new user. The admin User-management and
+Audit-log pages **shall** mount only for an Admin session (RBAC also enforced in
+UsersPresenter, so this is the visible half of a defence-in-depth gate), each a
+pure View over the shared presenter / reader. Reusing the auth layer behind a
+third frontend extends the toolkit-independence proof to authentication
+(extends REQ-ARCH-011, builds on the AUTH requirements).
+
+Verified by: the existing auth tests cover the store, hasher, service, audit and
+UsersPresenter; CI builds the Qt frontend over the shared auth wiring; manual run
+of `industrial-hmi-qt` with auth enabled (login gate, admin sees Users + Audit,
+non-admin does not, footer shows the operator).
+
+ADR: 0006 (Auth defence in depth), 0020 (Qt frontend).
+
+### REQ-ARCH-017 (SHOULD) — Qt frontend multi-station view
+
+`req~arch-017~1`
+
+When the integration layer builds a secondary model (a `MirrorModel` fed by the
+`PrimaryToSecondaryBridge`, enabled by `ui.multistation_enabled`), the Qt
+frontend **shall** present a multi-station view of two full dashboard panes side
+by side -- the primary station over the live model and the secondary over the
+mirror -- reusing the same `QtDashboardPage` over a second `DashboardPresenter`
+(composition over duplication, the Qt counterpart to the GTK
+MultiStationDashboardPage). The view **shall** mount only when the secondary
+model exists. Reusing the dashboard View and presenter for a second station,
+linked purely at the model layer, is another slice of the toolkit-independence
+proof (extends REQ-ARCH-011, builds on ADR-0011).
+
+Verified by: the PrimaryToSecondaryBridge + MirrorModel are covered by the
+existing integration tests (PrimaryToSecondary); CI builds the Qt frontend over
+the shared secondary-model wiring; manual run of `industrial-hmi-qt` with
+`ui.multistation_enabled` (the Multi-station tab shows both stations live).
+
+ADR: 0011 (Primary/secondary bridge), 0020 (Qt frontend).
+
 ---
 
 ## AUTH — Authentication & Authorisation

@@ -389,6 +389,37 @@ public:
         notifyWorkUnitChange();
     }
 
+    // Re-broadcast every current status to all observers so derived views
+    // repaint without waiting for the next state change (e.g. after a live
+    // language switch, to re-render presenter-formatted strings in the new
+    // locale). Ids are snapshotted under the lock, then notified outside it so
+    // each per-id notify* can take the lock itself.
+    void republishAll() {
+        std::vector<uint32_t> equipmentIds;
+        std::vector<uint32_t> actuatorIds;
+        std::vector<uint32_t> qualityIds;
+        {
+            const std::scoped_lock lock(mutex_);
+            equipmentIds.reserve(equipmentStatuses_.size());
+            for (const auto& entry : equipmentStatuses_) {
+                equipmentIds.push_back(entry.first);
+            }
+            actuatorIds.reserve(actuatorStatuses_.size());
+            for (const auto& entry : actuatorStatuses_) {
+                actuatorIds.push_back(entry.first);
+            }
+            qualityIds.reserve(qualityCheckpoints_.size());
+            for (const auto& entry : qualityCheckpoints_) {
+                qualityIds.push_back(entry.first);
+            }
+        }
+        for (uint32_t id : equipmentIds) { notifyEquipmentChange(id); }
+        for (uint32_t id : actuatorIds)  { notifyActuatorChange(id); }
+        for (uint32_t id : qualityIds)   { notifyQualityChange(id); }
+        notifyWorkUnitChange();
+        notifyStateChange();
+    }
+
     void notifyQualityChange(uint32_t id) {
         std::vector<QualityCheckpointCallback> cbs;
         QualityCheckpoint cp;

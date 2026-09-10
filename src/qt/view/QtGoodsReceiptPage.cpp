@@ -9,6 +9,7 @@
 
 #include "ui_QtGoodsReceiptPage.h"
 
+#include <QEvent>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -39,6 +40,15 @@ QtGoodsReceiptPage::QtGoodsReceiptPage(
 }
 
 QtGoodsReceiptPage::~QtGoodsReceiptPage() = default;
+
+void QtGoodsReceiptPage::changeEvent(QEvent* event) {
+    if (event != nullptr && event->type() == QEvent::LanguageChange) {
+        // The .ui chrome (button, section labels); the status / result rows are
+        // event-driven and re-read the catalog on the next inspection.
+        ui_->retranslateUi(this);
+    }
+    QWidget::changeEvent(event);
+}
 
 void QtGoodsReceiptPage::chooseAndInspect() {
     const QString path = QFileDialog::getOpenFileName(

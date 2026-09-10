@@ -8,6 +8,8 @@
 
 #include <memory>
 
+class QEvent;
+
 // The Ui namespace name is fixed by Qt's uic generator, not our style.
 // NOLINTNEXTLINE(readability-identifier-naming)
 namespace Ui {
@@ -38,7 +40,12 @@ public:
 
     void onProductsLoaded(const presenter::ProductsViewModel& vm) override;
 
+protected:
+    void changeEvent(QEvent* event) override;
+
 private:
+    void applyHeaderLabels();
+
     ProductsPresenter&                  presenter_;
     std::unique_ptr<Ui::QtProductsPage> ui_;
 };

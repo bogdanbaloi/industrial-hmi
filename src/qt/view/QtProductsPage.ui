@@ -4,6 +4,13 @@
  <widget class="QWidget" name="QtProductsPage">
   <layout class="QVBoxLayout" name="rootLayout">
    <item>
+    <widget class="QLabel" name="headerLabel">
+     <property name="text">
+      <string>Inventory</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="refreshButton">
      <property name="text">
       <string>Refresh</string>

@@ -1,8 +1,14 @@
 # List of source files containing translatable strings.
 # Used by xgettext to generate the .pot template.
 [encoding: UTF-8]
+#
+# ORDER MATTERS: every C++ source is listed before the GtkBuilder .ui block.
+# A `[type: gettext/glade]` line switches xgettext into Glade mode for that and
+# every following entry, so any C++ file placed after the .ui block would be
+# parsed as Glade and its _() / tr() strings silently dropped. Keep the .ui
+# block last.
 
-# C++ sources
+# GTK + shared C++ sources (_() / N_())
 src/core/Bootstrap.cpp
 src/core/Application.cpp
 src/presenter/DashboardPresenter.cpp
@@ -16,7 +22,36 @@ src/gtk/view/pages/SettingsPage.cpp
 src/gtk/view/widgets/AlertsPanel.h
 src/gtk/view/widgets/SystemStatusBadge.h
 
-# GtkBuilder UI files
+# Qt frontend C++ sources. These mark strings with Qt's tr() rather than _(),
+# so the catalog regen must add --keyword=tr:1 for them (the Qt frontend routes
+# tr() through the same gettext catalog via QtGettextTranslator). The Qt .ui
+# files are not listed here: uic emits their strings into generated ui_*.h, so
+# they are extracted from the build tree with --keyword=translate:2, not here.
+src/qt/QtInitRoot.cpp
+src/qt/view/QtMainWindow.cpp
+src/qt/view/QtSidebar.cpp
+src/qt/view/QtDashboardPage.cpp
+src/qt/view/QtSettingsPage.cpp
+src/qt/view/QtProductsPage.cpp
+src/qt/view/QtAlertsPage.cpp
+src/qt/view/QtGoodsReceiptPage.cpp
+src/qt/view/QtHistoryPage.cpp
+src/qt/view/QtTrendsPage.cpp
+src/qt/view/QtStatusStrip.cpp
+src/qt/view/QtLogPanel.cpp
+src/qt/view/QtUsersPage.cpp
+src/qt/view/QtUserFormDialog.cpp
+src/qt/view/QtResetPasswordDialog.cpp
+src/qt/view/QtChangePasswordDialog.cpp
+src/qt/view/QtLoginDialog.cpp
+src/qt/view/QtAuditLogPage.cpp
+src/qt/view/QtRoleLabel.h
+src/qt/view/widgets/QtActuatorCard.cpp
+src/qt/view/widgets/QtEquipmentCard.cpp
+src/qt/view/widgets/QtQualityCard.cpp
+src/qt/view/widgets/QtUptimeDonut.cpp
+
+# GtkBuilder UI files (Glade mode -- MUST stay last, see note above)
 [type: gettext/glade]assets/ui/main-window.ui
 [type: gettext/glade]assets/ui/dashboard-page.ui
 [type: gettext/glade]assets/ui/products-page.ui

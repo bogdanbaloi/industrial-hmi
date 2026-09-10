@@ -6,6 +6,8 @@
 
 #include <memory>
 
+class QEvent;
+
 // The Ui namespace name is fixed by Qt's uic generator, not our style.
 // NOLINTNEXTLINE(readability-identifier-naming)
 namespace Ui {
@@ -38,6 +40,9 @@ public:
     QtAlertsPage& operator=(const QtAlertsPage&) = delete;
     QtAlertsPage(QtAlertsPage&&)                 = delete;
     QtAlertsPage& operator=(QtAlertsPage&&)      = delete;
+
+protected:
+    void changeEvent(QEvent* event) override;
 
 private:
     void scheduleRebuild();

@@ -5,7 +5,9 @@
 #include <QGroupBox>
 
 #include <cstdint>
+#include <optional>
 
+class QEvent;
 class QLabel;
 
 namespace app::view {
@@ -20,6 +22,10 @@ public:
 
     void applyViewModel(const presenter::QualityCheckpointViewModel& viewModel);
 
+protected:
+    // Re-render the code-set text in the new language on a live switch.
+    void changeEvent(QEvent* event) override;
+
 private:
     std::uint32_t checkpointId_;
 
@@ -27,6 +33,9 @@ private:
     QLabel* passRateLabel_{nullptr};
     QLabel* statsLabel_{nullptr};
     QLabel* lastDefectLabel_{nullptr};
+
+    // Last rendered model, so a language change can re-render from it.
+    std::optional<presenter::QualityCheckpointViewModel> lastViewModel_;
 };
 
 }  // namespace app::view
