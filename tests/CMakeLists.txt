@@ -1310,3 +1310,17 @@ foreach(scenario ${CONSOLE_SCENARIOS})
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
 endforeach()
+
+# MCP protocol + tools (REQ-ARCH-018). Exercises the initialize handshake,
+# tools/list, both read-only tools over an AlertCenter + a stub HistoryReader,
+# argument validation and the boundary error mapping. Pure logic -- no GUI, no
+# stdio loop. objectsMcp carries GTKMM's include dirs transitively (via
+# objectsModel) so AlertCenter's sigc++ signal header resolves.
+add_executable(test_mcp_protocol McpProtocolTest.cpp)
+target_link_libraries(test_mcp_protocol PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsMcp
+    nlohmann_json_headers
+)
+add_test(NAME McpProtocolTest COMMAND test_mcp_protocol)

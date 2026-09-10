@@ -396,6 +396,31 @@ ADR: 0011 (Primary/secondary bridge), 0020 (Qt frontend).
 
 ---
 
+### REQ-ARCH-018 (SHOULD) — MCP server as a fourth MVP consumer
+
+`req~arch-018~1`
+
+The system **shall** provide an opt-in `industrial-hmi-mcp` executable (gated by
+`BUILD_MCP_SERVER`, default OFF) that speaks the Model Context Protocol over
+stdio JSON-RPC, driving the same `presenter::AlertCenter` and
+`historian::HistoryReader` instances the GTK, console and Qt frontends use, with
+no change to presenter or model code. v1 **shall** expose exactly two read-only
+tools: `alarms_snapshot` (current active alarms) and `historian_query` (bounded
+time-series read). No state-changing tool is exposed in this version. Driving
+the shared core from a non-human, programmatic consumer extends the
+toolkit-independence proof from human GUI toolkits to an AI agent (builds on
+ADR-0020, REQ-ARCH-013).
+
+Verified by: McpProtocolTest (initialize / tools/list / both tools / argument
+validation / boundary error mapping); manual run of `industrial-hmi-mcp` against
+an MCP client (e.g. Claude Desktop) exercising `initialize` / `tools/list` /
+`tools/call`.
+
+ADR: 0001 (MVP boundaries), 0003 (ViewObserver), 0014 (Result at boundaries),
+0020 (Qt toolkit-independence precedent), 0023 (MCP server).
+
+---
+
 ## AUTH — Authentication & Authorisation
 
 ### REQ-AUTH-001 (MUST) — Password hashing via Argon2id

@@ -1319,6 +1319,62 @@ if(BUILD_QT_FRONTEND)
     message(STATUS "Qt frontend enabled -- building industrial-hmi-qt")
 endif()
 
+# ----------------------------------------------------------------
+# MCP server (industrial-hmi-mcp) -- opt-in fourth consumer of the MVP core
+# (ADR-0023, REQ-ARCH-018). An LLM agent drives the same AlertCenter +
+# HistoryReader the human frontends use, over MCP (JSON-RPC on stdio). Like the
+# console binary it links no GUI widget toolkit (GTK/Qt); sigc++, which
+# AlertCenter's change signal uses, comes header-only via objectsModel.
+#
+# objectsMcp holds the protocol + tools + stdio loop, and is built under
+# BUILD_TESTS too so the protocol test compiles in CI without enabling the exe.
+# ----------------------------------------------------------------
+option(BUILD_MCP_SERVER
+    "Compile the opt-in MCP server (industrial-hmi-mcp)" OFF)
+
+if(BUILD_MCP_SERVER OR BUILD_TESTS)
+    add_library(objectsMcp OBJECT
+        src/mcp/McpProtocol.cpp
+        src/mcp/tools/AlarmsSnapshotTool.cpp
+        src/mcp/tools/HistorianQueryTool.cpp
+        src/mcp/McpServer.cpp)
+    target_link_libraries(objectsMcp
+        PUBLIC
+            objectsPresenter
+            objectsHistorian
+            objectsCore
+            nlohmann_json_headers)
+    target_include_directories(objectsMcp PUBLIC ${CMAKE_SOURCE_DIR})
+endif()
+
+if(BUILD_MCP_SERVER)
+    add_executable(industrial-hmi-mcp
+        src/mcp/main.cpp
+        src/mcp/McpInitRoot.cpp)
+    target_link_libraries(industrial-hmi-mcp
+        PRIVATE
+            objectsMcp
+            objectsModel
+            objectsConfig
+            objectsCore
+            objectsPresenter
+            objectsHistorian
+            objectsAuth
+            objectsMl
+            objectsIntegrationCore
+            nlohmann_json_headers
+            Threads::Threads)
+    if(WIN32)
+        target_link_libraries(industrial-hmi-mcp PRIVATE ws2_32 mswsock)
+    endif()
+    if(Intl_FOUND)
+        target_include_directories(industrial-hmi-mcp PRIVATE ${Intl_INCLUDE_DIRS})
+        target_link_libraries(industrial-hmi-mcp PRIVATE ${Intl_LIBRARIES})
+    endif()
+    add_dependencies(industrial-hmi-mcp CopyConfig)
+    message(STATUS "MCP server enabled -- building industrial-hmi-mcp")
+endif()
+
 # libintl - needed on platforms where gettext is not in libc (Windows, macOS)
 if(Intl_FOUND)
     target_include_directories(industrial-hmi PRIVATE ${Intl_INCLUDE_DIRS})
