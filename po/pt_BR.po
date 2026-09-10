@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: industrial-hmi 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-09 21:38+0300\n"
+"POT-Creation-Date: 2026-09-10 16:48+0300\n"
 "PO-Revision-Date: 2026-04-15 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Brazilian Portuguese\n"
@@ -67,6 +67,38 @@ msgstr "Falha do sistema"
 #: src/presenter/DashboardPresenter.cpp:362
 msgid "Production locked out."
 msgstr "Produção bloqueada."
+
+#: src/presenter/DashboardPresenter.cpp:409
+msgid "Not connected"
+msgstr "Não ligado"
+
+#: src/presenter/DashboardPresenter.cpp:414
+msgid "Supply level: 85%"
+msgstr "Nível de abastecimento: 85%"
+
+#: src/presenter/DashboardPresenter.cpp:419
+msgid "Supply level: 60%"
+msgstr "Nível de abastecimento: 60%"
+
+#: src/presenter/DashboardPresenter.cpp:424
+msgid "Low supply (12%)"
+msgstr "Abastecimento baixo (12%)"
+
+#: src/presenter/DashboardPresenter.cpp:439
+msgid "Idle - At home position"
+msgstr "Inativo - Na posição inicial"
+
+#: src/presenter/DashboardPresenter.cpp:446
+msgid "Working - Position X:150 Y:200"
+msgstr "A funcionar - Posição X:150 Y:200"
+
+#: src/presenter/DashboardPresenter.cpp:453
+msgid "Error - Position fault"
+msgstr "Erro - Falha de posição"
+
+#: src/presenter/DashboardPresenter.cpp:457
+msgid "Position timeout detected"
+msgstr "Tempo limite de posição detetado"
 
 #: src/presenter/ProductsPresenter.cpp:270
 msgid "Recipe loading is not available."
@@ -195,8 +227,8 @@ msgstr "Requer função de Manutenção"
 #: src/gtk/view/pages/ProductsPage.cpp:675
 #: src/gtk/view/pages/ProductsPage.cpp:711
 #: src/gtk/view/pages/SettingsPage.cpp:328 src/qt/view/QtStatusStrip.cpp:47
-#: src/qt/view/widgets/QtActuatorCard.cpp:21
-#: src/qt/view/widgets/QtEquipmentCard.cpp:29
+#: src/qt/view/widgets/QtActuatorCard.cpp:22
+#: src/qt/view/widgets/QtEquipmentCard.cpp:30
 msgid "Error"
 msgstr "Erro"
 
@@ -290,7 +322,7 @@ msgid "%1 inspected • %2 defects"
 msgstr "%1 inspecionados • %2 defeitos"
 
 #: src/gtk/view/pages/DashboardPage.cpp:743
-#: src/qt/view/widgets/QtQualityCard.cpp:76
+#: src/qt/view/widgets/QtQualityCard.cpp:78
 msgid "Last: %1"
 msgstr "Último: %1"
 
@@ -324,7 +356,7 @@ msgid "uptime"
 msgstr "tempo ativo"
 
 #: src/gtk/view/pages/DashboardPage.cpp:925 src/qt/view/QtStatusStrip.cpp:53
-#: src/qt/view/widgets/QtActuatorCard.cpp:19
+#: src/qt/view/widgets/QtActuatorCard.cpp:20
 msgid "Idle"
 msgstr "Inativo"
 
@@ -400,9 +432,9 @@ msgid "Created: %1"
 msgstr "Criado: %1"
 
 #: src/gtk/view/pages/ProductsPage.cpp:243
-#: src/qt/view/widgets/QtActuatorCard.cpp:61
-#: src/qt/view/widgets/QtEquipmentCard.cpp:83
-#: src/qt/view/widgets/QtQualityCard.cpp:62
+#: src/qt/view/widgets/QtActuatorCard.cpp:63
+#: src/qt/view/widgets/QtEquipmentCard.cpp:85
+#: src/qt/view/widgets/QtQualityCard.cpp:64
 msgid "Status: %1"
 msgstr "Estado: %1"
 
@@ -646,13 +678,13 @@ msgstr "Voltou ao normal, a aguardar reconhecimento"
 msgid "Shelved (auto-unshelves at deadline)"
 msgstr "Adiado (reativa automaticamente no prazo)"
 
-#: src/qt/QtInitRoot.cpp:552 src/qt/view/QtSidebar.cpp:65
+#: src/qt/QtInitRoot.cpp:556 src/qt/view/QtSidebar.cpp:65
 #: src/qt/view/QtSidebar.cpp:150
 #: build-qt/objectsQt_autogen/include/ui_QtChangePasswordDialog.h:129
 msgid "Change password"
 msgstr "Alterar senha"
 
-#: src/qt/QtInitRoot.cpp:555
+#: src/qt/QtInitRoot.cpp:559
 msgid "Password changed."
 msgstr "Senha alterada."
 
@@ -836,12 +868,14 @@ msgid "Last 7 days"
 msgstr "Últimos 7 dias"
 
 #: src/qt/view/QtHistoryPage.cpp:90 src/qt/view/QtHistoryPage.cpp:113
-#: src/qt/view/widgets/QtQualityCard.cpp:41
+#: src/qt/view/widgets/QtQualityCard.cpp:42
+#: src/qt/view/widgets/QtQualityCard.cpp:86
 msgid "Checkpoint %1"
 msgstr "Ponto de controle %1"
 
 #: src/qt/view/QtHistoryPage.cpp:92 src/qt/view/QtHistoryPage.cpp:115
-#: src/qt/view/widgets/QtEquipmentCard.cpp:57
+#: src/qt/view/widgets/QtEquipmentCard.cpp:58
+#: src/qt/view/widgets/QtEquipmentCard.cpp:99
 msgid "Equipment %1"
 msgstr "Equipamento %1"
 
@@ -897,7 +931,8 @@ msgstr "Nome de exibição"
 msgid "Role"
 msgstr "Função"
 
-#: src/qt/view/QtUsersPage.cpp:86 src/qt/view/widgets/QtEquipmentCard.cpp:64
+#: src/qt/view/QtUsersPage.cpp:86 src/qt/view/widgets/QtEquipmentCard.cpp:65
+#: src/qt/view/widgets/QtEquipmentCard.cpp:100
 msgid "Enabled"
 msgstr "Ativado"
 
@@ -1066,122 +1101,128 @@ msgstr "Manutenção"
 msgid "Admin"
 msgstr "Administrador"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:18
-#: src/qt/view/widgets/QtEquipmentCard.cpp:21
+#: src/qt/view/widgets/QtActuatorCard.cpp:19
+#: src/qt/view/widgets/QtEquipmentCard.cpp:22
 msgid "Offline"
 msgstr "Offline"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:20
+#: src/qt/view/widgets/QtActuatorCard.cpp:21
 msgid "Working"
 msgstr "A funcionar"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:22
+#: src/qt/view/widgets/QtActuatorCard.cpp:23
 msgid "Homing"
 msgstr "A referenciar"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:23
+#: src/qt/view/widgets/QtActuatorCard.cpp:24
 msgid "Calibrating"
 msgstr "A calibrar"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:24
-#: src/qt/view/widgets/QtActuatorCard.cpp:26
-#: src/qt/view/widgets/QtEquipmentCard.cpp:31
-#: src/qt/view/widgets/QtEquipmentCard.cpp:33
+#: src/qt/view/widgets/QtActuatorCard.cpp:25
+#: src/qt/view/widgets/QtActuatorCard.cpp:27
+#: src/qt/view/widgets/QtEquipmentCard.cpp:32
+#: src/qt/view/widgets/QtEquipmentCard.cpp:34
 msgid "Unknown"
 msgstr "Desconhecido"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:46
+#: src/qt/view/widgets/QtActuatorCard.cpp:47
+#: src/qt/view/widgets/QtActuatorCard.cpp:82
 msgid "Actuator %1"
 msgstr "Atuador %1"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:50
-#: src/qt/view/widgets/QtEquipmentCard.cpp:61
-#: src/qt/view/widgets/QtQualityCard.cpp:45
+#: src/qt/view/widgets/QtActuatorCard.cpp:51
+#: src/qt/view/widgets/QtActuatorCard.cpp:86
+#: src/qt/view/widgets/QtEquipmentCard.cpp:62
+#: src/qt/view/widgets/QtEquipmentCard.cpp:104
+#: src/qt/view/widgets/QtQualityCard.cpp:46
+#: src/qt/view/widgets/QtQualityCard.cpp:87
 msgid "Status: -"
 msgstr "Estado: -"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:68
+#: src/qt/view/widgets/QtActuatorCard.cpp:70
 msgid "AUTO"
 msgstr "AUTO"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:68
+#: src/qt/view/widgets/QtActuatorCard.cpp:70
 msgid "MANUAL"
 msgstr "MANUAL"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:70
+#: src/qt/view/widgets/QtActuatorCard.cpp:72
 msgid "HOME"
 msgstr "ORIGEM"
 
-#: src/qt/view/widgets/QtActuatorCard.cpp:73
+#: src/qt/view/widgets/QtActuatorCard.cpp:75
 msgid "ALERT"
 msgstr "ALERTA"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:22
+#: src/qt/view/widgets/QtEquipmentCard.cpp:23
 msgid "Starting up"
 msgstr "A iniciar"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:23
+#: src/qt/view/widgets/QtEquipmentCard.cpp:24
 msgid "Self-check"
 msgstr "Autoverificação"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:24
+#: src/qt/view/widgets/QtEquipmentCard.cpp:25
 msgid "Online"
 msgstr "Online"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:25
+#: src/qt/view/widgets/QtEquipmentCard.cpp:26
 msgid "Processing"
 msgstr "A processar"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:26
+#: src/qt/view/widgets/QtEquipmentCard.cpp:27
 msgid "Warming up"
 msgstr "A aquecer"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:27 assets/ui/dashboard-page.ui:169
+#: src/qt/view/widgets/QtEquipmentCard.cpp:28 assets/ui/dashboard-page.ui:169
 msgid "Ready"
 msgstr "Pronto"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:28
+#: src/qt/view/widgets/QtEquipmentCard.cpp:29
 msgid "Reboot"
 msgstr "Reiniciar"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:30
+#: src/qt/view/widgets/QtEquipmentCard.cpp:31
 msgid "Disabled"
 msgstr "Desativado"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:62
+#: src/qt/view/widgets/QtEquipmentCard.cpp:63
+#: src/qt/view/widgets/QtEquipmentCard.cpp:105
 msgid "Supplies: -"
 msgstr "Suprimentos: -"
 
-#: src/qt/view/widgets/QtEquipmentCard.cpp:87
+#: src/qt/view/widgets/QtEquipmentCard.cpp:89
 msgid "Supplies: %1"
 msgstr "Suprimentos: %1"
 
-#: src/qt/view/widgets/QtQualityCard.cpp:20
-#: src/qt/view/widgets/QtQualityCard.cpp:24
+#: src/qt/view/widgets/QtQualityCard.cpp:21
+#: src/qt/view/widgets/QtQualityCard.cpp:25
 msgid "Passing"
 msgstr "Aprovado"
 
-#: src/qt/view/widgets/QtQualityCard.cpp:21
+#: src/qt/view/widgets/QtQualityCard.cpp:22
 msgid "Warning"
 msgstr "Aviso"
 
-#: src/qt/view/widgets/QtQualityCard.cpp:22
+#: src/qt/view/widgets/QtQualityCard.cpp:23
 msgid "Critical"
 msgstr "Crítico"
 
-#: src/qt/view/widgets/QtQualityCard.cpp:46
+#: src/qt/view/widgets/QtQualityCard.cpp:47
+#: src/qt/view/widgets/QtQualityCard.cpp:88
 msgid "Pass rate: -"
 msgstr "Taxa de aprovação: -"
 
-#: src/qt/view/widgets/QtQualityCard.cpp:66
+#: src/qt/view/widgets/QtQualityCard.cpp:68
 msgid "Pass rate: %1%"
 msgstr "Taxa de aprovação: %1%"
 
-#: src/qt/view/widgets/QtQualityCard.cpp:69
+#: src/qt/view/widgets/QtQualityCard.cpp:71
 msgid "Inspected: %1  Defects: %2"
 msgstr "Inspecionados: %1  Defeitos: %2"
 
-#: src/qt/view/widgets/QtQualityCard.cpp:75
+#: src/qt/view/widgets/QtQualityCard.cpp:77
 msgid "No defects"
 msgstr "Sem defeitos"
 

@@ -240,6 +240,10 @@ void QtInitRoot::changeLanguage(const std::string& code) {
         QCoreApplication::removeTranslator(translator_.get());
         QCoreApplication::installTranslator(translator_.get());
     }
+    // Re-emit current model state so presenter-formatted strings (equipment
+    // consumables, actuator messages) that only change on a state event are
+    // rebuilt in the new locale immediately, not on the next such event.
+    app::model::SimulatedModel::instance().republishAll();
 }
 
 void QtInitRoot::buildAuth() {
