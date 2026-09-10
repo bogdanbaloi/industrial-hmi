@@ -419,6 +419,8 @@ an MCP client (e.g. Claude Desktop) exercising `initialize` / `tools/list` /
 ADR: 0001 (MVP boundaries), 0003 (ViewObserver), 0014 (Result at boundaries),
 0020 (Qt toolkit-independence precedent), 0023 (MCP server).
 
+Needs: utest
+
 ---
 
 ## AUTH — Authentication & Authorisation

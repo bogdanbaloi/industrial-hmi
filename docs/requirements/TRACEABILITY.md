@@ -194,7 +194,7 @@ requirements may be smoke-tested.
 
 | Category | Total | MUST | SHOULD | NICE | Fully tested | Manual-only |
 |---|---|---|---|---|---|---|
-| ARCH | 18 | 5 | 11 | 2 | 8 | 10 (REQ-ARCH-006, REQ-ARCH-011, REQ-ARCH-012, REQ-ARCH-013, REQ-ARCH-014, REQ-ARCH-015, REQ-ARCH-016, REQ-ARCH-017, REQ-ARCH-018, manual smoke) |
+| ARCH | 18 | 5 | 11 | 2 | 9 | 9 (REQ-ARCH-006, REQ-ARCH-011, REQ-ARCH-012, REQ-ARCH-013, REQ-ARCH-014, REQ-ARCH-015, REQ-ARCH-016, REQ-ARCH-017, manual smoke) |
 | AUTH | 6 | 3 | 2 | 1 | 6 | 0 |
 | CORE | 9 | 2 | 3 | 4 | 9 | 0 |
 | DASHBOARD | 7 | 3 | 3 | 1 | 7 | 0 |
@@ -206,7 +206,7 @@ requirements may be smoke-tested.
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **66** | **24** | **30** | **12** | **53** | **13** |
+| **TOTAL** | **66** | **24** | **30** | **12** | **54** | **12** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE
