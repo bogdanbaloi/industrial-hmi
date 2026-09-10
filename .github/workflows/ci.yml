@@ -75,7 +75,11 @@ jobs:
       uses: msys2/setup-msys2@v2
       with:
         msystem: CLANG64
-        update: true
+        # Pinned to the action's base snapshot (no rolling -Syuu). A bleeding
+        # edge glib2 whose G_DECLARE_FINAL_TYPE now emits the ...Class typedef
+        # collides with giomm-2.68's hand-written alias and breaks the gtkmm
+        # build; keeping the snapshot consistent avoids that drift.
+        update: false
         install: >-
           mingw-w64-clang-x86_64-toolchain
           mingw-w64-clang-x86_64-cmake
