@@ -2,6 +2,7 @@
 
 #include "src/mcp/tools/AlarmsSnapshotTool.h"
 #include "src/mcp/tools/HistorianQueryTool.h"
+#include "src/mcp/tools/ProductionMetricsTool.h"
 
 #include <string>
 
@@ -27,13 +28,16 @@ nlohmann::json handleInitialize(const nlohmann::json& /*params*/) {
 }
 
 nlohmann::json handleToolsList() {
-    return {{"tools", {alarmsSnapshotDescriptor(), historianQueryDescriptor()}}};
+    return {{"tools",
+             {alarmsSnapshotDescriptor(), historianQueryDescriptor(),
+              productionMetricsDescriptor()}}};
 }
 
 app::core::Result<nlohmann::json, McpErrorCode>
 handleToolsCall(const nlohmann::json& params,
                 const presenter::AlertCenter& alerts,
-                historian::HistoryReader& reader) {
+                historian::HistoryReader& reader,
+                const model::ProductionModel& production) {
     using Res = app::core::Result<nlohmann::json, McpErrorCode>;
 
     const std::string name = params.value("name", std::string{});
@@ -43,6 +47,9 @@ handleToolsCall(const nlohmann::json& params,
 
     if (name == kAlarmsSnapshotTool) {
         return Res{app::core::Ok, toolResult(runAlarmsSnapshot(alerts))};
+    }
+    if (name == kProductionMetricsTool) {
+        return Res{app::core::Ok, toolResult(runProductionMetrics(production))};
     }
     if (name == kHistorianQueryTool) {
         auto parsed = parseHistorianArgs(arguments);

@@ -54,6 +54,7 @@ requirements may be smoke-tested.
 | REQ-ARCH-016 | SHOULD | `src/qt/QtInitRoot.cpp` (`buildAuth`: config-gated user store + hasher + audit + AuthService + Session + UsersPresenter, login gate, run() returns bool, Admin gating, session-footer sync), `src/qt/view/QtLoginDialog.h/.cpp/.ui` (modal login over AuthService), `src/qt/view/QtUsersPage.h/.cpp/.ui` + `QtUserFormDialog.*` + `QtResetPasswordDialog.*` (admin user CRUD over UsersPresenter), `src/qt/view/QtAuditLogPage.h/.cpp/.ui` (audit viewer over AuditLogger), `src/qt/view/QtMainWindow.cpp` (Admin-gated mount), `src/qt/view/QtSidebar.cpp` (session footer), `src/main.cpp` (skip exec on cancel), `CMakeLists.txt` (QT_NO_KEYWORDS + Qt auth sources) | existing auth tests (AuthServiceTest, SqliteUserRepositoryTest, Argon2 / SqliteAuditLogger / UsersPresenter tests); CI builds the Qt frontend over the shared auth wiring; manual run of `industrial-hmi-qt` with auth enabled | 0006, 0020 |
 | REQ-ARCH-017 | SHOULD | `src/qt/view/QtMultiStationPage.h/.cpp/.ui` (two QtDashboardPage panes side by side), `src/qt/QtInitRoot.cpp` (builds a secondary DashboardPresenter over `integrationServices_->secondaryModel`, attaches both panes as observers), `src/qt/view/QtMainWindow.cpp` (mounts the Multi-station tab when a secondary model exists), `CMakeLists.txt` | PrimaryToSecondaryBridgeTest / MirrorModel tests cover the model link; CI builds the Qt frontend over the shared secondary-model wiring; manual run of `industrial-hmi-qt` with `ui.multistation_enabled` | 0011, 0020 |
 | REQ-ARCH-018 | SHOULD | `src/mcp/McpProtocol.h/.cpp`, `src/mcp/McpError.h`, `src/mcp/tools/AlarmsSnapshotTool.h/.cpp`, `src/mcp/tools/HistorianQueryTool.h/.cpp`, `src/mcp/McpServer.h/.cpp`, `src/mcp/McpInitRoot.h/.cpp`, `src/main.cpp` (MCP_MODE branch), `CMakeLists.txt` | McpProtocolTest.* (initialize / tools-list / both read-only tools over AlertCenter + a stub HistoryReader / argument validation / boundary error mapping); manual run of `industrial-hmi-mcp` against an MCP client | 0001, 0003, 0014, 0020, 0023 |
+| REQ-ARCH-020 | SHOULD | `src/mcp/tools/ProductionMetricsTool.h/.cpp`, `src/mcp/McpProtocol.h/.cpp`, `src/mcp/McpServer.h/.cpp`, `src/mcp/McpInitRoot.cpp`, `CMakeLists.txt` | McpProtocolTest.ToolsListIncludesProductionMetrics, McpProtocolTest.ProductionMetricsReturnsThroughputAndOee, McpProtocolTest.ProductionMetricsOmitsMinutesPerUnitWhenThroughputIsZero, McpProtocolTest.ProductionMetricsOmitsMinutesPerUnitWhenThroughputIsNegative, McpProtocolTest.ToolsCallRoutesProductionMetrics | 0001, 0003, 0014, 0020, 0023 |
 
 ## AUTH
 
@@ -194,7 +195,7 @@ requirements may be smoke-tested.
 
 | Category | Total | MUST | SHOULD | NICE | Fully tested | Manual-only |
 |---|---|---|---|---|---|---|
-| ARCH | 18 | 5 | 11 | 2 | 9 | 9 (REQ-ARCH-006, REQ-ARCH-011, REQ-ARCH-012, REQ-ARCH-013, REQ-ARCH-014, REQ-ARCH-015, REQ-ARCH-016, REQ-ARCH-017, manual smoke) |
+| ARCH | 19 | 5 | 12 | 2 | 10 | 9 (REQ-ARCH-006, REQ-ARCH-011, REQ-ARCH-012, REQ-ARCH-013, REQ-ARCH-014, REQ-ARCH-015, REQ-ARCH-016, REQ-ARCH-017, manual smoke) |
 | AUTH | 6 | 3 | 2 | 1 | 6 | 0 |
 | CORE | 9 | 2 | 3 | 4 | 9 | 0 |
 | DASHBOARD | 7 | 3 | 3 | 1 | 7 | 0 |
@@ -206,7 +207,7 @@ requirements may be smoke-tested.
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **66** | **24** | **30** | **12** | **54** | **12** |
+| **TOTAL** | **67** | **24** | **31** | **12** | **55** | **12** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE

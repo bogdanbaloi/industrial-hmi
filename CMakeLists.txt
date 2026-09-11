@@ -1337,6 +1337,7 @@ if(BUILD_MCP_SERVER OR BUILD_TESTS)
         src/mcp/McpProtocol.cpp
         src/mcp/tools/AlarmsSnapshotTool.cpp
         src/mcp/tools/HistorianQueryTool.cpp
+        src/mcp/tools/ProductionMetricsTool.cpp
         src/mcp/McpServer.cpp)
     target_link_libraries(objectsMcp
         PUBLIC

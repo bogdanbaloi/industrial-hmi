@@ -8,6 +8,9 @@ class AlertCenter;
 namespace app::historian {
 class HistoryReader;
 }
+namespace app::model {
+class ProductionModel;
+}
 
 namespace app::mcp {
 
@@ -19,7 +22,8 @@ namespace app::mcp {
 class McpServer {
 public:
     McpServer(const presenter::AlertCenter& alerts,
-              historian::HistoryReader& reader);
+              historian::HistoryReader& reader,
+              const model::ProductionModel& production);
 
     /// Pump requests until end of input. Returns 0 on a clean EOF.
     int run(std::istream& input, std::ostream& output);
@@ -29,7 +33,8 @@ public:
 
 private:
     const presenter::AlertCenter& alerts_;
-    historian::HistoryReader&     reader_;
+    historian::HistoryReader&      reader_;
+    const model::ProductionModel&  production_;
 };
 
 }  // namespace app::mcp
