@@ -462,6 +462,13 @@ bool ConfigManager::isMultiStationEnabled() const {
     return getValue("ui.multistation_enabled", "false") == "true";
 }
 
+bool ConfigManager::isMcpWriteEnabled() const {
+    return getValue("mcp.write_enabled", "false") == "true";
+}
+std::string ConfigManager::getMcpAgentRole() const {
+    return getValue("mcp.agent_role", defaults::kMcpAgentRole);
+}
+
 bool ConfigManager::isHistorianEnabled() const {
     return getValue("historian.enabled", "false") == "true";
 }

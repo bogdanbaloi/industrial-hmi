@@ -17,6 +17,10 @@ namespace app::historian {
 class SqliteHistoryStore;
 class HistorianBridge;
 }
+namespace app::auth {
+class Session;
+class SqliteAuditLogger;
+}
 
 namespace app::mcp {
 
@@ -47,6 +51,13 @@ private:
     std::unique_ptr<DashboardPresenter>            dashboardPresenter_;
     std::unique_ptr<historian::SqliteHistoryStore> historyStore_;
     std::unique_ptr<historian::HistorianBridge>    historianBridge_;
+
+    // Synthetic agent identity + audit sink for the state-changing write tool
+    // (ADR-0024). Built only when mcp.write_enabled is true; left null for a
+    // read-only deployment.
+    std::unique_ptr<auth::Session>            agentSession_;
+    std::unique_ptr<auth::SqliteAuditLogger>  auditLogger_;
+
     std::jthread                                   ticker_;
 };
 

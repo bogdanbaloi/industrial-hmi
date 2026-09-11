@@ -423,6 +423,39 @@ Needs: utest
 
 ---
 
+### REQ-ARCH-019 (SHOULD) — MCP state-changing tool, agent-identity gated
+
+`req~arch-019~1`
+
+The MCP server **shall** expose one opt-in, state-changing tool
+`equipment_command` (start / stop / reset-restart of the line) that routes
+through the existing `DashboardPresenter` operator handlers
+(`onStartClicked` / `onStopClicked` / `onResetRestartClicked`), forking no
+control logic. The tool **shall** be gated by `mcp.write_enabled` (default
+false); when disabled it **shall** be absent from `tools/list` and a
+`tools/call` for it **shall** return `MethodNotFound`, so a read-only deployment
+is provably unable to write. When enabled, the server **shall** act under a
+synthetic in-memory agent `auth::Session` (username `mcp-agent`, role from
+`mcp.agent_role`, default `OPERATOR` least-privilege), wired with a real
+`AuditLogger` into the presenter so every write is role-checked and audited like
+a human action. Because `DashboardPresenter::checkRole` passes a null session
+through and refuses with a silent `void` return, the tool **shall** perform its
+own explicit authorization pre-check and return a structured
+`Unauthorized` JSON-RPC error rather than a misleading success or a silent
+ungated write (ADR-0024).
+
+Verified by: EquipmentCommandToolTest (descriptor / argument parsing / the
+authorization pre-check, including the null-session internal refusal and the
+audited role rejection); McpProtocolTest (routing + write-tool absence when
+disabled); McpServerStdioTest (the stdio request/response loop).
+
+ADR: 0001 (MVP boundaries), 0006 (RBAC + audit), 0014 (Result at boundaries),
+0023 (MCP server), 0024 (agent identity for writes).
+
+Needs: utest
+
+---
+
 ## AUTH — Authentication & Authorisation
 
 ### REQ-AUTH-001 (MUST) — Password hashing via Argon2id
