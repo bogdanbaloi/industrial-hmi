@@ -11,6 +11,9 @@ class AlertCenter;
 namespace app::historian {
 class HistoryReader;
 }
+namespace app::model {
+class ProductionModel;
+}
 
 namespace app::mcp {
 
@@ -31,7 +34,7 @@ inline constexpr const char* kMethodToolsCall  = "tools/call";
 /// (we serve tools) and server identity. Client params are accepted as-is.
 [[nodiscard]] nlohmann::json handleInitialize(const nlohmann::json& params);
 
-/// `tools/list` result: the descriptors of the two read-only tools.
+/// `tools/list` result: the descriptors of the read-only tools.
 [[nodiscard]] nlohmann::json handleToolsList();
 
 /// `tools/call` dispatch. Routes on `params["name"]` to the matching tool,
@@ -41,6 +44,7 @@ inline constexpr const char* kMethodToolsCall  = "tools/call";
 [[nodiscard]] app::core::Result<nlohmann::json, McpErrorCode>
 handleToolsCall(const nlohmann::json& params,
                 const presenter::AlertCenter& alerts,
-                historian::HistoryReader& reader);
+                historian::HistoryReader& reader,
+                const model::ProductionModel& production);
 
 }  // namespace app::mcp

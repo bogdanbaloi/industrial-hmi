@@ -421,6 +421,28 @@ ADR: 0001 (MVP boundaries), 0003 (ViewObserver), 0014 (Result at boundaries),
 
 Needs: utest
 
+### REQ-ARCH-020 (SHOULD) — MCP read-only production-metrics tool
+
+`req~arch-020~1`
+
+The MCP server **shall** expose a third read-only tool, `production_metrics`,
+returning a live snapshot of `throughputUph` (from
+`ProductionModel::getWorkUnit().throughputUnitsPerHour`) and `oeePct` (from
+`ProductionModel::oeeSnapshot()`), plus a derived `minutesPerUnit`
+(`60.0 / throughputUph`). When `throughputUph <= 0` the tool **shall** omit
+`minutesPerUnit` from the response rather than emit a divide-by-zero or
+infinite value. The tool depends on the abstract `ProductionModel` interface,
+not the concrete `SimulatedModel` (DIP), requires no authorization (read-only,
+like `alarms_snapshot`) and is listed in `tools/list` unconditionally.
+
+Verified by: McpProtocolTest (descriptor listed / throughput + OEE snapshot /
+`minutesPerUnit` omitted at zero and negative throughput / routing).
+
+ADR: 0001 (MVP boundaries), 0003 (ViewObserver), 0014 (Result at boundaries),
+0020 (Qt toolkit-independence precedent), 0023 (MCP server).
+
+Needs: utest
+
 ---
 
 ## AUTH — Authentication & Authorisation

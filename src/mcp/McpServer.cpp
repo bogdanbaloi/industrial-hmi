@@ -32,7 +32,9 @@ nlohmann::json errorEnvelope(const nlohmann::json& id, int code,
 }
 
 void processLine(const std::string& line, const presenter::AlertCenter& alerts,
-                 historian::HistoryReader& reader, std::ostream& output) {
+                 historian::HistoryReader& reader,
+                 const model::ProductionModel& production,
+                 std::ostream& output) {
     nlohmann::json request;
     try {
         request = nlohmann::json::parse(line);
@@ -63,7 +65,7 @@ void processLine(const std::string& line, const presenter::AlertCenter& alerts,
         return;
     }
     if (method == kMethodToolsCall) {
-        auto result = handleToolsCall(params, alerts, reader);
+        auto result = handleToolsCall(params, alerts, reader, production);
         if (result.isOk()) {
             writeResponse(output, successEnvelope(id, result.unwrap()));
         } else {
@@ -81,8 +83,9 @@ void processLine(const std::string& line, const presenter::AlertCenter& alerts,
 }  // namespace
 
 McpServer::McpServer(const presenter::AlertCenter& alerts,
-                     historian::HistoryReader& reader)
-    : alerts_(alerts), reader_(reader) {}
+                     historian::HistoryReader& reader,
+                     const model::ProductionModel& production)
+    : alerts_(alerts), reader_(reader), production_(production) {}
 
 int McpServer::run(std::istream& input, std::ostream& output) {
     std::string line;
@@ -90,7 +93,7 @@ int McpServer::run(std::istream& input, std::ostream& output) {
         if (line.empty()) {
             continue;
         }
-        processLine(line, alerts_, reader_, output);
+        processLine(line, alerts_, reader_, production_, output);
     }
     return 0;
 }
