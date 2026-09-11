@@ -1337,11 +1337,13 @@ if(BUILD_MCP_SERVER OR BUILD_TESTS)
         src/mcp/McpProtocol.cpp
         src/mcp/tools/AlarmsSnapshotTool.cpp
         src/mcp/tools/HistorianQueryTool.cpp
+        src/mcp/tools/EquipmentCommandTool.cpp
         src/mcp/McpServer.cpp)
     target_link_libraries(objectsMcp
         PUBLIC
             objectsPresenter
             objectsHistorian
+            objectsAuth
             objectsCore
             nlohmann_json_headers)
     target_include_directories(objectsMcp PUBLIC ${CMAKE_SOURCE_DIR})

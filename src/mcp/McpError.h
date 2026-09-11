@@ -22,6 +22,8 @@ enum class McpErrorCode {
     ParseError,      ///< malformed JSON on the wire
     MethodNotFound,  ///< unknown JSON-RPC method or unknown tool name
     InvalidParams,   ///< a handler rejected its arguments
+    Unauthorized,    ///< the agent's role may not perform this action (ADR-0024)
+    InvalidState,    ///< the action is not valid in the current system state
 };
 
 /// Spec-mandated JSON-RPC numeric code for a boundary error kind.
@@ -31,7 +33,14 @@ enum class McpErrorCode {
             return kJsonRpcParseError;
         case McpErrorCode::MethodNotFound:
             return kJsonRpcMethodNotFound;
+        // JSON-RPC 2.0 defines no standard authorization or state code; the
+        // reserved codes are transport-level. Unauthorized / InvalidState reuse
+        // the invalid-params code with a distinct message (see defaultMessage)
+        // rather than invent an application code an MCP client would not
+        // understand (ADR-0024).
         case McpErrorCode::InvalidParams:
+        case McpErrorCode::Unauthorized:
+        case McpErrorCode::InvalidState:
             return kJsonRpcInvalidParams;
     }
     return kJsonRpcInternalError;
@@ -46,6 +55,10 @@ enum class McpErrorCode {
             return "Method not found";
         case McpErrorCode::InvalidParams:
             return "Invalid params";
+        case McpErrorCode::Unauthorized:
+            return "Unauthorized: the agent role may not perform this action";
+        case McpErrorCode::InvalidState:
+            return "Invalid state for the requested action";
     }
     return "Internal error";
 }

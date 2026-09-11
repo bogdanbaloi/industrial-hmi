@@ -241,6 +241,16 @@ public:
 
     [[nodiscard]] bool isMultiStationEnabled() const;
 
+    // MCP server (ADR-0024)
+
+    /// Whether the MCP server exposes the state-changing `equipment_command`
+    /// tool. Default false: the server is read-only unless a deployment opts in.
+    [[nodiscard]] bool isMcpWriteEnabled() const;
+
+    /// Role name (OPERATOR / MAINTENANCE / ADMIN) the synthetic MCP agent
+    /// session is seeded with when writes are enabled. Default OPERATOR.
+    [[nodiscard]] std::string getMcpAgentRole() const;
+
     // Historian
 
     [[nodiscard]] bool isHistorianEnabled() const;

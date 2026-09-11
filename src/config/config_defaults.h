@@ -170,4 +170,10 @@ constexpr int         kHistorianSweepIntervalMs    = 60'000;       // 1 min
 constexpr int         kHistorianRawRetentionMs     = 3'600'000;    // 1 h
 constexpr int         kHistorianMinuteRetentionMs  = 86'400'000;   // 24 h
 
+// MCP server agent identity (ADR-0024). Writes are off by default; when
+// enabled, the synthetic agent session is seeded with this role. OPERATOR is
+// the least-privilege default (start / stop only, not reset). An operator
+// raises it to MAINTENANCE deliberately if the agent should reset the line.
+constexpr const char* kMcpAgentRole = "OPERATOR";
+
 }  // namespace app::config::defaults

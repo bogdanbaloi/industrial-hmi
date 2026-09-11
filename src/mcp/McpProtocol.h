@@ -11,6 +11,12 @@ class AlertCenter;
 namespace app::historian {
 class HistoryReader;
 }
+namespace app {
+class DashboardPresenter;
+}
+namespace app::auth {
+class Session;
+}
 
 namespace app::mcp {
 
@@ -31,16 +37,27 @@ inline constexpr const char* kMethodToolsCall  = "tools/call";
 /// (we serve tools) and server identity. Client params are accepted as-is.
 [[nodiscard]] nlohmann::json handleInitialize(const nlohmann::json& params);
 
-/// `tools/list` result: the descriptors of the two read-only tools.
-[[nodiscard]] nlohmann::json handleToolsList();
+/// `tools/list` result: the read-only tool descriptors, plus the state-changing
+/// `equipment_command` descriptor only when `writeEnabled` (ADR-0024). A
+/// read-only deployment must not even advertise the write tool.
+[[nodiscard]] nlohmann::json handleToolsList(bool writeEnabled);
 
 /// `tools/call` dispatch. Routes on `params["name"]` to the matching tool,
 /// forwarding `params["arguments"]`. Returns the MCP content result on success,
-/// or a boundary error value (ADR-0014): MethodNotFound for an unknown tool,
-/// InvalidParams when a tool rejects its arguments.
+/// or a boundary error value (ADR-0014): MethodNotFound for an unknown tool
+/// (including `equipment_command` when `writeEnabled` is false, so a read-only
+/// deployment cannot be talked into a write), InvalidParams when a tool rejects
+/// its arguments, Unauthorized when the agent role may not perform a write.
+///
+/// The write path needs the same `DashboardPresenter` the human frontends drive
+/// and the synthetic agent `session` that supplies its role (ADR-0024); both are
+/// ignored by the read-only tools.
 [[nodiscard]] app::core::Result<nlohmann::json, McpErrorCode>
 handleToolsCall(const nlohmann::json& params,
                 const presenter::AlertCenter& alerts,
-                historian::HistoryReader& reader);
+                historian::HistoryReader& reader,
+                DashboardPresenter& presenter,
+                const auth::Session& session,
+                bool writeEnabled);
 
 }  // namespace app::mcp

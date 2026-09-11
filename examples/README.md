@@ -144,3 +144,52 @@ every time.
 - **Bug reproduction**: pin `--seed` and `--duration`, share the
   command in the bug report. The maintainer reproduces by running
   the same line.
+
+## MCP server (LLM client)
+
+The opt-in MCP server (`industrial-hmi-mcp`, built with
+`-DBUILD_MCP_SERVER=ON`) lets an LLM agent query the same alarms and
+historian the human frontends use, over the Model Context Protocol
+(JSON-RPC on stdio). Two ways to exercise it:
+
+1. **`mcp_client.py`** -- a dependency-free Python MCP client. Spawns the
+   server, runs `initialize` / `tools/list` / `tools/call`, pretty-prints the
+   responses. No Node, no `npx` needed:
+
+   ```bash
+   cmake --build build-qt --target industrial-hmi-mcp
+   python examples/mcp_client.py            # or --exe PATH, --quiet
+   ```
+
+2. **Claude Desktop** -- copy the `mcpServers` entry from
+   `mcp_claude_desktop_config.json` into your Claude Desktop config, set the
+   command to the absolute path of your built binary, restart, then ask e.g.
+   "are there any active alarms?" and Claude calls the tool for you.
+
+3. **MCP Inspector** -- the official interactive client (web UI + CLI).
+
+   > Windows note: the Inspector's **web UI** needs official Windows Node
+   > (from nodejs.org / `winget install OpenJS.NodeJS`), NOT the MSYS2 mingw
+   > Node. The web UI's native modules (rolldown, lightningcss, keyring) ship
+   > only `win32-x64-msvc` bindings, so MSYS2's mingw/gnu Node fails with
+   > "Cannot find native binding". So launch the **web UI from PowerShell**
+   > (where the official Node is on PATH), not from MSYS2 bash:
+   >
+   > ```powershell
+   > # use npx.cmd, not npx: PowerShell's default execution policy blocks the
+   > # npx.ps1 shim. Run from the worktree that holds build-qt.
+   > npx.cmd @modelcontextprotocol/inspector .\build-qt\industrial-hmi-mcp.exe
+   > ```
+   >
+   > The **CLI mode works from MSYS2 bash** (it needs none of those native
+   > modules), so quick checks stay in the same shell as the build:
+   >
+   > ```bash
+   > mcp-inspector --cli ./build-qt/industrial-hmi-mcp.exe --method tools/list
+   > mcp-inspector --cli ./build-qt/industrial-hmi-mcp.exe --method tools/call --tool-name alarms_snapshot
+   > ```
+
+The server logs to stderr and writes JSON-RPC to stdout, so the protocol
+stream stays clean for any client. Tool output is localized through the same
+gettext catalog as the UI, so alarm text comes back in the configured
+language.

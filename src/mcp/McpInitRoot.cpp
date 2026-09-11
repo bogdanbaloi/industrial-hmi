@@ -6,6 +6,10 @@
 #include "src/mcp/McpInitRoot.h"
 
 #include "src/mcp/McpServer.h"
+#include "src/auth/Role.h"
+#include "src/auth/Session.h"
+#include "src/auth/SqliteAuditLogger.h"
+#include "src/auth/User.h"
 #include "src/config/ConfigManager.h"
 #include "src/core/Bootstrap.h"
 #include "src/core/LoggerBase.h"
@@ -13,6 +17,8 @@
 #include "src/historian/SqliteHistoryStore.h"
 #include "src/model/ModelContext.h"
 #include "src/presenter/AlertCenter.h"
+
+#include <string>
 
 #include <chrono>
 #include <cstddef>
@@ -26,6 +32,10 @@ namespace app::mcp {
 namespace {
 // Background simulation cadence, matching the tick the console/Qt frontends use.
 constexpr auto kTickPeriod = std::chrono::milliseconds{1000};
+
+// Username stamped on the synthetic agent identity + every audit row it writes
+// (ADR-0024). Not a real account: no password, no repository row, no login.
+constexpr const char* kAgentUsername = "mcp-agent";
 }  // namespace
 
 McpInitRoot::McpInitRoot(core::Bootstrap& bootstrap) : bootstrap_{bootstrap} {}
@@ -40,7 +50,11 @@ McpInitRoot::~McpInitRoot() {
     // closes, then the presenter (which borrows the model + AlertCenter).
     historianBridge_.reset();
     historyStore_.reset();
+    // The presenter borrows the audit logger + agent session via setAudit(), so
+    // it must be torn down before them.
     dashboardPresenter_.reset();
+    auditLogger_.reset();
+    agentSession_.reset();
     alertCenter_.reset();
     app::model::SimulatedModel::instance().clearCallbacks();
     app::model::ModelContext::instance().stop();
@@ -98,9 +112,48 @@ int McpInitRoot::run(std::ostream& output) {
         }
     });
 
+    // Agent identity for the state-changing write tool (ADR-0024). Always build
+    // a session so the server has a valid reference; only when writes are opted
+    // in do we seed the synthetic agent user and wire the audit sink into the
+    // presenter, so every agent write is role-checked + audited like a human
+    // click. A read-only deployment leaves the session empty and the tool
+    // unreachable.
+    const bool writeEnabled = config.isMcpWriteEnabled();
+    agentSession_ = std::make_unique<auth::Session>();
+    if (writeEnabled) {
+        const auth::Role agentRole = auth::parseRole(config.getMcpAgentRole());
+        // Field-by-field (the auth-layer idiom) rather than a designated
+        // initializer: the agent is not a real account, so passwordHash stays
+        // empty by default -- no login path, no repository row (ADR-0024).
+        auth::User agent;
+        agent.username = kAgentUsername;
+        agent.role     = agentRole;
+        agentSession_->setUser(agent);
+
+        // Audit sink shares the auth SQLite file, exactly as the human
+        // frontends do. A failed open downgrades to "writes without a
+        // persisted audit row" rather than killing the feature.
+        auth::SqliteAuditLogger::Config auditCfg;
+        auditCfg.dbPath = config.getAuthDbPath();
+        auditLogger_ =
+            std::make_unique<auth::SqliteAuditLogger>(std::move(auditCfg));
+        auditLogger_->setLogger(logger);
+        if (auditLogger_->initialize()) {
+            dashboardPresenter_->setAudit(*auditLogger_, *agentSession_);
+        } else {
+            logger.warn("MCP audit log failed to open '{}'; equipment_command "
+                        "writes will not be persisted to the audit trail",
+                        config.getAuthDbPath());
+            auditLogger_.reset();
+        }
+        logger.info("MCP write tool enabled -- agent role {}",
+                    auth::roleName(agentRole));
+    }
+
     // `output` is bound to the real stdout by main(); std::cout has been
     // redirected to stderr there, so no log line can reach the JSON-RPC stream.
-    McpServer server(*alertCenter_, *historyStore_);
+    McpServer server(*alertCenter_, *historyStore_, *dashboardPresenter_,
+                     *agentSession_, writeEnabled);
     return server.run(std::cin, output);
 }
 
