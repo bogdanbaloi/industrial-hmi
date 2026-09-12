@@ -3,6 +3,11 @@
 // handshake, tools/list enumeration, both read-only tools over an AlertCenter
 // and a stub HistoryReader, argument validation and the boundary error mapping.
 // Pure logic over fakes -- no stdio loop, no GUI.
+//
+// [utest->req~historian-007~1]
+// Covers REQ-HISTORIAN-007 at the tool boundary: historian_query accepts
+// the throughput and oee field names and round-trips them, and an unknown
+// field is still rejected (the new mappings didn't loosen validation).
 
 #include "src/mcp/McpProtocol.h"
 #include "src/mcp/McpError.h"
@@ -120,6 +125,51 @@ TEST(McpProtocolTest, HistorianQueryToolReturnsRecordsInRange) {
     EXPECT_EQ(array[0].at("entityId"), 2U);
     EXPECT_EQ(reader.lastField, FieldKind::QualityPassRate);
     EXPECT_EQ(reader.lastEntity, 2U);
+}
+
+TEST(McpProtocolTest, HistorianQueryAcceptsThroughputField) {
+    StubHistoryReader reader;
+    reader.rows.push_back(HistoryRecord{.timestampMs = 2000,
+                                        .field    = FieldKind::Throughput,
+                                        .entityId = 0U,
+                                        .value    = 42.0F});
+
+    const nlohmann::json args = {{"field", "throughput"}, {"entityId", 0}};
+    auto parsed = parseHistorianArgs(args);
+    ASSERT_TRUE(parsed.isOk());
+    EXPECT_EQ(parsed.unwrap().field, FieldKind::Throughput);
+
+    const auto array = runHistorianQuery(reader, parsed.unwrap());
+    ASSERT_EQ(array.size(), 1U);
+    EXPECT_EQ(array[0].at("field"), "throughput");
+    EXPECT_EQ(reader.lastField, FieldKind::Throughput);
+}
+
+TEST(McpProtocolTest, HistorianQueryAcceptsOeeField) {
+    StubHistoryReader reader;
+    reader.rows.push_back(HistoryRecord{.timestampMs = 3000,
+                                        .field    = FieldKind::OeePercent,
+                                        .entityId = 0U,
+                                        .value    = 73.5F});
+
+    const nlohmann::json args = {{"field", "oee"}, {"entityId", 0}};
+    auto parsed = parseHistorianArgs(args);
+    ASSERT_TRUE(parsed.isOk());
+    EXPECT_EQ(parsed.unwrap().field, FieldKind::OeePercent);
+
+    const auto array = runHistorianQuery(reader, parsed.unwrap());
+    ASSERT_EQ(array.size(), 1U);
+    EXPECT_EQ(array[0].at("field"), "oee");
+    EXPECT_EQ(reader.lastField, FieldKind::OeePercent);
+}
+
+TEST(McpProtocolTest, HistorianQueryRejectsUnknownFieldStillFails) {
+    // Regression guard: adding throughput/oee must not loosen the
+    // parse-layer rejection of an unknown field name.
+    const nlohmann::json args = {{"field", "cadence"}};
+    auto parsed = parseHistorianArgs(args);
+    ASSERT_TRUE(parsed.isErr());
+    EXPECT_EQ(parsed.error(), McpErrorCode::InvalidParams);
 }
 
 TEST(McpProtocolTest, HistorianQueryToolClampsLimitToDefaultCap) {

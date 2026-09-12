@@ -1012,6 +1012,27 @@ AllSixQueriesStillRunWhenChartHidden).
 
 Needs: utest
 
+### REQ-HISTORIAN-007 (SHOULD) — Historized throughput and OEE
+
+`req~historian-007~1`
+
+The historian **shall** record two additional global series alongside the
+existing quality/supply/state series: production throughput (completed
+work units per hour) and OEE percentage. Both **shall** be recorded on
+the same trigger as the work-unit change notification, with `entityId`
+fixed at 0 (single line-wide series, no per-checkpoint/per-equipment
+breakdown). Both series **shall** be queryable via the `historian_query`
+MCP tool using the field names `throughput` and `oee`.
+
+ADR: none (extends the existing `FieldKind` open-set pattern from
+REQ-HISTORIAN-001/002).
+
+Verified by: HistorianBridgeTest (WorkUnitChangeProducesThroughputRow,
+WorkUnitChangeProducesOeeRow), McpProtocolTest
+(HistorianQueryAcceptsThroughputField, HistorianQueryAcceptsOeeField).
+
+Needs: utest
+
 ---
 
 ## I18N — Internationalisation

@@ -79,6 +79,26 @@ void HistorianBridge::wire() {
                 .value       = static_cast<float>(s)});
         });
 
+    // Production KPIs. The work-unit change fires on the same tick the
+    // quality series historizes at, so both KPIs record at the model's
+    // native cadence. OEE has no dedicated change signal (oeeSnapshot()
+    // is a computed getter), so we sample it here on the same trigger.
+    // Both are single line-wide series (entityId = 0), like SystemState.
+    model_.onWorkUnitChanged(
+        [this](const model::WorkUnit& wu) {
+            const auto now = nowMs();
+            enqueue(HistoryRecord{
+                .timestampMs = now,
+                .field       = FieldKind::Throughput,
+                .entityId    = 0,
+                .value       = static_cast<float>(wu.throughputUnitsPerHour)});
+            enqueue(HistoryRecord{
+                .timestampMs = now,
+                .field       = FieldKind::OeePercent,
+                .entityId    = 0,
+                .value       = model_.oeeSnapshot().oeePct});
+        });
+
     if (logger_ != nullptr) {
         logger_->info("Historian: bridge wired (batch={}, age<={}ms)",
                       config_.maxBatchSize, config_.maxBatchAge.count());
