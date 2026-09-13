@@ -14,6 +14,9 @@ class DashboardPresenter;
 namespace app::auth {
 class Session;
 }
+namespace app::model {
+class ProductionModel;
+}
 
 namespace app::mcp {
 
@@ -30,6 +33,7 @@ class McpServer {
 public:
     McpServer(const presenter::AlertCenter& alerts,
               historian::HistoryReader& reader,
+              const model::ProductionModel& production,
               DashboardPresenter& presenter,
               const auth::Session& session,
               bool writeEnabled);
@@ -42,10 +46,11 @@ public:
 
 private:
     const presenter::AlertCenter& alerts_;
-    historian::HistoryReader&     reader_;
-    DashboardPresenter&           presenter_;
-    const auth::Session&          session_;
-    bool                          writeEnabled_;
+    historian::HistoryReader&      reader_;
+    const model::ProductionModel&  production_;
+    DashboardPresenter&            presenter_;
+    const auth::Session&           session_;
+    bool                           writeEnabled_;
 };
 
 }  // namespace app::mcp

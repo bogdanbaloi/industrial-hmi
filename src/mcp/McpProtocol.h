@@ -17,6 +17,9 @@ class DashboardPresenter;
 namespace app::auth {
 class Session;
 }
+namespace app::model {
+class ProductionModel;
+}
 
 namespace app::mcp {
 
@@ -37,9 +40,10 @@ inline constexpr const char* kMethodToolsCall  = "tools/call";
 /// (we serve tools) and server identity. Client params are accepted as-is.
 [[nodiscard]] nlohmann::json handleInitialize(const nlohmann::json& params);
 
-/// `tools/list` result: the read-only tool descriptors, plus the state-changing
-/// `equipment_command` descriptor only when `writeEnabled` (ADR-0024). A
-/// read-only deployment must not even advertise the write tool.
+/// `tools/list` result: the read-only tool descriptors (alarms, historian,
+/// production metrics), plus the state-changing `equipment_command` descriptor
+/// only when `writeEnabled` (ADR-0024). A read-only deployment must not even
+/// advertise the write tool.
 [[nodiscard]] nlohmann::json handleToolsList(bool writeEnabled);
 
 /// `tools/call` dispatch. Routes on `params["name"]` to the matching tool,
@@ -56,6 +60,7 @@ inline constexpr const char* kMethodToolsCall  = "tools/call";
 handleToolsCall(const nlohmann::json& params,
                 const presenter::AlertCenter& alerts,
                 historian::HistoryReader& reader,
+                const model::ProductionModel& production,
                 DashboardPresenter& presenter,
                 const auth::Session& session,
                 bool writeEnabled);

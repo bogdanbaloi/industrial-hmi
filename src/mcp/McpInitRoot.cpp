@@ -152,7 +152,7 @@ int McpInitRoot::run(std::ostream& output) {
 
     // `output` is bound to the real stdout by main(); std::cout has been
     // redirected to stderr there, so no log line can reach the JSON-RPC stream.
-    McpServer server(*alertCenter_, *historyStore_, *dashboardPresenter_,
+    McpServer server(*alertCenter_, *historyStore_, model, *dashboardPresenter_,
                      *agentSession_, writeEnabled);
     return server.run(std::cin, output);
 }

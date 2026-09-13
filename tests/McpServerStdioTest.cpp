@@ -58,7 +58,7 @@ public:
 struct ServerFixture {
     explicit ServerFixture(bool writeEnabled,
                            app::auth::Role role = app::auth::Role::Operator)
-        : presenter(model), server(alerts, reader, presenter, session,
+        : presenter(model), server(alerts, reader, model, presenter, session,
                                    writeEnabled) {
         app::auth::User agent;
         agent.username = "mcp-agent";
@@ -160,8 +160,8 @@ TEST(McpServerStdioTest, EachRequestGetsExactlyOneResponseLine) {
     ASSERT_EQ(responses.size(), 2U);
     EXPECT_EQ(responses[0].at("id"), 1);
     EXPECT_EQ(responses[1].at("id"), 2);
-    // The read-only deployment lists exactly the two read tools.
-    EXPECT_EQ(responses[1].at("result").at("tools").size(), 2U);
+    // The read-only deployment lists exactly the three read tools.
+    EXPECT_EQ(responses[1].at("result").at("tools").size(), 3U);
 }
 
 TEST(McpServerStdioTest, ToolsListSurfacesWriteToolWhenEnabled) {
@@ -176,7 +176,7 @@ TEST(McpServerStdioTest, ToolsListSurfacesWriteToolWhenEnabled) {
     const auto responses = responseLines(output.str());
     ASSERT_EQ(responses.size(), 1U);
     const auto& tools = responses[0].at("result").at("tools");
-    ASSERT_EQ(tools.size(), 3U);
+    ASSERT_EQ(tools.size(), 4U);
     bool found = false;
     for (const auto& tool : tools) {
         found = found || tool.at("name") == kEquipmentCommandTool;
