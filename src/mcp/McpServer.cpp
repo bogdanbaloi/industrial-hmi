@@ -34,6 +34,8 @@ nlohmann::json errorEnvelope(const nlohmann::json& id, int code,
 void processLine(const std::string& line, const presenter::AlertCenter& alerts,
                  historian::HistoryReader& reader,
                  const model::ProductionModel& production,
+                 DashboardPresenter& presenter,
+                 const auth::Session& session, bool writeEnabled,
                  std::ostream& output) {
     nlohmann::json request;
     try {
@@ -61,11 +63,12 @@ void processLine(const std::string& line, const presenter::AlertCenter& alerts,
         return;
     }
     if (method == kMethodToolsList) {
-        writeResponse(output, successEnvelope(id, handleToolsList()));
+        writeResponse(output, successEnvelope(id, handleToolsList(writeEnabled)));
         return;
     }
     if (method == kMethodToolsCall) {
-        auto result = handleToolsCall(params, alerts, reader, production);
+        auto result = handleToolsCall(params, alerts, reader, production, presenter,
+                                      session, writeEnabled);
         if (result.isOk()) {
             writeResponse(output, successEnvelope(id, result.unwrap()));
         } else {
@@ -84,8 +87,15 @@ void processLine(const std::string& line, const presenter::AlertCenter& alerts,
 
 McpServer::McpServer(const presenter::AlertCenter& alerts,
                      historian::HistoryReader& reader,
-                     const model::ProductionModel& production)
-    : alerts_(alerts), reader_(reader), production_(production) {}
+                     const model::ProductionModel& production,
+                     DashboardPresenter& presenter,
+                     const auth::Session& session, bool writeEnabled)
+    : alerts_(alerts),
+      reader_(reader),
+      production_(production),
+      presenter_(presenter),
+      session_(session),
+      writeEnabled_(writeEnabled) {}
 
 int McpServer::run(std::istream& input, std::ostream& output) {
     std::string line;
@@ -93,7 +103,8 @@ int McpServer::run(std::istream& input, std::ostream& output) {
         if (line.empty()) {
             continue;
         }
-        processLine(line, alerts_, reader_, production_, output);
+        processLine(line, alerts_, reader_, production_, presenter_, session_,
+                    writeEnabled_, output);
     }
     return 0;
 }

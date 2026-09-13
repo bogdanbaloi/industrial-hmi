@@ -299,5 +299,9 @@
   "auth": {
     "enabled": false,
     "db_path": "data/auth.sqlite"
+  },
+  "mcp": {
+    "write_enabled": false,
+    "agent_role": "OPERATOR"
   }
 }
