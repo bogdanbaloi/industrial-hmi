@@ -17,6 +17,32 @@ a standalone MCP server produces.
 - `FieldKind::Throughput` and `FieldKind::OeePercent` series, recorded on every work-unit change, entity id 0.
 - `historian_query` field names `throughput` and `oee`.
 
+### MCP write tool (REQ-ARCH-019)
+
+The MCP server's first state-changing tool, `equipment_command` (start / stop /
+reset-restart), routed through the same `DashboardPresenter` operator handlers a
+human button drives. Opt-in behind `mcp.write_enabled` (default false) and gated
+by a synthetic, least-privilege agent identity. Pays down the authorization
+story ADR-0023 deferred. ADR-0024.
+
+#### Added
+- `equipment_command` MCP tool: forwards to `DashboardPresenter::onStartClicked` / `onStopClicked` / `onResetRestartClicked`, forking no control logic. Off by default; when `mcp.write_enabled=false` the tool is absent from `tools/list` and a `tools/call` for it returns `MethodNotFound`, so a read-only deployment is provably unable to write.
+- Synthetic agent identity (ADR-0024): when writes are enabled the composition root seeds one in-memory `auth::Session` (`mcp-agent`, role from `mcp.agent_role`, default `OPERATOR` least-privilege), wired with a real `AuditLogger` into the presenter so every agent write is role-checked and audited exactly like a human action.
+- Explicit authorization pre-check in the tool: `DashboardPresenter::checkRole` passes a null session through and refuses with a silent `void` return, so the tool checks the agent role itself and returns a structured `Unauthorized` JSON-RPC error, never a misleading success or a silent ungated write. New `McpErrorCode::Unauthorized` / `InvalidState`.
+- `mcp.write_enabled` / `mcp.agent_role` config keys (both defaulting to the read-only, least-privilege posture).
+- `McpServerStdioTest`: the stdio request/response loop, untested since REQ-ARCH-018, now has coverage (one response per request, parse error with a null id, notification-produces-no-response, unknown method, write tool surfacing only when enabled).
+
+### Production metrics MCP tool (REQ-ARCH-020)
+
+A third read-only MCP tool exposing live throughput and OEE so an external
+consumer (the AI-audit product) can source a real per-stage production time
+instead of an invented simulator baseline. Depends on the abstract
+`ProductionModel` interface (DIP), lives in its own file and leaves the existing
+tools untouched (Open/Closed). ADR-0023.
+
+#### Added
+- `production_metrics` MCP tool: `throughputUph` and `oeePct` from `ProductionModel`, plus a derived `minutesPerUnit` (60 / throughputUph), omitted when throughput is non-positive to avoid a divide-by-zero.
+
 ### MCP server (REQ-ARCH-018)
 
 A fourth, headless consumer of the existing presenter/model core: an opt-in MCP

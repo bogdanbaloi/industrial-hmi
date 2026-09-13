@@ -1311,16 +1311,72 @@ foreach(scenario ${CONSOLE_SCENARIOS})
     )
 endforeach()
 
-# MCP protocol + tools (REQ-ARCH-018). Exercises the initialize handshake,
-# tools/list, both read-only tools over an AlertCenter + a stub HistoryReader,
-# argument validation and the boundary error mapping. Pure logic -- no GUI, no
-# stdio loop. objectsMcp carries GTKMM's include dirs transitively (via
-# objectsModel) so AlertCenter's sigc++ signal header resolves.
+# MCP protocol + tools (REQ-ARCH-018, REQ-ARCH-019). Exercises the initialize
+# handshake, tools/list, the read-only tools over an AlertCenter + a stub
+# HistoryReader, the state-changing equipment_command routing over a real
+# DashboardPresenter + agent session, argument validation and the boundary error
+# mapping. Pure logic -- no GUI, no stdio loop. objectsMcp carries GTKMM's
+# include dirs transitively (via objectsModel) so AlertCenter's sigc++ signal
+# header resolves; objectsModel is linked for the MockProductionModel symbols.
 add_executable(test_mcp_protocol McpProtocolTest.cpp)
+target_include_directories(test_mcp_protocol PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}  # so #include "mocks/..." resolves
+)
+# objectsMcp + the OBJECT libraries whose symbols it and the test use: OBJECT
+# libraries do not propagate their objects through target_link_libraries, so
+# each provider (Presenter, Model, Historian, Auth, Core) is listed explicitly.
 target_link_libraries(test_mcp_protocol PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes
     objectsMcp
+    objectsPresenter
+    objectsModel
+    objectsHistorian
+    objectsAuth
+    objectsCore
     nlohmann_json_headers
 )
 add_test(NAME McpProtocolTest COMMAND test_mcp_protocol)
+
+# MCP write tool (REQ-ARCH-019). The equipment_command descriptor, argument
+# parsing, and the explicit authorization pre-check (ADR-0024) over a real
+# Session + in-memory SqliteAuditLogger + a nice-mock model behind a real
+# DashboardPresenter. Verifies the null-session refusal and the audited role
+# rejection.
+add_executable(test_equipment_command_tool EquipmentCommandToolTest.cpp)
+target_include_directories(test_equipment_command_tool PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}  # so #include "mocks/..." resolves
+)
+target_link_libraries(test_equipment_command_tool PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsMcp
+    objectsPresenter
+    objectsModel
+    objectsHistorian
+    objectsAuth
+    objectsCore
+    nlohmann_json_headers
+)
+add_test(NAME EquipmentCommandToolTest COMMAND test_equipment_command_tool)
+
+# MCP stdio loop (REQ-ARCH-019, pays down the ADR-0023 gap). Drives McpServer
+# over string streams: one response line per request, initialize / tools-list /
+# tools-call, parse error with a null id, notification-produces-no-response, and
+# the write tool surfacing over stdio only when writes are enabled.
+add_executable(test_mcp_server_stdio McpServerStdioTest.cpp)
+target_include_directories(test_mcp_server_stdio PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}  # so #include "mocks/..." resolves
+)
+target_link_libraries(test_mcp_server_stdio PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsMcp
+    objectsPresenter
+    objectsModel
+    objectsHistorian
+    objectsAuth
+    objectsCore
+    nlohmann_json_headers
+)
+add_test(NAME McpServerStdioTest COMMAND test_mcp_server_stdio)
