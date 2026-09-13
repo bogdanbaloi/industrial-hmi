@@ -95,6 +95,12 @@ constexpr float kModbusSupplyScale         = 1.0F;
 constexpr int kModbusQualityBaseAddress    = 0x20;
 constexpr float kModbusQualityScale        = 0.1F;
 
+// HTTP/REST backend (read-only). 8080 is the conventional non-privileged
+// local HTTP port; loopback bind by default so an opt-in server is not
+// exposed beyond the host without an explicit config change. See ADR-0025.
+constexpr int kHttpBackendPort            = 8080;
+constexpr const char* kHttpBackendBindAddress = "127.0.0.1";
+
 // Product status values (used in DB, UI, and presenter layers)
 constexpr const char* kStatusActive = "Active";
 constexpr const char* kStatusInactive = "Inactive";

@@ -128,6 +128,7 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-004 | MUST | `src/integration/opcua/OpcUaBackend.cpp`, `src/integration/opcua/OpcUaIngestBridge.cpp`, `src/integration/opcua/FactoryCommandSink.cpp`, `src/integration/opcua/FactoryNodeMap.cpp` | OpcUaBackendTest, Open62541ServerIntegrationTest, Open62541ClientIntegrationTest, Open62541ServerControlIntegrationTest, OpcUaIngestBridgeTest, FactoryCommandSinkTest, FactoryNodeMapTest | -- |
 | REQ-INTEGRATION-005 | SHOULD | `src/presenter/BackendHealthPresenter.cpp`, `src/integration/IntegrationManager.cpp::metricsSnapshot` | BackendHealthPresenterTest, IntegrationManagerTest | -- |
 | REQ-INTEGRATION-006 | MUST | `src/integration/modbus/ModbusPdu.cpp::decodeReadResponse`, `src/integration/MqttPacket.cpp::parsePublish` + `::decodeRemainingLength`, `fuzzers/fuzz_modbus_decode.cpp`, `fuzzers/fuzz_mqtt_publish.cpp`, `fuzzers/fuzz_mqtt_remaining_length.cpp` | libFuzzer harnesses under `-DBUILD_FUZZERS=ON` (Clang); seed corpora in `fuzzers/corpus/`; smoke-run baseline in `fuzzers/README.md` | -- |
+| REQ-INTEGRATION-007 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/StatusJson.cpp`, `src/app/IntegrationBootstrap.cpp` | HttpBackendTest, StatusJsonTest | 0025 |
 
 ## PERF
 
@@ -201,12 +202,12 @@ requirements may be smoke-tested.
 | HISTORIAN | 6 | 1 | 5 | 0 | 5 | 1 (REQ-HISTORIAN-004) |
 | I18N | 1 | 0 | 1 | 0 | 1 | 0 |
 | INSPECTION | 2 | 0 | 0 | 2 | 2 | 0 |
-| INTEGRATION | 5 | 4 | 1 | 0 | 5 | 0 |
+| INTEGRATION | 6 | 4 | 2 | 0 | 6 | 0 |
 | MULTISTATION | 5 | 4 | 1 | 0 | 5 | 0 |
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **66** | **24** | **30** | **12** | **54** | **12** |
+| **TOTAL** | **67** | **24** | **31** | **12** | **55** | **12** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE

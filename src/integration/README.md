@@ -1,11 +1,11 @@
 # `src/integration/` -- Integration Backends + Telemetry Bridges
 
-Protocol-agnostic integration core plus four concrete network backends
-(TCP, MQTT 3.1.1, Modbus TCP, OPC-UA) and the bridge layer that
-moves data between them and the application model. The whole module is
-GTK-free and presenter-free; drops into any C++20 server / daemon / HMI
-that needs to expose a `ProductionModel`-shaped state over a wire
-protocol.
+Protocol-agnostic integration core plus five concrete network backends
+(TCP, MQTT 3.1.1, Modbus TCP, OPC-UA, and a read-only HTTP/REST server)
+and the bridge layer that moves data between them and the application
+model. The whole module is GTK-free and presenter-free; drops into any
+C++20 server / daemon / HMI that needs to expose a `ProductionModel`-shaped
+state over a wire protocol.
 
 ---
 
@@ -25,9 +25,10 @@ Different customers want different wires for the same payloads. One
 plant wants OPC-UA because the rest of their stack is open62541
 servers. The next wants MQTT 3.1.1 with retained messages on a Mosquitto
 broker. A QA bench wants a quick TCP `nc` shell. A retrofit on a 20-
-year-old PLC wants Modbus TCP on RS-485-over-Ethernet.
+year-old PLC wants Modbus TCP on RS-485-over-Ethernet. A status page or a
+monitoring script wants a plain `curl http://host/status` over HTTP.
 
-Putting all four behind a single `IntegrationBackend` interface means:
+Putting all of them behind a single `IntegrationBackend` interface means:
 
 - The composition root (`main.cpp`) decides which backends are
   enabled at startup from a JSON config; presenters never know.
@@ -47,10 +48,10 @@ Putting all four behind a single `IntegrationBackend` interface means:
                   │ (start/stop/connState)   │
                   └──────────▲───────────────┘
                              │
-        ┌───────────┬────────┴─────────┬───────────────┐
-        │           │                  │               │
-   TcpBackend  MqttClient    ModbusBackend       OpcUaBackend
-                                                 (open62541)
+     ┌──────────┬──────────┼──────────────┬───────────────┐
+     │          │          │              │               │
+ TcpBackend MqttClient ModbusBackend OpcUaBackend    HttpBackend
+                                     (open62541)     (cpp-httplib)
 
                   ┌──────────────────────────┐
                   │   IntegrationManager     │  composes + fans
@@ -161,8 +162,28 @@ to writable nodes. The open62541 client side is also wrapped
 (`Open62541Client`) for the rarer case where the HMI consumes
 another OPC-UA server.
 
-The OPC-UA path is the most "industrial-shop-floor" of the four --
+The OPC-UA path is the most "industrial-shop-floor" of the set --
 Allen-Bradley, Siemens, and most SCADA stacks speak it natively.
+
+### `HttpBackend` (cpp-httplib) -- optional, read-only
+
+`cpp-httplib` is pulled via CMake `FetchContent` only when
+`-DBUILD_HTTP_BACKEND=ON` (or under `BUILD_TESTS`). `HttpBackend` serves
+four read-only routes as JSON -- `GET /health`, `/status`, `/alarms`,
+`/products` -- over the same `ProductionModel`, `ProductsRepository` and
+`presenter::AlertCenter` the other backends use. `/status` reuses the
+shared `buildStatusJson` (so it matches the TCP `status` command) and
+`/alarms` reuses the MCP `alarms_snapshot` projection verbatim (so it
+matches the MCP tool). No state-changing route is exposed; a write
+endpoint waits on the same authorization story the MCP write tool was
+deferred behind (ADR-0023, ADR-0025).
+
+The HTTP path is the standard-web-client sibling of the wire protocols:
+any browser, `curl`, status page or uptime monitor can read plant state
+without speaking an industrial protocol. Off by default
+(`network.http.enabled=false`); because cpp-httplib calls Winsock
+directly on Windows, `objectsHttp` carries its own `ws2_32` / `mswsock`
+link line.
 
 ---
 

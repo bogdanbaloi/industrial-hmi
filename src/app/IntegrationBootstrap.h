@@ -11,6 +11,9 @@ class Logger;
 namespace app::model {
 class MirrorModel;
 }
+namespace app::presenter {
+class AlertCenter;
+}
 
 namespace app::integration {
 
@@ -68,7 +71,18 @@ struct IntegrationServices {
 ///
 /// The caller starts the manager (`services.manager->startAll()`) and keeps
 /// the returned bundle alive until after `stopAll()`.
+///
+/// @param httpAlerts Optional. The read-only HTTP backend (REQ-INTEGRATION-007)
+///        projects `presenter::AlertCenter` on `GET /alarms`, so -- unlike the
+///        other backends, which need only model + repository -- it requires the
+///        presenter-layer alarm store. The `AlertCenter` is built by each
+///        frontend's composition root, which runs after this function, so a
+///        caller that has one already may pass it here to opt the HTTP backend
+///        in; a null pointer (the default) means the HTTP backend is skipped
+///        even when `network.http.enabled` is true. Ignored unless the HTTP
+///        backend was compiled in (`BUILD_HTTP_BACKEND`).
 [[nodiscard]] IntegrationServices buildIntegrationServices(
-    config::ConfigManager& config, core::Logger& logger);
+    config::ConfigManager& config, core::Logger& logger,
+    presenter::AlertCenter* httpAlerts = nullptr);
 
 }  // namespace app::integration

@@ -101,6 +101,9 @@ void checkBackends(const ConfigManager& cfg,
     if (cfg.isTcpBackendEnabled() && !isValidPort(cfg.getTcpBackendPort())) {
         errors.emplace_back("network.tcp.port: out of range (1..65535)");
     }
+    if (cfg.isHttpBackendEnabled() && !isValidPort(cfg.getHttpBackendPort())) {
+        errors.emplace_back("network.http.port: out of range (1..65535)");
+    }
     if (cfg.isMqttBackendEnabled() &&
         !isValidPort(cfg.getMqttBrokerPort())) {
         errors.emplace_back(

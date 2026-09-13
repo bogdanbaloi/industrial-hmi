@@ -1146,6 +1146,25 @@ Verified by: `fuzz_modbus_decode`, `fuzz_mqtt_publish`,
 
 Needs: utest
 
+### REQ-INTEGRATION-007 (SHOULD) — HTTP/REST backend (read-only)
+
+`req~integration-007~1`
+
+The system **shall** expose a read-only REST/HTTP backend, opt-in behind
+`network.http.enabled` (default false), serving `GET /health`, `GET /status`,
+`GET /alarms` and `GET /products` as JSON over the same `ProductionModel`,
+`ProductsRepository` and `presenter::AlertCenter` the other frontends and
+backends use, with no change to model or presenter code. No state-changing
+route is exposed in this version; a write endpoint is deferred until an
+authorization story exists, mirroring the read-only posture the MCP server
+adopted (REQ-ARCH-018).
+
+Verified by: HttpBackendTest, StatusJsonTest.
+
+ADR: 0005, 0014, 0025.
+
+Needs: utest
+
 ---
 
 ## PERF — Performance budgets

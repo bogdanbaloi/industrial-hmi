@@ -55,6 +55,8 @@ Each file has the following sections:
 | 0020 | [Qt frontend proves MVP toolkit-independence](0020-qt-frontend-mvp-toolkit-independence.md) | Accepted |
 | 0021 | [Qt runtime palettes via an application-wide style sheet](0021-qt-runtime-palettes-via-stylesheet.md) | Accepted |
 | 0022 | [Shared integration bootstrap across frontends](0022-shared-integration-bootstrap.md) | Accepted |
+| 0023 | [MCP server as a fourth MVP consumer](0023-mcp-server-fourth-mvp-consumer.md) | Accepted |
+| 0025 | [cpp-httplib for a read-only REST/HTTP backend](0025-cpp-httplib-rest-backend.md) | Accepted |
 
 ## Adding a new ADR
 

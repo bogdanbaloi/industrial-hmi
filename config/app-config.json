@@ -255,6 +255,11 @@
       "enabled": true,
       "port": 5555
     },
+    "http": {
+      "enabled": false,
+      "port": 8080,
+      "bind_address": "127.0.0.1"
+    },
     "mqtt": {
       "enabled": true,
       "broker_host": "127.0.0.1",

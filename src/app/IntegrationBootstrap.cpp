@@ -30,6 +30,11 @@
 #  include "src/integration/modbus/ModbusRegisterMap.h"
 #endif
 
+#ifdef INDUSTRIAL_HMI_HAS_HTTP_BACKEND
+#  include "src/integration/HttpBackend.h"
+#  include "src/presenter/AlertCenter.h"
+#endif
+
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -266,6 +271,26 @@ void registerModbusBackend(
 }
 #endif
 
+#ifdef INDUSTRIAL_HMI_HAS_HTTP_BACKEND
+// Build + register the read-only HTTP/REST backend (REQ-INTEGRATION-007). It
+// owns all its own pieces, so nothing leaks into the bundle; it does need the
+// presenter-layer AlertCenter for the `/alarms` route, passed in by reference.
+void registerHttpBackend(
+        app::integration::IntegrationManager& integration,
+        app::config::ConfigManager& config,
+        app::presenter::AlertCenter& alerts,
+        app::core::Logger& logger) {
+    integration.registerBackend(
+        std::make_unique<app::integration::HttpBackend>(
+            static_cast<std::uint16_t>(config.getHttpBackendPort()),
+            config.getHttpBackendBindAddress(),
+            app::model::SimulatedModel::instance(),
+            app::model::DatabaseManager::instance(),
+            alerts,
+            logger));
+}
+#endif
+
 // Multi-station: build the secondary MirrorModel + the in-process
 // PrimaryToSecondaryBridge linking the singleton SimulatedModel (primary)
 // into the mirror (secondary), then hand the bridge to the
@@ -292,7 +317,8 @@ IntegrationServices& IntegrationServices::operator=(
 
 IntegrationServices buildIntegrationServices(
     app::config::ConfigManager& config,
-    [[maybe_unused]] app::core::Logger& logger) {
+    [[maybe_unused]] app::core::Logger& logger,
+    [[maybe_unused]] app::presenter::AlertCenter* httpAlerts) {
     IntegrationServices services;
     services.manager = std::make_unique<IntegrationManager>();
     auto& integration = *services.manager;
@@ -304,6 +330,22 @@ IntegrationServices buildIntegrationServices(
                 app::model::SimulatedModel::instance(),
                 app::model::DatabaseManager::instance()));
     }
+
+#ifdef INDUSTRIAL_HMI_HAS_HTTP_BACKEND
+    if (config.isHttpBackendEnabled()) {
+        if (httpAlerts != nullptr) {
+            registerHttpBackend(integration, config, *httpAlerts, logger);
+        } else {
+            // The HTTP backend needs the presenter-layer AlertCenter for its
+            // /alarms route, but this composition runs before any frontend
+            // builds one. Skip rather than serve a broken /alarms; the caller
+            // opts in by passing a live AlertCenter.
+            logger.warn(
+                "network.http.enabled is true but no AlertCenter was provided "
+                "to buildIntegrationServices; HTTP backend not registered");
+        }
+    }
+#endif
 
     if (config.isMqttBackendEnabled()) {
         registerMqttBackend(integration, config, services.productionBridge,
