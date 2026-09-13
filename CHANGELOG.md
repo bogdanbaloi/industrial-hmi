@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Production metrics MCP tool (REQ-ARCH-020)
+
+A third read-only MCP tool exposing live throughput and OEE so an external
+consumer (the AI-audit product) can source a real per-stage production time
+instead of an invented simulator baseline. Depends on the abstract
+`ProductionModel` interface (DIP), lives in its own file and leaves the existing
+tools untouched (Open/Closed). ADR-0023.
+
+#### Added
+- `production_metrics` MCP tool: `throughputUph` and `oeePct` from `ProductionModel`, plus a derived `minutesPerUnit` (60 / throughputUph), omitted when throughput is non-positive to avoid a divide-by-zero.
+
 ### MCP server (REQ-ARCH-018)
 
 A fourth, headless consumer of the existing presenter/model core: an opt-in MCP
