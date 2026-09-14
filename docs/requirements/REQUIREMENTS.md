@@ -1243,6 +1243,25 @@ Needs: utest
 
 ---
 
+### REQ-INTEGRATION-008 (SHOULD) — HTTP/REST production KPIs
+
+`req~integration-008~1`
+
+The read-only HTTP/REST backend (REQ-INTEGRATION-007) **shall** additionally
+serve `GET /production`, returning the same throughput/OEE snapshot the MCP
+`production_metrics` tool exposes: `throughputUph`, `oeePct` and a derived
+`minutesPerUnit` (`60 / throughputUph`), omitted when throughput is
+non-positive. The derivation **shall** be a single shared builder consumed by
+both consumers so the two cannot drift.
+
+Verified by: HttpBackendTest, ProductionMetricsJsonTest.
+
+ADR: 0025.
+
+Needs: utest
+
+---
+
 ## PERF — Performance budgets
 
 ### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths

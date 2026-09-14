@@ -22,8 +22,9 @@
 
 namespace app::console {
 
-InitConsole::InitConsole(core::Bootstrap& bootstrap)
-    : bootstrap_{bootstrap} {}
+InitConsole::InitConsole(core::Bootstrap& bootstrap,
+                         presenter::AlertCenter& alertCenter)
+    : bootstrap_{bootstrap}, alertCenter_{alertCenter} {}
 
 InitConsole::~InitConsole() = default;
 
@@ -38,10 +39,11 @@ int InitConsole::run() {
 
     // Presenters -- DI construction so we don't rely on any singleton
     // shortcut from inside the presenter. Makes the dependency graph
-    // explicit at the composition root, identical to test wiring.
-    alertCenter_        = std::make_unique<presenter::AlertCenter>();
+    // explicit at the composition root, identical to test wiring. The
+    // AlertCenter is borrowed from main() (shared with the HTTP /alarms
+    // route), not built here.
     dashboardPresenter_ = std::make_unique<DashboardPresenter>(model);
-    dashboardPresenter_->setAlertCenter(*alertCenter_);
+    dashboardPresenter_->setAlertCenter(alertCenter_);
     productsPresenter_  = std::make_unique<ProductsPresenter>();  // DB singleton path
 
     // View -- injected with std::cout / std::cin so tests can plug in
@@ -74,7 +76,7 @@ int InitConsole::run() {
     view_.reset();
     productsPresenter_.reset();
     dashboardPresenter_.reset();
-    alertCenter_.reset();
+    // alertCenter_ is borrowed from main() -- not owned here, nothing to reset.
 
     model.clearCallbacks();
 
@@ -98,7 +100,7 @@ void InitConsole::wireActions() {
     // together in InitConsole::run()'s cleanup block.
     auto* dp = dashboardPresenter_.get();
     auto* pp = productsPresenter_.get();
-    auto* ac = alertCenter_.get();
+    auto* ac = &alertCenter_;
 
     view_->onStart     ([dp] { if (dp) dp->onStartClicked(); });
     view_->onStop      ([dp] { if (dp) dp->onStopClicked(); });

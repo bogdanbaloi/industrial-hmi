@@ -22,6 +22,7 @@ class AuditLogger;         // forward decl -- non-owning pointer
 
 namespace app::presenter {
 class UsersPresenter;      // forward decl -- non-owning pointer
+class AlertCenter;         // forward decl -- non-owning pointer
 }
 
 namespace app::model {
@@ -105,6 +106,21 @@ public:
         return historyReader_;
     }
 
+    /// Inject the process-wide alarm store so a frontend (MainWindow) can
+    /// borrow it rather than owning its own, and so the HTTP backend's
+    /// `/alarms` route (REQ-INTEGRATION-007) projects the same AlertCenter
+    /// the GUI raises alarms into. Optional -- when null, MainWindow falls
+    /// back to constructing its own. Non-owning; the store lives in main()'s
+    /// stack frame, declared before the integration services that reference
+    /// it so it outlives them.
+    void setAlertCenter(presenter::AlertCenter* alerts) noexcept {
+        alertCenter_ = alerts;
+    }
+
+    [[nodiscard]] presenter::AlertCenter* getAlertCenter() const noexcept {
+        return alertCenter_;
+    }
+
     /// Inject the auth service + session. When both pointers are non-
     /// null AND `auth.enabled` is true in config, `run()` shows a
     /// modal LoginDialog before the main window appears. Cancel from
@@ -176,6 +192,7 @@ private:
     Logger*                 logger_ = nullptr;   // non-owning -- Bootstrap owns
     integration::IntegrationManager* integrationManager_ = nullptr;  // non-owning
     historian::HistoryReader* historyReader_ = nullptr;              // non-owning
+    presenter::AlertCenter* alertCenter_ = nullptr;                  // non-owning
     auth::AuthService*      authService_ = nullptr;                  // non-owning
     auth::Session*          authSession_ = nullptr;                  // non-owning
     auth::AuditLogger*      auditLogger_ = nullptr;                  // non-owning

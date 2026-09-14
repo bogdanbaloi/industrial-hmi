@@ -1336,6 +1336,7 @@ target_link_libraries(test_mcp_protocol PRIVATE
     objectsHistorian
     objectsAuth
     objectsCore
+    objectsIntegrationCore  # buildProductionMetricsJson (production_metrics delegate)
     nlohmann_json_headers
 )
 add_test(NAME McpProtocolTest COMMAND test_mcp_protocol)
@@ -1351,6 +1352,19 @@ target_link_libraries(test_status_json PRIVATE
     nlohmann_json_headers
 )
 add_test(NAME StatusJsonTest COMMAND test_status_json)
+
+# ProductionMetricsJson: the shared production-KPI JSON builder
+# (REQ-INTEGRATION-008) that the MCP `production_metrics` tool and the HTTP
+# `GET /production` route both delegate to. Pure logic -- compile the one
+# source directly and drive it with a gmock ProductionModel; no sockets.
+add_executable(test_production_metrics_json ProductionMetricsJsonTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/ProductionMetricsJson.cpp)
+target_link_libraries(test_production_metrics_json PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    nlohmann_json_headers
+)
+add_test(NAME ProductionMetricsJsonTest COMMAND test_production_metrics_json)
 
 # HttpBackend: the read-only REST backend (REQ-INTEGRATION-007) over real
 # loopback HTTP, mocked model + repository, a live AlertCenter. Links objectsHttp
@@ -1378,6 +1392,43 @@ if(WIN32)
 endif()
 add_test(NAME HttpBackendTest COMMAND test_http_backend)
 
+# IntegrationBootstrap: proves the shared buildIntegrationServices composition
+# (REQ-INTEGRATION-007) actually registers + starts the HTTP backend and its
+# /alarms route projects a live AlertCenter. IntegrationBootstrap.cpp is
+# compiled directly with INDUSTRIAL_HMI_HAS_HTTP_BACKEND so the registerHttpBackend
+# branch is live regardless of the build's BUILD_HTTP_BACKEND switch; the OPC-UA
+# and Modbus branches stay #ifdef'd out so this target links neither. The bundle
+# always references TCP + MQTT (unconditional in the bootstrap TU), so objectsTcp
+# / objectsMqtt + Boost are linked. Binds a real loopback socket -> its own
+# ws2_32 / mswsock line on Windows.
+add_executable(test_integration_bootstrap IntegrationBootstrapTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/app/IntegrationBootstrap.cpp)
+target_compile_definitions(test_integration_bootstrap PRIVATE
+    INDUSTRIAL_HMI_HAS_HTTP_BACKEND=1)
+target_link_libraries(test_integration_bootstrap PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHttp
+    objectsMcp
+    objectsIntegrationCore
+    objectsTcp
+    objectsMqtt
+    objectsPresenter
+    objectsModel
+    objectsConfig
+    objectsHistorian
+    objectsAuth
+    objectsCore
+    ${BOOST_TARGET}
+    cpp_httplib_headers
+    nlohmann_json_headers
+    Threads::Threads
+)
+if(WIN32)
+    target_link_libraries(test_integration_bootstrap PRIVATE ws2_32 mswsock)
+endif()
+add_test(NAME IntegrationBootstrapTest COMMAND test_integration_bootstrap)
+
 # MCP write tool (REQ-ARCH-019). The equipment_command descriptor, argument
 # parsing, and the explicit authorization pre-check (ADR-0024) over a real
 # Session + in-memory SqliteAuditLogger + a nice-mock model behind a real
@@ -1396,6 +1447,7 @@ target_link_libraries(test_equipment_command_tool PRIVATE
     objectsHistorian
     objectsAuth
     objectsCore
+    objectsIntegrationCore  # buildProductionMetricsJson (production_metrics delegate)
     nlohmann_json_headers
 )
 add_test(NAME EquipmentCommandToolTest COMMAND test_equipment_command_tool)
@@ -1417,6 +1469,7 @@ target_link_libraries(test_mcp_server_stdio PRIVATE
     objectsHistorian
     objectsAuth
     objectsCore
+    objectsIntegrationCore  # buildProductionMetricsJson (production_metrics delegate)
     nlohmann_json_headers
 )
 add_test(NAME McpServerStdioTest COMMAND test_mcp_server_stdio)

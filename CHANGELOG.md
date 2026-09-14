@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### REST/HTTP backend (REQ-INTEGRATION-007)
+### REST/HTTP backend (REQ-INTEGRATION-007, REQ-INTEGRATION-008)
 
 A fifth IntegrationBackend: an opt-in, read-only REST server over the same
 model / AlertCenter the other four backends serve, the standard-web-client
@@ -16,9 +16,13 @@ sibling of the TCP / MQTT / Modbus / OPC-UA protocols. ADR-0025.
 #### Added
 - `HttpBackend`: `GET /health`, `/status`, `/alarms`, `/products` via cpp-httplib (FetchContent), off by default (`network.http.enabled=false`, compile-gated behind `BUILD_HTTP_BACKEND`). `/status` reuses the shared status-JSON builder and `/alarms` reuses the MCP `alarms_snapshot` projection, so the HTTP surface cannot drift from the TCP command or the MCP tool.
 - `StatusJson`: extracted shared status-JSON builder used by both `TcpBackend` and `HttpBackend`.
+- `GET /production`: throughput + OEE + derived `minutesPerUnit`, served through a shared `ProductionMetricsJson` builder the MCP `production_metrics` tool now delegates to, so the REST route and the LLM tool cannot drift (REQ-INTEGRATION-008).
+- `/alarms` activated in the GTK and console binaries: `buildIntegrationServices` now receives the process-wide `AlertCenter` (the same store MainWindow / InitConsole raise alarms into), so the route serves live alarms when `network.http.enabled` is set. The Qt frontend already passed its AlertCenter.
 
 #### Changed
 - `TcpBackend`'s `status` command now calls the shared `buildStatusJson` instead of building the JSON inline.
+- `ProductionMetricsTool` now delegates to the shared `buildProductionMetricsJson`, preserving its public API and behaviour.
+- `MainWindow` borrows the `AlertCenter` from `Application::getAlertCenter()` when the composition root supplies one, else owns its own (standalone GUI tests unchanged); `InitConsole` takes the `AlertCenter` by reference from `main()`.
 
 ### Historized throughput and OEE (REQ-HISTORIAN-007)
 

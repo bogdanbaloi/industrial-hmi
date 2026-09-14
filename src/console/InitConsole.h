@@ -43,9 +43,13 @@ class ConsoleView;
 ///      flushes on its own destruction in `main()`.
 class InitConsole {
 public:
-    /// Borrow the already-prepared Bootstrap (logger + config + i18n).
-    /// Bootstrap must out-live InitConsole.
-    explicit InitConsole(core::Bootstrap& bootstrap);
+    /// Borrow the already-prepared Bootstrap (logger + config + i18n) and the
+    /// process-wide AlertCenter built by main(). The AlertCenter is borrowed
+    /// (not owned) so the HTTP backend's `/alarms` route projects the same
+    /// store the console's DashboardPresenter raises alarms into
+    /// (REQ-INTEGRATION-007). Both must out-live InitConsole -- they live in
+    /// main()'s frame, declared before the integration services.
+    InitConsole(core::Bootstrap& bootstrap, presenter::AlertCenter& alertCenter);
     ~InitConsole();
 
     InitConsole(const InitConsole&)            = delete;
@@ -64,7 +68,7 @@ private:
     void tickLoop(std::stop_token stop);
 
     core::Bootstrap&                         bootstrap_;
-    std::unique_ptr<presenter::AlertCenter>  alertCenter_;
+    presenter::AlertCenter&                  alertCenter_;  // borrowed from main()
     std::unique_ptr<DashboardPresenter>      dashboardPresenter_;
     std::unique_ptr<ProductsPresenter>       productsPresenter_;
     std::unique_ptr<ConsoleView>             view_;

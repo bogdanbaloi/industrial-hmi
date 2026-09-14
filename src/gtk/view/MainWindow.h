@@ -238,9 +238,15 @@ private:
     app::view::QualityInspectionPage*                  inspectionPage_ = nullptr;
 #endif
 
-    // Sidebar Alert center + view -- owned by the window, shared with
-    // DashboardPresenter which raises/clears alerts on state transitions.
-    std::unique_ptr<app::presenter::AlertCenter> alertCenter_;
+    // Sidebar Alert center + view -- shared with DashboardPresenter which
+    // raises/clears alerts on state transitions. Borrowed from
+    // Application::getAlertCenter() when the composition root supplies one
+    // (so the HTTP /alarms route projects the same store the GUI raises
+    // into); otherwise self-owned via ownedAlertCenter_ so a MainWindow
+    // built standalone (existing GUI tests) still has a store. alertCenter_
+    // points at whichever is live; it is never null after construction.
+    std::unique_ptr<app::presenter::AlertCenter> ownedAlertCenter_;
+    app::presenter::AlertCenter*                 alertCenter_ = nullptr;
     app::view::AlertsPanel*                      alertsPanel_ = nullptr;
     app::view::SystemStatusBadge*                statusBadge_ = nullptr;
     app::view::LiveClock*                        clock_       = nullptr;
