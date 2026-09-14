@@ -1,6 +1,7 @@
 #include "src/integration/HttpBackend.h"
 
 #include "src/core/LoggerBase.h"
+#include "src/integration/ProductionMetricsJson.h"
 #include "src/integration/StatusJson.h"
 #include "src/mcp/tools/AlarmsSnapshotTool.h"
 #include "src/model/Product.h"
@@ -43,22 +44,24 @@ namespace app::integration {
 
 namespace {
 
-// Route paths -- named constants, never inline string literals. The four
+// Route paths -- named constants, never inline string literals. The five
 // together form the authoritative route table: `registerRoutes` binds a
 // handler to each and `HttpBackend::routePaths` reports them for the
 // duplicate-path test.
 namespace routes {
-inline constexpr const char* kHealth   = "/health";
-inline constexpr const char* kStatus   = "/status";
-inline constexpr const char* kAlarms   = "/alarms";
-inline constexpr const char* kProducts = "/products";
+inline constexpr const char* kHealth     = "/health";
+inline constexpr const char* kStatus     = "/status";
+inline constexpr const char* kAlarms     = "/alarms";
+inline constexpr const char* kProducts   = "/products";
+inline constexpr const char* kProduction = "/production";
 }  // namespace routes
 
-inline constexpr std::array<const char*, 4> kRouteTable = {
+inline constexpr std::array<const char*, 5> kRouteTable = {
     routes::kHealth,
     routes::kStatus,
     routes::kAlarms,
     routes::kProducts,
+    routes::kProduction,
 };
 
 // Response content type + fixed / error bodies. Named so no bare JSON or
@@ -150,6 +153,16 @@ void HttpBackend::registerRoutes() {
                  [this](const httplib::Request&, httplib::Response& res) {
                      res.set_content(productsToJson(products_).dump(),
                                      kJsonMime);
+                 });
+
+    // GET /production -- throughput + OEE + derived minutesPerUnit, the exact
+    // shape the MCP `production_metrics` tool serves, reused through the shared
+    // buildProductionMetricsJson builder so the two consumers cannot drift.
+    server_->Get(routes::kProduction,
+                 [this](const httplib::Request&, httplib::Response& res) {
+                     res.set_content(
+                         buildProductionMetricsJson(production_).dump(),
+                         kJsonMime);
                  });
 
     // Unmatched path -> 404 with a JSON body. httplib has already set the

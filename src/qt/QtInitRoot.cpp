@@ -370,9 +370,15 @@ bool QtInitRoot::run() {
     // Connectivity page. Reusing the integration composition behind a third
     // frontend is the integration-layer half of the toolkit-independence proof
     // (ADR-0022, REQ-ARCH-013).
+    // Pass the AlertCenter (built just above) so the HTTP backend's /alarms
+    // route projects the same store this frontend raises alarms into
+    // (REQ-INTEGRATION-007). The HTTP backend borrows this reference; the
+    // destructor calls manager->stopAll() before dropping alertCenter_, so the
+    // accept loop is joined before the store it reads goes away.
     integrationServices_ = std::make_unique<integration::IntegrationServices>(
         integration::buildIntegrationServices(
-            app::config::ConfigManager::instance(), logger));
+            app::config::ConfigManager::instance(), logger,
+            alertCenter_.get()));
     integrationServices_->manager->startAll();
     backendHealthPresenter_ = std::make_unique<BackendHealthPresenter>(
         *integrationServices_->manager);

@@ -85,10 +85,19 @@ MainWindow::MainWindow()
     // Create DialogManager (injected into pages)
     dialogManager_ = std::make_unique<app::view::DialogManager>(this);
 
-    // AlertCenter lives alongside the window -- DashboardPresenter
-    // raises alerts into it from model callbacks, AlertsPanel (in
-    // sidebar) renders the current snapshot.
-    alertCenter_ = std::make_unique<app::presenter::AlertCenter>();
+    // AlertCenter -- DashboardPresenter raises alerts into it from model
+    // callbacks, AlertsPanel (in sidebar) renders the current snapshot.
+    // Borrow the composition root's store when it provided one (so the HTTP
+    // /alarms route projects the same AlertCenter the GUI raises into);
+    // otherwise own one so a standalone MainWindow (existing GUI tests) still
+    // has a store. The borrowed store lives in main()'s frame and outlives
+    // the window; the owned one tears down with it.
+    if (auto* borrowed = app::core::Application::instance().getAlertCenter()) {
+        alertCenter_ = borrowed;
+    } else {
+        ownedAlertCenter_ = std::make_unique<app::presenter::AlertCenter>();
+        alertCenter_      = ownedAlertCenter_.get();
+    }
 
     // Build pages + presenters (also registers them with the Notebook)
     createAllPages();

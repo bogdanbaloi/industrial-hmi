@@ -15,6 +15,7 @@
 #include "src/historian/SqliteHistoryStore.h"
 #include "src/model/MirrorModel.h"
 #include "src/model/SimulatedModel.h"
+#include "src/presenter/AlertCenter.h"
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -316,14 +317,25 @@ int main(int argc, char* argv[]) {
         // Integration backends -- opt-in per deployment via JSON.
         // Stack-owned through main() so RAII shuts them down on exit.
         auto& config = app::config::ConfigManager::instance();
+
+        // Process-wide alarm store. Declared BEFORE integrationServices so it
+        // outlives them: the HTTP backend (REQ-INTEGRATION-007) holds a
+        // reference into this AlertCenter for its /alarms route, so on exit
+        // the services (reverse declaration order) tear down first. The GTK
+        // MainWindow and the console InitConsole borrow this same store, so
+        // the alarms a frontend raises are exactly what /alarms serves.
+        app::presenter::AlertCenter alertCenter;
+
         // Integration backends are built (not started) by the shared
         // bootstrap so the GTK, console and Qt frontends compose the same
         // protocol set from one place. The bundle is stack-owned through
         // main() so RAII shuts the backends down on exit; the manager is
-        // started below after auth / historian are wired.
+        // started below after auth / historian are wired. Pass the AlertCenter
+        // so the HTTP /alarms route is activated when network.http.enabled.
         auto integrationServices =
             app::integration::buildIntegrationServices(config,
-                                                       bootstrap.logger());
+                                                       bootstrap.logger(),
+                                                       &alertCenter);
         auto& integration = *integrationServices.manager;
 
         // Auth + Historian stacks. Declared in construction order so
@@ -354,12 +366,17 @@ int main(int argc, char* argv[]) {
 
 #ifdef CONSOLE_MODE
         (void)argc; (void)argv;
-        app::console::InitConsole console(bootstrap);
+        app::console::InitConsole console(bootstrap, alertCenter);
         console.run();
         integration.stopAll();
         return kExitOk;
 #else
         auto& app = app::core::Application::instance();
+        // Hand MainWindow the same AlertCenter the HTTP /alarms route reads,
+        // so the GUI raises alarms into exactly what /alarms serves. Set
+        // before app.run() builds MainWindow (which borrows it via
+        // Application::getAlertCenter()).
+        app.setAlertCenter(&alertCenter);
         std::unique_ptr<app::presenter::UsersPresenter> usersPresenter;
         CompositionRoot root{
             historyStore, authService, authSession, auditLogger,

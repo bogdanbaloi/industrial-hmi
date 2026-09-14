@@ -34,13 +34,14 @@ namespace app::integration {
 
 /// Read-only REST/HTTP backend: the standard-web-client sibling of the
 /// TCP / MQTT / Modbus / OPC-UA protocols, serving the same model /
-/// products / alarm seams over four `GET` routes (ADR-0025,
-/// REQ-INTEGRATION-007):
+/// products / alarm seams over five `GET` routes (ADR-0025,
+/// REQ-INTEGRATION-007, REQ-INTEGRATION-008):
 ///
-///   GET /health   -> {"status":"ok"}                (no model access)
-///   GET /status   -> buildStatusJson(ProductionModel) (shared with TCP)
-///   GET /alarms   -> app::mcp::runAlarmsSnapshot(AlertCenter) (shared MCP)
-///   GET /products -> ProductsRepository::getAllProducts() as a JSON array
+///   GET /health     -> {"status":"ok"}                  (no model access)
+///   GET /status     -> buildStatusJson(ProductionModel) (shared with TCP)
+///   GET /alarms     -> app::mcp::runAlarmsSnapshot(AlertCenter) (shared MCP)
+///   GET /products   -> ProductsRepository::getAllProducts() as a JSON array
+///   GET /production -> buildProductionMetricsJson(ProductionModel) (shared MCP)
 ///
 /// No state-changing route is exposed; a write endpoint waits on the same
 /// authorization story the MCP write tool was deferred behind (ADR-0023).

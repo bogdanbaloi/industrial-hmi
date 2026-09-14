@@ -226,6 +226,46 @@ TEST(HttpBackendTest, ProductsReturnsRepositorySnapshot) {
     EXPECT_EQ(j[1].at("productCode").get<std::string>(), "PROD-002");
 }
 
+// [utest->req~integration-008~1]
+TEST(HttpBackendTest, ProductionRouteReturnsDerivedMetrics) {
+    HttpFixture f;
+    app::model::WorkUnit unit;
+    unit.throughputUnitsPerHour = 120.0;  // 120/hour -> 0.5 min per unit
+    app::model::OeeMetrics oee;
+    oee.oeePct = 85.0F;
+    EXPECT_CALL(f.model(), getWorkUnit()).WillRepeatedly(Return(unit));
+    EXPECT_CALL(f.model(), oeeSnapshot()).WillRepeatedly(Return(oee));
+
+    auto res = f.client().Get("/production");
+    ASSERT_TRUE(res);
+    EXPECT_EQ(res->status, kOkStatus);
+
+    const auto j = nlohmann::json::parse(res->body);
+    EXPECT_DOUBLE_EQ(j.at("throughputUph").get<double>(), 120.0);
+    EXPECT_FLOAT_EQ(j.at("oeePct").get<float>(), 85.0F);
+    ASSERT_TRUE(j.contains("minutesPerUnit"));
+    EXPECT_DOUBLE_EQ(j.at("minutesPerUnit").get<double>(), 0.5);
+}
+
+// [utest->req~integration-008~1]
+TEST(HttpBackendTest, ProductionRouteOmitsMinutesPerUnitWhenThroughputZero) {
+    HttpFixture f;
+    app::model::WorkUnit unit;
+    unit.throughputUnitsPerHour = 0.0;
+    app::model::OeeMetrics oee;
+    oee.oeePct = 40.0F;
+    EXPECT_CALL(f.model(), getWorkUnit()).WillRepeatedly(Return(unit));
+    EXPECT_CALL(f.model(), oeeSnapshot()).WillRepeatedly(Return(oee));
+
+    auto res = f.client().Get("/production");
+    ASSERT_TRUE(res);
+    EXPECT_EQ(res->status, kOkStatus);
+
+    const auto j = nlohmann::json::parse(res->body);
+    EXPECT_DOUBLE_EQ(j.at("throughputUph").get<double>(), 0.0);
+    EXPECT_FALSE(j.contains("minutesPerUnit"));
+}
+
 TEST(HttpBackendTest, UnknownPathReturns404) {
     HttpFixture f;
     auto res = f.client().Get("/does-not-exist");
@@ -238,7 +278,8 @@ TEST(HttpBackendTest, UnknownPathReturns404) {
 
 TEST(HttpBackendTest, RouteTableHasNoDuplicatePaths) {
     auto paths = HttpBackend::routePaths();
-    EXPECT_FALSE(paths.empty());
+    // /health, /status, /alarms, /products, /production.
+    EXPECT_EQ(paths.size(), 5U);
 
     std::vector<std::string_view> sorted = paths;
     std::sort(sorted.begin(), sorted.end());

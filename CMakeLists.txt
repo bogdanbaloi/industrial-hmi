@@ -655,6 +655,7 @@ target_sources(objectsIntegrationCore
         src/integration/SensorIngestBridge.cpp
         src/integration/PrimaryToSecondaryBridge.cpp
         src/integration/StatusJson.cpp
+        src/integration/ProductionMetricsJson.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -672,6 +673,7 @@ target_sources(objectsIntegrationCore
             src/integration/SensorIngestBridge.h
             src/integration/PrimaryToSecondaryBridge.h
             src/integration/StatusJson.h
+            src/integration/ProductionMetricsJson.h
 )
 target_link_libraries(objectsIntegrationCore
     PUBLIC
@@ -1441,6 +1443,7 @@ if(BUILD_MCP_SERVER OR BUILD_TESTS OR BUILD_HTTP_BACKEND)
             objectsHistorian
             objectsAuth
             objectsCore
+            objectsIntegrationCore  # production_metrics delegates to buildProductionMetricsJson
             nlohmann_json_headers)
     target_include_directories(objectsMcp PUBLIC ${CMAKE_SOURCE_DIR})
 endif()

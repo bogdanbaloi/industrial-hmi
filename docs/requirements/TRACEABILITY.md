@@ -131,7 +131,8 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-004 | MUST | `src/integration/opcua/OpcUaBackend.cpp`, `src/integration/opcua/OpcUaIngestBridge.cpp`, `src/integration/opcua/FactoryCommandSink.cpp`, `src/integration/opcua/FactoryNodeMap.cpp` | OpcUaBackendTest, Open62541ServerIntegrationTest, Open62541ClientIntegrationTest, Open62541ServerControlIntegrationTest, OpcUaIngestBridgeTest, FactoryCommandSinkTest, FactoryNodeMapTest | -- |
 | REQ-INTEGRATION-005 | SHOULD | `src/presenter/BackendHealthPresenter.cpp`, `src/integration/IntegrationManager.cpp::metricsSnapshot` | BackendHealthPresenterTest, IntegrationManagerTest | -- |
 | REQ-INTEGRATION-006 | MUST | `src/integration/modbus/ModbusPdu.cpp::decodeReadResponse`, `src/integration/MqttPacket.cpp::parsePublish` + `::decodeRemainingLength`, `fuzzers/fuzz_modbus_decode.cpp`, `fuzzers/fuzz_mqtt_publish.cpp`, `fuzzers/fuzz_mqtt_remaining_length.cpp` | libFuzzer harnesses under `-DBUILD_FUZZERS=ON` (Clang); seed corpora in `fuzzers/corpus/`; smoke-run baseline in `fuzzers/README.md` | -- |
-| REQ-INTEGRATION-007 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/StatusJson.cpp`, `src/app/IntegrationBootstrap.cpp` | HttpBackendTest, StatusJsonTest | 0025 |
+| REQ-INTEGRATION-007 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/StatusJson.cpp`, `src/app/IntegrationBootstrap.cpp`, `src/main.cpp`, `src/core/Application.h`, `src/gtk/view/MainWindow.cpp`, `src/console/InitConsole.cpp`, `src/qt/QtInitRoot.cpp` | HttpBackendTest, StatusJsonTest, IntegrationBootstrapTest | 0025 |
+| REQ-INTEGRATION-008 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/ProductionMetricsJson.cpp`, `src/mcp/tools/ProductionMetricsTool.cpp` | HttpBackendTest, ProductionMetricsJsonTest | 0025 |
 
 ## PERF
 
@@ -205,12 +206,12 @@ requirements may be smoke-tested.
 | HISTORIAN | 7 | 1 | 6 | 0 | 6 | 1 (REQ-HISTORIAN-004) |
 | I18N | 1 | 0 | 1 | 0 | 1 | 0 |
 | INSPECTION | 2 | 0 | 0 | 2 | 2 | 0 |
-| INTEGRATION | 6 | 4 | 2 | 0 | 6 | 0 |
+| INTEGRATION | 7 | 4 | 3 | 0 | 7 | 0 |
 | MULTISTATION | 5 | 4 | 1 | 0 | 5 | 0 |
 | PRODUCTS | 2 | 1 | 1 | 0 | 2 | 0 |
 | QUALITY | 2 | 1 | 1 | 0 | 2 | 0 |
 | SETTINGS | 3 | 0 | 1 | 2 | 1 | 2 |
-| **TOTAL** | **70** | **24** | **34** | **12** | **58** | **12** |
+| **TOTAL** | **71** | **24** | **35** | **12** | **59** | **12** |
 
 **Pass criteria:** every MUST and SHOULD requirement has at least
 one automated test target listed under "Verification". NICE
