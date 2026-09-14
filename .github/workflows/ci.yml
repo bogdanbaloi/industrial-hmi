@@ -3,8 +3,21 @@ name: Industrial HMI - CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+    # Skip the full pipeline for doc-only changes. Deliberately does NOT
+    # ignore docs/requirements/** -- the OFT trace gate must still run when
+    # requirements or traceability change.
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - 'docs/adr/**'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - 'docs/adr/**'
   workflow_dispatch:
 
 env:
