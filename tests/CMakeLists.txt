@@ -338,11 +338,13 @@ add_test(NAME IntegrationManagerTest COMMAND test_integration_manager)
 # socket so we link the same Boost target the production library uses.
 add_executable(test_tcp_backend TcpBackendTest.cpp
     ${CMAKE_SOURCE_DIR}/src/integration/TcpBackend.cpp
-    ${CMAKE_SOURCE_DIR}/src/integration/JsonSerializer.cpp)
+    ${CMAKE_SOURCE_DIR}/src/integration/JsonSerializer.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/StatusJson.cpp)
 target_link_libraries(test_tcp_backend PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes
     ${BOOST_TARGET}
+    nlohmann_json_headers   # TcpBackend status now builds JSON via buildStatusJson
     Threads::Threads
 )
 if(WIN32)
@@ -1337,6 +1339,44 @@ target_link_libraries(test_mcp_protocol PRIVATE
     nlohmann_json_headers
 )
 add_test(NAME McpProtocolTest COMMAND test_mcp_protocol)
+
+# StatusJson: the shared status-JSON builder (REQ-INTEGRATION-007) that the TCP
+# `status` command and the HTTP `/status` route both call. Pure logic -- compile
+# the one source directly and drive it with a gmock ProductionModel; no sockets.
+add_executable(test_status_json StatusJsonTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/StatusJson.cpp)
+target_link_libraries(test_status_json PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    nlohmann_json_headers
+)
+add_test(NAME StatusJsonTest COMMAND test_status_json)
+
+# HttpBackend: the read-only REST backend (REQ-INTEGRATION-007) over real
+# loopback HTTP, mocked model + repository, a live AlertCenter. Links objectsHttp
+# (built under BUILD_TESTS) and objectsMcp (the /alarms route reuses
+# runAlarmsSnapshot); the test itself uses cpp-httplib's client. cpp-httplib
+# calls Winsock directly, so this target carries its own ws2_32 / mswsock line.
+add_executable(test_http_backend HttpBackendTest.cpp)
+target_link_libraries(test_http_backend PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHttp
+    objectsMcp
+    objectsPresenter
+    objectsModel
+    objectsHistorian
+    objectsAuth
+    objectsCore
+    objectsIntegrationCore
+    cpp_httplib_headers
+    nlohmann_json_headers
+    Threads::Threads
+)
+if(WIN32)
+    target_link_libraries(test_http_backend PRIVATE ws2_32 mswsock)
+endif()
+add_test(NAME HttpBackendTest COMMAND test_http_backend)
 
 # MCP write tool (REQ-ARCH-019). The equipment_command descriptor, argument
 # parsing, and the explicit authorization pre-check (ADR-0024) over a real

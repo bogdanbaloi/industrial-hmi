@@ -232,6 +232,12 @@ public:
     [[nodiscard]] bool isTcpBackendEnabled() const;
     [[nodiscard]] int getTcpBackendPort() const;
 
+    // Integration backends - HTTP/REST (read-only)
+
+    [[nodiscard]] bool isHttpBackendEnabled() const;
+    [[nodiscard]] int getHttpBackendPort() const;
+    [[nodiscard]] std::string getHttpBackendBindAddress() const;
+
     // Auth
 
     [[nodiscard]] bool isAuthEnabled() const;

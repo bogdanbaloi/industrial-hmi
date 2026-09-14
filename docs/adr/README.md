@@ -57,6 +57,7 @@ Each file has the following sections:
 | 0022 | [Shared integration bootstrap across frontends](0022-shared-integration-bootstrap.md) | Accepted |
 | 0023 | [MCP server as a fourth, LLM-facing consumer of the MVP core](0023-mcp-server-fourth-mvp-consumer.md) | Accepted |
 | 0024 | [Agent identity for MCP write tools](0024-mcp-agent-identity-for-writes.md) | Accepted |
+| 0025 | [cpp-httplib for a read-only REST/HTTP backend](0025-cpp-httplib-rest-backend.md) | Accepted |
 
 ## Adding a new ADR
 

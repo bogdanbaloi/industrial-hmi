@@ -1,14 +1,18 @@
 #include "src/integration/TcpBackend.h"
 
 #include "src/integration/JsonSerializer.h"
+#include "src/integration/StatusJson.h"
 #include "src/model/ProductionTypes.h"
+
+#include <nlohmann/json.hpp>
 
 #include <boost/asio.hpp>
 
 // Boost.Asio on Windows pulls in <windows.h> which #defines ERROR as 0.
-// That breaks `case model::SystemState::ERROR:` further down (the enum
-// constant turns into `case 0` after preprocessing). Undefine here --
-// no other code in this TU needs the wingdi ERROR macro.
+// The SystemState::ERROR enum is parsed above (ProductionTypes.h is
+// included before Boost) so the definition is safe; this undef keeps the
+// token clean for any later use in this TU. No code here needs the wingdi
+// ERROR macro.
 #ifdef ERROR
 #  undef ERROR
 #endif
@@ -58,19 +62,6 @@ std::optional<std::uint32_t> parseId(const std::string& s) {
     auto [ptr, ec] = std::from_chars(first, last, out);
     if (ec != std::errc{} || ptr != last) return std::nullopt;
     return out;
-}
-
-/// Map SystemState to a stable wire-protocol string. Lower-case + no
-/// whitespace so the value reads cleanly as a JSON string field.
-const char* systemStateName(model::SystemState s) {
-    using enum model::SystemState;
-    switch (s) {
-        case IDLE:        return "idle";
-        case RUNNING:     return "running";
-        case ERROR:       return "error";
-        case CALIBRATION: return "calibration";
-    }
-    return "unknown";
 }
 
 /// Marshal a single Product as one JSON line for the `products` stream.
@@ -343,12 +334,11 @@ bool TcpBackend::dispatchCommand(const std::string& line, std::string& out) {
     }
 
     if (cmd == "status") {
-        const auto state = production_.getState();
-        const bool isRunning = state == model::SystemState::RUNNING;
-        out = std::format(
-            R"({{"state":"{}","running":{}}})" "\n",
-            systemStateName(state),
-            isRunning ? "true" : "false");
+        // Shared shape with the HTTP `/status` route (StatusJson.h) so the
+        // two frontends cannot drift. dump() is compact (no spaces), which
+        // keeps the single-line wire contract.
+        out = buildStatusJson(production_).dump();
+        out += '\n';
         return true;
     }
 

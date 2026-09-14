@@ -451,6 +451,17 @@ int ConfigManager::getTcpBackendPort() const {
     return getInt("network.tcp.port", defaults::kTcpBackendPort);
 }
 
+bool ConfigManager::isHttpBackendEnabled() const {
+    return getValue("network.http.enabled", "false") == "true";
+}
+int ConfigManager::getHttpBackendPort() const {
+    return getInt("network.http.port", defaults::kHttpBackendPort);
+}
+std::string ConfigManager::getHttpBackendBindAddress() const {
+    return getValue("network.http.bind_address",
+                    defaults::kHttpBackendBindAddress);
+}
+
 bool ConfigManager::isAuthEnabled() const {
     return getValue("auth.enabled", "false") == "true";
 }

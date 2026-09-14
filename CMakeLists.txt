@@ -259,6 +259,30 @@ add_library(nlohmann_json_headers INTERFACE)
 target_include_directories(nlohmann_json_headers SYSTEM INTERFACE
     ${CMAKE_BINARY_DIR}/_deps/json-vendor/include)
 
+# cpp-httplib -- single-header HTTP/1.1 server + client (MIT licence). Backs
+# the read-only HTTP/REST backend (ADR-0024). Header-only, so it is included
+# ONLY from src/integration/HttpBackend.cpp (PIMPL behind a forward-declared
+# httplib::Server) and never from a public header. Fetched only when the HTTP
+# backend or the tests are built, so the default GTK/console build does not pay
+# the download. Routed into `_deps/httplib-vendor/`; a SYSTEM include so its
+# diagnostics stay out of our clang-tidy WarningsAsErrors budget. We use the
+# header directly rather than the upstream CMake target so no extra install /
+# find_package logic enters the build.
+if(BUILD_HTTP_BACKEND OR BUILD_TESTS)
+    FetchContent_Declare(cpp_httplib
+        GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+        GIT_TAG        v0.15.3
+        GIT_SHALLOW    TRUE
+        SOURCE_DIR     ${CMAKE_BINARY_DIR}/_deps/httplib-vendor
+    )
+    FetchContent_MakeAvailable(cpp_httplib)
+    add_library(cpp_httplib_headers INTERFACE)
+    target_include_directories(cpp_httplib_headers SYSTEM INTERFACE
+        ${CMAKE_BINARY_DIR}/_deps/httplib-vendor)
+    find_package(Threads REQUIRED)
+    target_link_libraries(cpp_httplib_headers INTERFACE Threads::Threads)
+endif()
+
 # Google Benchmark (google/benchmark) -- microbenchmark harness with
 # statistical reporting (Apache 2.0). Used by the `benchmarks/`
 # tree to give the portfolio reproducible p50 / p90 / p99 numbers
@@ -318,6 +342,15 @@ option(BUILD_OPCUA_BACKEND
 # any platform with Boost.Asio can build it.
 option(BUILD_MODBUS_BACKEND
     "Compile Modbus master backend (hand-rolled MBAP over Boost.Asio)" ON)
+
+# HTTP/REST backend (read-only): a fifth IntegrationBackend over cpp-httplib
+# (single-header, FetchContent). OFF by default because it is the first
+# integration backend to read the presenter-layer AlertCenter and to reuse the
+# MCP alarms tool, so it links objectsMcp -- mirroring the opt-in gating of the
+# OPC-UA backend. Built automatically under BUILD_TESTS so its tests compile in
+# CI without enabling it in the host binaries. See ADR-0024.
+option(BUILD_HTTP_BACKEND
+    "Compile the read-only HTTP/REST backend (cpp-httplib via FetchContent)" OFF)
 
 # Qt6 desktop frontend (industrial-hmi-qt): an opt-in third frontend beside the GTK
 # and console binaries. Proves the MVP View seam is toolkit-independent by
@@ -621,6 +654,7 @@ target_sources(objectsIntegrationCore
         src/integration/JsonTelemetryFormatter.cpp
         src/integration/SensorIngestBridge.cpp
         src/integration/PrimaryToSecondaryBridge.cpp
+        src/integration/StatusJson.cpp
     PUBLIC
         FILE_SET HEADERS
         FILES
@@ -637,10 +671,12 @@ target_sources(objectsIntegrationCore
             src/integration/ProductionTelemetryBridge.h
             src/integration/SensorIngestBridge.h
             src/integration/PrimaryToSecondaryBridge.h
+            src/integration/StatusJson.h
 )
 target_link_libraries(objectsIntegrationCore
     PUBLIC
         objectsModel
+        nlohmann_json_headers   # buildStatusJson (StatusJson.cpp) emits json
         Threads::Threads
 )
 # NOTE: core has NO Boost dep -- only the protocol libs that
@@ -694,6 +730,46 @@ target_link_libraries(objectsMqtt
 )
 if(WIN32)
     target_link_libraries(objectsMqtt PUBLIC ws2_32 mswsock)
+endif()
+
+# ----- objectsHttp -----
+# Read-only HTTP/REST backend (ADR-0024, REQ-INTEGRATION-007). cpp-httplib
+# server + std::jthread accept loop. Reuses buildStatusJson (integration core)
+# and app::mcp::runAlarmsSnapshot (objectsMcp) so /status and /alarms cannot
+# drift from the TCP command and the MCP tool. Built when the backend is
+# enabled OR under BUILD_TESTS so its tests compile without enabling the host
+# binaries -- the same gating objectsMcp uses.
+if(BUILD_HTTP_BACKEND OR BUILD_TESTS)
+    add_library(objectsHttp OBJECT)
+    target_sources(objectsHttp
+        PRIVATE
+            src/integration/HttpBackend.cpp
+        PUBLIC
+            FILE_SET HEADERS
+            FILES
+                src/integration/HttpBackend.h
+    )
+    target_link_libraries(objectsHttp
+        PUBLIC
+            objectsIntegrationCore  # IntegrationBackend base + buildStatusJson
+            objectsModel            # ProductionModel / ProductsRepository / sigc++
+            objectsMcp              # app::mcp::runAlarmsSnapshot (verbatim reuse)
+            cpp_httplib_headers
+            nlohmann_json_headers
+            Threads::Threads
+    )
+    target_include_directories(objectsHttp PUBLIC ${CMAKE_SOURCE_DIR})
+    target_compile_definitions(objectsHttp
+        PUBLIC
+            INDUSTRIAL_HMI_HAS_HTTP_BACKEND=1
+    )
+    if(WIN32)
+        # cpp-httplib calls Winsock (WSAStartup / socket / listen) DIRECTLY,
+        # not through Boost.Asio, so objectsHttp is NOT covered by the
+        # "objectsModel carries ws2_32 transitively" rule -- it needs its own
+        # explicit link line, same as objectsTcp / objectsMqtt.
+        target_link_libraries(objectsHttp PUBLIC ws2_32 mswsock)
+    endif()
 endif()
 
 # OPC-UA Layer - Industrial protocol backend. Lives in its own object
@@ -827,6 +903,11 @@ if(BUILD_OPCUA_BACKEND)
 endif()
 if(BUILD_MODBUS_BACKEND)
     target_link_libraries(objectsIntegrationBootstrap PUBLIC objectsModbus)
+endif()
+if(BUILD_HTTP_BACKEND)
+    # PUBLIC so INDUSTRIAL_HMI_HAS_HTTP_BACKEND reaches this TU (and the
+    # frontends transitively), enabling the registerHttpBackend branch.
+    target_link_libraries(objectsIntegrationBootstrap PUBLIC objectsHttp)
 endif()
 
 # ML Layer - Edge inference foundation. Image decoding (stb_image),
@@ -1154,6 +1235,12 @@ endif()
 if(BUILD_MODBUS_BACKEND)
     target_link_libraries(industrial-hmi PRIVATE objectsModbus)
 endif()
+if(BUILD_HTTP_BACKEND)
+    # objectsHttp + the objectsMcp it reuses for /alarms. Object-lib object
+    # files do not propagate transitively through objectsIntegrationBootstrap,
+    # so the exe lists both explicitly.
+    target_link_libraries(industrial-hmi PRIVATE objectsHttp objectsMcp)
+endif()
 
 # Windows: Boost.Asio requires Winsock + mswsock (AcceptEx,
 # GetAcceptExSockaddrs are in mswsock.lib, not ws2_32). StartupDialog
@@ -1197,6 +1284,9 @@ if(BUILD_OPCUA_BACKEND)
 endif()
 if(BUILD_MODBUS_BACKEND)
     target_link_libraries(industrial-hmi-console PRIVATE objectsModbus)
+endif()
+if(BUILD_HTTP_BACKEND)
+    target_link_libraries(industrial-hmi-console PRIVATE objectsHttp objectsMcp)
 endif()
 if(WIN32)
     # Boost.Asio's TCP server uses IOCP AcceptEx / GetAcceptExSockaddrs
@@ -1310,6 +1400,9 @@ if(BUILD_QT_FRONTEND)
     if(BUILD_MODBUS_BACKEND)
         target_link_libraries(industrial-hmi-qt PRIVATE objectsModbus)
     endif()
+    if(BUILD_HTTP_BACKEND)
+        target_link_libraries(industrial-hmi-qt PRIVATE objectsHttp objectsMcp)
+    endif()
     if(WIN32)
         # Winsock arrives transitively via objectsModel (PUBLIC ws2_32 /
         # mswsock), kept explicit for parity with the console target.
@@ -1332,7 +1425,9 @@ endif()
 option(BUILD_MCP_SERVER
     "Compile the opt-in MCP server (industrial-hmi-mcp)" OFF)
 
-if(BUILD_MCP_SERVER OR BUILD_TESTS)
+# Also built for BUILD_HTTP_BACKEND: the HTTP backend's /alarms route reuses
+# app::mcp::runAlarmsSnapshot (defined here) verbatim, so objectsHttp links this.
+if(BUILD_MCP_SERVER OR BUILD_TESTS OR BUILD_HTTP_BACKEND)
     add_library(objectsMcp OBJECT
         src/mcp/McpProtocol.cpp
         src/mcp/tools/AlarmsSnapshotTool.cpp

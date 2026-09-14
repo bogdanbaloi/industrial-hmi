@@ -1,0 +1,261 @@
+#include "src/integration/HttpBackend.h"
+
+#include "src/core/LoggerBase.h"
+#include "src/integration/StatusJson.h"
+#include "src/mcp/tools/AlarmsSnapshotTool.h"
+#include "src/model/Product.h"
+#include "src/model/ProductsRepository.h"
+
+#include <nlohmann/json.hpp>
+
+// cpp-httplib pulls <winsock2.h>/<windows.h> on Windows. Keep those from
+// defining the min/max function macros (they collide with std::min/max used
+// by the standard library and nlohmann) and trim the header. httplib.h is
+// included LAST so its Windows macros can't leak into the headers above.
+#ifdef _WIN32
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
+#endif
+#include <httplib.h>
+// <windows.h> (via httplib on Windows) #defines ERROR as 0; undo it so the
+// token stays clean for the rest of this TU. Nothing here needs the wingdi
+// ERROR macro.
+#ifdef ERROR
+#  undef ERROR
+#endif
+
+#include <array>
+#include <chrono>
+#include <exception>
+#include <format>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <utility>
+#include <vector>
+
+namespace app::integration {
+
+namespace {
+
+// Route paths -- named constants, never inline string literals. The four
+// together form the authoritative route table: `registerRoutes` binds a
+// handler to each and `HttpBackend::routePaths` reports them for the
+// duplicate-path test.
+namespace routes {
+inline constexpr const char* kHealth   = "/health";
+inline constexpr const char* kStatus   = "/status";
+inline constexpr const char* kAlarms   = "/alarms";
+inline constexpr const char* kProducts = "/products";
+}  // namespace routes
+
+inline constexpr std::array<const char*, 4> kRouteTable = {
+    routes::kHealth,
+    routes::kStatus,
+    routes::kAlarms,
+    routes::kProducts,
+};
+
+// Response content type + fixed / error bodies. Named so no bare JSON or
+// mime literal is scattered through the handlers.
+inline constexpr const char* kJsonMime          = "application/json";
+inline constexpr const char* kHealthBody        = R"({"status":"ok"})";
+inline constexpr const char* kNotFoundBody      = R"({"error":"not found"})";
+inline constexpr const char* kInternalErrorBody = R"({"error":"internal error"})";
+
+// HTTP status codes we set explicitly (httplib defaults unmatched routes to
+// 404; we set 500 ourselves on a handler exception). Named to keep the magic
+// numbers out of the handler bodies.
+inline constexpr int kStatusNotFound      = 404;
+inline constexpr int kStatusInternalError = 500;
+
+// Bounded wait for the accept loop to come up after start() spins its
+// thread, so callers (and tests) observe a server that is actually ready to
+// answer once start() returns.
+inline constexpr std::chrono::milliseconds kReadyPollInterval{5};
+inline constexpr int                       kReadyPollMaxAttempts = 400;  // ~2s
+
+/// Marshal the product catalogue to a JSON array. Field set + names follow
+/// JsonSerializer's conventions (productCode / name / status / stock /
+/// qualityRate) so the REST shape matches the file-export and TCP shapes.
+nlohmann::json productsToJson(model::ProductsRepository& products) {
+    nlohmann::json array = nlohmann::json::array();
+    for (const auto& p : products.getAllProducts()) {
+        array.push_back({
+            {"productCode", p.productCode},
+            {"name", p.name},
+            {"status", p.status},
+            {"stock", p.stock},
+            {"qualityRate", p.qualityRate},
+        });
+    }
+    return array;
+}
+
+}  // namespace
+
+HttpBackend::HttpBackend(std::uint16_t port,
+                         std::string bindAddress,
+                         model::ProductionModel& production,
+                         model::ProductsRepository& products,
+                         presenter::AlertCenter& alerts,
+                         core::Logger& logger)
+    : requestedPort_(port),
+      bindAddress_(std::move(bindAddress)),
+      production_(production),
+      products_(products),
+      alerts_(alerts),
+      logger_(logger) {}
+
+HttpBackend::~HttpBackend() {
+    // Defensive -- callers should stop() explicitly. Use the non-virtual
+    // stopImpl() because calling a virtual from a destructor bypasses dynamic
+    // dispatch (clang-analyzer-optin.cplusplus.VirtualCall).
+    stopImpl();
+}
+
+std::vector<std::string_view> HttpBackend::routePaths() {
+    return {kRouteTable.begin(), kRouteTable.end()};
+}
+
+void HttpBackend::registerRoutes() {
+    // GET /health -- liveness, no model access.
+    server_->Get(routes::kHealth,
+                 [](const httplib::Request&, httplib::Response& res) {
+                     res.set_content(kHealthBody, kJsonMime);
+                 });
+
+    // GET /status -- shared shape with the TCP `status` command.
+    server_->Get(routes::kStatus,
+                 [this](const httplib::Request&, httplib::Response& res) {
+                     res.set_content(buildStatusJson(production_).dump(),
+                                     kJsonMime);
+                 });
+
+    // GET /alarms -- the exact projection the MCP `alarms_snapshot` tool
+    // serves, reused verbatim so the two consumers cannot drift.
+    server_->Get(routes::kAlarms,
+                 [this](const httplib::Request&, httplib::Response& res) {
+                     res.set_content(app::mcp::runAlarmsSnapshot(alerts_).dump(),
+                                     kJsonMime);
+                 });
+
+    // GET /products -- the product catalogue as a JSON array.
+    server_->Get(routes::kProducts,
+                 [this](const httplib::Request&, httplib::Response& res) {
+                     res.set_content(productsToJson(products_).dump(),
+                                     kJsonMime);
+                 });
+
+    // Unmatched path -> 404 with a JSON body. httplib has already set the
+    // 404 status and calls this for any >= 400 response, so we scope the
+    // synthesized body to a genuine not-found with no body of its own (the
+    // 500 path below supplies its own body and is left untouched).
+    server_->set_error_handler(
+        [](const httplib::Request&, httplib::Response& res) {
+            if (res.status == kStatusNotFound && res.body.empty()) {
+                res.set_content(kNotFoundBody, kJsonMime);
+            }
+        });
+
+    // Any exception escaping a handler (e.g. a model read that threw) is
+    // logged and mapped to 500 -- never silently swallowed, never allowed to
+    // tear down the accept loop.
+    server_->set_exception_handler(
+        [this](const httplib::Request& req, httplib::Response& res,
+               const std::exception_ptr& ep) {
+            std::string reason;
+            try {
+                std::rethrow_exception(ep);
+            } catch (const std::exception& e) {
+                reason = e.what();
+            } catch (...) {
+                reason = "non-std exception";
+            }
+            logger_.error("HTTP handler for {} failed: {}", req.path, reason);
+            res.status = kStatusInternalError;
+            res.set_content(kInternalErrorBody, kJsonMime);
+        });
+}
+
+void HttpBackend::start() {
+    if (running_.exchange(true, std::memory_order_acq_rel)) {
+        return;  // already running, idempotent
+    }
+
+    server_ = std::make_unique<httplib::Server>();
+    registerRoutes();
+
+    // Bind synchronously so the caller learns about a busy port before
+    // start() returns (per the IntegrationBackend contract). port == 0 asks
+    // the OS to assign a free port, reported through boundPort().
+    int bound = 0;
+    try {
+        if (requestedPort_ == 0) {
+            bound = server_->bind_to_any_port(bindAddress_);
+            if (bound <= 0) {
+                throw std::runtime_error(
+                    "HttpBackend: bind_to_any_port failed on " + bindAddress_);
+            }
+        } else {
+            if (!server_->bind_to_port(bindAddress_, requestedPort_)) {
+                throw std::runtime_error(std::format(
+                    "HttpBackend: bind failed on {}:{}", bindAddress_,
+                    requestedPort_));
+            }
+            bound = requestedPort_;
+        }
+    } catch (...) {
+        running_.store(false, std::memory_order_release);
+        server_.reset();
+        throw;
+    }
+    boundPort_.store(static_cast<std::uint16_t>(bound),
+                     std::memory_order_release);
+
+    // Run the accept loop on our own thread. jthread auto-joins on stop() /
+    // dtor. listen_after_bind() blocks until Server::stop() is called.
+    thread_ = std::jthread([this]() { server_->listen_after_bind(); });
+
+    // Wait until the loop is actually accepting so a request issued right
+    // after start() (as tests do) is not racing the listen thread.
+    for (int attempt = 0;
+         attempt < kReadyPollMaxAttempts && !server_->is_running(); ++attempt) {
+        std::this_thread::sleep_for(kReadyPollInterval);
+    }
+
+    logger_.info("HTTP backend listening on http://{}:{}", bindAddress_,
+                 boundPort_.load(std::memory_order_acquire));
+}
+
+std::string HttpBackend::metricsSummary() const {
+    return std::format("port {}", boundPort_.load(std::memory_order_acquire));
+}
+
+void HttpBackend::stop() {
+    stopImpl();
+}
+
+void HttpBackend::stopImpl() noexcept {
+    if (!running_.exchange(false, std::memory_order_acq_rel)) {
+        return;  // already stopped, idempotent
+    }
+    try {
+        // stop() unblocks listen_after_bind() so the jthread can join.
+        if (server_) server_->stop();
+        if (thread_.joinable()) thread_.join();
+        boundPort_.store(0, std::memory_order_release);
+        server_.reset();
+    }
+    // Shutdown is noexcept by contract; the logger may be gone by dtor time
+    // and there is nowhere meaningful to surface a stop-time failure.
+    // NOLINTNEXTLINE(bugprone-empty-catch)
+    catch (...) { /* swallow */ }
+}
+
+}  // namespace app::integration
