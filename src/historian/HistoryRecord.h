@@ -25,6 +25,17 @@ enum class FieldKind : std::uint8_t {
     /// integer set; the History page renders this as a stepped strip
     /// rather than a continuous line.
     SystemState         = 2,
+
+    /// Line throughput in completed work units per hour. entityId = 0
+    /// (single line-wide series). Recorded off the work-unit change
+    /// notification so the archive keeps a production-time baseline a
+    /// live snapshot can't reconstruct after the fact.
+    Throughput          = 3,
+
+    /// Composite OEE percentage, 0..100 (%). entityId = 0 (single
+    /// line-wide series). Sampled on the same work-unit change trigger
+    /// as throughput since OEE has no dedicated change signal.
+    OeePercent          = 4,
 };
 
 /// Stable single-character codes used in the SQLite schema so a human
@@ -36,6 +47,8 @@ enum class FieldKind : std::uint8_t {
         case FieldKind::QualityPassRate:      return "Q";
         case FieldKind::EquipmentSupplyLevel: return "S";
         case FieldKind::SystemState:          return "T";
+        case FieldKind::Throughput:           return "H";
+        case FieldKind::OeePercent:           return "E";
     }
     return "?";
 }

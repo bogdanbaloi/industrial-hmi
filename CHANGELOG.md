@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Historized throughput and OEE (REQ-HISTORIAN-007)
+
+Extends the historian's recorded series so the `historian_query` MCP tool can
+return a real production-time baseline instead of the always-zero live snapshot
+a standalone MCP server produces.
+
+#### Added
+- `FieldKind::Throughput` and `FieldKind::OeePercent` series, recorded on every work-unit change, entity id 0.
+- `historian_query` field names `throughput` and `oee`.
+
 ### MCP write tool (REQ-ARCH-019)
 
 The MCP server's first state-changing tool, `equipment_command` (start / stop /
