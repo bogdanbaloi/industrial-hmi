@@ -1,0 +1,8 @@
+{
+  "_comment": "Example Claude Desktop MCP config for industrial-hmi-mcp. Copy the mcpServers entry into your real config (Windows: %APPDATA%/Claude/claude_desktop_config.json ; macOS: ~/Library/Application Support/Claude/claude_desktop_config.json), replace the command with the absolute path to your built binary, then restart Claude Desktop. Ask it e.g. 'are there any active alarms?' and it will call the alarms_snapshot tool.",
+  "mcpServers": {
+    "industrial-hmi": {
+      "command": "C:/path/to/build-qt/industrial-hmi-mcp.exe"
+    }
+  }
+}

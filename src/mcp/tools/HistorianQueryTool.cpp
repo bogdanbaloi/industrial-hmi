@@ -25,6 +25,8 @@ constexpr auto kFieldMappings = std::to_array<FieldMapping>({
     {.field = FieldKind::QualityPassRate, .name = "quality"},
     {.field = FieldKind::EquipmentSupplyLevel, .name = "supply"},
     {.field = FieldKind::SystemState, .name = "state"},
+    {.field = FieldKind::Throughput, .name = "throughput"},
+    {.field = FieldKind::OeePercent, .name = "oee"},
 });
 
 const char* fieldName(FieldKind field) {
@@ -68,13 +70,13 @@ nlohmann::json historianQueryDescriptor() {
              {{"type", "string"},
               {"enum", fieldNameEnum()},
               {"description",
-               "Series: quality pass rate, equipment supply level, or "
-               "system state."}}},
+               "Series: quality pass rate, equipment supply level, "
+               "system state, throughput (units/hour) or OEE (%)."}}},
             {"entityId",
              {{"type", "integer"},
               {"description",
-               "Checkpoint or equipment id (0 for the global system-state "
-               "series)."}}},
+               "Checkpoint or equipment id (0 for the global system-state, "
+               "throughput and OEE series)."}}},
             {"fromMs",
              {{"type", "integer"},
               {"description", "Range start, ms since the Unix epoch."}}},

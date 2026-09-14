@@ -1,6 +1,10 @@
 // [utest->req~historian-002~1]
 // Covers REQ-HISTORIAN-002 (batched writes).
 //
+// [utest->req~historian-007~1]
+// Covers REQ-HISTORIAN-007 (historized throughput + OEE): a work-unit
+// change enqueues a Throughput row and an OeePercent row, both entity 0.
+//
 // Tests for HistorianBridge.
 //
 // The SimulatedModel singleton owns its callback list and has no
@@ -164,6 +168,41 @@ TEST_F(HistorianBridgeTest, SystemStateTransitionProducesRow) {
     EXPECT_TRUE(foundState)
         << "expected SystemState row on transition";
     model.stopProduction();
+}
+
+TEST_F(HistorianBridgeTest, WorkUnitChangeProducesThroughputRow) {
+    auto& model = app::model::SimulatedModel::instance();
+    // resetSystem() always fires onWorkUnitChanged (it zeroes the rate
+    // and re-broadcasts), the same trigger the bridge records off.
+    model.resetSystem();
+    bridge_->flush();
+
+    bool foundThroughput = false;
+    for (const auto& r : fake_->snapshot()) {
+        if (r.field == FieldKind::Throughput && r.entityId == 0) {
+            foundThroughput = true;
+        }
+    }
+    EXPECT_TRUE(foundThroughput)
+        << "expected a Throughput row for entity 0 on a work-unit change";
+}
+
+TEST_F(HistorianBridgeTest, WorkUnitChangeProducesOeeRow) {
+    auto& model = app::model::SimulatedModel::instance();
+    model.resetSystem();
+    bridge_->flush();
+
+    bool foundOee = false;
+    for (const auto& r : fake_->snapshot()) {
+        if (r.field == FieldKind::OeePercent
+                && r.entityId == 0
+                && r.value >= 0.0F && r.value <= 100.0F) {
+            foundOee = true;
+        }
+    }
+    EXPECT_TRUE(foundOee)
+        << "expected an OeePercent row (0..100) for entity 0 on a "
+           "work-unit change";
 }
 
 TEST_F(HistorianBridgeTest, ExplicitFlushIsIdempotent) {
