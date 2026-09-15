@@ -1,0 +1,27 @@
+[package]
+name = "hmi-spsc"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+description = "Lock-free single-producer single-consumer bounded ring buffer, ported from the C++ industrial-hmi SpscQueue (ADR-0026)"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "hmi_spsc"
+path = "src/lib.rs"
+
+# No runtime dependencies for the core logic: every line is hand-built and
+# defensible. Loom and Miri are test-only tools, never runtime deps.
+[dependencies]
+
+[dev-dependencies]
+# Loom: model-checker that explores all thread interleavings (the
+# ThreadSanitizer analogue). Used only by the loom-gated tests, built with
+# `RUSTFLAGS="--cfg loom"`.
+loom = "0.7"
+
+# `loom` is a custom cfg set via RUSTFLAGS; declare it so the compiler does
+# not flag it as unexpected (which `deny(warnings)` would turn into an error).
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }

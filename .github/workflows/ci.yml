@@ -11,6 +11,8 @@ on:
       - 'CHANGELOG.md'
       - 'LICENSE'
       - 'docs/adr/**'
+      - 'rust/**'
+      - '.github/workflows/rust.yml'
   pull_request:
     branches: [ main ]
     paths-ignore:
@@ -18,6 +20,8 @@ on:
       - 'CHANGELOG.md'
       - 'LICENSE'
       - 'docs/adr/**'
+      - 'rust/**'
+      - '.github/workflows/rust.yml'
   workflow_dispatch:
 
 env:

@@ -1,0 +1,6 @@
+# Cargo build output
+/target
+# Cargo.lock is kept for a binary but omitted for a library crate
+Cargo.lock
+# The build log / journal is kept private, outside the repo
+BUILDLOG.md
