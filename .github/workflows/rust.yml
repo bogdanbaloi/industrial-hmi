@@ -1,0 +1,61 @@
+name: Rust
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust.yml'
+  workflow_dispatch:
+
+env:
+  # Opt into Node.js 24 for JavaScript-based actions (matches ci.yml).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+defaults:
+  run:
+    working-directory: rust/spsc
+
+jobs:
+  check:
+    name: Test + clippy + fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install stable toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy,rustfmt
+          rustup default stable
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy (deny(clippy::all) is set in the crate)
+        run: cargo clippy --all-targets
+      - name: Unit and integration tests
+        run: cargo test
+
+  loom:
+    name: Loom (all interleavings)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install stable toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - name: Loom model test (Linux only; loom cannot run on Windows)
+        run: RUSTFLAGS="--cfg loom" cargo test --lib
+
+  miri:
+    name: Miri (undefined behaviour on unsafe)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install nightly + miri
+        run: rustup toolchain install nightly --profile minimal --component miri
+      - name: Miri
+        run: cargo +nightly miri test
