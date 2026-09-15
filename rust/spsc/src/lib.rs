@@ -18,6 +18,9 @@
 // `unsafe fn`, so the SAFETY reasoning is never implicit.
 #![forbid(unsafe_op_in_unsafe_fn)]
 
+// The C ABI surface (Phase 2, ADR-0027): compiled into the cdylib for C/C++.
+pub mod ffi;
+
 use std::mem::MaybeUninit;
 
 #[cfg(loom)]
