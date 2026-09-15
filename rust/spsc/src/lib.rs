@@ -279,7 +279,7 @@ mod tests {
 
     // [utest->req~spsc-ordering~1]
     #[test]
-    #[cfg_attr(miri, ignore = "too slow under Miri; concurrency is covered by the loom test")]
+    #[cfg_attr(miri, ignore = "slow under Miri (loom covers concurrency)")]
     fn producer_and_consumer_across_threads() {
         const COUNT: usize = 100_000;
         let (mut p, mut c) = channel::<usize, 1024>();
