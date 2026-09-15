@@ -59,3 +59,15 @@ jobs:
         run: rustup toolchain install nightly --profile minimal --component miri
       - name: Miri
         run: cargo +nightly miri test
+
+  ffi:
+    name: C ABI interop (C++ drives the Rust cdylib)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install stable toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - name: Build cdylib, compile the C++ harness and run it
+        run: bash ffi-test/run.sh

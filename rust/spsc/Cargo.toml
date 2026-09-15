@@ -10,6 +10,9 @@ publish = false
 [lib]
 name = "hmi_spsc"
 path = "src/lib.rs"
+# `lib` (rlib) for the unit tests and Rust consumers; `cdylib` for the C ABI
+# shared library that C and C++ load at runtime (Phase 2, ADR-0027).
+crate-type = ["lib", "cdylib"]
 
 # No runtime dependencies for the core logic: every line is hand-built and
 # defensible. Loom and Miri are test-only tools, never runtime deps.
