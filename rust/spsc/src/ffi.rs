@@ -125,11 +125,17 @@ mod tests {
         // SAFETY: both out-params are valid writable pointers.
         unsafe { hmi_spsc_create(&raw mut producer, &raw mut consumer) };
 
-        let pushed = Sample { ts_ms: 42, value: 3.5 };
+        let pushed = Sample {
+            ts_ms: 42,
+            value: 3.5,
+        };
         // SAFETY: `producer` is a live handle just created.
         assert!(unsafe { hmi_spsc_push(producer, pushed) });
 
-        let mut got = Sample { ts_ms: 0, value: 0.0 };
+        let mut got = Sample {
+            ts_ms: 0,
+            value: 0.0,
+        };
         // SAFETY: `consumer` is live and `got` is a valid writable pointer.
         assert!(unsafe { hmi_spsc_pop(consumer, &raw mut got) });
         assert_eq!(got.ts_ms, 42);
