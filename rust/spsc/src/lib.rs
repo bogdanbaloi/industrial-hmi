@@ -9,7 +9,7 @@
 //!
 //! - Design record: `../../docs/adr/0026-rust-spsc-polyglot-component.md`
 //! - Requirements and their tests: `REQUIREMENTS.md`
-//! - C++ -> Rust mapping and the build story: `README.md`, `BUILDLOG.md`
+//! - C++ -> Rust mapping: `README.md`
 
 #![deny(warnings)]
 #![deny(clippy::all)]
