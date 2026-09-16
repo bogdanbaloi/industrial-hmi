@@ -53,3 +53,16 @@ and consumer never invalidate each other's cache line by writing their own
 index (false-sharing elimination, matching the C++ `alignas(64)`).
 Verified by: unit test (alignment / offset assertion).
 Needs: utest
+
+## REQ-SPSC-FFI
+`req~spsc-ffi~1`
+The queue **shall** be exposable over a C ABI (`hmi_spsc_create` / `push` /
+`pop` / `producer_destroy` / `consumer_destroy`) built into a `cdylib`,
+carrying a `#[repr(C)]` `Sample` payload, with the producer and consumer as
+SEPARATE opaque handles so the single-producer / single-consumer contract
+holds across the boundary (no aliasing when the two ends run on different
+threads). See ADR-0027.
+Verified by: an in-process Rust unit test (`ffi_roundtrip_single_thread`) and
+the concurrent C++ harness (`ffi-test/main.cpp`).
+ADR: 0027.
+Needs: utest
