@@ -1,0 +1,87 @@
+@startuml class-integration-backend
+' Class diagram: IntegrationBackend interface + concrete backends (DIP).
+'
+' Grounded in real source:
+'   - src/integration/IntegrationBackend.h  (interface + BackendState enum)
+'   - src/integration/IntegrationManager.h  (owns backends by interface)
+'   - src/integration/TcpBackend.h
+'   - src/integration/MqttClient.h  (also TelemetryPublisher/Subscriber)
+'   - src/integration/HttpBackend.h
+'   - src/integration/modbus/ModbusBackend.h
+'   - src/integration/opcua/OpcUaBackend.h
+' Signatures copied verbatim from those headers.
+
+title IntegrationBackend - interface + concretes (Dependency Inversion)
+
+skinparam shadowing false
+hide empty members
+
+enum BackendState {
+  Disconnected
+  Connecting
+  Connected
+  Degraded
+}
+
+interface IntegrationBackend {
+  +start() : void
+  +stop() : void
+  +isRunning() : bool
+  +name() : string
+  +connectionState() : BackendState
+  +metricsSummary() : string
+}
+IntegrationBackend ..> BackendState
+
+class IntegrationManager {
+  +registerBackend(unique_ptr<IntegrationBackend>)
+  +startAll()
+  +stopAll() noexcept
+  +allRunning() : bool
+  +backends() : vector<unique_ptr<IntegrationBackend>>&
+  +lastStartErrors() : vector<string>&
+}
+IntegrationManager o--> "*" IntegrationBackend : owns\n(treats uniformly, never downcasts)
+
+class TcpBackend {
+  name() = "TCP"
+  +boundPort() : uint16_t
+  +activeClients() : size_t
+}
+class MqttClient {
+  name() = "MQTT" (3.1.1, QoS0)
+  +publish(topic, payload)
+  +subscribe(filter, cb)
+}
+class HttpBackend {
+  name() = "HTTP" (read-only REST)
+  +routePaths() : vector<string_view>
+}
+class ModbusBackend {
+  name() = "Modbus"
+  composes client+map+bridge+pollLoop
+}
+class OpcUaBackend {
+  name() = "OPC-UA"
+  composes server + nodeMap
+}
+
+interface TelemetryPublisher
+interface TelemetrySubscriber
+
+IntegrationBackend <|.. TcpBackend
+IntegrationBackend <|.. MqttClient
+IntegrationBackend <|.. HttpBackend
+IntegrationBackend <|.. ModbusBackend
+IntegrationBackend <|.. OpcUaBackend
+
+TelemetryPublisher  <|.. MqttClient
+TelemetrySubscriber <|.. MqttClient
+
+note bottom of IntegrationManager
+  DIP: the manager depends only on the
+  IntegrationBackend abstraction. Adding a
+  protocol = a new subclass; manager unchanged (O of SOLID).
+end note
+
+@enduml

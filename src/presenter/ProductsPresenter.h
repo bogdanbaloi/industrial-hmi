@@ -57,18 +57,29 @@ public:
     void viewProduct(int productId);
     
     /// Add new product to database (ASYNC - non-blocking)
+    /// @param productCode Unique product code (SKU)
+    /// @param name Human-readable product name
+    /// @param status Initial product status
+    /// @param stock Initial stock quantity
+    /// @param qualityRate Target quality pass rate
     /// @param callback Called with success/failure result
     void addProduct(const std::string& productCode, const std::string& name,
                     const std::string& status, int stock, float qualityRate,
                     std::function<void(bool)> callback);
     
     /// Update existing product (ASYNC - non-blocking)
+    /// @param productId Id of the product to update
+    /// @param name Updated product name
+    /// @param status Updated product status
+    /// @param stock Updated stock quantity
+    /// @param qualityRate Updated target quality pass rate
     /// @param callback Called with success/failure result
     void updateProduct(int productId, const std::string& name,
                       const std::string& status, int stock, float qualityRate,
                       std::function<void(bool)> callback);
     
     /// Delete product (ASYNC - non-blocking, soft delete)
+    /// @param productId Id of the product to soft-delete
     /// @param callback Called with success/failure result
     void deleteProduct(int productId, std::function<void(bool)> callback);
     

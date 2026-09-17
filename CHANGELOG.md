@@ -17,6 +17,20 @@ Adopts a MISRA-aligned posture rather than certified compliance. ADR-0028.
 - `docs/coding-guidelines.md`: the MISRA C++ intent-to-clang-tidy mapping, the recorded deviations table, and the re-enable candidates.
 - `docs/adr/0028-misra-aligned-coding-guidelines.md`: the decision to document a MISRA-aligned posture over buying qualified tooling or running the language-mismatched cppcheck MISRA-C addon.
 
+### API documentation (Doxygen)
+
+A Doxygen configuration that turns the existing `///` doc comments into a
+browsable HTML API reference, with the README as its landing page, generated in
+CI.
+
+#### Added
+- `docs/Doxyfile`: Doxygen config over `src` plus the README, with aliases for the project-specific comment tags and the README as the main page.
+- `.github/workflows/docs.yml`: generates the API reference on every push that touches the sources (Graphviz enabled for class graphs).
+
+#### Changed
+- `ViewObserver` no-op default methods now name their parameters with `[[maybe_unused]]` instead of commenting them out, so the `@param` docs resolve while clang-tidy's unused-parameter gate stays satisfied.
+- Documented the remaining `ProductsPresenter` and `buildIntegrationServices` parameters.
+
 ### REST/HTTP backend (REQ-INTEGRATION-007, REQ-INTEGRATION-008)
 
 A fifth IntegrationBackend: an opt-in, read-only REST server over the same

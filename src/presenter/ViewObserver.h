@@ -36,16 +36,16 @@ public:
 
     /// Called when production work unit information changes (new work, progress update)
     /// @param viewModel Display-ready data for work unit info widget
-    virtual void onWorkUnitChanged(const presenter::WorkUnitViewModel& /*viewModel*/) {}
+    virtual void onWorkUnitChanged([[maybe_unused]] const presenter::WorkUnitViewModel& viewModel) {}
 
     /// Called when a critical error occurs that should be shown to the user
     /// @param errorMessage Human-readable error description
-    virtual void onError(const std::string& /*errorMessage*/) {}
+    virtual void onError([[maybe_unused]] const std::string& errorMessage) {}
 
     /// Called when process configuration dialog should be shown
     /// @param viewModel Data for the configuration confirmation dialog
     /// @note Default: empty (for views that don't support configuration dialogs)
-    virtual void onActionRequired(const presenter::ProcessConfigDialogViewModel& /*viewModel*/) {}
+    virtual void onActionRequired([[maybe_unused]] const presenter::ProcessConfigDialogViewModel& viewModel) {}
 
     /// Called when configuration dialog settings were saved successfully
     /// View should close the dialog and show success feedback
@@ -53,7 +53,7 @@ public:
 
     /// Called when configuration dialog settings failed to save
     /// @param errorMessage Reason for failure
-    virtual void onActionFailed(const std::string& /*errorMessage*/) {}
+    virtual void onActionFailed([[maybe_unused]] const std::string& errorMessage) {}
 
     /// Called when test run completes successfully
     /// View should show test completion dialog for operator approval
@@ -61,66 +61,66 @@ public:
 
     /// Called when products list has been loaded from database
     /// @param viewModel Contains array of products with metadata
-    virtual void onProductsLoaded(const presenter::ProductsViewModel& /*viewModel*/) {}
+    virtual void onProductsLoaded([[maybe_unused]] const presenter::ProductsViewModel& viewModel) {}
 
     /// Called when product data is ready for viewing (ViewProductDialog should be shown)
     /// @param viewModel Complete product details for read-only display
-    virtual void onViewProductReady(const presenter::ViewProductDialogViewModel& /*viewModel*/) {}
+    virtual void onViewProductReady([[maybe_unused]] const presenter::ViewProductDialogViewModel& viewModel) {}
 
     /// Called when reset confirmation is requested (ResetProductDialog should be shown)
     /// @param viewModel The reset dialog view model with product info and reset options
     virtual void
-    onResetProductRequested(const presenter::ResetProductDialogViewModel& /*viewModel*/) {}
+    onResetProductRequested([[maybe_unused]] const presenter::ResetProductDialogViewModel& viewModel) {}
 
     /// Called when product reset completes
     /// @param success True if resetting was successful
     /// @param message Success or error message to display
-    virtual void onProductReset(bool /*success*/, const std::string& /*message*/) {}
+    virtual void onProductReset([[maybe_unused]] bool success, [[maybe_unused]] const std::string& message) {}
 
     /// Called when a product's recipe is loaded onto the production line
     /// (Products page "Load Recipe" action). The view shows a toast.
     /// @param success True if a recipe was found and applied
     /// @param message Success or "no recipe defined" message to display
-    virtual void onRecipeLoaded(bool /*success*/, const std::string& /*message*/) {}
+    virtual void onRecipeLoaded([[maybe_unused]] bool success, [[maybe_unused]] const std::string& message) {}
 
     /// Called when equipment station status changes
     /// @param viewModel Equipment status data (supplies, connectivity, operational state)
     /// @note Can be called up to 10 times per second during active production
-    virtual void onEquipmentCardChanged(const presenter::EquipmentCardViewModel& /*viewModel*/) {}
+    virtual void onEquipmentCardChanged([[maybe_unused]] const presenter::EquipmentCardViewModel& viewModel) {}
 
     /// Called when actuator equipment status changes
     /// @param viewModel Actuator status data (position, mode, alerts, auto mode)
     /// @note Can be called up to 10 times per second during active production
-    virtual void onActuatorCardChanged(const presenter::ActuatorCardViewModel& /*viewModel*/) {}
+    virtual void onActuatorCardChanged([[maybe_unused]] const presenter::ActuatorCardViewModel& viewModel) {}
     
     /// Called when quality checkpoint status changes
     /// @param viewModel Quality checkpoint data (pass rate, defects, inspection stats)
-    virtual void onQualityCheckpointChanged(const presenter::QualityCheckpointViewModel& /*viewModel*/) {}
+    virtual void onQualityCheckpointChanged([[maybe_unused]] const presenter::QualityCheckpointViewModel& viewModel) {}
 
     /// Called when header status bar should update (connectivity indicators)
     /// @param viewModel Network status, DB connectivity, system health
-    virtual void onHeaderStatusChanged(const presenter::HeaderStatusViewModel& /*viewModel*/) {}
+    virtual void onHeaderStatusChanged([[maybe_unused]] const presenter::HeaderStatusViewModel& viewModel) {}
 
     /// Called when control panel button states change (enabled/disabled)
     /// @param viewModel Button availability based on current system state
     /// @design This is driven by a state machine in the presenter - view just renders
-    virtual void onControlPanelChanged(const presenter::ControlPanelViewModel& /*viewModel*/) {}
+    virtual void onControlPanelChanged([[maybe_unused]] const presenter::ControlPanelViewModel& viewModel) {}
 
     /// Called when the integration-backend health snapshot refreshes.
     /// Driven by `BackendHealthPresenter::poll()` on a polling timer
     /// (the manager itself doesn't push events when a backend's
     /// internal state shifts -- the presenter polls + diffs).
-    virtual void onBackendHealthChanged(const presenter::BackendHealthViewModel& /*viewModel*/) {}
+    virtual void onBackendHealthChanged([[maybe_unused]] const presenter::BackendHealthViewModel& viewModel) {}
 
     /// Called when a process step completes or fails
     /// @param viewModel Step identifier, completion status, coordinates
     /// @note View should update the process visualization
-    virtual void onProcessStepChanged(const presenter::ProcessStepViewModel& /*viewModel*/) {}
+    virtual void onProcessStepChanged([[maybe_unused]] const presenter::ProcessStepViewModel& viewModel) {}
 
     /// Called when system error status changes
     /// @param viewModel Aggregated error state translated to display-ready format
     /// @note View should update the status zone banner (background color + message)
-    virtual void onStatusZoneChanged(const presenter::StatusZoneViewModel& /*viewModel*/) {}
+    virtual void onStatusZoneChanged([[maybe_unused]] const presenter::StatusZoneViewModel& viewModel) {}
 
     // Reset Process Panel state management
     /// Called to show the reset panel in "choosing action" state
@@ -130,7 +130,7 @@ public:
     /// Called to show the reset panel in "waiting for equipment" state
     /// Panel shows: title + "Please bring equipment to home position" + one button highlighted
     /// @param restartSelected true if "Restart process" was selected, false if "Release work unit"
-    virtual void onResetProcessShowWaitingForEquipment(bool /*restartSelected*/) {}
+    virtual void onResetProcessShowWaitingForEquipment([[maybe_unused]] bool restartSelected) {}
 
     /// Called to hide the reset panel completely
     virtual void onResetProcessHide() {}
@@ -146,19 +146,18 @@ public:
     ///      error. Exactly one of these fires per started call.
     /// Called when an inspection run begins.
     /// @param sourcePath absolute path of the image being inspected.
-    virtual void onInspectionStarted(const std::string& /*sourcePath*/) {}
+    virtual void onInspectionStarted([[maybe_unused]] const std::string& sourcePath) {}
 
     /// Called when an inspection run completes successfully.
     /// @param viewModel top-K classifications + latency + source path.
     virtual void
-        onInspectionCompleted(const presenter::InspectionResultViewModel&
-                              /*viewModel*/) {}
+        onInspectionCompleted([[maybe_unused]] const presenter::InspectionResultViewModel& viewModel) {}
 
     /// Called when an inspection run fails.
     /// @param sourcePath the path that failed.
     /// @param errorMessage human-readable cause.
-    virtual void onInspectionFailed(const std::string& /*sourcePath*/,
-                                    const std::string& /*errorMessage*/) {}
+    virtual void onInspectionFailed([[maybe_unused]] const std::string& sourcePath,
+                                    [[maybe_unused]] const std::string& errorMessage) {}
 };
 
 }  // namespace app

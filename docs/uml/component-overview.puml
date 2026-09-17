@@ -1,0 +1,93 @@
+@startuml component-overview
+' System component overview: "one core, many consumers".
+'
+' Grounded in real source:
+'   - MVP core: src/presenter/BasePresenter.h, DashboardPresenter.h,
+'     src/presenter/ViewObserver.h; src/model/ProductionModel.h
+'   - Integration: src/integration/IntegrationBackend.h,
+'     IntegrationManager.h; concretes TcpBackend.h, MqttClient.h,
+'     modbus/ModbusBackend.h, opcua/OpcUaBackend.h, HttpBackend.h
+'   - Bootstrap: src/app/IntegrationBootstrap.h (buildIntegrationServices)
+'   - Bridges: ProductionTelemetryBridge.h, SensorIngestBridge.h,
+'     modbus/ModbusIngestBridge.h, historian/HistorianBridge.h
+'   - Historian: src/historian/HistoryReader.h, HistoryWriter.h,
+'     SqliteHistoryStore.h
+'   - AlertCenter: src/presenter/AlertCenter.h
+'   - MCP: src/mcp/McpServer.h, McpProtocol.h, tools/*
+'   - Frontends: src/gtk/view/MainWindow.h + pages/DashboardPage.h,
+'     src/console/ConsoleView.h, src/qt/view/QtMainWindow.h + QtDashboardPage.h
+
+title Industrial HMI - Component Overview (one core, many consumers)
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+package "MVP Core (toolkit-independent)" {
+  [ProductionModel\n<<interface>>] as Model
+  [DashboardPresenter\n: BasePresenter] as Presenter
+  interface "ViewObserver" as VO
+  Presenter ..> VO : notifyAll(...)
+  Model --> Presenter : observer callbacks
+  Presenter --> Model : commands
+}
+
+package "Frontends (each implements ViewObserver)" {
+  [GTK: MainWindow +\nDashboardPage] as GTK
+  [Qt: QtMainWindow +\nQtDashboardPage] as QT
+  [ConsoleView] as CON
+}
+GTK ..|> VO
+QT  ..|> VO
+CON ..|> VO
+
+package "Alarm + Audit" {
+  [AlertCenter\n(ISA-18.2 lifecycle)] as Alert
+  [AuditLogger] as Audit
+  Alert ..> Audit : AuditFn callback (RAISE/ACK/...)
+}
+Presenter --> Alert : raise() / clear()
+GTK --> Alert : AlertsPanel observes\nsignalAlertsChanged
+
+package "Integration layer\n(buildIntegrationServices)" {
+  [IntegrationManager] as Mgr
+  interface "IntegrationBackend" as IB
+  [TcpBackend] as TCP
+  [MqttClient] as MQTT
+  [ModbusBackend] as MB
+  [OpcUaBackend] as OPC
+  [HttpBackend] as HTTP
+  Mgr o--> IB : owns / startAll()
+  TCP ..|> IB
+  MQTT ..|> IB
+  MB ..|> IB
+  OPC ..|> IB
+  HTTP ..|> IB
+
+  [Ingest bridges\n(Modbus/Sensor/OpcUa)] as Ingest
+  [ProductionTelemetryBridge] as TeleBridge
+}
+Ingest --> Model : setters (inbound data)
+TeleBridge --> Model : subscribes (outbound telemetry)
+MB ..> Ingest
+MQTT ..> Ingest
+MQTT ..> TeleBridge
+HTTP --> Alert : GET /alarms
+
+package "Historian" {
+  [HistorianBridge] as HB
+  interface "HistoryReader" as HR
+  [SqliteHistoryStore] as SQLite
+  HB --> Model : subscribes
+  HB --> SQLite : HistoryWriter
+  SQLite ..|> HR
+}
+
+package "MCP server (4th consumer)" {
+  [McpServer\n(JSON-RPC / stdio)] as MCP
+}
+MCP --> Alert : alarms_snapshot
+MCP --> HR : historian_query
+MCP --> Model : production_metrics
+MCP --> Presenter : equipment_command (write, gated)
+
+@enduml

@@ -1,0 +1,57 @@
+@startuml mcp-tool-call
+' Sequence: LLM agent -> MCP server (JSON-RPC over stdio) -> a tool ->
+' AlertCenter / historian -> JSON response.
+'
+' Grounded in real source:
+'   - src/mcp/McpServer.h/.cpp  (run(istream,ostream): getline -> json::parse
+'     -> route on method -> writeResponse; ctor holds alerts/reader/production/
+'     presenter/session/writeEnabled)
+'   - src/mcp/McpProtocol.h  (kJsonRpcVersion="2.0"; methods initialize,
+'     tools/list, tools/call; handleInitialize/handleToolsList/handleToolsCall;
+'     handleToolsCall routes on params["name"], forwards params["arguments"])
+'   - src/mcp/tools/AlarmsSnapshotTool.h  (kAlarmsSnapshotTool="alarms_snapshot",
+'     runAlarmsSnapshot(AlertCenter&) -> wraps AlertCenter::snapshot())
+'   - src/mcp/tools/HistorianQueryTool.h  (kHistorianQueryTool="historian_query")
+'   - src/mcp/tools/ProductionMetricsTool.h ("production_metrics")
+'   - src/presenter/AlertCenter.h (snapshot()); src/historian/HistoryReader.h (query())
+
+title MCP tool call - JSON-RPC over stdio -> read-only tool -> JSON result
+
+skinparam shadowing false
+
+participant "LLM agent\n(MCP client)" as Agent
+participant "McpServer\n::run(stdin, stdout)" as Server
+participant "McpProtocol\n::handleToolsCall" as Proto
+participant "alarms_snapshot /\nhistorian_query tool" as Tool
+participant "AlertCenter /\nHistoryReader" as Backend
+
+== handshake ==
+Agent -> Server : {"method":"initialize"}  (stdin line)
+Server -> Server : handleInitialize(params)
+Server --> Agent : result: protocolVersion + serverInfo\n(stdout line)
+Agent -> Server : {"method":"tools/list"}
+Server -> Server : handleToolsList(writeEnabled)
+Server --> Agent : tool descriptors\n(equipment_command only if writeEnabled)
+
+== tool call ==
+Agent -> Server : {"method":"tools/call",\n"params":{"name":"alarms_snapshot"}}
+Server -> Server : json::parse(line); method == "tools/call"
+Server -> Proto : handleToolsCall(params, alerts, reader, ...)
+Proto -> Proto : route on params["name"]
+Proto -> Tool : runAlarmsSnapshot(alerts)\n(or historian_query -> reader.query())
+Tool -> Backend : AlertCenter::snapshot()\n(or HistoryReader::query(range))
+Backend --> Tool : active alarms / HistoryRecords
+Tool --> Proto : nlohmann::json content
+Proto --> Server : Result<json, McpErrorCode>
+Server -> Server : successEnvelope(id, result)
+Server --> Agent : JSON-RPC response line (stdout)
+
+note over Server
+  Single-threaded, synchronous: one request fully
+  handled before the next getline. stdout IS the
+  protocol channel (real logging goes to stderr).
+  Unknown tool -> MethodNotFound; equipment_command
+  when writeEnabled==false is neither listed nor callable.
+end note
+
+@enduml
