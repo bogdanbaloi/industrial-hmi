@@ -1,0 +1,44 @@
+name: Docs
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'docs/Doxyfile'
+      - 'README.md'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'docs/Doxyfile'
+      - 'README.md'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+env:
+  # Opt into Node.js 24 for JavaScript-based actions (matches ci.yml).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  doxygen:
+    name: Generate API reference (Doxygen)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Doxygen and Graphviz
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+      - name: Generate the API reference
+        # Doxygen creates only the leaf output dir, not the build/ parent,
+        # which is gitignored and absent in a clean checkout -- create it first.
+        # Graphviz is present in CI, so turn on class/collaboration graphs
+        # for this run without changing the committed Doxyfile default.
+        run: |
+          mkdir -p build/doxygen
+          (cat docs/Doxyfile; echo "HAVE_DOT=YES"; echo "DOT_IMAGE_FORMAT=svg") | doxygen -
+      - name: Upload the generated docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: build/doxygen/html

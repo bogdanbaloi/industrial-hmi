@@ -1,0 +1,56 @@
+@startuml sequence-alarm-lifecycle
+' Sequence: a fault condition -> AlertCenter raise -> observers + audit +
+' the AlertsPanel alert row, plus the safe-state (ERROR lock) effect.
+'
+' Grounded in real source:
+'   - src/presenter/DashboardPresenter.h/.cpp  (onInjectFaultClicked,
+'     faultInjector_, handleSystemStateChanged raises "system-error" alarm
+'     carrying lastFaultReason on ERROR edge -> alertCenter_->raise / clear)
+'   - src/model/SystemStateMachine.cpp  (fault(reason) -> FaultEvt -> error)
+'   - src/presenter/AlertCenter.h  (raise(): absent -> UnackActive, emit
+'     signalAlertsChanged_, emitAudit("RAISE", key); AuditFn)
+'   - src/gtk/view/MainWindow.cpp:414-430  (setAuditCallback -> AuditEvent
+'     category::kAlert -> AuditLogger::record)
+'   - src/gtk/view/widgets/AlertsPanel.h  (subscribes signalAlertsChanged,
+'     scheduleRefresh -> Glib::signal_idle -> snapshot())
+
+title Alarm lifecycle - fault -> AlertCenter -> observers + audit + alert panel
+
+skinparam shadowing false
+
+actor Operator
+participant "DashboardPresenter" as Pres
+participant "SimulatedModel /\nSystemStateMachine" as FSM
+participant "AlertCenter" as Alert
+participant "AuditLogger" as Audit
+participant "AlertsPanel\n(GTK sidebar)" as Panel
+
+Operator -> Pres : onInjectFaultClicked()
+Pres -> FSM : faultInjector_() -> triggerFault("DEMO")
+FSM -> FSM : fault(reason): FaultEvt -> ERROR\n(safe-state lock: only Reset leaves)
+FSM -> Pres : onStateChanged(ERROR)
+
+Pres -> Pres : handleSystemStateChanged: ERROR edge\nbuild AlertViewModel(key=system-error,\nseverity=Critical, message=lastFaultReason)
+Pres -> Alert : raise(alert)
+
+activate Alert
+Alert -> Alert : insert UnackActive\n(keyed, ISA-18.2 lifecycle)
+Alert -> Panel : signalAlertsChanged_.emit()
+Alert -> Audit : AuditFn("RAISE", key)  [emitAudit]
+Audit -> Audit : record(AuditEvent{category=kAlert,\naction="RAISE"})  (immutable log entry)
+deactivate Alert
+
+Panel -> Panel : scheduleRefresh -> Glib::signal_idle\n(marshal to GTK main thread)
+Panel -> Alert : snapshot()
+Alert --> Panel : active alarms (priority-sorted)
+Panel -> Operator : render alert row
+
+== recovery ==
+Operator -> Pres : Reset
+Pres -> FSM : reset() -> ResetEvt -> IDLE
+FSM -> Pres : onStateChanged(IDLE)
+Pres -> Alert : clear(key="system-error")
+Alert -> Audit : AuditFn("RTN" or "RESOLVE", key)
+Alert -> Panel : signalAlertsChanged_.emit()
+
+@enduml

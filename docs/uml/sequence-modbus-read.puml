@@ -1,0 +1,61 @@
+@startuml sequence-modbus-read
+' Sequence: one live Modbus reading from wire to GTK widget, with the
+' thread boundaries marked.
+'
+' Grounded in real source:
+'   - src/integration/modbus/ModbusPollLoop.h  (run/pollOnce, drainRun/drainOnce,
+'     queue_ SpscQueue<RegisterSample,256>, jthreads thread_ + drainThread_)
+'   - src/core/SpscQueue.h  (push/pop)
+'   - src/integration/modbus/ModbusReader.h  (readHoldingRegisters/readInputRegisters)
+'   - src/integration/modbus/ModbusIngestBridge.h  (onRegisterChanged)
+'   - src/model/ProductionModel.h  (setEquipmentSupplyLevel/setEquipmentEnabled + observers)
+'   - src/presenter/DashboardPresenter.h  (handlers -> notifyAll)
+'   - src/presenter/ViewObserver.h  (onEquipmentCardChanged)
+'   - src/gtk/view/pages/DashboardPage.h  (ViewObserver impl; Glib::signal_idle marshalling)
+
+title Modbus live reading - poll thread -> SPSC -> drain -> presenter -> GTK
+
+skinparam shadowing false
+
+box "POLL thread (jthread)" #LightYellow
+  participant "ModbusPollLoop\n::run/pollOnce" as Poll
+  participant "ModbusClient\n(: ModbusReader)" as Client
+end box
+
+participant "SpscQueue\n<RegisterSample,256>" as Queue
+
+box "DRAIN thread (jthread)" #LightBlue
+  participant "ModbusPollLoop\n::drainRun/drainOnce" as Drain
+  participant "ModbusIngestBridge" as Bridge
+  participant "ProductionModel" as Model
+  participant "DashboardPresenter" as Pres
+end box
+
+box "GTK main thread" #LightGreen
+  participant "DashboardPage\n(: ViewObserver)" as Page
+end box
+
+Poll -> Client : readHoldingRegisters()/readInputRegisters()\n(blocking socket I/O)
+Client --> Poll : Result<vector<uint16_t>>
+Poll -> Queue : push(RegisterSample)\n(false -> droppedSamples_++)
+Poll -> Drain : notify drainCv_
+note over Poll: returns to the wire immediately\n(never blocks on model lock)
+
+Drain -> Queue : pop(sample)
+Queue --> Drain : sample
+Drain -> Bridge : onRegisterChanged(mapping, rawValue)
+Bridge -> Bridge : dedup (value flipped?)
+Bridge -> Model : setEquipmentSupplyLevel(id, level)\n/ setEquipmentEnabled(id, on)
+Model -> Pres : observer callback\n(EquipmentStatus)
+Pres -> Pres : build EquipmentCardViewModel
+Pres -> Page : onEquipmentCardChanged(vm)\n(via BasePresenter::notifyAll)
+
+Page -> Page : Glib::signal_idle\n(marshal to GTK main thread)
+Page -> Page : updateEquipmentCard(vm)\n-> GTK widget update
+
+note across
+  Thread boundary 1: SPSC queue (POLL -> DRAIN), lock-free.
+  Thread boundary 2: Glib::signal_idle (DRAIN/presenter -> GTK main thread).
+end note
+
+@enduml

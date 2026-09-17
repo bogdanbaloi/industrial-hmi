@@ -1,0 +1,68 @@
+# Doxygen configuration for the Industrial HMI portfolio.
+# Generates a browsable HTML API reference from the /// doc comments.
+# Run from the repo root:  doxygen docs/Doxyfile
+# Output goes to build/doxygen/html (gitignored; CI publishes it).
+
+#---- Project identity ---------------------------------------------------------
+PROJECT_NAME           = "Industrial HMI"
+PROJECT_BRIEF          = "Cross-platform C++20 industrial monitoring and control terminal"
+OUTPUT_DIRECTORY       = build/doxygen
+
+#---- What to read -------------------------------------------------------------
+INPUT                  = src README.md
+FILE_PATTERNS          = *.h *.hpp *.cpp *.md
+RECURSIVE              = YES
+# Keep generated, third-party and non-C++ trees out of the API docs.
+EXCLUDE                = build build-wsl build-qt rust ffi-test
+EXCLUDE_PATTERNS       = */tests/* */build/*
+# Where @include / @snippet look for referenced example files.
+EXAMPLE_PATH           = examples src
+
+#---- What to extract ----------------------------------------------------------
+# EXTRACT_ALL shows the whole public surface even where a /// is missing, so the
+# reference is complete; private members stay out to keep it an API view.
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+# Treat the first sentence of a /// block as the brief (matches our comment style).
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+
+#---- Output -------------------------------------------------------------------
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+# README.md becomes the landing page of the generated site.
+USE_MDFILE_AS_MAINPAGE = README.md
+
+#---- Custom comment tags ------------------------------------------------------
+# The codebase uses a few project-specific /// tags; define them so they render
+# as titled paragraphs instead of "unknown command" warnings.
+ALIASES               += "usage=@par Usage:^^"
+ALIASES               += "design=@par Design:^^"
+ALIASES               += "features=@par Features:^^"
+ALIASES               += "threading=@par Thread safety:^^"
+ALIASES               += "rationale=@par Rationale:^^"
+ALIASES               += "memory_ordering=@par Memory ordering:^^"
+ALIASES               += "thread_safety=@par Thread safety:^^"
+ALIASES               += "pattern=@par Pattern:^^"
+ALIASES               += "logic=@par Logic:^^"
+ALIASES               += "examples=@par Examples:^^"
+ALIASES               += "lifecycle=@par Lifecycle:^^"
+ALIASES               += "theming=@par Theming:^^"
+ALIASES               += "layout=@par Layout:^^"
+ALIASES               += "capacity=@par Capacity:^^"
+
+#---- C++ awareness ------------------------------------------------------------
+BUILTIN_STL_SUPPORT    = YES
+# The project builds C++20; let Doxygen resolve the newer syntax.
+CLANG_ASSISTED_PARSING = NO
+
+#---- Diagrams -----------------------------------------------------------------
+# HAVE_DOT needs Graphviz. Off by default so the docs build anywhere;
+# CI turns it on (DOT_IMAGE_FORMAT=svg) for inheritance/collaboration graphs.
+HAVE_DOT               = NO
+
+#---- Warnings (documentation hygiene) -----------------------------------------
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+QUIET                  = YES
