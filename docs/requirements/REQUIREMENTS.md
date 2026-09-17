@@ -1262,6 +1262,27 @@ Needs: utest
 
 ---
 
+### REQ-INTEGRATION-009 (SHOULD) — Serial telemetry ingest
+
+`req~integration-009~1`
+
+The system **shall** ingest sensor telemetry from a microcontroller over a
+serial port, opt-in behind `integration.serial.enabled` (default false) and
+compile-gated behind `BUILD_SERIAL_BACKEND` (default OFF), decoding a
+line-framed `sensorId,value` ASCII protocol into the same sensor-ingest path
+the other inbound backends feed. The frame decoder **shall** reassemble a
+reading split across reads, tolerate CRLF line endings, skip malformed or
+empty lines without throwing, and bound its buffer against a stream that never
+delivers a frame delimiter.
+
+Verified by: SerialFrameParserTest.
+
+ADR: 0029.
+
+Needs: utest
+
+---
+
 ## PERF — Performance budgets
 
 ### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths

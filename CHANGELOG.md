@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Serial telemetry ingest (REQ-INTEGRATION-009)
+
+A sixth integration backend reads `sensorId,value` telemetry from a
+microcontroller over a serial port, decoding a line-framed ASCII protocol into
+the existing sensor-ingest path. ADR-0029. This commit lands the framing layer.
+
+#### Added
+- `SerialFrameParser`: turns the raw serial byte stream into whole `sensorId,value` readings, reassembling a frame split across reads, tolerating CRLF, and skipping malformed lines without throwing. Pure logic, unit-tested with no serial port attached.
+
 ### MISRA-C++-aligned coding guidelines
 
 A document mapping the existing strict clang-tidy profile to MISRA C++ intent,
