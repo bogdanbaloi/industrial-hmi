@@ -1267,7 +1267,7 @@ Needs: utest
 `req~integration-009~1`
 
 The system **shall** ingest sensor telemetry from a microcontroller over a
-serial port, opt-in behind `integration.serial.enabled` (default false) and
+serial port, opt-in behind `network.serial.enabled` (default false) and
 compile-gated behind `BUILD_SERIAL_BACKEND` (default OFF), decoding a
 line-framed `sensorId,value` ASCII protocol into the same sensor-ingest path
 the other inbound backends feed. The frame decoder **shall** reassemble a

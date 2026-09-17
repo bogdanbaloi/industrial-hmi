@@ -463,13 +463,13 @@ std::string ConfigManager::getHttpBackendBindAddress() const {
 }
 
 bool ConfigManager::isSerialBackendEnabled() const {
-    return getValue("integration.serial.enabled", "false") == "true";
+    return getValue("network.serial.enabled", "false") == "true";
 }
 std::string ConfigManager::getSerialDevice() const {
-    return getValue("integration.serial.device", defaults::kSerialDevice);
+    return getValue("network.serial.device", defaults::kSerialDevice);
 }
 int ConfigManager::getSerialBaud() const {
-    return getInt("integration.serial.baud", defaults::kSerialBaudRate);
+    return getInt("network.serial.baud", defaults::kSerialBaudRate);
 }
 
 bool ConfigManager::isAuthEnabled() const {

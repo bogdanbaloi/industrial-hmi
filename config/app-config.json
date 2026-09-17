@@ -293,6 +293,11 @@
       "poll_interval_ms": 1000,
       "connect_timeout_ms": 2000,
       "request_timeout_ms": 1000
+    },
+    "serial": {
+      "enabled": false,
+      "device": "COM3",
+      "baud": 115200
     }
   },
   "historian": {
