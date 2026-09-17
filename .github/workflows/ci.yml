@@ -11,6 +11,9 @@ on:
       - 'CHANGELOG.md'
       - 'LICENSE'
       - 'docs/adr/**'
+      - 'docs/Doxyfile'
+      - 'docs/uml/**'
+      - '.github/workflows/docs.yml'
   pull_request:
     branches: [ main ]
     paths-ignore:
@@ -18,6 +21,9 @@ on:
       - 'CHANGELOG.md'
       - 'LICENSE'
       - 'docs/adr/**'
+      - 'docs/Doxyfile'
+      - 'docs/uml/**'
+      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 env:
