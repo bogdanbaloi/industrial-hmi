@@ -12,6 +12,7 @@
 #   --auth             Enable auth (login dialog, RBAC, Users tab, audit log)
 #   --historian        Enable historian (SQLite time-series + History tab)
 #   --modbus           Enable Modbus TCP master (default off)
+#   --serial           Compile + enable the serial ingest backend (reads a COM port)
 #   --tcp / --no-tcp       Force TCP backend on/off (default on in config)
 #   --mqtt / --no-mqtt     Force MQTT backend on/off (default on; needs a broker)
 #   --opcua / --no-opcua   Force OPC-UA backend on/off (default on)
@@ -30,6 +31,7 @@ WANT_MULTISTATION=0
 WANT_AUTH=0
 WANT_HISTORIAN=0
 WANT_MODBUS=0
+WANT_SERIAL=0
 # Tri-state for default-on backends: "" = leave config as-is, 1 = on, 0 = off.
 WANT_TCP=""
 WANT_MQTT=""
@@ -43,6 +45,7 @@ for arg in "$@"; do
         --auth)         WANT_AUTH=1 ;;
         --historian)    WANT_HISTORIAN=1 ;;
         --modbus)       WANT_MODBUS=1 ;;
+        --serial)       WANT_SERIAL=1 ;;
         --tcp)          WANT_TCP=1 ;;
         --no-tcp)       WANT_TCP=0 ;;
         --mqtt)         WANT_MQTT=1 ;;
@@ -73,6 +76,7 @@ if [[ ! -f "${BUILD_DIR}/CMakeCache.txt" ]]; then
     echo "Configuring (preset: ${PRESET})"
     EXTRA=()
     [[ ${WANT_TESTS} -eq 1 ]] && EXTRA+=("-DBUILD_TESTS=ON")
+    [[ ${WANT_SERIAL} -eq 1 ]] && EXTRA+=("-DBUILD_SERIAL_BACKEND=ON")
     cmake --preset "${PRESET}" "${EXTRA[@]}"
 fi
 
@@ -143,6 +147,10 @@ else
     if [[ ${WANT_MODBUS} -eq 1 ]]; then
         echo "Enabling Modbus TCP master"
         patch_json 'network.modbus.enabled' 'true'
+    fi
+    if [[ ${WANT_SERIAL} -eq 1 ]]; then
+        echo "Enabling serial ingest backend"
+        patch_json 'network.serial.enabled' 'true'
     fi
     if [[ "${WANT_TCP}" == "1" ]]; then
         echo "Enabling TCP backend"
