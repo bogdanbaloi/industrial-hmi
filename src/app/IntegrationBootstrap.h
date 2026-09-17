@@ -72,6 +72,8 @@ struct IntegrationServices {
 /// The caller starts the manager (`services.manager->startAll()`) and keeps
 /// the returned bundle alive until after `stopAll()`.
 ///
+/// @param config Application configuration the backends read their settings from
+/// @param logger Logger the integration backends and bridges log through
 /// @param httpAlerts Optional. The read-only HTTP backend (REQ-INTEGRATION-007)
 ///        projects `presenter::AlertCenter` on `GET /alarms`, so -- unlike the
 ///        other backends, which need only model + repository -- it requires the

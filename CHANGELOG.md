@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### API documentation (Doxygen)
+
+A Doxygen configuration that turns the existing `///` doc comments into a
+browsable HTML API reference, with the README as its landing page, generated in
+CI.
+
+#### Added
+- `docs/Doxyfile`: Doxygen config over `src` plus the README, with aliases for the project-specific comment tags and the README as the main page.
+- `.github/workflows/docs.yml`: generates the API reference on every push that touches the sources (Graphviz enabled for class graphs).
+
+#### Changed
+- `ViewObserver` no-op default methods now name their parameters with `[[maybe_unused]]` instead of commenting them out, so the `@param` docs resolve while clang-tidy's unused-parameter gate stays satisfied.
+- Documented the remaining `ProductsPresenter` and `buildIntegrationServices` parameters.
+
 ### REST/HTTP backend (REQ-INTEGRATION-007, REQ-INTEGRATION-008)
 
 A fifth IntegrationBackend: an opt-in, read-only REST server over the same
