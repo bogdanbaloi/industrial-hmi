@@ -35,6 +35,11 @@
 #  include "src/presenter/AlertCenter.h"
 #endif
 
+#ifdef INDUSTRIAL_HMI_HAS_SERIAL_BACKEND
+#  include "src/integration/EquipmentStateReading.h"
+#  include "src/integration/SerialBackend.h"
+#endif
+
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -291,6 +296,27 @@ void registerHttpBackend(
 }
 #endif
 
+#ifdef INDUSTRIAL_HMI_HAS_SERIAL_BACKEND
+// Build + register the serial telemetry ingest backend (REQ-INTEGRATION-009).
+// The sink maps equipment/<n>/state readings onto the production model,
+// mirroring the MQTT SensorIngestBridge vocabulary; a reading that is not a
+// well-formed equipment-state frame is dropped, never crashes the ingest.
+void registerSerialBackend(
+        app::integration::IntegrationManager& integration,
+        app::config::ConfigManager& config) {
+    integration.registerBackend(
+        std::make_unique<app::integration::SerialBackend>(
+            config.getSerialDevice(),
+            static_cast<unsigned>(config.getSerialBaud()),
+            [](const app::integration::SerialReading& reading) {
+                if (const auto command = toEquipmentStateCommand(reading)) {
+                    app::model::SimulatedModel::instance().setEquipmentEnabled(
+                        command->equipmentId, command->enabled);
+                }
+            }));
+}
+#endif
+
 // Multi-station: build the secondary MirrorModel + the in-process
 // PrimaryToSecondaryBridge linking the singleton SimulatedModel (primary)
 // into the mirror (secondary), then hand the bridge to the
@@ -344,6 +370,12 @@ IntegrationServices buildIntegrationServices(
                 "network.http.enabled is true but no AlertCenter was provided "
                 "to buildIntegrationServices; HTTP backend not registered");
         }
+    }
+#endif
+
+#ifdef INDUSTRIAL_HMI_HAS_SERIAL_BACKEND
+    if (config.isSerialBackendEnabled()) {
+        registerSerialBackend(integration, config);
     }
 #endif
 

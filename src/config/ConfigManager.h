@@ -238,6 +238,12 @@ public:
     [[nodiscard]] int getHttpBackendPort() const;
     [[nodiscard]] std::string getHttpBackendBindAddress() const;
 
+    // Serial telemetry ingest backend (REQ-INTEGRATION-009)
+
+    [[nodiscard]] bool isSerialBackendEnabled() const;
+    [[nodiscard]] std::string getSerialDevice() const;
+    [[nodiscard]] int getSerialBaud() const;
+
     // Auth
 
     [[nodiscard]] bool isAuthEnabled() const;

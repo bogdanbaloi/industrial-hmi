@@ -1,0 +1,60 @@
+@startuml sequence-serial-read
+' Sequence: one serial telemetry frame from the microcontroller's wire to a
+' GTK widget, with the thread boundary marked.
+'
+' Grounded in real source:
+'   - src/integration/SerialBackend.h/.cpp  (armRead, async_read_some, handler, sink_)
+'   - src/integration/SerialFrameParser.h   (consume -> vector<SerialReading>)
+'   - src/integration/EquipmentStateReading.h  (toEquipmentStateCommand)
+'   - src/app/IntegrationBootstrap.cpp  (registerSerialBackend sink -> setEquipmentEnabled)
+'   - src/model/ProductionModel.h  (setEquipmentEnabled + observers)
+'   - src/presenter/DashboardPresenter.h  (handlers -> notifyAll)
+'   - src/gtk/view/pages/DashboardPage.h  (ViewObserver impl; Glib::signal_idle marshalling)
+
+title Serial ingest - MCU -> UART -> asio read loop -> parser -> sink -> model -> GTK
+
+skinparam shadowing false
+
+participant "Microcontroller\n(Nucleo, firmware)" as MCU
+
+box "io_context thread (jthread)" #LightYellow
+  participant "boost::asio\nserial_port" as Port
+  participant "SerialBackend\n::armRead/handler" as Backend
+  participant "SerialFrameParser\n::consume" as Parser
+  participant "ReadingSink\n(std::function)" as Sink
+  participant "ProductionModel" as Model
+  participant "DashboardPresenter" as Pres
+end box
+
+box "GTK main thread" #LightGreen
+  participant "DashboardPage\n(: ViewObserver)" as Page
+end box
+
+MCU -> Port : bytes over UART\n("equipment/0/state,on\\n")
+Backend -> Port : async_read_some(buffer)
+Port --> Backend : handler(ec, bytes)\n(io_context dispatches; stack stays flat)
+Backend -> Parser : consume(string_view(buffer, bytes))
+Parser -> Parser : buffer bytes, split on '\\n',\nkeep trailing partial
+Parser --> Backend : vector<SerialReading>{sensorId, value}
+loop for each reading
+  Backend -> Sink : sink_(reading)
+  Sink -> Sink : toEquipmentStateCommand(reading)\n(equipment/<n>/state + on|off)
+  Sink -> Model : setEquipmentEnabled(id, on)
+end
+Backend -> Port : armRead()  (re-arm the read loop)
+note over Backend: no lock: parser + sink run only\non this one io_context thread
+
+Model -> Pres : observer callback (EquipmentStatus)
+Pres -> Pres : build EquipmentCardViewModel
+Pres -> Page : onEquipmentCardChanged(vm)\n(via BasePresenter::notifyAll)
+
+Page -> Page : Glib::signal_idle\n(marshal to GTK main thread)
+Page -> Page : updateEquipmentCard(vm)\n-> GTK widget update
+
+note across
+  Serial is a byte stream: a read may carry half a frame or several.
+  The parser frames on '\\n' and holds the partial between reads.
+  Thread boundary: Glib::signal_idle (io_context -> GTK main thread).
+end note
+
+@enduml

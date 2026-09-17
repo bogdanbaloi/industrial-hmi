@@ -101,6 +101,12 @@ constexpr float kModbusQualityScale        = 0.1F;
 constexpr int kHttpBackendPort            = 8080;
 constexpr const char* kHttpBackendBindAddress = "127.0.0.1";
 
+// Serial telemetry ingest backend (REQ-INTEGRATION-009). 115200 is the
+// common bench-microcontroller baud; the device name is host-specific and
+// set in config (a Linux /dev/ttyACM* or a Windows COMx). See ADR-0029.
+constexpr int kSerialBaudRate             = 115200;
+constexpr const char* kSerialDevice       = "/dev/ttyACM0";
+
 // Product status values (used in DB, UI, and presenter layers)
 constexpr const char* kStatusActive = "Active";
 constexpr const char* kStatusInactive = "Inactive";

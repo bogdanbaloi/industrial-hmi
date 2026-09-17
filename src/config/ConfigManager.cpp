@@ -462,6 +462,16 @@ std::string ConfigManager::getHttpBackendBindAddress() const {
                     defaults::kHttpBackendBindAddress);
 }
 
+bool ConfigManager::isSerialBackendEnabled() const {
+    return getValue("network.serial.enabled", "false") == "true";
+}
+std::string ConfigManager::getSerialDevice() const {
+    return getValue("network.serial.device", defaults::kSerialDevice);
+}
+int ConfigManager::getSerialBaud() const {
+    return getInt("network.serial.baud", defaults::kSerialBaudRate);
+}
+
 bool ConfigManager::isAuthEnabled() const {
     return getValue("auth.enabled", "false") == "true";
 }

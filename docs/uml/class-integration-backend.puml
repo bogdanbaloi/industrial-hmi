@@ -65,6 +65,11 @@ class OpcUaBackend {
   name() = "OPC-UA"
   composes server + nodeMap
 }
+class SerialBackend {
+  name() = "Serial"
+  boost::asio::serial_port async read loop
+  feeds SerialFrameParser -> ReadingSink
+}
 
 interface TelemetryPublisher
 interface TelemetrySubscriber
@@ -74,6 +79,7 @@ IntegrationBackend <|.. MqttClient
 IntegrationBackend <|.. HttpBackend
 IntegrationBackend <|.. ModbusBackend
 IntegrationBackend <|.. OpcUaBackend
+IntegrationBackend <|.. SerialBackend
 
 TelemetryPublisher  <|.. MqttClient
 TelemetrySubscriber <|.. MqttClient
