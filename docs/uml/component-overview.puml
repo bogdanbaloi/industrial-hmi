@@ -56,12 +56,14 @@ package "Integration layer\n(buildIntegrationServices)" {
   [ModbusBackend] as MB
   [OpcUaBackend] as OPC
   [HttpBackend] as HTTP
+  [SerialBackend] as SER
   Mgr o--> IB : owns / startAll()
   TCP ..|> IB
   MQTT ..|> IB
   MB ..|> IB
   OPC ..|> IB
   HTTP ..|> IB
+  SER ..|> IB
 
   [Ingest bridges\n(Modbus/Sensor/OpcUa)] as Ingest
   [ProductionTelemetryBridge] as TeleBridge
