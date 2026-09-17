@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### MISRA-C++-aligned coding guidelines
+
+A document mapping the existing strict clang-tidy profile to MISRA C++ intent,
+with the disabled MISRA-relevant checks recorded as deviations with a rationale.
+Adopts a MISRA-aligned posture rather than certified compliance. ADR-0028.
+
+#### Added
+- `docs/coding-guidelines.md`: the MISRA C++ intent-to-clang-tidy mapping, the recorded deviations table, and the re-enable candidates.
+- `docs/adr/0028-misra-aligned-coding-guidelines.md`: the decision to document a MISRA-aligned posture over buying qualified tooling or running the language-mismatched cppcheck MISRA-C addon.
+
 ### API documentation (Doxygen)
 
 A Doxygen configuration that turns the existing `///` doc comments into a
