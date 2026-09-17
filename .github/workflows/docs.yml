@@ -30,9 +30,13 @@ jobs:
       - name: Install Doxygen and Graphviz
         run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
       - name: Generate the API reference
+        # Doxygen creates only the leaf output dir, not the build/ parent,
+        # which is gitignored and absent in a clean checkout -- create it first.
         # Graphviz is present in CI, so turn on class/collaboration graphs
         # for this run without changing the committed Doxyfile default.
-        run: (cat docs/Doxyfile; echo "HAVE_DOT=YES"; echo "DOT_IMAGE_FORMAT=svg") | doxygen -
+        run: |
+          mkdir -p build/doxygen
+          (cat docs/Doxyfile; echo "HAVE_DOT=YES"; echo "DOT_IMAGE_FORMAT=svg") | doxygen -
       - name: Upload the generated docs
         uses: actions/upload-artifact@v4
         with:

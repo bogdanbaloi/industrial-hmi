@@ -61,7 +61,6 @@ CLANG_ASSISTED_PARSING = NO
 # HAVE_DOT needs Graphviz. Off by default so the docs build anywhere;
 # CI turns it on (DOT_IMAGE_FORMAT=svg) for inheritance/collaboration graphs.
 HAVE_DOT               = NO
-CLASS_DIAGRAMS         = YES
 
 #---- Warnings (documentation hygiene) -----------------------------------------
 WARN_IF_UNDOCUMENTED   = NO
