@@ -133,7 +133,7 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-006 | MUST | `src/integration/modbus/ModbusPdu.cpp::decodeReadResponse`, `src/integration/MqttPacket.cpp::parsePublish` + `::decodeRemainingLength`, `fuzzers/fuzz_modbus_decode.cpp`, `fuzzers/fuzz_mqtt_publish.cpp`, `fuzzers/fuzz_mqtt_remaining_length.cpp` | libFuzzer harnesses under `-DBUILD_FUZZERS=ON` (Clang); seed corpora in `fuzzers/corpus/`; smoke-run baseline in `fuzzers/README.md` | -- |
 | REQ-INTEGRATION-007 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/StatusJson.cpp`, `src/app/IntegrationBootstrap.cpp`, `src/main.cpp`, `src/core/Application.h`, `src/gtk/view/MainWindow.cpp`, `src/console/InitConsole.cpp`, `src/qt/QtInitRoot.cpp` | HttpBackendTest, StatusJsonTest, IntegrationBootstrapTest | 0025 |
 | REQ-INTEGRATION-008 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/ProductionMetricsJson.cpp`, `src/mcp/tools/ProductionMetricsTool.cpp` | HttpBackendTest, ProductionMetricsJsonTest | 0025 |
-| REQ-INTEGRATION-009 | SHOULD | `src/integration/SerialFrameParser.cpp`, `src/integration/SerialBackend.cpp` | SerialFrameParserTest, SerialBackendTest | 0029 |
+| REQ-INTEGRATION-009 | SHOULD | `src/integration/SerialFrameParser.cpp`, `src/integration/SerialBackend.cpp`, `src/integration/EquipmentStateReading.h`, `src/app/IntegrationBootstrap.cpp` | SerialFrameParserTest, EquipmentStateReadingTest, SerialBackendTest | 0029 |
 
 ## PERF
 

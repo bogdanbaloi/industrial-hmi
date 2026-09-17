@@ -352,6 +352,13 @@ option(BUILD_MODBUS_BACKEND
 option(BUILD_HTTP_BACKEND
     "Compile the read-only HTTP/REST backend (cpp-httplib via FetchContent)" OFF)
 
+# Serial telemetry ingest backend (REQ-INTEGRATION-009, ADR-0029). Reads a
+# microcontroller's sensorId,value frames over boost::asio::serial_port.
+# Built automatically under BUILD_TESTS so its tests compile in CI without
+# enabling it in the host binaries.
+option(BUILD_SERIAL_BACKEND
+    "Compile the serial telemetry ingest backend (boost::asio::serial_port)" OFF)
+
 # Qt6 desktop frontend (industrial-hmi-qt): an opt-in third frontend beside the GTK
 # and console binaries. Proves the MVP View seam is toolkit-independent by
 # driving the real DashboardPresenter from a Qt6 QMainWindow, with zero
@@ -734,6 +741,38 @@ if(WIN32)
     target_link_libraries(objectsMqtt PUBLIC ws2_32 mswsock)
 endif()
 
+# ----- objectsSerial -----
+# Serial telemetry ingest backend (REQ-INTEGRATION-009, ADR-0029).
+# boost::asio::serial_port async read loop feeding SerialFrameParser, mapping
+# equipment/<n>/state readings to the model via EquipmentStateReading. Built
+# when enabled OR under BUILD_TESTS so its tests compile without enabling the
+# host binaries -- the same gating objectsHttp uses. No Winsock: serial_port
+# uses the OS serial API, not sockets.
+if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
+    add_library(objectsSerial OBJECT)
+    target_sources(objectsSerial
+        PRIVATE
+            src/integration/SerialBackend.cpp
+            src/integration/SerialFrameParser.cpp
+        PUBLIC
+            FILE_SET HEADERS
+            FILES
+                src/integration/SerialBackend.h
+                src/integration/SerialFrameParser.h
+                src/integration/EquipmentStateReading.h
+    )
+    target_link_libraries(objectsSerial
+        PUBLIC
+            objectsIntegrationCore
+            ${BOOST_TARGET}
+            Threads::Threads
+    )
+    target_compile_definitions(objectsSerial
+        PUBLIC
+            INDUSTRIAL_HMI_HAS_SERIAL_BACKEND=1
+    )
+endif()
+
 # ----- objectsHttp -----
 # Read-only HTTP/REST backend (ADR-0024, REQ-INTEGRATION-007). cpp-httplib
 # server + std::jthread accept loop. Reuses buildStatusJson (integration core)
@@ -910,6 +949,11 @@ if(BUILD_HTTP_BACKEND)
     # PUBLIC so INDUSTRIAL_HMI_HAS_HTTP_BACKEND reaches this TU (and the
     # frontends transitively), enabling the registerHttpBackend branch.
     target_link_libraries(objectsIntegrationBootstrap PUBLIC objectsHttp)
+endif()
+if(BUILD_SERIAL_BACKEND)
+    # PUBLIC so INDUSTRIAL_HMI_HAS_SERIAL_BACKEND reaches this TU, enabling
+    # the registerSerialBackend branch.
+    target_link_libraries(objectsIntegrationBootstrap PUBLIC objectsSerial)
 endif()
 
 # ML Layer - Edge inference foundation. Image decoding (stb_image),
@@ -1243,6 +1287,10 @@ if(BUILD_HTTP_BACKEND)
     # so the exe lists both explicitly.
     target_link_libraries(industrial-hmi PRIVATE objectsHttp objectsMcp)
 endif()
+if(BUILD_SERIAL_BACKEND)
+    # Same object-lib non-transitivity: the exe must list objectsSerial itself.
+    target_link_libraries(industrial-hmi PRIVATE objectsSerial)
+endif()
 
 # Windows: Boost.Asio requires Winsock + mswsock (AcceptEx,
 # GetAcceptExSockaddrs are in mswsock.lib, not ws2_32). StartupDialog
@@ -1289,6 +1337,9 @@ if(BUILD_MODBUS_BACKEND)
 endif()
 if(BUILD_HTTP_BACKEND)
     target_link_libraries(industrial-hmi-console PRIVATE objectsHttp objectsMcp)
+endif()
+if(BUILD_SERIAL_BACKEND)
+    target_link_libraries(industrial-hmi-console PRIVATE objectsSerial)
 endif()
 if(WIN32)
     # Boost.Asio's TCP server uses IOCP AcceptEx / GetAcceptExSockaddrs
@@ -1404,6 +1455,9 @@ if(BUILD_QT_FRONTEND)
     endif()
     if(BUILD_HTTP_BACKEND)
         target_link_libraries(industrial-hmi-qt PRIVATE objectsHttp objectsMcp)
+    endif()
+    if(BUILD_SERIAL_BACKEND)
+        target_link_libraries(industrial-hmi-qt PRIVATE objectsSerial)
     endif()
     if(WIN32)
         # Winsock arrives transitively via objectsModel (PUBLIC ws2_32 /

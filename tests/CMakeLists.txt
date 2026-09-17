@@ -426,6 +426,17 @@ target_link_libraries(test_serial_frame_parser PRIVATE
 add_test(NAME SerialFrameParserTest
          COMMAND test_serial_frame_parser)
 
+# Integration: serial reading -> equipment-state command mapping (the
+# SerialBackend sink's vocabulary). Pure header-only logic, no serial port
+# and no boost, so it runs on every platform.
+add_executable(test_equipment_state_reading EquipmentStateReadingTest.cpp)
+target_link_libraries(test_equipment_state_reading PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME EquipmentStateReadingTest
+         COMMAND test_equipment_state_reading)
+
 # Integration: SerialBackend end-to-end over an emulated serial endpoint
 # (a PTY pair). Compiles the backend + parser directly and links Boost.Asio,
 # mirroring test_tcp_backend. POSIX-only: posix_openpt / ptsname gate this to
