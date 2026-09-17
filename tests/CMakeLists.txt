@@ -426,6 +426,24 @@ target_link_libraries(test_serial_frame_parser PRIVATE
 add_test(NAME SerialFrameParserTest
          COMMAND test_serial_frame_parser)
 
+# Integration: SerialBackend end-to-end over an emulated serial endpoint
+# (a PTY pair). Compiles the backend + parser directly and links Boost.Asio,
+# mirroring test_tcp_backend. POSIX-only: posix_openpt / ptsname gate this to
+# Unix (the cross-platform framing is covered by SerialFrameParserTest).
+if(UNIX AND NOT APPLE)
+    add_executable(test_serial_backend
+        SerialBackendTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/SerialBackend.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/SerialFrameParser.cpp)
+    target_link_libraries(test_serial_backend PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        ${BOOST_TARGET}
+        Threads::Threads
+    )
+    add_test(NAME SerialBackendTest COMMAND test_serial_backend)
+endif()
+
 # Integration: PrimaryToSecondaryBridge -- in-process bridge that mirrors
 # equipment supply levels from a master ProductionModel to a slave.
 # Tested with two MockProductionModel instances; no I/O, no threads.

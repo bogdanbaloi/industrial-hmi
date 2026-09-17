@@ -15,6 +15,7 @@ the existing sensor-ingest path. ADR-0029. This commit lands the framing layer.
 
 #### Added
 - `SerialFrameParser`: turns the raw serial byte stream into whole `sensorId,value` readings, reassembling a frame split across reads, tolerating CRLF, and skipping malformed lines without throwing. Pure logic, unit-tested with no serial port attached.
+- `SerialBackend`: an `IntegrationBackend` that reads the serial port with a `boost::asio::serial_port` async read loop, feeds the parser, and emits each reading to an injected sink. Verified end-to-end over a PTY pair, so CI needs no attached device.
 
 ### MISRA-C++-aligned coding guidelines
 
