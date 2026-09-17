@@ -1,0 +1,49 @@
+@startuml state-system-fsm
+' State diagram: SystemState FSM (Boost.SML).
+'
+' Grounded verbatim in the transition table at:
+'   - src/model/SystemStateMachine.cpp  (SystemStateTable::operator(),
+'     make_transition_table, events StartEvt/StopEvt/ResetEvt/
+'     CalibrateEvt/CalibrationDoneEvt/FaultEvt)
+'   - src/model/SystemStateMachine.h    (public start/stop/reset/fault/
+'     calibrate/calibrationDone; SystemState enum IDLE/RUNNING/ERROR/CALIBRATION)
+' State names below use the SML string states (idle/running/calibration/error);
+' the enum maps them to IDLE/RUNNING/CALIBRATION/ERROR.
+
+title SystemState FSM (Boost.SML) - Phase 2 + 3 transition table
+
+[*] --> idle : initial (*)
+
+idle --> running : StartEvt
+idle --> calibration : CalibrateEvt
+idle --> idle : ResetEvt (idempotent)
+
+running --> idle : StopEvt
+running --> idle : ResetEvt
+running --> running : StartEvt (idempotent)
+
+calibration --> idle : CalibrationDoneEvt
+calibration --> idle : StopEvt
+calibration --> idle : ResetEvt
+
+' ---- safe-state (Phase 3) : Fault from ANY state -> error ----
+idle --> error : FaultEvt
+running --> error : FaultEvt
+calibration --> error : FaultEvt
+
+' ERROR is locked: only Reset leaves it (operator must recover).
+error --> idle : ResetEvt
+
+note right of error
+  Safe-state lock-out: every command other than
+  Reset is dropped while in ERROR. fault(reason)
+  stores lastFaultReason; reset() clears it.
+end note
+
+note bottom
+  Invalid combinations are intentionally OMITTED (no transition ->
+  SML silently ignores): RUNNING+Calibrate, CALIBRATION+Start,
+  ERROR+Start, ERROR+Stop.
+end note
+
+@enduml

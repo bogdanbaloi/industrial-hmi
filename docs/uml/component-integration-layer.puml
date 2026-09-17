@@ -1,0 +1,71 @@
+@startuml component-integration-layer
+' Zoom into the integration subsystem: manager + backends + bridges +
+' the lock-free SPSC seam + wiring into model / presenter.
+'
+' Grounded in real source:
+'   - src/app/IntegrationBootstrap.h  (IntegrationServices, buildIntegrationServices)
+'   - src/integration/IntegrationManager.h
+'   - src/integration/modbus/ModbusBackend.h + ModbusClient.h +
+'     ModbusRegisterMap.h + ModbusIngestBridge.h + ModbusPollLoop.h
+'   - src/core/SpscQueue.h  (SpscQueue<RegisterSample, 256>)
+'   - src/integration/ProductionTelemetryBridge.h (outbound, TelemetryPublisher)
+'   - src/integration/SensorIngestBridge.h (inbound, TelemetrySubscriber)
+'   - src/integration/MqttClient.h (publisher + subscriber)
+'   - src/model/ProductionModel.h  (setters + subscriptions)
+'   - src/presenter/BackendHealthPresenter.h (polls backends())
+
+title Integration layer - manager, backends, bridges, SPSC seam
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+package "buildIntegrationServices() -> IntegrationServices" {
+  [IntegrationManager] as Mgr
+  [ProductionTelemetryBridge] as Tele
+  [SensorIngestBridge] as Sensor
+}
+
+package "Modbus master channel (ModbusBackend)" {
+  [ModbusClient\n(implements ModbusReader)] as MC
+  [ModbusRegisterMap] as Map
+  [ModbusPollLoop\n(2 jthreads)] as Poll
+  [ModbusIngestBridge] as MIB
+  queue "SpscQueue<RegisterSample,256>\n(lock-free, 1 producer / 1 consumer)" as Q
+
+  Poll --> MC : read (FC03/FC04)\n[POLL thread]
+  Map --> Poll : which registers
+  Poll --> Q : push() sample\n[POLL thread]
+  Q --> Poll : pop() sample\n[DRAIN thread]
+  Poll --> MIB : onRegisterChanged()\n[DRAIN thread]
+}
+
+package "MQTT channel (MqttClient)" {
+  [MqttClient] as MQTT
+}
+
+node "MVP core" {
+  [ProductionModel\n<<interface>>] as Model
+  [DashboardPresenter] as Pres
+  [BackendHealthPresenter] as BHP
+}
+
+Mgr o--> "ModbusBackend" : owns
+Mgr o--> MQTT : owns
+
+MIB --> Model : setEquipmentEnabled /\nsetEquipmentSupplyLevel
+Sensor --> MQTT : TelemetrySubscriber\n(inbound)
+Sensor --> Model : setters (inbound)
+Tele --> Model : subscribes\n(outbound telemetry)
+Tele --> MQTT : TelemetryPublisher.publish()
+
+Model --> Pres : observer callbacks
+BHP --> Mgr : polls backends()\n(name/connectionState/metricsSummary)
+
+note right of Q
+  ADR-0018 / REQ-ARCH-010: only the poll->drain
+  seam is lock-free. Blocking socket I/O on the
+  POLL thread never holds a model lock; overflow
+  drops a sample (droppedSamples_), never blocks.
+end note
+
+@enduml
