@@ -596,9 +596,18 @@ jobs:
 
     - name: Stats
       run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq cloc
+        # cloc reports CODE only, skipping blank lines and comments, so this
+        # is the same metric the README quotes. The previous
+        # `find ... -exec cat` counted headers alone: with no parentheses
+        # around the -name tests, -exec binds to the '*.h' branch by itself,
+        # so every .cpp line was silently dropped.
+        stats=$(cloc --quiet --csv --include-lang=C++,"C/C++ Header" src \
+                | awk -F, '$2 == "SUM" { print $1, $5 }')
         echo "## Project Statistics" >> $GITHUB_STEP_SUMMARY
-        echo "- C++ files: $(find src -name '*.cpp' -o -name '*.h' | wc -l)" >> $GITHUB_STEP_SUMMARY
-        echo "- Lines of code: $(find src -name '*.cpp' -o -name '*.h' -exec cat {} \; | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- C++ files: $(echo "$stats" | cut -d' ' -f1)" >> $GITHUB_STEP_SUMMARY
+        echo "- Lines of C++ code (cloc, blanks and comments excluded): $(echo "$stats" | cut -d' ' -f2)" >> $GITHUB_STEP_SUMMARY
         echo "- Commits: $(git rev-list --count HEAD)" >> $GITHUB_STEP_SUMMARY
 
   traceability:

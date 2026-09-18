@@ -48,7 +48,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   running state, Performance from throughput / target UPH (clamped to
   100%), Quality from the average checkpoint pass rate. See
   REQ-DASHBOARD-008.
-- **Requirements traceability (OpenFastTrace)** -- 25 ADRs + 85
+- **Requirements traceability (OpenFastTrace)** -- 30 ADRs + 88
   functional requirements in `docs/requirements/REQUIREMENTS.md`,
   cross-checked on every PR against `// [utest->req~xxx~1]`
   coverage tags in source. Bidirectional matrix: every MUST/SHOULD
@@ -86,7 +86,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   one pass. The auditable spec lives in `schemas/app-config.schema.json`
   (JSON Schema draft-07). See REQ-CORE-005.
 - **67% test coverage** verified by gcovr in CI on every PR, across
-  11,112 instrumented lines and **90 ctest targets**: scenario-based
+  11,112 instrumented lines and **100 ctest targets**: scenario-based
   E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
   tests under real GTK via Xvfb, dialog dispatch via programmatic
   `response()`, plus integration tests that wire **real** components
@@ -438,11 +438,16 @@ scripts/
 po/                     gettext catalogs (11 languages)
 config/                 app-config.json
 cmake/                  FindOnnxRuntime.cmake
-tests/                  90 ctest targets (see Testing section)
+tests/                  100 ctest targets (see Testing section)
 benchmarks/             google/benchmark p50/p90/p99 harnesses (opt-in via BUILD_BENCHMARKS=ON)
 fuzzers/                libFuzzer harnesses on wire parsers (opt-in via BUILD_FUZZERS=ON)
 schemas/                JSON Schema spec for app-config.json (draft-07)
 ```
+
+**Size.** `src/` holds **28,232 lines of C++ code across 311 files**, counted
+with `cloc`, so blank lines and comments are excluded. The CI `Documentation`
+job prints those two numbers on every run using the same command, so the figure
+here can be checked instead of trusted.
 
 ## Extensibility -- how to add X
 
@@ -1199,7 +1204,7 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled client (full duplex, no paho dep) + OPC-UA via open62541 |
 | Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros); one catalog serves all three front-ends (Qt routes `tr()` through a `QTranslator` -> gettext adapter) |
-| Testing | GoogleTest + gmock (90 ctest targets) + google/benchmark (p50/p90/p99 hot-path microbenchmarks) + libFuzzer (wire-parser fuzz harnesses) |
+| Testing | GoogleTest + gmock (100 ctest targets) + google/benchmark (p50/p90/p99 hot-path microbenchmarks) + libFuzzer (wire-parser fuzz harnesses) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |
