@@ -1436,8 +1436,8 @@ endif()
 add_test(NAME HttpBackendTest COMMAND test_http_backend)
 
 # HttpTlsMaterial: the cert / key / client-CA loader (REQ-INTEGRATION-010).
-# Pure file I/O plus an OpenSSL parse -- compile the one source directly and
-# drive it against the committed PEMs; no sockets, no server. The fixture
+# Pure file I/O plus an OpenSSL parse. Compile the one source directly and
+# drive it against the committed PEMs. No sockets, no server. The fixture
 # directory is passed in as a compile definition so the test finds the PEMs
 # whatever working directory ctest runs it from.
 add_executable(test_http_tls_material HttpTlsMaterialTest.cpp
@@ -1454,9 +1454,9 @@ add_test(NAME HttpTlsMaterialTest COMMAND test_http_tls_material)
 
 # HttpBackend TLS mode (REQ-INTEGRATION-010) over a real loopback TLS socket:
 # server-only and mutual handshakes with cpp-httplib's SSLClient, a plaintext
-# client refused, and a bad cert refused at construction. Same link shape as
+# client refused, plus a bad cert refused at construction. Same link shape as
 # test_http_backend (objectsHttp + objectsMcp, own ws2_32 / mswsock line on
-# Windows); OpenSSL arrives with cpp_httplib_headers, which also carries the
+# Windows). OpenSSL arrives with cpp_httplib_headers, which also carries the
 # CPPHTTPLIB_OPENSSL_SUPPORT definition this TU must share with the backend.
 add_executable(test_http_backend_tls HttpBackendTlsTest.cpp)
 target_compile_definitions(test_http_backend_tls PRIVATE

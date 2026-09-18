@@ -285,7 +285,7 @@ if(BUILD_HTTP_BACKEND OR BUILD_TESTS)
     # TLS for the HTTP/REST backend (ADR-0030, REQ-INTEGRATION-010) via
     # cpp-httplib's own OpenSSL path (httplib::SSLServer). OpenSSL is a
     # REQUIRED dependency of the HTTP backend, not an extra switch: TLS is a
-    # mode of the backend, and a build that silently dropped it would hand
+    # mode of the backend. A build that silently dropped it would hand
     # operators a plaintext server where they configured HTTPS.
     #
     # CPPHTTPLIB_OPENSSL_SUPPORT is defined HERE, on the interface target, and
@@ -300,7 +300,7 @@ if(BUILD_HTTP_BACKEND OR BUILD_TESTS)
     target_link_libraries(cpp_httplib_headers INTERFACE
         OpenSSL::SSL OpenSSL::Crypto)
     if(WIN32)
-        # Second Windows-only link, and NOT Winsock: with OpenSSL support on,
+        # Second Windows-only link. NOT Winsock: with OpenSSL support on,
         # cpp-httplib's client verifies against the Windows system certificate
         # store (CertOpenSystemStoreW and friends), which lives in crypt32.
         # Easy to miss because only translation units that instantiate the
