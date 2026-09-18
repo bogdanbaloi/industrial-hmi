@@ -29,29 +29,29 @@ jobs:
     name: Build (Ubuntu 24.04)
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only change: the full build is not required."
+      - run: 'echo "Docs-only change: the full build is not required."'
   build-windows:
     name: Build (Windows MSYS2)
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only change: the full build is not required."
+      - run: 'echo "Docs-only change: the full build is not required."'
   code-quality:
     name: Code Quality
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only change: code quality unchanged."
+      - run: 'echo "Docs-only change: code quality unchanged."'
   documentation:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only change."
+      - run: 'echo "Docs-only change."'
   sanitizers:
     name: Sanitizers (ASan + UBSan)
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only change: no code to sanitize."
+      - run: 'echo "Docs-only change: no code to sanitize."'
   coverage:
     name: Test Coverage
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only change: coverage unchanged."
+      - run: 'echo "Docs-only change: coverage unchanged."'
