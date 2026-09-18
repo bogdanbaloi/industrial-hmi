@@ -449,6 +449,13 @@ with `cloc`, so blank lines and comments are excluded. The CI `Documentation`
 job prints those two numbers on every run using the same command, so the figure
 here can be checked instead of trusted.
 
+**Test count.** The **100 ctest targets** quoted above are what a default
+`cmake -DBUILD_TESTS=ON` configure registers, counted with `ctest -N`. Reading
+`add_test` call sites instead gives 97, because one of them sits inside a
+`foreach` over the ten console scenarios. Turning on the optional backends
+(`ENABLE_OPCUA`, `BUILD_ML_CLASSIFIER`, `BUILD_QT_FRONTEND`) registers more, so
+the honest figure is the default configure rather than a maximum.
+
 ## Extensibility -- how to add X
 
 Every extension point below is **localised to one or two files**.
@@ -1204,7 +1211,7 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled client (full duplex, no paho dep) + OPC-UA via open62541 |
 | Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros); one catalog serves all three front-ends (Qt routes `tr()` through a `QTranslator` -> gettext adapter) |
-| Testing | GoogleTest + gmock (100 ctest targets) + google/benchmark (p50/p90/p99 hot-path microbenchmarks) + libFuzzer (wire-parser fuzz harnesses) |
+| Testing | GoogleTest + gmock (100 ctest targets on a default configure) + google/benchmark (p50/p90/p99 hot-path microbenchmarks) + libFuzzer (wire-parser fuzz harnesses) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |
