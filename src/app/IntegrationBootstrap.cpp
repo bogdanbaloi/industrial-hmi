@@ -32,6 +32,7 @@
 
 #ifdef INDUSTRIAL_HMI_HAS_HTTP_BACKEND
 #  include "src/integration/HttpBackend.h"
+#  include "src/integration/HttpTlsOptions.h"
 #  include "src/presenter/AlertCenter.h"
 #endif
 
@@ -43,6 +44,7 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace app::integration {
@@ -280,11 +282,34 @@ void registerModbusBackend(
 // Build + register the read-only HTTP/REST backend (REQ-INTEGRATION-007). It
 // owns all its own pieces, so nothing leaks into the bundle; it does need the
 // presenter-layer AlertCenter for the `/alarms` route, passed in by reference.
+// Read the network.http.tls block into the backend's own value type, or
+// nothing when TLS is off. This is the one place config meets the TLS
+// options: HttpBackend takes the four values, not a ConfigManager, so the
+// integration layer keeps its config-free shape (REQ-INTEGRATION-010).
+std::optional<app::integration::HttpTlsOptions> httpTlsOptions(
+        app::config::ConfigManager& config) {
+    if (!config.isHttpTlsEnabled()) {
+        return std::nullopt;
+    }
+    app::integration::HttpTlsOptions options;
+    options.certPath     = config.getHttpTlsCertPath();
+    options.keyPath      = config.getHttpTlsKeyPath();
+    options.verifyPeer   = config.isHttpTlsVerifyPeer();
+    options.clientCaPath = config.getHttpTlsClientCaPath();
+    return options;
+}
+
 void registerHttpBackend(
         app::integration::IntegrationManager& integration,
         app::config::ConfigManager& config,
         app::presenter::AlertCenter& alerts,
         app::core::Logger& logger) {
+    // Constructing the backend is what validates the TLS material. It
+    // happens HERE rather than in IntegrationManager::startAll(), which
+    // deliberately swallows a per-backend exception so one failed backend
+    // cannot keep the rest down. A cert the operator asked for and cannot
+    // have must be fatal, so it is thrown from this composition step and
+    // caught by main()'s CriticalStartupError handler (ADR-0030).
     integration.registerBackend(
         std::make_unique<app::integration::HttpBackend>(
             static_cast<std::uint16_t>(config.getHttpBackendPort()),
@@ -292,7 +317,8 @@ void registerHttpBackend(
             app::model::SimulatedModel::instance(),
             app::model::DatabaseManager::instance(),
             alerts,
-            logger));
+            logger,
+            httpTlsOptions(config)));
 }
 #endif
 

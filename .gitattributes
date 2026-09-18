@@ -8,6 +8,11 @@
 tests/scenarios/*.txt      text eol=lf
 tests/scenarios/*.expected text eol=lf
 
+# TLS test material (REQ-INTEGRATION-010) stays on LF: each certificate is
+# checked against its key at load time, so a CRLF-converted checkout would
+# be a needless source of platform-only test failures.
+tests/fixtures/tls/*       text eol=lf
+
 # gettext translation catalogs are canonical LF.
 *.po                       text eol=lf
 *.pot                      text eol=lf

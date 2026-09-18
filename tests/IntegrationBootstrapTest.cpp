@@ -43,6 +43,7 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
@@ -52,6 +53,14 @@ namespace {
 
 constexpr const char* kLoopback = "127.0.0.1";
 constexpr int         kOkStatus = 200;
+
+// Committed TLS test material (tests/fixtures/tls), located through a
+// compile definition so the test does not depend on the working directory.
+constexpr std::string_view kTlsFixtureDir = INDUSTRIAL_HMI_TLS_FIXTURE_DIR;
+
+std::string fixture(std::string_view name) {
+    return std::string(kTlsFixtureDir) + "/" + std::string(name);
+}
 
 // Find the running HTTP backend among the manager's registered backends and
 // report the port it bound. Returns 0 when the HTTP backend was not
@@ -64,6 +73,19 @@ std::uint16_t httpBoundPort(const app::integration::IntegrationManager& manager)
         }
     }
     return 0;
+}
+
+// The registered HTTP backend, or nullptr when the bootstrap did not build
+// one. Used by the TLS test to read back what the composition wired.
+app::integration::HttpBackend* httpBackend(
+        const app::integration::IntegrationManager& manager) {
+    for (const auto& backend : manager.backends()) {
+        if (auto* http =
+                dynamic_cast<app::integration::HttpBackend*>(backend.get())) {
+            return http;
+        }
+    }
+    return nullptr;
 }
 
 class IntegrationBootstrapTest : public ::testing::Test {
@@ -92,6 +114,25 @@ protected:
   "application": { "name": "Industrial HMI" },
   "network": {
     "http": { "enabled": true, "port": 0, "bind_address": "127.0.0.1" }
+  }
+})";
+    }
+
+    // The same HTTP-only composition, with network.http.tls pointed at the
+    // committed test certificates.
+    void writeHttpTlsConfig() {
+        std::ofstream out(configPath_, std::ios::trunc);
+        out << R"({
+  "application": { "name": "Industrial HMI" },
+  "network": {
+    "http": {
+      "enabled": true, "port": 0, "bind_address": "127.0.0.1",
+      "tls": {
+        "enabled": true,
+        "cert_path": ")" << fixture("server.crt") << R"(",
+        "key_path": ")" << fixture("server.key") << R"("
+      }
+    }
   }
 })";
     }
@@ -141,6 +182,29 @@ TEST_F(IntegrationBootstrapTest, AlarmsRouteServesRaisedAlarmThroughBootstrap) {
     EXPECT_EQ(j[0].at("severity").get<std::string>(), "critical");
 
     services.manager->stopAll();
+}
+
+// [utest->req~integration-010~1]
+// The composition seam for TLS: network.http.tls in the config file has to
+// reach the backend, otherwise an operator who configured HTTPS silently
+// gets HTTP. The handshake itself is covered by HttpBackendTlsTest.
+TEST_F(IntegrationBootstrapTest, RegisterHttpBackendWiresTlsOptionsFromConfig) {
+    writeHttpTlsConfig();
+    auto& config = ConfigManager::instance();
+    ASSERT_TRUE(config.initialize(configPath_.string()));
+    ASSERT_TRUE(config.isHttpTlsEnabled());
+
+    app::core::Logger logger{std::make_unique<app::core::ConsoleLogger>()};
+    app::presenter::AlertCenter alerts;
+
+    auto services =
+        app::integration::buildIntegrationServices(config, logger, &alerts);
+    ASSERT_NE(services.manager, nullptr);
+
+    auto* http = httpBackend(*services.manager);
+    ASSERT_NE(http, nullptr) << "HTTP backend was not registered";
+    EXPECT_TRUE(http->tlsEnabled())
+        << "network.http.tls.enabled did not reach the backend";
 }
 
 }  // namespace

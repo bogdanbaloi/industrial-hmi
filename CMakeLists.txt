@@ -281,6 +281,33 @@ if(BUILD_HTTP_BACKEND OR BUILD_TESTS)
         ${CMAKE_BINARY_DIR}/_deps/httplib-vendor)
     find_package(Threads REQUIRED)
     target_link_libraries(cpp_httplib_headers INTERFACE Threads::Threads)
+
+    # TLS for the HTTP/REST backend (ADR-0030, REQ-INTEGRATION-010) via
+    # cpp-httplib's own OpenSSL path (httplib::SSLServer). OpenSSL is a
+    # REQUIRED dependency of the HTTP backend, not an extra switch: TLS is a
+    # mode of the backend. A build that silently dropped it would hand
+    # operators a plaintext server where they configured HTTPS.
+    #
+    # CPPHTTPLIB_OPENSSL_SUPPORT is defined HERE, on the interface target, and
+    # not on objectsHttp: the macro changes the layout of httplib::Server, so
+    # every translation unit that includes <httplib.h> (HttpBackend.cpp and
+    # the tests that drive it with httplib's client) must see the identical
+    # definition. Hanging it off the header target makes that automatic --
+    # you cannot get the header without the macro.
+    find_package(OpenSSL REQUIRED)
+    target_compile_definitions(cpp_httplib_headers INTERFACE
+        CPPHTTPLIB_OPENSSL_SUPPORT)
+    target_link_libraries(cpp_httplib_headers INTERFACE
+        OpenSSL::SSL OpenSSL::Crypto)
+    if(WIN32)
+        # Second Windows-only link. NOT Winsock: with OpenSSL support on,
+        # cpp-httplib's client verifies against the Windows system certificate
+        # store (CertOpenSystemStoreW and friends), which lives in crypt32.
+        # Easy to miss because only translation units that instantiate the
+        # CLIENT pull those symbols in, so it surfaces as an undefined-symbol
+        # link error in a test, never in the backend itself.
+        target_link_libraries(cpp_httplib_headers INTERFACE crypt32)
+    endif()
 endif()
 
 # Google Benchmark (google/benchmark) -- microbenchmark harness with
@@ -785,10 +812,13 @@ if(BUILD_HTTP_BACKEND OR BUILD_TESTS)
     target_sources(objectsHttp
         PRIVATE
             src/integration/HttpBackend.cpp
+            src/integration/HttpTlsMaterial.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
                 src/integration/HttpBackend.h
+                src/integration/HttpTlsMaterial.h
+                src/integration/HttpTlsOptions.h
     )
     target_link_libraries(objectsHttp
         PUBLIC
@@ -798,6 +828,11 @@ if(BUILD_HTTP_BACKEND OR BUILD_TESTS)
             cpp_httplib_headers
             nlohmann_json_headers
             Threads::Threads
+            # HttpTlsMaterial.cpp calls OpenSSL DIRECTLY (PEM_read_bio_X509 /
+            # X509_check_private_key), not only through cpp-httplib, so the
+            # link is named here as well as on the header target.
+            OpenSSL::SSL
+            OpenSSL::Crypto
     )
     target_include_directories(objectsHttp PUBLIC ${CMAKE_SOURCE_DIR})
     target_compile_definitions(objectsHttp

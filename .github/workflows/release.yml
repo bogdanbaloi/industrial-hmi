@@ -64,9 +64,13 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
+        # libssl-dev is here for the HTTP/REST backend's TLS mode
+        # (REQ-INTEGRATION-010): a release configured with
+        # -DBUILD_HTTP_BACKEND=ON needs OpenSSL at configure time.
         sudo apt-get install -y \
           build-essential cmake ninja-build \
-          libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev
+          libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev \
+          libssl-dev
 
     - name: Configure
       run: cmake --preset release
@@ -121,6 +125,7 @@ jobs:
           mingw-w64-clang-x86_64-sqlite3
           mingw-w64-clang-x86_64-libsodium
           mingw-w64-clang-x86_64-boost
+          mingw-w64-clang-x86_64-openssl
           zip
 
     - name: Checkout

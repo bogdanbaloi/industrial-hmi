@@ -88,6 +88,26 @@
             "port":    { "type": "integer", "minimum": 1, "maximum": 65535 }
           }
         },
+        "http": {
+          "type": "object",
+          "description": "Read-only HTTP/REST backend (REQ-INTEGRATION-007). Off by default; compile-gated behind BUILD_HTTP_BACKEND.",
+          "properties": {
+            "enabled":      { "type": "boolean" },
+            "port":         { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "bind_address": { "type": "string" },
+            "tls": {
+              "type": "object",
+              "description": "Native TLS for the HTTP backend (REQ-INTEGRATION-010, ADR-0030). cert_path and key_path are required when enabled is true; client_ca_path is required when verify_peer is true. Bad material is a fatal startup error, never a plaintext fallback.",
+              "properties": {
+                "enabled":        { "type": "boolean" },
+                "cert_path":      { "type": "string" },
+                "key_path":       { "type": "string" },
+                "verify_peer":    { "type": "boolean" },
+                "client_ca_path": { "type": "string" }
+              }
+            }
+          }
+        },
         "mqtt": {
           "type": "object",
           "properties": {

@@ -238,6 +238,14 @@ public:
     [[nodiscard]] int getHttpBackendPort() const;
     [[nodiscard]] std::string getHttpBackendBindAddress() const;
 
+    // HTTP/REST backend - TLS (REQ-INTEGRATION-010)
+
+    [[nodiscard]] bool isHttpTlsEnabled() const;
+    [[nodiscard]] std::string getHttpTlsCertPath() const;
+    [[nodiscard]] std::string getHttpTlsKeyPath() const;
+    [[nodiscard]] bool isHttpTlsVerifyPeer() const;
+    [[nodiscard]] std::string getHttpTlsClientCaPath() const;
+
     // Serial telemetry ingest backend (REQ-INTEGRATION-009)
 
     [[nodiscard]] bool isSerialBackendEnabled() const;

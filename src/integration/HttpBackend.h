@@ -1,10 +1,13 @@
 #pragma once
 
+#include "src/integration/HttpTlsMaterial.h"
+#include "src/integration/HttpTlsOptions.h"
 #include "src/integration/IntegrationBackend.h"
 
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -56,6 +59,12 @@ namespace app::integration {
 ///     `presenter::AlertCenter&` interfaces (never the singletons) so tests
 ///     inject fakes. The injected references + logger must outlive the
 ///     backend.
+///
+/// TLS (REQ-INTEGRATION-010, ADR-0030): passing `HttpTlsOptions` switches the
+/// accept loop to `httplib::SSLServer`, server-only or mutual-auth. The cert
+/// / key material is proven in THIS constructor, so a deployment that
+/// configured TLS and cannot have it fails at startup instead of quietly
+/// serving plaintext on a port the operator believes is encrypted.
 class HttpBackend final : public IntegrationBackend {
 public:
     /// @param port          TCP port to bind. 0 == auto-assign by the OS
@@ -66,12 +75,20 @@ public:
     /// @param alerts        Alarm store the `/alarms` route projects (DI).
     /// @param logger        Start/stop traces + handler-exception (500)
     ///                      logging. Must outlive this backend.
+    /// @param tlsOptions    Absent (the default) serves plaintext HTTP.
+    ///                      Present switches the server to TLS. The cert /
+    ///                      key (and client CA when `verifyPeer` is set) are
+    ///                      loaded and verified right here.
+    /// @throws core::TlsMaterialError when `tlsOptions` is present and the
+    ///         configured material cannot be loaded. There is deliberately
+    ///         no plaintext fallback.
     HttpBackend(std::uint16_t port,
                 std::string bindAddress,
                 model::ProductionModel& production,
                 model::ProductsRepository& products,
                 presenter::AlertCenter& alerts,
-                core::Logger& logger);
+                core::Logger& logger,
+                std::optional<HttpTlsOptions> tlsOptions = std::nullopt);
 
     ~HttpBackend() override;
 
@@ -96,6 +113,12 @@ public:
         return boundPort_.load(std::memory_order_acquire);
     }
 
+    /// True when this backend serves HTTPS (REQ-INTEGRATION-010). Fixed at
+    /// construction: TLS is never turned on or off by a running server.
+    [[nodiscard]] bool tlsEnabled() const noexcept {
+        return tls_.has_value();
+    }
+
     /// The route paths the backend serves, in declaration order. Exposed so
     /// a unit test can assert the route table has no duplicate paths without
     /// reaching into the private table.
@@ -111,8 +134,26 @@ private:
     /// `server_`. Called once per start().
     void registerRoutes();
 
+    /// Create the concrete server for this start(): an `httplib::SSLServer`
+    /// when TLS is configured, a plain `httplib::Server` otherwise. Both
+    /// derive from the `httplib::Server` the rest of the class talks to, so
+    /// the route table and the accept loop are identical either way.
+    ///
+    /// @throws core::TlsMaterialError when the SSL context cannot be built
+    ///         from already-validated material (an OpenSSL-level refusal).
+    [[nodiscard]] std::unique_ptr<httplib::Server> makeServer() const;
+
+    /// "off", "server" or "mutual". What the port actually speaks, for the
+    /// start() log line and the metrics summary.
+    [[nodiscard]] const char* tlsModeName() const noexcept;
+
     std::uint16_t requestedPort_;
     std::string   bindAddress_;
+
+    /// Proven TLS material, or nothing for plaintext HTTP. Holding the
+    /// material (not the raw options) means the paths the server opens in
+    /// start() are exactly the ones validated in the constructor.
+    std::optional<HttpTlsMaterial> tls_;
 
     model::ProductionModel&    production_;
     model::ProductsRepository& products_;

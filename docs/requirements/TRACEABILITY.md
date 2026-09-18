@@ -134,6 +134,7 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-007 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/StatusJson.cpp`, `src/app/IntegrationBootstrap.cpp`, `src/main.cpp`, `src/core/Application.h`, `src/gtk/view/MainWindow.cpp`, `src/console/InitConsole.cpp`, `src/qt/QtInitRoot.cpp` | HttpBackendTest, StatusJsonTest, IntegrationBootstrapTest | 0025 |
 | REQ-INTEGRATION-008 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/ProductionMetricsJson.cpp`, `src/mcp/tools/ProductionMetricsTool.cpp` | HttpBackendTest, ProductionMetricsJsonTest | 0025 |
 | REQ-INTEGRATION-009 | SHOULD | `src/integration/SerialFrameParser.cpp`, `src/integration/SerialBackend.cpp`, `src/integration/EquipmentStateReading.h`, `src/app/IntegrationBootstrap.cpp` | SerialFrameParserTest, EquipmentStateReadingTest, SerialBackendTest | 0029 |
+| REQ-INTEGRATION-010 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/HttpTlsMaterial.cpp`, `src/integration/HttpTlsOptions.h`, `src/config/ConfigValidator.cpp`, `src/app/IntegrationBootstrap.cpp` | HttpTlsMaterialTest, HttpBackendTlsTest, ConfigValidatorTest, IntegrationBootstrapTest | 0030 |
 
 ## PERF
 
