@@ -258,7 +258,14 @@
     "http": {
       "enabled": false,
       "port": 8080,
-      "bind_address": "127.0.0.1"
+      "bind_address": "127.0.0.1",
+      "tls": {
+        "enabled": false,
+        "cert_path": "",
+        "key_path": "",
+        "verify_peer": false,
+        "client_ca_path": ""
+      }
     },
     "mqtt": {
       "enabled": true,

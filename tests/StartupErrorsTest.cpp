@@ -28,6 +28,7 @@ using app::core::CriticalStartupError;
 using app::core::DatabaseInitError;
 using app::core::LoggerBootstrapError;
 using app::core::StartupErrorCode;
+using app::core::TlsMaterialError;
 using app::core::toTag;
 
 // toTag()
@@ -37,6 +38,8 @@ TEST(StartupErrorsTest, ToTagMapsEveryCode) {
     EXPECT_EQ(toTag(StartupErrorCode::ConfigCorrupt),   "CONFIG CORRUPT");
     EXPECT_EQ(toTag(StartupErrorCode::DatabaseInit),    "DATABASE ERROR");
     EXPECT_EQ(toTag(StartupErrorCode::LoggerBootstrap), "LOGGER ERROR");
+    EXPECT_EQ(toTag(StartupErrorCode::TlsMaterialInvalid),
+              "TLS MATERIAL INVALID");
 }
 
 TEST(StartupErrorsTest, TagsAreDistinct) {
@@ -48,6 +51,7 @@ TEST(StartupErrorsTest, TagsAreDistinct) {
         toTag(StartupErrorCode::ConfigCorrupt),
         toTag(StartupErrorCode::DatabaseInit),
         toTag(StartupErrorCode::LoggerBootstrap),
+        toTag(StartupErrorCode::TlsMaterialInvalid),
     };
     for (std::size_t i = 0; i < std::size(tags); ++i) {
         for (std::size_t j = i + 1; j < std::size(tags); ++j) {
@@ -102,6 +106,15 @@ TEST(StartupErrorsTest, LoggerBootstrapErrorCarriesCode) {
     LoggerBootstrapError e{"log"};
     EXPECT_EQ(e.code(), StartupErrorCode::LoggerBootstrap);
     EXPECT_STREQ(e.what(), "log");
+}
+
+TEST(StartupErrorsTest, TlsMaterialErrorCarriesCode) {
+    // Thrown when a backend configured for TLS cannot load its cert / key
+    // (REQ-INTEGRATION-010): fatal, so it must reach main()'s handler with
+    // its own code rather than as a generic runtime_error.
+    TlsMaterialError e{"tls"};
+    EXPECT_EQ(e.code(), StartupErrorCode::TlsMaterialInvalid);
+    EXPECT_STREQ(e.what(), "tls");
 }
 
 TEST(StartupErrorsTest, SubclassesCatchableAsBase) {

@@ -145,6 +145,54 @@ TEST_F(ConfigValidatorTest, RejectsHistorianBatchSizeZeroWhenEnabled) {
               std::string::npos);
 }
 
+// [utest->req~integration-010~1]
+// TLS for the HTTP/REST backend: the validator's share of REQ-INTEGRATION-010
+// is the SHAPE of network.http.tls (which paths the operator's own settings
+// oblige them to supply). Whether those files parse is HttpTlsMaterial's job,
+// covered by HttpTlsMaterialTest.
+
+TEST_F(ConfigValidatorTest, RejectsHttpTlsEnabledWithoutCertPath) {
+    writeFile(tmpPath_, wrap(R"(  "network": { "http": { "enabled": true, "port": 8080, "tls": { "enabled": true, "key_path": "server.key" } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_FALSE(r.ok);
+    ASSERT_FALSE(r.errors.empty());
+    EXPECT_NE(r.errors.front().find("network.http.tls.cert_path"),
+              std::string::npos);
+}
+
+TEST_F(ConfigValidatorTest, RejectsHttpTlsVerifyPeerWithoutClientCa) {
+    writeFile(tmpPath_, wrap(R"(  "network": { "http": { "enabled": true, "port": 8080, "tls": { "enabled": true, "cert_path": "server.crt", "key_path": "server.key", "verify_peer": true } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_FALSE(r.ok);
+    ASSERT_FALSE(r.errors.empty());
+    EXPECT_NE(r.errors.front().find("network.http.tls.client_ca_path"),
+              std::string::npos);
+}
+
+TEST_F(ConfigValidatorTest, AcceptsHttpTlsFullyConfigured) {
+    writeFile(tmpPath_, wrap(R"(  "network": { "http": { "enabled": true, "port": 8443, "tls": { "enabled": true, "cert_path": "server.crt", "key_path": "server.key", "verify_peer": true, "client_ca_path": "client-ca.crt" } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_TRUE(r.ok) << "first error: "
+                      << (r.errors.empty() ? "<none>" : r.errors.front());
+}
+
+TEST_F(ConfigValidatorTest, IgnoresIncompleteHttpTlsWhenTlsDisabled) {
+    // Leftover TLS keys with tls.enabled=false must not block startup --
+    // same posture as a disabled backend's out-of-range port.
+    writeFile(tmpPath_, wrap(R"(  "network": { "http": { "enabled": true, "port": 8080, "tls": { "enabled": false, "verify_peer": true } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_TRUE(r.ok) << "first error: "
+                      << (r.errors.empty() ? "<none>" : r.errors.front());
+}
+
 TEST_F(ConfigValidatorTest, CollectsAllViolations) {
     // Multiple unrelated bad values -- assert the validator returns
     // every one. Operators get one round-trip instead of a fix-and-retry

@@ -1,6 +1,7 @@
 #include "src/integration/HttpBackend.h"
 
 #include "src/core/LoggerBase.h"
+#include "src/core/StartupErrors.h"
 #include "src/integration/ProductionMetricsJson.h"
 #include "src/integration/StatusJson.h"
 #include "src/mcp/tools/AlarmsSnapshotTool.h"
@@ -33,6 +34,8 @@
 #include <chrono>
 #include <exception>
 #include <format>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -71,6 +74,21 @@ inline constexpr const char* kHealthBody        = R"({"status":"ok"})";
 inline constexpr const char* kNotFoundBody      = R"({"error":"not found"})";
 inline constexpr const char* kInternalErrorBody = R"({"error":"internal error"})";
 
+// The TLS mode reported by metricsSummary() and the start() log line. Named
+// rather than inline literals because each one is emitted from more than one
+// place. "off" vs "server" vs "mutual" is the operator's only evidence of
+// what the port actually speaks.
+namespace tls_mode {
+inline constexpr const char* kOff        = "off";
+inline constexpr const char* kServerOnly = "server";
+inline constexpr const char* kMutual     = "mutual";
+}  // namespace tls_mode
+
+// URL scheme for the start() log line, so the trace matches what a client
+// has to type.
+inline constexpr const char* kPlaintextScheme = "http";
+inline constexpr const char* kTlsScheme       = "https";
+
 // HTTP status codes we set explicitly (httplib defaults unmatched routes to
 // 404; we set 500 ourselves on a handler exception). Named to keep the magic
 // numbers out of the handler bodies.
@@ -107,13 +125,23 @@ HttpBackend::HttpBackend(std::uint16_t port,
                          model::ProductionModel& production,
                          model::ProductsRepository& products,
                          presenter::AlertCenter& alerts,
-                         core::Logger& logger)
+                         core::Logger& logger,
+                         std::optional<HttpTlsOptions> tlsOptions)
     : requestedPort_(port),
       bindAddress_(std::move(bindAddress)),
       production_(production),
       products_(products),
       alerts_(alerts),
-      logger_(logger) {}
+      logger_(logger) {
+    if (tlsOptions.has_value()) {
+        // Load + verify the cert / key (/ client CA) NOW, before anything can
+        // bind a port. A failure throws core::TlsMaterialError out of this
+        // constructor, up through registerHttpBackend() to the top-level
+        // catch in main(), exactly like a bad config or a dead database
+        // (ADR-0030). There is no plaintext fallback on purpose.
+        tls_.emplace(std::move(*tlsOptions));
+    }
+}
 
 HttpBackend::~HttpBackend() {
     // Defensive -- callers should stop() explicitly. Use the non-virtual
@@ -196,12 +224,43 @@ void HttpBackend::registerRoutes() {
         });
 }
 
+std::unique_ptr<httplib::Server> HttpBackend::makeServer() const {
+    if (!tls_.has_value()) {
+        return std::make_unique<httplib::Server>();
+    }
+
+    const HttpTlsOptions& options = tls_->options();
+    // A null client-CA path is httplib's "do not ask the client for a
+    // certificate". Passing the CA turns on SSL_VERIFY_PEER |
+    // SSL_VERIFY_FAIL_IF_NO_PEER_CERT, i.e. mutual TLS.
+    const char* clientCa =
+        tls_->verifiesPeer() ? options.clientCaPath.c_str() : nullptr;
+
+    auto server = std::make_unique<httplib::SSLServer>(
+        options.certPath.c_str(), options.keyPath.c_str(), clientCa);
+
+    // The material was already proven in the constructor, so this is the
+    // residual case where OpenSSL itself refused to build a context. Still
+    // fatal. Never fall through to a plaintext server.
+    if (!server->is_valid()) {
+        throw core::TlsMaterialError(std::format(
+            "HttpBackend: OpenSSL refused the TLS context built from {} / {}",
+            options.certPath, options.keyPath));
+    }
+    return server;
+}
+
 void HttpBackend::start() {
     if (running_.exchange(true, std::memory_order_acq_rel)) {
         return;  // already running, idempotent
     }
 
-    server_ = std::make_unique<httplib::Server>();
+    try {
+        server_ = makeServer();
+    } catch (...) {
+        running_.store(false, std::memory_order_release);
+        throw;
+    }
     registerRoutes();
 
     // Bind synchronously so the caller learns about a busy port before
@@ -242,12 +301,21 @@ void HttpBackend::start() {
         std::this_thread::sleep_for(kReadyPollInterval);
     }
 
-    logger_.info("HTTP backend listening on http://{}:{}", bindAddress_,
-                 boundPort_.load(std::memory_order_acquire));
+    logger_.info("HTTP backend listening on {}://{}:{} (TLS {})",
+                 tls_.has_value() ? kTlsScheme : kPlaintextScheme,
+                 bindAddress_, boundPort_.load(std::memory_order_acquire),
+                 tlsModeName());
+}
+
+const char* HttpBackend::tlsModeName() const noexcept {
+    if (!tls_.has_value()) return tls_mode::kOff;
+    return tls_->verifiesPeer() ? tls_mode::kMutual : tls_mode::kServerOnly;
 }
 
 std::string HttpBackend::metricsSummary() const {
-    return std::format("port {}", boundPort_.load(std::memory_order_acquire));
+    return std::format("port {}, tls {}",
+                       boundPort_.load(std::memory_order_acquire),
+                       tlsModeName());
 }
 
 void HttpBackend::stop() {

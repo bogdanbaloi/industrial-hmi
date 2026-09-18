@@ -462,6 +462,23 @@ std::string ConfigManager::getHttpBackendBindAddress() const {
                     defaults::kHttpBackendBindAddress);
 }
 
+bool ConfigManager::isHttpTlsEnabled() const {
+    return getValue("network.http.tls.enabled", "false") == "true";
+}
+std::string ConfigManager::getHttpTlsCertPath() const {
+    return getValue("network.http.tls.cert_path", defaults::kHttpTlsCertPath);
+}
+std::string ConfigManager::getHttpTlsKeyPath() const {
+    return getValue("network.http.tls.key_path", defaults::kHttpTlsKeyPath);
+}
+bool ConfigManager::isHttpTlsVerifyPeer() const {
+    return getValue("network.http.tls.verify_peer", "false") == "true";
+}
+std::string ConfigManager::getHttpTlsClientCaPath() const {
+    return getValue("network.http.tls.client_ca_path",
+                    defaults::kHttpTlsClientCaPath);
+}
+
 bool ConfigManager::isSerialBackendEnabled() const {
     return getValue("network.serial.enabled", "false") == "true";
 }

@@ -7,6 +7,7 @@
 '   - src/integration/TcpBackend.h
 '   - src/integration/MqttClient.h  (also TelemetryPublisher/Subscriber)
 '   - src/integration/HttpBackend.h
+'   - src/integration/HttpTlsMaterial.h / HttpTlsOptions.h
 '   - src/integration/modbus/ModbusBackend.h
 '   - src/integration/opcua/OpcUaBackend.h
 ' Signatures copied verbatim from those headers.
@@ -56,6 +57,20 @@ class MqttClient {
 class HttpBackend {
   name() = "HTTP" (read-only REST)
   +routePaths() : vector<string_view>
+  +tlsEnabled() : bool
+}
+
+class HttpTlsOptions <<value>> {
+  +certPath : string
+  +keyPath : string
+  +verifyPeer : bool
+  +clientCaPath : string
+}
+
+class HttpTlsMaterial {
+  +HttpTlsMaterial(HttpTlsOptions)
+  +options() : const HttpTlsOptions&
+  +verifiesPeer() : bool
 }
 class ModbusBackend {
   name() = "Modbus"
@@ -83,6 +98,16 @@ IntegrationBackend <|.. SerialBackend
 
 TelemetryPublisher  <|.. MqttClient
 TelemetrySubscriber <|.. MqttClient
+
+HttpBackend o--> "0..1" HttpTlsMaterial : proven at construction
+HttpTlsMaterial *--> HttpTlsOptions : holds the paths it verified
+
+note right of HttpTlsMaterial
+  ADR-0030: the cert / key (/ client CA) are
+  loaded and checked BEFORE any port is bound.
+  A failure is a fatal core::TlsMaterialError,
+  never a silent fallback to plaintext.
+end note
 
 note bottom of IntegrationManager
   DIP: the manager depends only on the

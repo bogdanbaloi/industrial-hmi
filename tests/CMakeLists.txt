@@ -1435,6 +1435,52 @@ if(WIN32)
 endif()
 add_test(NAME HttpBackendTest COMMAND test_http_backend)
 
+# HttpTlsMaterial: the cert / key / client-CA loader (REQ-INTEGRATION-010).
+# Pure file I/O plus an OpenSSL parse. Compile the one source directly and
+# drive it against the committed PEMs. No sockets, no server. The fixture
+# directory is passed in as a compile definition so the test finds the PEMs
+# whatever working directory ctest runs it from.
+add_executable(test_http_tls_material HttpTlsMaterialTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/HttpTlsMaterial.cpp)
+target_compile_definitions(test_http_tls_material PRIVATE
+    INDUSTRIAL_HMI_TLS_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/tls")
+target_link_libraries(test_http_tls_material PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
+add_test(NAME HttpTlsMaterialTest COMMAND test_http_tls_material)
+
+# HttpBackend TLS mode (REQ-INTEGRATION-010) over a real loopback TLS socket:
+# server-only and mutual handshakes with cpp-httplib's SSLClient, a plaintext
+# client refused, plus a bad cert refused at construction. Same link shape as
+# test_http_backend (objectsHttp + objectsMcp, own ws2_32 / mswsock line on
+# Windows). OpenSSL arrives with cpp_httplib_headers, which also carries the
+# CPPHTTPLIB_OPENSSL_SUPPORT definition this TU must share with the backend.
+add_executable(test_http_backend_tls HttpBackendTlsTest.cpp)
+target_compile_definitions(test_http_backend_tls PRIVATE
+    INDUSTRIAL_HMI_TLS_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/tls")
+target_link_libraries(test_http_backend_tls PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    objectsHttp
+    objectsMcp
+    objectsPresenter
+    objectsModel
+    objectsHistorian
+    objectsAuth
+    objectsCore
+    objectsIntegrationCore
+    cpp_httplib_headers
+    nlohmann_json_headers
+    Threads::Threads
+)
+if(WIN32)
+    target_link_libraries(test_http_backend_tls PRIVATE ws2_32 mswsock)
+endif()
+add_test(NAME HttpBackendTlsTest COMMAND test_http_backend_tls)
+
 # IntegrationBootstrap: proves the shared buildIntegrationServices composition
 # (REQ-INTEGRATION-007) actually registers + starts the HTTP backend and its
 # /alarms route projects a live AlertCenter. IntegrationBootstrap.cpp is
@@ -1447,7 +1493,8 @@ add_test(NAME HttpBackendTest COMMAND test_http_backend)
 add_executable(test_integration_bootstrap IntegrationBootstrapTest.cpp
     ${CMAKE_SOURCE_DIR}/src/app/IntegrationBootstrap.cpp)
 target_compile_definitions(test_integration_bootstrap PRIVATE
-    INDUSTRIAL_HMI_HAS_HTTP_BACKEND=1)
+    INDUSTRIAL_HMI_HAS_HTTP_BACKEND=1
+    INDUSTRIAL_HMI_TLS_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/tls")
 target_link_libraries(test_integration_bootstrap PRIVATE
     ${TEST_COMMON_LIBS}
     tests_includes

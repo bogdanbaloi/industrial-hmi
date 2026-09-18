@@ -169,8 +169,8 @@ Allen-Bradley, Siemens, and most SCADA stacks speak it natively.
 
 `cpp-httplib` is pulled via CMake `FetchContent` only when
 `-DBUILD_HTTP_BACKEND=ON` (or under `BUILD_TESTS`). `HttpBackend` serves
-four read-only routes as JSON -- `GET /health`, `/status`, `/alarms`,
-`/products` -- over the same `ProductionModel`, `ProductsRepository` and
+five read-only routes as JSON (`GET /health`, `/status`, `/alarms`,
+`/products`, `/production`) over the same `ProductionModel`, `ProductsRepository` and
 `presenter::AlertCenter` the other backends use. `/status` reuses the
 shared `buildStatusJson` (so it matches the TCP `status` command) and
 `/alarms` reuses the MCP `alarms_snapshot` projection verbatim (so it
@@ -184,6 +184,48 @@ without speaking an industrial protocol. Off by default
 (`network.http.enabled=false`); because cpp-httplib calls Winsock
 directly on Windows, `objectsHttp` carries its own `ws2_32` / `mswsock`
 link line.
+
+#### TLS (REQ-INTEGRATION-010, ADR-0030)
+
+`HttpBackend` is the one backend with a real TLS library boundary, so it
+terminates TLS itself through cpp-httplib's `httplib::SSLServer` instead
+of delegating to a tunnel:
+
+```jsonc
+"network": {
+  "http": {
+    "enabled": true,
+    "port": 8443,
+    "bind_address": "127.0.0.1",
+    "tls": {
+      "enabled": true,
+      "cert_path": "/etc/industrial-hmi/server.crt",
+      "key_path": "/etc/industrial-hmi/server.key",
+      // Mutual TLS: demand a client certificate and verify it
+      // against this CA. Omit / leave false for server-only TLS.
+      "verify_peer": true,
+      "client_ca_path": "/etc/industrial-hmi/client-ca.crt"
+    }
+  }
+}
+```
+
+With `verify_peer` set, a client that presents no certificate, or one
+issued by any other CA, is refused during the handshake. The server
+decides *who* may read plant state, not just that the read is encrypted.
+
+The cert, key and client CA are loaded and checked (including "does this
+key actually belong to this certificate") in the `HttpBackend`
+**constructor**, before anything binds a port. A failure throws
+`core::TlsMaterialError`, a fatal startup error. There is deliberately no
+plaintext fallback: a server that was configured for HTTPS and cannot
+have it must not come up serving cleartext on that port.
+
+**Not covered by this:** TCP, MQTT, Modbus and the serial link are
+unchanged and still speak plaintext. They are hand-rolled protocols over
+raw sockets with no TLS library boundary. The documented answer for them
+remains an external tunnel (stunnel). Nothing here is a PKI either. There is no
+rotation or revocation story, a restart picks up new material.
 
 ---
 

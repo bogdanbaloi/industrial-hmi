@@ -101,6 +101,15 @@ constexpr float kModbusQualityScale        = 0.1F;
 constexpr int kHttpBackendPort            = 8080;
 constexpr const char* kHttpBackendBindAddress = "127.0.0.1";
 
+// TLS for the HTTP/REST backend (REQ-INTEGRATION-010, ADR-0030). There is no
+// sensible default certificate: an empty path means "not configured", which
+// ConfigValidator rejects when network.http.tls.enabled is true. Defaulting
+// to some bundled cert would be worse than having none, because it would
+// look like working TLS while anyone could hold the same private key.
+constexpr const char* kHttpTlsCertPath     = "";
+constexpr const char* kHttpTlsKeyPath      = "";
+constexpr const char* kHttpTlsClientCaPath = "";
+
 // Serial telemetry ingest backend (REQ-INTEGRATION-009). 115200 is the
 // common bench-microcontroller baud; the device name is host-specific and
 // set in config (a Linux /dev/ttyACM* or a Windows COMx). See ADR-0029.

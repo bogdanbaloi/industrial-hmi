@@ -18,6 +18,7 @@ enum class StartupErrorCode {
     ConfigInvalid,     ///< parsed OK but semantic validation rejected it
     DatabaseInit,      ///< SQLite initialisation refused
     LoggerBootstrap,   ///< even the stderr logger could not be constructed
+    TlsMaterialInvalid,///< a configured certificate / key / CA is missing or unusable
 };
 
 /// Human-readable short tag for a StartupErrorCode (used as dialog title
@@ -30,6 +31,7 @@ inline std::string_view toTag(StartupErrorCode code) {
     case StartupErrorCode::ConfigInvalid:    return "CONFIG INVALID";
     case StartupErrorCode::DatabaseInit:     return "DATABASE ERROR";
     case StartupErrorCode::LoggerBootstrap:  return "LOGGER ERROR";
+    case StartupErrorCode::TlsMaterialInvalid: return "TLS MATERIAL INVALID";
     }
     return "STARTUP ERROR";
 }
@@ -99,6 +101,20 @@ class LoggerBootstrapError final : public CriticalStartupError {
 public:
     explicit LoggerBootstrapError(const std::string& detail)
         : CriticalStartupError(StartupErrorCode::LoggerBootstrap, detail) {}
+};
+
+/// Thrown when a backend configured for TLS cannot load the certificate,
+/// private key or client CA it was pointed at (file missing, not PEM, key
+/// that does not match the certificate, verify_peer without a CA).
+///
+/// Deliberately fatal: a deployment that asked for TLS and cannot have it
+/// must not come up serving plaintext on the port an operator believes is
+/// encrypted. The check runs once, where the backend is constructed, so the
+/// failure surfaces at startup instead of as per-request 500s (ADR-0030).
+class TlsMaterialError final : public CriticalStartupError {
+public:
+    explicit TlsMaterialError(const std::string& detail)
+        : CriticalStartupError(StartupErrorCode::TlsMaterialInvalid, detail) {}
 };
 
 }  // namespace app::core
