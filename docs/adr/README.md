@@ -58,6 +58,11 @@ Each file has the following sections:
 | 0023 | [MCP server as a fourth, LLM-facing consumer of the MVP core](0023-mcp-server-fourth-mvp-consumer.md) | Accepted |
 | 0024 | [Agent identity for MCP write tools](0024-mcp-agent-identity-for-writes.md) | Accepted |
 | 0025 | [cpp-httplib for a read-only REST/HTTP backend](0025-cpp-httplib-rest-backend.md) | Accepted |
+| 0026 | [Rust SPSC as a polyglot portfolio component](0026-rust-spsc-polyglot-component.md) | Accepted |
+| 0027 | [Expose the Rust SPSC over a C ABI (C++/Rust interop)](0027-rust-spsc-c-abi-interop.md) | Accepted |
+| 0028 | [MISRA-C++-aligned coding guidelines via clang-tidy](0028-misra-aligned-coding-guidelines.md) | Accepted |
+| 0029 | [Serial telemetry ingest (line-framed protocol, asio transport)](0029-serial-telemetry-ingest.md) | Accepted |
+| 0030 | [TLS for the HTTP/REST backend via cpp-httplib's SSL variant](0030-http-backend-tls-via-cpp-httplib.md) | Accepted |
 
 ## Adding a new ADR
 

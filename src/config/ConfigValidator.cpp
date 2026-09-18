@@ -121,6 +121,32 @@ void checkBackends(const ConfigManager& cfg,
     }
 }
 
+/// TLS for the HTTP/REST backend (REQ-INTEGRATION-010). SHAPE ONLY: this
+/// asks whether the operator supplied the paths their own settings require,
+/// not whether the files exist or parse. ConfigValidator is linked into
+/// every build, including ones without the HTTP backend, so it must stay
+/// free of OpenSSL and of the filesystem -- same posture as checkModbus.
+/// Proving the material is HttpTlsMaterial's job, at backend construction.
+void checkHttpTls(const ConfigManager& cfg,
+                  std::vector<std::string>& errors) {
+    if (!cfg.isHttpBackendEnabled() || !cfg.isHttpTlsEnabled()) return;
+    if (cfg.getHttpTlsCertPath().empty()) {
+        errors.emplace_back(
+            "network.http.tls.cert_path: required when "
+            "network.http.tls.enabled is true");
+    }
+    if (cfg.getHttpTlsKeyPath().empty()) {
+        errors.emplace_back(
+            "network.http.tls.key_path: required when "
+            "network.http.tls.enabled is true");
+    }
+    if (cfg.isHttpTlsVerifyPeer() && cfg.getHttpTlsClientCaPath().empty()) {
+        errors.emplace_back(
+            "network.http.tls.client_ca_path: required when "
+            "network.http.tls.verify_peer is true");
+    }
+}
+
 void checkHistorian(const ConfigManager& cfg,
                     std::vector<std::string>& errors) {
     if (!cfg.isHistorianEnabled()) return;
@@ -166,6 +192,7 @@ ConfigValidator::Result ConfigValidator::validate(const ConfigManager& cfg) {
     checkI18n(cfg, r.errors);
     checkWindow(cfg, r.errors);
     checkBackends(cfg, r.errors);
+    checkHttpTls(cfg, r.errors);
     checkHistorian(cfg, r.errors);
     checkModbus(cfg, r.errors);
     r.ok = r.errors.empty();

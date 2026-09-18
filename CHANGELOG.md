@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### TLS for the HTTP/REST backend (REQ-INTEGRATION-010)
+
+The read-only HTTP/REST backend (REQ-INTEGRATION-007) gets an opt-in native
+TLS mode via cpp-httplib's OpenSSL support, including mutual TLS, so the one
+backend with a real TLS library boundary can demonstrate both server-only and
+client-verified deployments without an external stunnel process. ADR-0030.
+
+#### Added
+- `network.http.tls.*` config block (cert/key/verify_peer/client_ca), validated for shape by ConfigValidator and mirrored in `schemas/app-config.schema.json`.
+- `HttpTlsOptions` / `HttpTlsMaterial`: cert+key(+CA) load and validation, run once at HttpBackend construction, including the key-does-not-match-certificate case OpenSSL would otherwise only fail on at handshake time.
+- `TlsMaterialError` (new `StartupErrorCode::TlsMaterialInvalid`): a bad cert/key pair is a fatal startup error, never a silent plaintext fallback.
+- `httplib::SSLServer` wiring behind the existing HttpBackend PIMPL; `tlsEnabled()` and a TLS mode (`off` / `server` / `mutual`) in the metrics summary and the start-up log line.
+- `tests/fixtures/tls/`: committed self-signed cert/key/client-CA fixtures, with the `openssl` commands that produced them, so the TLS tests need no generation step in CI.
+- `docs/adr/0030-http-backend-tls-via-cpp-httplib.md`, plus the ADR index rows that were missing for 0026-0029.
+
+#### Changed
+- README.md / src/integration/README.md: the standing "no TLS, tunnel through stunnel" framing is now scoped to the hand-rolled protocols; HTTP terminates TLS itself.
+- `CPPHTTPLIB_OPENSSL_SUPPORT` is defined on the shared cpp-httplib interface target, so every translation unit that includes the header agrees on the layout of `httplib::Server`; on Windows that target also carries `crypt32`, which cpp-httplib's client needs for the system certificate store.
+
 ### Serial telemetry ingest (REQ-INTEGRATION-009)
 
 A sixth integration backend reads `sensorId,value` telemetry from a
