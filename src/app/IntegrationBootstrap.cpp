@@ -304,7 +304,7 @@ void registerHttpBackend(
         app::config::ConfigManager& config,
         app::presenter::AlertCenter& alerts,
         app::core::Logger& logger) {
-    // Constructing the backend is what validates the TLS material, and it
+    // Constructing the backend is what validates the TLS material. It
     // happens HERE rather than in IntegrationManager::startAll(), which
     // deliberately swallows a per-backend exception so one failed backend
     // cannot keep the rest down. A cert the operator asked for and cannot

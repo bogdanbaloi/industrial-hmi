@@ -4,14 +4,14 @@ Self-signed certificates used by `HttpTlsMaterialTest` and
 `HttpBackendTlsTest` to exercise the HTTP backend's TLS mode (ADR-0030).
 
 These are throwaway test keys. They are **not** secrets, they are **not**
-used by any binary or deployment, and nothing outside `tests/` reads them.
+used by any binary or deployment. Nothing outside `tests/` reads them.
 They are committed so the TLS tests run with no generation step in CI.
 
 | File              | What it is                                                 |
 |-------------------|------------------------------------------------------------|
 | `server.crt`      | Self-signed server certificate, `CN=localhost`, SAN `DNS:localhost` + `IP:127.0.0.1` |
 | `server.key`      | Private key for `server.crt`                                |
-| `client-ca.crt`   | Self-signed CA that issued `client.crt`; the `client_ca_path` for mutual TLS |
+| `client-ca.crt`   | Self-signed CA that issued `client.crt`. Also the `client_ca_path` for mutual TLS |
 | `client.crt`      | Client certificate signed by `client-ca.crt`                |
 | `client.key`      | Private key for `client.crt`                                |
 | `malformed.pem`   | Deliberately not a PEM object, for the rejection test       |
@@ -50,4 +50,4 @@ openssl x509 -req -days 3650 -in client.csr \
 rm -f client-ca.key client.csr client-ca.srl
 ```
 
-`malformed.pem` is hand-written garbage; any non-PEM bytes will do.
+`malformed.pem` is hand-written garbage. Any non-PEM bytes will do.

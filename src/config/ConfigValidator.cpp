@@ -125,7 +125,7 @@ void checkBackends(const ConfigManager& cfg,
 /// asks whether the operator supplied the paths their own settings require,
 /// not whether the files exist or parse. ConfigValidator is linked into
 /// every build, including ones without the HTTP backend, so it must stay
-/// free of OpenSSL and of the filesystem -- same posture as checkModbus.
+/// free of OpenSSL and of the filesystem, the same posture as checkModbus.
 /// Proving the material is HttpTlsMaterial's job, at backend construction.
 void checkHttpTls(const ConfigManager& cfg,
                   std::vector<std::string>& errors) {

@@ -9,16 +9,16 @@ namespace app::integration {
 ///
 /// @design The only OpenSSL-touching piece of the HTTP backend. It lives in
 /// its own translation unit so `HttpBackend.cpp` never hand-rolls cert
-/// parsing inline, and so these checks are unit-testable without starting a
+/// parsing inline. These checks stay unit-testable without starting a
 /// server: construct it against a fixture directory and assert what it
 /// accepts or rejects.
 ///
 /// @rationale Validation runs ONCE, at construction, not per request. A
 /// deployment pointed at a missing or mismatched cert/key pair must fail
 /// loudly at startup (a `core::TlsMaterialError`, fatal) instead of binding
-/// the port and answering every request with a confusing 500 -- and, above
-/// all, instead of silently degrading to plaintext on a port the operator
-/// believes is encrypted.
+/// the port and answering every request with a confusing 500. Above all, it
+/// must never silently degrade to plaintext on a port the operator believes
+/// is encrypted.
 ///
 /// @threading Not thread-safe and not shared: one instance is built and
 /// consumed by one backend constructor.

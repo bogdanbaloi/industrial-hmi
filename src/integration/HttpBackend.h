@@ -76,7 +76,7 @@ public:
     /// @param logger        Start/stop traces + handler-exception (500)
     ///                      logging. Must outlive this backend.
     /// @param tlsOptions    Absent (the default) serves plaintext HTTP.
-    ///                      Present switches the server to TLS; the cert /
+    ///                      Present switches the server to TLS. The cert /
     ///                      key (and client CA when `verifyPeer` is set) are
     ///                      loaded and verified right here.
     /// @throws core::TlsMaterialError when `tlsOptions` is present and the
@@ -143,7 +143,7 @@ private:
     ///         from already-validated material (an OpenSSL-level refusal).
     [[nodiscard]] std::unique_ptr<httplib::Server> makeServer() const;
 
-    /// "off", "server" or "mutual" -- what the port actually speaks, for the
+    /// "off", "server" or "mutual". What the port actually speaks, for the
     /// start() log line and the metrics summary.
     [[nodiscard]] const char* tlsModeName() const noexcept;
 

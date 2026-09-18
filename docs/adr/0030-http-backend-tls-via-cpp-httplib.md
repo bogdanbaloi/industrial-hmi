@@ -8,15 +8,15 @@ Six integration backends speak over a network (TCP, MQTT, Modbus, OPC-UA,
 HTTP, serial). None of them encrypts anything. The standing answer, recorded
 in the README, has been "tunnel through stunnel": correct for a hand-rolled
 protocol, but it means the binary itself has never demonstrated a TLS
-boundary, and it cannot demonstrate client-certificate authentication at all.
+boundary. It cannot demonstrate client-certificate authentication at all.
 
 One of those six is different: the HTTP backend is built on cpp-httplib,
 which already ships an OpenSSL path. `httplib::SSLServer` derives from the
 `httplib::Server` that `HttpBackend` keeps behind its PIMPL, so TLS there is
 a different concrete server, not a new abstraction.
 
-The question is where to terminate TLS, and how a bad certificate should
-behave.
+The first question is where to terminate TLS. The second is how a bad
+certificate should behave.
 
 ## Decision
 Terminate TLS in-process for the HTTP backend only, using cpp-httplib's
@@ -26,7 +26,7 @@ built-in OpenSSL support, configured under `network.http.tls`
 - **Native TLS, not a reverse proxy.** cpp-httplib's `SSLServer` gives both
   wire encryption and, with a client CA configured, client-certificate
   verification (mutual TLS). That is the part a proxy cannot demonstrate from
-  inside this binary, and it is the part worth showing: the server decides who
+  inside this binary. It is also the part worth showing: the server decides who
   may talk to it, not just that the talk is encrypted.
 - **Bad material is a fatal startup error, never a plaintext fallback.** The
   cert, key and client CA are loaded and verified by `HttpTlsMaterial` in the
@@ -46,20 +46,20 @@ built-in OpenSSL support, configured under `network.http.tls`
   files and does not link OpenSSL: it is compiled into every build, including
   ones without the HTTP backend.
 - **Explicit non-goal: TCP, MQTT and Modbus stay stunnel-documented.** They
-  are hand-rolled protocols over raw sockets with no TLS library boundary;
-  adding native TLS there is materially more work and a separate decision.
+  are hand-rolled protocols over raw sockets with no TLS library boundary.
+  Adding native TLS there is materially more work and a separate decision.
 
 ## Alternatives rejected
 - **stunnel / reverse proxy only.** Zero new dependency and the standard
-  production answer, but the binary can then never show mutual TLS, and the
-  demo needs an external process. Kept as the documented answer for the other
-  backends, not for HTTP.
+  production answer, but the binary can then never show mutual TLS. The
+  demo also needs an external process. Kept as the documented answer for
+  the other backends, not for HTTP.
 - **TLS on every backend now.** Out of scope: four more protocols, each with
   its own hand-rolled socket loop, for the same demonstrated capability.
   Tracked as follow-on work.
 - **Validate the certificate lazily, on the first request.** Simpler wiring,
   but a broken deployment would bind the port and answer with confusing
-  per-request 500s, and the operator would learn about it from a user rather
+  per-request 500s. The operator would learn about it from a user rather
   than from startup.
 - **Fall back to plaintext when the certificate cannot be loaded.** Rejected
   outright. Serving cleartext on a port the operator configured as HTTPS is
@@ -72,9 +72,9 @@ built-in OpenSSL support, configured under `network.http.tls`
 - `CPPHTTPLIB_OPENSSL_SUPPORT` is defined on the `cpp_httplib_headers`
   interface target rather than on `objectsHttp`. The macro changes the layout
   of `httplib::Server`, so every translation unit that includes the header
-  must agree on it; hanging it off the header target makes a mismatch
+  must agree on it. Hanging it off the header target makes a mismatch
   impossible to write by accident.
-- A second Windows-only link appears, and it is not Winsock: with OpenSSL
+- A second Windows-only link appears. It is not Winsock: with OpenSSL
   support on, cpp-httplib's client reads the Windows system certificate store,
   so `crypt32` joins the link line.
 - Self-signed test material is committed under `tests/fixtures/tls/` with the
@@ -82,5 +82,5 @@ built-in OpenSSL support, configured under `network.http.tls`
   generation step in CI.
 - Honesty rail: this is TLS termination for one read-only backend, with
   certificates an operator supplies. It is not a PKI, there is no certificate
-  rotation or revocation story (a restart picks up new material), and the
+  rotation or revocation story (a restart picks up new material). The
   other five backends are unchanged.

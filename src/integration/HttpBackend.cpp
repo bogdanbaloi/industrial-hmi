@@ -76,7 +76,7 @@ inline constexpr const char* kInternalErrorBody = R"({"error":"internal error"})
 
 // The TLS mode reported by metricsSummary() and the start() log line. Named
 // rather than inline literals because each one is emitted from more than one
-// place, and "off" vs "server" vs "mutual" is the operator's only evidence of
+// place. "off" vs "server" vs "mutual" is the operator's only evidence of
 // what the port actually speaks.
 namespace tls_mode {
 inline constexpr const char* kOff        = "off";
@@ -231,7 +231,7 @@ std::unique_ptr<httplib::Server> HttpBackend::makeServer() const {
 
     const HttpTlsOptions& options = tls_->options();
     // A null client-CA path is httplib's "do not ask the client for a
-    // certificate"; passing the CA turns on SSL_VERIFY_PEER |
+    // certificate". Passing the CA turns on SSL_VERIFY_PEER |
     // SSL_VERIFY_FAIL_IF_NO_PEER_CERT, i.e. mutual TLS.
     const char* clientCa =
         tls_->verifiesPeer() ? options.clientCaPath.c_str() : nullptr;
@@ -241,7 +241,7 @@ std::unique_ptr<httplib::Server> HttpBackend::makeServer() const {
 
     // The material was already proven in the constructor, so this is the
     // residual case where OpenSSL itself refused to build a context. Still
-    // fatal -- never fall through to a plaintext server.
+    // fatal. Never fall through to a plaintext server.
     if (!server->is_valid()) {
         throw core::TlsMaterialError(std::format(
             "HttpBackend: OpenSSL refused the TLS context built from {} / {}",

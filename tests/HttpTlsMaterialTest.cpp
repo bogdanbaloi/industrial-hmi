@@ -1,7 +1,7 @@
 // [utest->req~integration-010~1]
 // Covers REQ-INTEGRATION-010 (TLS for the HTTP/REST backend) at the loader:
 // the cert / key / client-CA material is proven usable BEFORE a socket
-// exists, and every way it can be unusable is a structured, fatal
+// exists. Every way it can be unusable is a structured, fatal
 // TlsMaterialError naming the config key and the path (ADR-0030).
 //
 // Hermetic: file I/O plus an OpenSSL parse against the committed fixtures in
@@ -42,7 +42,7 @@ HttpTlsOptions validServerOptions() {
 
 /// Build the material and return the message of the TlsMaterialError it
 /// must throw. Fails the test if it throws nothing, or throws something
-/// else -- a plain std::runtime_error would not reach the startup dialog's
+/// else. A plain std::runtime_error would not reach the startup dialog's
 /// TLS branch.
 std::string rejectionMessage(const HttpTlsOptions& options) {
     try {
@@ -105,7 +105,7 @@ TEST(HttpTlsMaterialTest, RejectsMissingKeyFile) {
 
 TEST(HttpTlsMaterialTest, RejectsMalformedCert) {
     // Garbage where a PEM object should be. OpenSSL's error paths are a
-    // classic crash surface; this must come back as a message, not a signal.
+    // classic crash surface. This must come back as a message, not a signal.
     HttpTlsOptions options = validServerOptions();
     options.certPath       = fixture("malformed.pem");
 
@@ -123,7 +123,7 @@ TEST(HttpTlsMaterialTest, RejectsMalformedKey) {
 }
 
 TEST(HttpTlsMaterialTest, RejectsMismatchedKeyForCert) {
-    // client.key is a perfectly valid key -- it just belongs to a different
+    // client.key is a perfectly valid key. It just belongs to a different
     // certificate. Every handshake would fail at run time, so it is caught
     // here, before any socket is opened.
     HttpTlsOptions options = validServerOptions();

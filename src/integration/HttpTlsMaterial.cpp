@@ -20,7 +20,7 @@ namespace app::integration {
 namespace {
 
 // OpenSSL writes its human-readable diagnostic into a caller-supplied
-// buffer; 256 bytes is the size its own documentation uses for
+// buffer. 256 bytes is the size its own documentation uses for
 // ERR_error_string_n.
 inline constexpr std::size_t kOpenSslErrorTextSize = 256;
 
@@ -58,7 +58,7 @@ using CertificatePtr = std::unique_ptr<X509, X509Deleter>;
 using PrivateKeyPtr  = std::unique_ptr<EVP_PKEY, PrivateKeyDeleter>;
 
 /// Abort the load with a message naming the config key, the path and the
-/// reason. Never returns -- a TLS deployment that cannot have TLS is fatal
+/// reason. Never returns. A TLS deployment that cannot have TLS is fatal
 /// (ADR-0030), so there is no degraded path to fall back to.
 [[noreturn]] void refuse(const char* configKey,
                          const std::string& path,
@@ -149,7 +149,7 @@ HttpTlsMaterial::HttpTlsMaterial(HttpTlsOptions options)
         refuse(material::kClientCa, options_.clientCaPath,
                "is required when network.http.tls.verify_peer is true");
     }
-    // Parsed purely to prove it is a readable PEM CA; the server opens the
+    // Parsed purely to prove it is a readable PEM CA. The server opens the
     // file itself by path, so the parsed object is dropped right here.
     readCertificate(material::kClientCa, options_.clientCaPath);
 }

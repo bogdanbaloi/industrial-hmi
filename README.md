@@ -921,7 +921,7 @@ mosquitto_pub -t industrial-hmi-sensors/equipment/0/state -m off
 | MQTT 3.1.1 only           | Full 5.0 properties + shared subscriptions out of scope |
 | Single full-duplex client | One socket, two roles -- matches paho / AsyncMQTT5; SoC kept at the bridge layer (publish bridge + subscribe bridge are separate classes) |
 | QoS 0                     | Industrial telemetry is transient; QoS 1/2 would need state machines for marginal benefit |
-| Plain TCP, no TLS (MQTT)  | MQTT only: production deployments tunnel it through stunnel, wire format unchanged. Not a repo-wide caveat -- the HTTP/REST backend terminates TLS itself, mutual TLS included (`src/integration/README.md`, ADR-0030) |
+| Plain TCP, no TLS (MQTT)  | MQTT only: production deployments tunnel it through stunnel, wire format unchanged. Not a repo-wide caveat. The HTTP/REST backend terminates TLS itself, mutual TLS included (`src/integration/README.md`, ADR-0030) |
 
 Coverage: `MqttPacketTest` (48 cases) verifies byte-exact wire format
 for CONNECT / CONNACK / PUBLISH / SUBSCRIBE / SUBACK / UNSUBSCRIBE /

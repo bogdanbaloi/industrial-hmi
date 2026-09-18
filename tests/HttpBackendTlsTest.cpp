@@ -2,7 +2,7 @@
 // Covers REQ-INTEGRATION-010 (TLS for the HTTP/REST backend) end to end:
 // the backend really terminates TLS on its own socket, really refuses a
 // plaintext client, really enforces a client certificate when verify_peer is
-// set, and really refuses to start on bad material instead of falling back to
+// set. It really refuses to start on bad material instead of falling back to
 // plaintext (ADR-0030).
 //
 // Boots on an OS-assigned port (port=0) and drives it with cpp-httplib's
@@ -81,7 +81,7 @@ HttpTlsOptions mutualTls() {
 
 /// RAII fixture: starts a TLS backend on a random port. The routes are the
 /// same ones HttpBackendTest covers, so these tests only ever ask for
-/// /health -- what is under test is the transport, not the payload.
+/// /health. What is under test is the transport, not the payload.
 class TlsFixture {
 public:
     explicit TlsFixture(HttpTlsOptions options)
@@ -184,7 +184,7 @@ TEST(HttpBackendTlsTest, ConstructorThrowsOnBadCertRatherThanFallingBackToPlaint
     HttpTlsOptions broken = serverOnlyTls();
     broken.certPath       = fixture("no-such-server.crt");
 
-    // Constructing is what fails -- so no object exists to have bound a
+    // Constructing is what fails, so no object exists to have bound a
     // port, which is the point: the failure happens before any listener.
     EXPECT_THROW(
         {

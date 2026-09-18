@@ -1292,12 +1292,12 @@ mode, configured under `network.http.tls` (`enabled`, `cert_path`,
 `key_path`, `verify_peer`, `client_ca_path`), using cpp-httplib's built-in
 OpenSSL support (`httplib::SSLServer`). When `network.http.tls.enabled` is
 true, the certificate and private key **shall** be loaded and validated at
-startup; a missing or malformed cert/key pair **shall** produce a
+startup. A missing or malformed cert/key pair **shall** produce a
 structured, fatal startup error (`TlsMaterialError`) rather than starting
 the backend in plaintext. When `network.http.tls.verify_peer` is true, the
 backend **shall** require and verify a client certificate against the
 configured `client_ca_path` (mutual TLS). TLS support in this version
-covers the HTTP backend only; TCP, MQTT and Modbus remain
+covers the HTTP backend only. TCP, MQTT and Modbus remain
 stunnel-documented, unchanged by this requirement.
 
 Verified by: HttpTlsMaterialTest, HttpBackendTlsTest, ConfigValidatorTest,
