@@ -1,0 +1,57 @@
+name: CI docs-only guard
+
+# The main pipeline (ci.yml) path-ignores doc-only changes to skip the heavy
+# C++ build. But branch protection still requires those checks, so a pure-doc
+# PR would sit forever on "Expected -- waiting for status". This companion
+# workflow runs on exactly those ignored paths and reports the SAME check
+# names as an immediate success, satisfying branch protection without a build.
+#
+# When a change also touches code, ci.yml runs (its paths-ignore only skips
+# when every changed file is a doc file), so the real checks report there.
+#
+# Keep the `paths` list below in sync with ci.yml's `paths-ignore`, and the
+# job `name:` values in sync with ci.yml's required jobs.
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - 'docs/adr/**'
+      - 'docs/Doxyfile'
+      - 'docs/uml/**'
+      - '.github/workflows/docs.yml'
+
+jobs:
+  build-ubuntu:
+    name: Build (Ubuntu 24.04)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only change: the full build is not required."
+  build-windows:
+    name: Build (Windows MSYS2)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only change: the full build is not required."
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only change: code quality unchanged."
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only change."
+  sanitizers:
+    name: Sanitizers (ASan + UBSan)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only change: no code to sanitize."
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only change: coverage unchanged."
