@@ -122,4 +122,30 @@ TEST(SerialFrameParserTest, RunawayPartialIsDroppedThenRecovers) {
     EXPECT_EQ(readings[0].value, "23");
 }
 
+// Contract pin (ADR-0029): the reference device reports `temp` in degrees
+// Celsius, so a sub-zero reading carries a leading minus. The parser keeps a
+// value as opaque text and never parses a number, which is exactly why this
+// works -- this case exists so a future "validate the value" change cannot
+// silently break the real device.
+TEST(SerialFrameParserTest, NegativeTemperatureValueParses) {
+    SerialFrameParser parser;
+    const auto readings = parser.consume("temp,-3.5\n");
+    ASSERT_EQ(readings.size(), 1U);
+    EXPECT_EQ(readings[0].sensorId, "temp");
+    EXPECT_EQ(readings[0].value, "-3.5");
+}
+
+// Contract pin (ADR-0029): the device drops the `temp` frame entirely when it
+// has no valid reading, so one button press can arrive as a single frame. The
+// parser is line-based and holds no cross-frame state, so nothing pairs the
+// two -- this case exists so a future "expect both frames" assumption cannot
+// creep in unnoticed.
+TEST(SerialFrameParserTest, PressWithoutTemperatureYieldsOnlyTheStateFrame) {
+    SerialFrameParser parser;
+    const auto readings = parser.consume("equipment/3/state,on\n");
+    ASSERT_EQ(readings.size(), 1U);
+    EXPECT_EQ(readings[0].sensorId, "equipment/3/state");
+    EXPECT_EQ(readings[0].value, "on");
+}
+
 }  // namespace
