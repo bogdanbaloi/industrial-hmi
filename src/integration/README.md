@@ -385,3 +385,11 @@ ctest -R '(Backend|Mqtt|Modbus|Integration|OpcUa|Telemetry|Ingest|Csv|Json)' --o
   protocol is operator-debuggable and Good Enough for the demo
   surface. A binary framing layer would be a new backend, not a
   modification.
+
+## Serial backend reference device
+
+The serial backend (REQ-INTEGRATION-009, ADR-0029) is fed by a companion
+firmware, [`hmi-edge-node`](https://github.com/bogdanbaloi/hmi-edge-node): a
+bare-metal STM32 Nucleo that sends `equipment/<n>/state,on|off` and `temp,<raw>`
+frames over serial. The two projects are independent and interoperate only
+through the line protocol, so any device that speaks it can drive the backend.
