@@ -65,6 +65,11 @@ Add a sixth backend, `SerialIngestBackend`, opt-in behind
 The companion firmware
 [`hmi-edge-node`](https://github.com/bogdanbaloi/hmi-edge-node) is the reference
 device that emits these frames: a bare-metal STM32 Nucleo-L476RG that sends
-`equipment/<n>/state,on|off` and `temp,<raw>` over USART2 on a button press. The
-two projects are independent and interoperate only through this serial protocol,
-so any device that speaks it can feed the backend.
+`equipment/<n>/state,on|off` and `temp,<celsius>` over USART2 on a button press.
+The temperature is degrees Celsius with one decimal and may be negative, and the
+`temp` frame is omitted entirely when the device has no valid reading, so one
+press can carry only the state frame. Neither shape is special-cased here: the
+parser treats a frame's value as opaque text and emits whole lines as they
+arrive, so a negative reading and a missing frame both fall out of the existing
+behaviour. The two projects are independent and interoperate only through this
+serial protocol, so any device that speaks it can feed the backend.
