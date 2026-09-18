@@ -59,3 +59,12 @@ Add a sixth backend, `SerialIngestBackend`, opt-in behind
   device over the air. It demonstrates the host side of a device/host link. The
   microcontroller firmware and any real over-the-air transport are separate
   pieces, not claimed by this backend.
+
+## Reference device
+
+The companion firmware
+[`hmi-edge-node`](https://github.com/bogdanbaloi/hmi-edge-node) is the reference
+device that emits these frames: a bare-metal STM32 Nucleo-L476RG that sends
+`equipment/<n>/state,on|off` and `temp,<raw>` over USART2 on a button press. The
+two projects are independent and interoperate only through this serial protocol,
+so any device that speaks it can feed the backend.
