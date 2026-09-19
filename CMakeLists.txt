@@ -405,6 +405,22 @@ if(BUILD_OPCUA_BACKEND)
     set(UA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(UA_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
     set(UA_NAMESPACE_ZERO REDUCED CACHE STRING "" FORCE)
+
+    # Sign&Encrypt for the OPC-UA endpoints (ADR-0031, REQ-INTEGRATION-011).
+    # UA_ENABLE_ENCRYPTION is an open62541 BUILD OPTION, not a new third-party
+    # dependency: it compiles open62541's own PKI + SecurityPolicy plugins on
+    # top of the OpenSSL that ADR-0030 already brought in for the HTTP
+    # backend. Set before FetchContent_MakeAvailable because open62541 reads
+    # it during its own configure step.
+    #
+    # find_package(OpenSSL) is repeated here on purpose. It is idempotent, and
+    # the earlier call sits inside the `BUILD_HTTP_BACKEND OR BUILD_TESTS`
+    # block: a build with the OPC-UA backend ON and the HTTP backend OFF would
+    # otherwise reach open62541's encryption path with no OpenSSL targets
+    # defined.
+    find_package(OpenSSL REQUIRED)
+    set(UA_ENABLE_ENCRYPTION OPENSSL CACHE STRING "" FORCE)
+
     set(BUILD_SHARED_LIBS_save ${BUILD_SHARED_LIBS})
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
@@ -435,6 +451,25 @@ if(BUILD_OPCUA_BACKEND)
                 -Wno-error=pedantic)
         endif()
     endforeach()
+
+    # Serve open62541's headers to CONSUMERS as -isystem, the same posture
+    # cpp_httplib_headers takes for its own vendored header. Targets created
+    # by add_subdirectory export plain -I, which puts third-party headers
+    # inside our static-analysis surface: clang-tidy runs with
+    # -header-filter='src/.*' and WarningsAsErrors='*', and open62541's
+    # generated types_generated.h includes back into the types.h that
+    # included it, which misc-header-include-cycle reports as an error we
+    # cannot fix in upstream code.
+    #
+    # Only relevant since REQ-INTEGRATION-011 put a `#include
+    # <open62541/types.h>` in one of OUR headers (Open62541SecurityMaterial.h
+    # cannot hide UA_ByteString, see ADR-0031). Before that every open62541
+    # include sat in a .cpp.
+    if(TARGET open62541)
+        set_target_properties(open62541 PROPERTIES
+            INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                "$<TARGET_PROPERTY:open62541,INTERFACE_INCLUDE_DIRECTORIES>")
+    endif()
 endif()
 
 # Object Libraries (Modular Build Pattern)
@@ -862,6 +897,7 @@ if(BUILD_OPCUA_BACKEND)
     target_sources(objectsOpcUa
         PRIVATE
             src/integration/opcua/Open62541Server.cpp
+            src/integration/opcua/Open62541SecurityMaterial.cpp
             src/integration/opcua/FactoryNodeMap.cpp
             src/integration/opcua/OpcUaBackend.cpp
             src/integration/opcua/Open62541Client.cpp
@@ -871,6 +907,9 @@ if(BUILD_OPCUA_BACKEND)
             FILE_SET HEADERS
             FILES
                 src/integration/opcua/OpcUaConfig.h
+                src/integration/opcua/OpcUaSecurityOptions.h
+                src/integration/opcua/OpcUaSecurityReport.h
+                src/integration/opcua/Open62541SecurityMaterial.h
                 src/integration/opcua/OpcUaServer.h
                 src/integration/opcua/OpcUaCommandSink.h
                 src/integration/opcua/OpcUaNodeMap.h

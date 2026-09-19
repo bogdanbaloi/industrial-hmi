@@ -2,6 +2,7 @@
 
 #include "src/core/LoggerBase.h"
 #include "src/integration/opcua/OpcUaNodeMap.h"
+#include "src/integration/opcua/OpcUaSecurityReport.h"
 #include "src/integration/opcua/OpcUaServer.h"
 
 #include <cassert>
@@ -72,9 +73,25 @@ std::string OpcUaBackend::name() const {
 
 std::string OpcUaBackend::metricsSummary() const {
     if (!server_->isRunning()) return {};
-    return std::format("port {} | {} sessions",
+
+    // Security is an OPTIONAL capability of a server, probed rather than
+    // demanded: `OpcUaServer`'s own contract reserves itself for what a node
+    // map and a command sink need and sends extension surfaces such as
+    // encryption to their own interface. A server that does not implement
+    // `OpcUaSecurityReport` simply has no security field in its summary,
+    // which is why `MockOpcUaServer` needed no change for
+    // REQ-INTEGRATION-011.
+    const auto* security =
+        dynamic_cast<const OpcUaSecurityReport*>(server_.get());
+    if (security == nullptr) {
+        return std::format("port {} | {} sessions",
+                           server_->boundPort(),
+                           server_->connectedSessions());
+    }
+    return std::format("port {} | {} sessions | security {}",
                        server_->boundPort(),
-                       server_->connectedSessions());
+                       server_->connectedSessions(),
+                       security->securityModeName());
 }
 
 BackendState OpcUaBackend::connectionState() const noexcept {

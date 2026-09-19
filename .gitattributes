@@ -13,6 +13,11 @@ tests/scenarios/*.expected text eol=lf
 # be a needless source of platform-only test failures.
 tests/fixtures/tls/*       text eol=lf
 
+# OPC-UA security fixtures are DER, which is binary. Declared rather than
+# left to content sniffing: a certificate mangled by EOL conversion does not
+# fail at checkout, it fails at handshake time with an obscure error.
+tests/fixtures/opcua-security/** binary
+
 # gettext translation catalogs are canonical LF.
 *.po                       text eol=lf
 *.pot                      text eol=lf

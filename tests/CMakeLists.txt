@@ -680,6 +680,56 @@ if(BUILD_OPCUA_BACKEND)
     add_test(NAME Open62541ClientIntegrationTest
              COMMAND test_open62541_client_integration)
 
+    # OPC-UA Sign&Encrypt loader (REQ-INTEGRATION-011, ADR-0031).
+    # Pure file I/O against the committed DER fixtures plus a scratch
+    # directory for the states git cannot hold (an empty directory, a
+    # trust-list path that is a file). No sockets, no server. The one source
+    # is compiled directly, but it still needs open62541's headers and
+    # allocator for UA_ByteString, so it links objectsOpcUa rather than
+    # standing alone the way test_http_tls_material does.
+    add_executable(test_open62541_security_material
+        Open62541SecurityMaterialTest.cpp)
+    target_compile_definitions(test_open62541_security_material PRIVATE
+        INDUSTRIAL_HMI_OPCUA_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/opcua-security")
+    target_link_libraries(test_open62541_security_material PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        objectsOpcUa
+        objectsCore
+    )
+    if(WIN32)
+        # objectsOpcUa -> objectsCore -> Bootstrap.cpp pulls Boost.Asio in
+        # transitively, which references WSAStartup / WSACleanup. Same line
+        # every other Asio-touching target on Windows carries; the OpenSSL
+        # that open62541's encryption plugin needs arrives through
+        # open62541::open62541 and needs no line of its own.
+        target_link_libraries(test_open62541_security_material
+                              PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME Open62541SecurityMaterialTest
+             COMMAND test_open62541_security_material)
+
+    # OPC-UA Sign&Encrypt at the endpoint (REQ-INTEGRATION-011, ADR-0031).
+    # Binds a real loopback socket with a secured config and proves a
+    # plaintext open62541 client is refused. Same link shape as the sibling
+    # Open62541 integration tests.
+    add_executable(test_open62541_server_security
+        Open62541ServerSecurityTest.cpp)
+    target_compile_definitions(test_open62541_server_security PRIVATE
+        INDUSTRIAL_HMI_OPCUA_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/opcua-security")
+    target_link_libraries(test_open62541_server_security PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        objectsOpcUa
+        objectsCore
+    )
+    if(WIN32)
+        target_link_libraries(test_open62541_server_security
+                              PRIVATE ws2_32 mswsock)
+    endif()
+    add_test(NAME Open62541ServerSecurityTest
+             COMMAND test_open62541_server_security)
+
     # OpcUaIngestBridge -- inbound mapping from OpcUaClient
     # notifications into ProductionModel mutations. Uses a fake
     # OpcUaClient (captures topic -> callback) + MockProductionModel,
@@ -1516,6 +1566,17 @@ target_link_libraries(test_integration_bootstrap PRIVATE
 )
 if(WIN32)
     target_link_libraries(test_integration_bootstrap PRIVATE ws2_32 mswsock)
+endif()
+if(BUILD_OPCUA_BACKEND)
+    # With the OPC-UA backend in the build, light up its branch too so the
+    # bad-certificate case can prove that buildIntegrationServices lets a
+    # TlsMaterialError out (REQ-INTEGRATION-011). Conditional because this is
+    # the edge that drags open62541 into the link, and the HTTP-only shape
+    # above has to keep working on a build without it.
+    target_compile_definitions(test_integration_bootstrap PRIVATE
+        INDUSTRIAL_HMI_HAS_OPCUA_BACKEND=1
+        INDUSTRIAL_HMI_OPCUA_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/opcua-security")
+    target_link_libraries(test_integration_bootstrap PRIVATE objectsOpcUa)
 endif()
 add_test(NAME IntegrationBootstrapTest COMMAND test_integration_bootstrap)
 

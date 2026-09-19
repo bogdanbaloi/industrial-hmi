@@ -15,6 +15,7 @@
 
 #include "src/config/ConfigManager.h"
 #include "src/core/LoggerImpl.h"
+#include "src/core/StartupErrors.h"
 #include "src/integration/HttpBackend.h"
 #include "src/integration/IntegrationManager.h"
 #include "src/presenter/AlertCenter.h"
@@ -61,6 +62,17 @@ constexpr std::string_view kTlsFixtureDir = INDUSTRIAL_HMI_TLS_FIXTURE_DIR;
 std::string fixture(std::string_view name) {
     return std::string(kTlsFixtureDir) + "/" + std::string(name);
 }
+
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+// Committed OPC-UA DER material (tests/fixtures/opcua-security), located the
+// same way. Present only when the OPC-UA branch of the bootstrap is compiled
+// in, because that is the only build that links open62541.
+constexpr std::string_view kOpcUaFixtureDir = INDUSTRIAL_HMI_OPCUA_FIXTURE_DIR;
+
+std::string opcUaFixture(std::string_view name) {
+    return std::string(kOpcUaFixtureDir) + "/" + std::string(name);
+}
+#endif  // INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
 
 // Find the running HTTP backend among the manager's registered backends and
 // report the port it bound. Returns 0 when the HTTP backend was not
@@ -206,5 +218,51 @@ TEST_F(IntegrationBootstrapTest, RegisterHttpBackendWiresTlsOptionsFromConfig) {
     EXPECT_TRUE(http->tlsEnabled())
         << "network.http.tls.enabled did not reach the backend";
 }
+
+#ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+// [utest->req~integration-011~1]
+// The composition seam for OPC-UA Sign&Encrypt, asserted through its FAILURE
+// mode because that is the one that matters. buildIntegrationServices builds
+// the server, and building the server is what proves the certificate. If that
+// throw were swallowed here the way IntegrationManager::startAll() swallows a
+// per-backend failure, a deployment with an unreadable certificate would come
+// up listening in plaintext on the port the operator configured as encrypted
+// (ADR-0031).
+TEST_F(IntegrationBootstrapTest, BadOpcUaCertificateEscapesBuildIntegrationServices) {
+    {
+        std::ofstream out(configPath_, std::ios::trunc);
+        out << R"({
+  "application": { "name": "Industrial HMI" },
+  "network": {
+    "opcua": {
+      "enabled": true, "port": 0,
+      "server": {
+        "security": {
+          "enabled": true,
+          "cert_path": ")" << opcUaFixture("no-such-certificate.der") << R"(",
+          "private_key_path": ")" << opcUaFixture("server-key.der") << R"(",
+          "trust_list_dir": ")" << opcUaFixture("trustlist") << R"("
+        }
+      }
+    }
+  }
+})";
+    }
+
+    auto& config = ConfigManager::instance();
+    ASSERT_TRUE(config.initialize(configPath_.string()));
+    ASSERT_TRUE(config.isOpcUaServerSecurityEnabled());
+
+    app::core::Logger logger{std::make_unique<app::core::ConsoleLogger>()};
+    app::presenter::AlertCenter alerts;
+
+    EXPECT_THROW(
+        {
+            auto services = app::integration::buildIntegrationServices(
+                config, logger, &alerts);
+        },
+        app::core::TlsMaterialError);
+}
+#endif  // INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
 
 }  // namespace

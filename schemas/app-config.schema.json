@@ -156,7 +156,16 @@
             "server": {
               "type": "object",
               "properties": {
-                "commands_enabled": { "type": "boolean" }
+                "commands_enabled": { "type": "boolean" },
+                "security": {
+                  "type": "object",
+                  "properties": {
+                    "enabled":          { "type": "boolean" },
+                    "cert_path":        { "type": "string" },
+                    "private_key_path": { "type": "string" },
+                    "trust_list_dir":   { "type": "string" }
+                  }
+                }
               }
             },
             "client": {
@@ -166,6 +175,15 @@
                 "endpoint":         { "type": "string" },
                 "application_uri":  { "type": "string" },
                 "application_name": { "type": "string" },
+                "security": {
+                  "type": "object",
+                  "properties": {
+                    "enabled":          { "type": "boolean" },
+                    "cert_path":        { "type": "string" },
+                    "private_key_path": { "type": "string" },
+                    "trust_list_dir":   { "type": "string" }
+                  }
+                },
                 "ingest_bridge": {
                   "type": "object",
                   "properties": {
