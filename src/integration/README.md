@@ -227,6 +227,67 @@ raw sockets with no TLS library boundary. The documented answer for them
 remains an external tunnel (stunnel). Nothing here is a PKI either. There is no
 rotation or revocation story, a restart picks up new material.
 
+#### OPC-UA Sign&Encrypt (REQ-INTEGRATION-011, ADR-0031)
+
+OPC-UA does not borrow TLS. It defines its own SecureChannel layer with
+three message security modes and a set of named policies, so the OPC-UA
+endpoints get their own opt-in security block rather than reusing
+`network.http.tls`:
+
+```jsonc
+"network": {
+  "opcua": {
+    "enabled": true,
+    "port": 4840,
+    "server": {
+      "security": {
+        "enabled": true,
+        // DER, not PEM: open62541 hands its PKI plugin raw bytes.
+        "cert_path": "/etc/industrial-hmi/opcua/server.der",
+        "private_key_path": "/etc/industrial-hmi/opcua/server-key.der",
+        // One trusted peer certificate per file in this directory.
+        "trust_list_dir": "/etc/industrial-hmi/opcua/trusted"
+      }
+    },
+    "client": {
+      "enabled": true,
+      "endpoint": "opc.tcp://plc-01:4840",
+      "security": {
+        "enabled": true,
+        "cert_path": "/etc/industrial-hmi/opcua/client.der",
+        "private_key_path": "/etc/industrial-hmi/opcua/client-key.der",
+        "trust_list_dir": "/etc/industrial-hmi/opcua/trusted"
+      }
+    }
+  }
+}
+```
+
+With security on, the server offers **exactly one** endpoint,
+`Basic256Sha256` with `UA_MessageSecurityMode_SignAndEncrypt`, and no
+`SecurityPolicy#None`. A plaintext client is refused with
+`BadSecurityPolicyRejected` rather than quietly served. The client pins the
+same policy and mode instead of taking whatever the peer offers first, so a
+server that lost its security cannot silently downgrade the link.
+
+The two endpoints read separate subtrees because OPC-UA ties a certificate
+to the `applicationUri` of the application presenting it, and the server and
+the client advertise different URIs. The `URI:` entry in the certificate's
+subject alternative name has to match, or open62541 refuses the connect with
+`BadCertificateUriInvalid`.
+
+The DER certificate, key and trust list are loaded in the server and client
+**constructors**, before any `UA_Server` or `UA_Client` exists. A failure
+throws the same `core::TlsMaterialError` a bad HTTP certificate throws, and
+for the same reason: there is no plaintext fallback. An existing but empty
+trust-list directory is accepted, because "trusts nobody yet" is a state an
+operator moves through while exchanging certificates.
+
+**Not covered by this:** one policy, one mode, no issuer list, no revocation
+list, no rotation, and no user-identity token beyond the application
+certificate. Turning it on requires `BUILD_OPCUA_BACKEND=ON`, which compiles
+open62541 with `UA_ENABLE_ENCRYPTION=OPENSSL`.
+
 ---
 
 ## Bridges -- where wire meets model

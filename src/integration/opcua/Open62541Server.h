@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/integration/opcua/OpcUaConfig.h"
+#include "src/integration/opcua/OpcUaSecurityReport.h"
 #include "src/integration/opcua/OpcUaServer.h"
 
 #include <atomic>
@@ -48,11 +49,19 @@ namespace app::integration::opcua {
 /// Rule of 5: copy / move deleted (owns a non-copyable `UA_Server*` +
 /// thread). Destructor does best-effort `stop()` so RAII teardown
 /// works even when callers forget.
-class Open62541Server final : public OpcUaServer {
+class Open62541Server final : public OpcUaServer,
+                              public OpcUaSecurityReport {
 public:
-    /// @param config Listen port, application URI, etc.
+    /// @param config Listen port, application URI, and the opt-in
+    ///               `SignAndEncrypt` material.
     /// @param logger Used for "started on port N", connection counts,
     ///               run-loop errors. Must outlive this server.
+    /// @throws core::TlsMaterialError when `config.security.enabled` is true
+    ///         and the configured certificate, key or trust list cannot be
+    ///         loaded. The material is proven HERE, before any `UA_Server`
+    ///         exists, so a deployment that asked for security and cannot
+    ///         have it never reaches the point of binding a port
+    ///         (REQ-INTEGRATION-011, ADR-0031).
     Open62541Server(OpcUaConfig config, core::Logger& logger);
 
     ~Open62541Server() override;
@@ -68,6 +77,9 @@ public:
     [[nodiscard]] bool isRunning() const noexcept override;
     [[nodiscard]] std::size_t connectedSessions() const noexcept override;
     [[nodiscard]] std::uint16_t boundPort() const noexcept override;
+
+    // OpcUaSecurityReport
+    [[nodiscard]] std::string_view securityModeName() const noexcept override;
 
     [[nodiscard]] bool
         writeFloat(std::string_view nodeBrowsePath,

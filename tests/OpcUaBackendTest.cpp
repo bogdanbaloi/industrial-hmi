@@ -23,13 +23,17 @@
 
 #include "src/core/LoggerImpl.h"
 #include "src/integration/opcua/OpcUaNodeMap.h"
+#include "src/integration/opcua/OpcUaSecurityReport.h"
 #include "src/integration/opcua/OpcUaServer.h"
 #include "tests/MockOpcUaServer.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <utility>
 
 using app::integration::opcua::OpcUaBackend;
@@ -56,6 +60,26 @@ public:
     MOCK_METHOD(void, registerNodes, (OpcUaServer&), (override));
     MOCK_METHOD(void, wire, (OpcUaServer&), (override));
     MOCK_METHOD(void, unwire, (), (noexcept, override));
+};
+
+/// The port the metrics-summary tests report. Named so the expectation and
+/// the assertion cannot drift apart, and because 4840 is the IANA assignment
+/// rather than an arbitrary number.
+constexpr std::uint16_t kTestPort = 4840;
+
+/// A mock server that ALSO implements the optional `OpcUaSecurityReport`
+/// capability (REQ-INTEGRATION-011, ADR-0031). Deliberately kept out of
+/// MockOpcUaServer: the plain mock standing for a server with no security
+/// story is what proves the backend probes rather than demands.
+class SecurityAwareMockOpcUaServer final
+    : public MockOpcUaServer,
+      public app::integration::opcua::OpcUaSecurityReport {
+public:
+    [[nodiscard]] std::string_view securityModeName() const noexcept override {
+        return securityMode;
+    }
+
+    std::string securityMode{"none"};
 };
 
 /// Build a backend with mock collaborators. The mocks are constructed
@@ -191,6 +215,52 @@ TEST(OpcUaBackendTest, StartIsIdempotent) {
 
     f.backend->start();
     f.backend->start();
+}
+
+// [utest->req~integration-011~1]
+// REQ-INTEGRATION-011 at the operator-facing summary. Security is an OPTIONAL
+// capability of a server (ADR-0031): the backend probes for
+// OpcUaSecurityReport and folds the answer in when it is there. Both
+// directions are asserted, because the interesting regression is a backend
+// that reports a mode it did not actually ask the server for.
+TEST(OpcUaBackendTest, MetricsSummaryReportsTheSecurityModeWhenTheServerHasOne) {
+    auto server     = std::make_unique<SecurityAwareMockOpcUaServer>();
+    auto nodeMap    = std::make_unique<MockOpcUaNodeMap>();
+    auto* serverRaw = server.get();
+    serverRaw->securityMode = "sign+encrypt";
+
+    app::core::Logger logger{std::make_unique<app::core::ConsoleLogger>()};
+    const OpcUaBackend backend{std::move(server), std::move(nodeMap), logger};
+
+    // One true for metricsSummary's own guard, then false so the
+    // destructor's stop() short-circuits. Same shape the lifecycle tests use.
+    EXPECT_CALL(*serverRaw, isRunning())
+        .WillOnce(Return(true))
+        .WillRepeatedly(Return(false));
+    EXPECT_CALL(*serverRaw, boundPort()).WillRepeatedly(Return(kTestPort));
+    EXPECT_CALL(*serverRaw, connectedSessions()).WillRepeatedly(Return(2));
+
+    const std::string summary = backend.metricsSummary();
+    EXPECT_NE(summary.find("security sign+encrypt"), std::string::npos)
+        << summary;
+}
+
+// [utest->req~integration-011~1]
+TEST(OpcUaBackendTest, MetricsSummaryOmitsSecurityWhenTheServerHasNone) {
+    // MockOpcUaServer does NOT implement OpcUaSecurityReport, and that is the
+    // point: a server with no security story is not forced to answer a
+    // question about one, and its summary simply has no security field.
+    Fixture f = makeFixture();
+
+    EXPECT_CALL(*f.server, isRunning())
+        .WillOnce(Return(true))
+        .WillRepeatedly(Return(false));
+    EXPECT_CALL(*f.server, boundPort()).WillRepeatedly(Return(kTestPort));
+    EXPECT_CALL(*f.server, connectedSessions()).WillRepeatedly(Return(1));
+
+    const std::string summary = f.backend->metricsSummary();
+    EXPECT_EQ(summary.find("security"), std::string::npos) << summary;
+    EXPECT_NE(summary.find("port 4840"), std::string::npos) << summary;
 }
 
 TEST(OpcUaBackendTest, StopWithoutStartIsNoOp) {

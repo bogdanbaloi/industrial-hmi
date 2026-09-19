@@ -1,5 +1,7 @@
 #pragma once
 
+#include "src/integration/opcua/OpcUaSecurityOptions.h"
+
 #include <cstdint>
 #include <string>
 
@@ -38,6 +40,12 @@ struct OpcUaConfig {
     /// "/ProductionLine" if the deployment routes multiple servers
     /// behind one host.
     std::string endpointPath;
+
+    /// Certificate material for the opt-in `SignAndEncrypt` mode
+    /// (REQ-INTEGRATION-011, ADR-0031). Disabled by default, which leaves the
+    /// endpoint on `SecurityPolicy#None` exactly as before: nothing changes
+    /// for a deployment that does not ask for security.
+    OpcUaSecurityOptions security;
 };
 
 }  // namespace app::integration::opcua

@@ -110,6 +110,19 @@ constexpr const char* kHttpTlsCertPath     = "";
 constexpr const char* kHttpTlsKeyPath      = "";
 constexpr const char* kHttpTlsClientCaPath = "";
 
+// Sign&Encrypt for the OPC-UA endpoints (REQ-INTEGRATION-011, ADR-0031).
+// Empty for the same reason the TLS paths above are empty: there is no
+// sensible default application certificate, and a bundled one would look like
+// working encryption while every deployment shared one private key. The
+// server and the client get separate keys because OPC-UA ties a certificate
+// to the applicationUri that presents it, and those two differ.
+constexpr const char* kOpcUaServerSecurityCertPath       = "";
+constexpr const char* kOpcUaServerSecurityPrivateKeyPath = "";
+constexpr const char* kOpcUaServerSecurityTrustListDir   = "";
+constexpr const char* kOpcUaClientSecurityCertPath       = "";
+constexpr const char* kOpcUaClientSecurityPrivateKeyPath = "";
+constexpr const char* kOpcUaClientSecurityTrustListDir   = "";
+
 // Serial telemetry ingest backend (REQ-INTEGRATION-009). 115200 is the
 // common bench-microcontroller baud; the device name is host-specific and
 // set in config (a Linux /dev/ttyACM* or a Windows COMx). See ADR-0029.

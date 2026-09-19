@@ -147,6 +147,64 @@ void checkHttpTls(const ConfigManager& cfg,
     }
 }
 
+// Sign&Encrypt for the OPC-UA endpoints (REQ-INTEGRATION-011, ADR-0031).
+//
+// SHAPE ONLY, for the same reason checkHttpTls is shape only: this validator
+// is compiled into EVERY build, including ones without the OPC-UA backend and
+// without open62541. It asks whether the operator supplied the paths their own
+// settings require. Whether those paths hold readable DER is
+// `Open62541SecurityMaterial`'s question, answered at construction, where a
+// failure can name the file and the reason.
+//
+// The two endpoints are checked through one helper rather than two copies:
+// the shape is identical and only the key prefix differs, so a future field
+// cannot be added to one half and forgotten in the other.
+void checkOpcUaSecurityEndpoint(bool enabled,
+                                const std::string& keyPrefix,
+                                const std::string& certPath,
+                                const std::string& privateKeyPath,
+                                const std::string& trustListDir,
+                                std::vector<std::string>& errors) {
+    if (!enabled) return;
+    if (certPath.empty()) {
+        errors.emplace_back(keyPrefix + ".cert_path: required when " +
+                            keyPrefix + ".enabled is true");
+    }
+    if (privateKeyPath.empty()) {
+        errors.emplace_back(keyPrefix + ".private_key_path: required when " +
+                            keyPrefix + ".enabled is true");
+    }
+    if (trustListDir.empty()) {
+        errors.emplace_back(keyPrefix + ".trust_list_dir: required when " +
+                            keyPrefix + ".enabled is true");
+    }
+}
+
+void checkOpcUaSecurity(const ConfigManager& cfg,
+                        std::vector<std::string>& errors) {
+    if (!cfg.isOpcUaBackendEnabled()) return;
+
+    checkOpcUaSecurityEndpoint(
+        cfg.isOpcUaServerSecurityEnabled(),
+        "network.opcua.server.security",
+        cfg.getOpcUaServerSecurityCertPath(),
+        cfg.getOpcUaServerSecurityPrivateKeyPath(),
+        cfg.getOpcUaServerSecurityTrustListDir(),
+        errors);
+
+    // Gated on the client being enabled as well: security settings under a
+    // client that is switched off describe an endpoint that never dials, and
+    // refusing to start over them would be noise.
+    if (!cfg.isOpcUaClientEnabled()) return;
+    checkOpcUaSecurityEndpoint(
+        cfg.isOpcUaClientSecurityEnabled(),
+        "network.opcua.client.security",
+        cfg.getOpcUaClientSecurityCertPath(),
+        cfg.getOpcUaClientSecurityPrivateKeyPath(),
+        cfg.getOpcUaClientSecurityTrustListDir(),
+        errors);
+}
+
 void checkHistorian(const ConfigManager& cfg,
                     std::vector<std::string>& errors) {
     if (!cfg.isHistorianEnabled()) return;
@@ -193,6 +251,7 @@ ConfigValidator::Result ConfigValidator::validate(const ConfigManager& cfg) {
     checkWindow(cfg, r.errors);
     checkBackends(cfg, r.errors);
     checkHttpTls(cfg, r.errors);
+    checkOpcUaSecurity(cfg, r.errors);
     checkHistorian(cfg, r.errors);
     checkModbus(cfg, r.errors);
     r.ok = r.errors.empty();

@@ -17,7 +17,13 @@ namespace app::integration::opcua::testing {
 /// Lives in the `testing` sub-namespace so production code can never
 /// accidentally include it -- tests opt in explicitly. Keeps gmock
 /// out of the production-code dependency surface.
-class MockOpcUaServer final : public OpcUaServer {
+///
+/// Not `final`: OpcUaBackendTest derives a variant that ALSO implements the
+/// optional `OpcUaSecurityReport` capability (REQ-INTEGRATION-011), so the
+/// backend's probe can be exercised in both directions. This class staying
+/// security-free is what makes it the "server with no security story" half of
+/// that pair, so do not add security methods here.
+class MockOpcUaServer : public OpcUaServer {
 public:
     MockOpcUaServer()           = default;
     ~MockOpcUaServer() override = default;
