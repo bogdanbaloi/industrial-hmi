@@ -1,7 +1,6 @@
 # UART flash protocol, version 1
 
-**Status: AGREED on 2026-09-22.** One open check: the worst-case bank erase
-time, which sets the host's wait after `BEGIN` (section 6, "Timeouts").
+**Status: AGREED on 2026-09-22.** No open checks.
 
 **Owners.** The protocol is a contract owned by both sides. industrial-hmi
 writes the host side, a C++ update agent on Linux. firmware writes the target
@@ -191,7 +190,7 @@ one, never while it is busy itself.
 | --------- | -------- | ----- | ---- |
 | Board | the next frame, counted from its own last answer (`ACK`, `NAK` or `INFO`) | 10 s | Ends the session, back to normal mode. The host restarts from `BEGIN`. |
 | Host | the answer to `INFO_REQ`, `DATA`, `COMMIT`, `CONFIRM` or `ABORT` | 2 s | Resends the same frame with the same `SEQ`, at most 3 times, then gives up. |
-| Host | the answer to `BEGIN` | worst-case erase time plus 2 s | Same retry rule. The erase time is the one open check (see the status line). |
+| Host | the answer to `BEGIN` | 2 s plus the bank erase, 24.59 ms at most | Same retry rule. The erase figure is `tME`, the erase time of one bank, 22.13 ms typical and 24.59 ms maximum (ST datasheet DS10198 Rev 8, Table 63, page 164). It holds because the board erases the bank with the single bank-erase command. Page by page it could take up to 6.26 s, so a change there is a contract change. |
 
 Why "counted from the board's last answer": at `BEGIN` the board erases a
 whole bank before it answers. That time is the board's own work and must not
