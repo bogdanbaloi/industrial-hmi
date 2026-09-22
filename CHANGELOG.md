@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### OTA update session (REQ-INTEGRATION-015)
+
+The part of the OTA piece that decides: it runs a whole update over the UART
+flash protocol, from asking the board's version to confirming the new image,
+including what to do when an answer is late, refused or wrong. ADR-0034.
+
+#### Added
+- `OtaSession`: the rules of one update as a declarative Boost.SML transition table, the same form `app::model::SystemStateMachine` uses, with the library behind a pimpl so no caller pays its compile time.
+- No I/O, no thread, no clock: the session takes events and returns the bytes to send, so every failure case is a unit test that moves the clock by hand.
+- Named failures instead of one error: `BoardRefused` with the `NAK` code, `NoAnswer` after the resend budget, `WrongVersion` when the board comes back on another image, `ProtocolError` for a frame that does not belong. `failureText()` says it in a sentence.
+- A board already running the target version is not re-flashed. Confirmed means nothing to do, on trial means send `CONFIRM` only.
+- `crc32IsoHdlc()` in `FlashFrame.h`, the image checksum `BEGIN` announces, checked against the standard value `0xCBF43926`.
+- `OtaSessionTest`, 13 cases, including the whole conversation in order, the 8-byte padding of the last chunk, a lost answer, silence past the budget, `BAD_CRC` versus a refusal, `FLASH_ERROR` at `COMMIT` and a stale `ACK`.
+- `docs/adr/0034-ota-session-as-a-state-machine.md` and `docs/uml/state-ota-session.puml`, one arrow per row of the table.
+
 ### Serial backend routes flash frames (REQ-INTEGRATION-014)
 
 `SerialBackend` now puts the flash frame decoder in front of the telemetry

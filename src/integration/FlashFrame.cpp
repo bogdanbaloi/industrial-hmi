@@ -21,6 +21,12 @@ constexpr unsigned kBitsPerByte = 8U;
 /// Mask for the low byte of a 16-bit value.
 constexpr unsigned kLowByteMask = 0x00FFU;
 
+/// CRC-32/ISO-HDLC parameters (see the header). The polynomial is the
+/// reflected form of 0x04C11DB7, which is what the reflected algorithm uses.
+constexpr std::uint32_t kCrc32ReflectedPolynomial = 0xEDB88320UL;
+constexpr std::uint32_t kCrc32Initial             = 0xFFFFFFFFUL;
+constexpr std::uint32_t kCrc32FinalXor            = 0xFFFFFFFFUL;
+
 /// Append a 16-bit value low byte first, as the protocol requires.
 void appendLittleEndian(std::vector<std::byte>& out, std::uint16_t value) {
     const unsigned wide = value;
@@ -40,6 +46,24 @@ std::uint16_t crc16CcittFalse(std::span<const std::byte> bytes) {
         }
     }
     return static_cast<std::uint16_t>(crc);
+}
+
+std::uint32_t crc32IsoHdlc(std::span<const std::byte> bytes) {
+    // The reflected form: the register shifts right and the polynomial is
+    // the bit-reversed 0x04C11DB7, which is what reflecting input and
+    // output amounts to (see the header for the full parameter list).
+    std::uint32_t crc = kCrc32Initial;
+    for (const std::byte b : bytes) {
+        crc ^= std::to_integer<std::uint32_t>(b);
+        for (unsigned bit = 0; bit < kBitsPerByte; ++bit) {
+            const std::uint32_t lowBitSet = crc & 1U;
+            crc >>= 1U;
+            if (lowBitSet != 0U) {
+                crc ^= kCrc32ReflectedPolynomial;
+            }
+        }
+    }
+    return crc ^ kCrc32FinalXor;
 }
 
 std::vector<std::byte> encodeFlashFrame(const FlashFrame& frame) {

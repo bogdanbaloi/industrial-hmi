@@ -1426,6 +1426,46 @@ Needs: utest
 
 ---
 
+### REQ-INTEGRATION-015 (SHOULD) — OTA update session
+
+`req~integration-015~1`
+
+The system **shall** drive one firmware update of a serial-attached device
+through the UART flash protocol (`docs/protocols/uart-flash-v1.md`), as logic
+that performs no I/O, owns no thread and reads no clock: it **shall** take
+the start signal, decoded frames and the current time. It **shall** return
+the bytes to send.
+
+The session **shall** follow section 5 in order: `INFO_REQ`, `BEGIN` with the
+image size, its CRC-32/ISO-HDLC and the new version, `DATA` frames of at most
+256 image bytes each at rising offsets, `COMMIT`, then after the board's reset
+a second `INFO_REQ` and `CONFIRM`. Each `DATA` payload **shall** carry a
+multiple of 8 image bytes, padded with `0xFF`. The announced CRC-32
+**shall** cover the image only, never the padding. Exactly one message
+**shall** be in flight.
+
+When the board already runs the target version, the session **shall not**
+send the image again: confirmed means nothing to do, on trial means send
+`CONFIRM` only.
+
+The session **shall** resend the same frame with the same `SEQ` when an
+answer does not arrive within the timeouts of section 6, at most 3 times, and
+**shall** then stop, reporting that the board went silent. It **shall** treat
+`NAK BAD_CRC` as a damaged frame to resend, then every other `NAK` as a
+refusal that stops the session with the code reported. It **shall** stop
+without confirming when the board reports another version after the update,
+and **shall** stop when a frame arrives that the protocol does not allow at
+that point. Each of those **shall** be reported as a distinct failure with a
+sentence naming it.
+
+Verified by: OtaSessionTest.
+
+ADR: 0034.
+
+Needs: utest
+
+---
+
 ## PERF — Performance budgets
 
 ### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths
