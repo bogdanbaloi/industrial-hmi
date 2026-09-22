@@ -46,6 +46,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: 'echo "Docs-only change."'
+  clang-tidy:
+    name: Clang-Tidy
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "Docs-only change: no source to analyse."'
   sanitizers:
     name: Sanitizers (ASan + UBSan)
     runs-on: ubuntu-latest
