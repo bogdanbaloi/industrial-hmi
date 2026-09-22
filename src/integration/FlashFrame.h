@@ -49,6 +49,14 @@ inline constexpr std::size_t kFlashTrailerBytes = 2;
 /// string "123456789" is 0x29B1, which the tests reproduce.
 [[nodiscard]] std::uint16_t crc16CcittFalse(std::span<const std::byte> bytes);
 
+/// CRC-32/ISO-HDLC, the one zlib and Ethernet use: reflected polynomial
+/// 0xEDB88320, initial value 0xFFFFFFFF, input and output reflected, final
+/// XOR 0xFFFFFFFF. Its check value over the ASCII string "123456789" is
+/// 0xCBF43926, which the tests reproduce. This is the image checksum the
+/// protocol announces in `BEGIN` and the board verifies at `COMMIT`
+/// (`docs/protocols/uart-flash-v1.md`, section 4).
+[[nodiscard]] std::uint32_t crc32IsoHdlc(std::span<const std::byte> bytes);
+
 /// Serialise a frame to the exact bytes that go on the wire.
 ///
 /// @throws std::length_error if the payload is longer than

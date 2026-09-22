@@ -441,6 +441,21 @@ target_link_libraries(test_flash_frame_parser PRIVATE
 add_test(NAME FlashFrameParserTest
          COMMAND test_flash_frame_parser)
 
+# Integration: OtaSession. The host-side state machine of the UART flash
+# protocol (REQ-INTEGRATION-015). Pure stdlib: the session does no I/O and
+# reads no clock, so the test plays the board and moves the clock by hand.
+add_executable(test_ota_session
+    OtaSessionTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/OtaSession.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/FlashFrame.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/FlashFrameParser.cpp)
+target_link_libraries(test_ota_session PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    boost_sml_headers
+)
+add_test(NAME OtaSessionTest COMMAND test_ota_session)
+
 # Integration: serial reading -> equipment-state command mapping (the
 # SerialBackend sink's vocabulary). Pure header-only logic, no serial port
 # and no boost, so it runs on every platform.

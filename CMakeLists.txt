@@ -818,6 +818,7 @@ if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
             src/integration/SerialFrameParser.cpp
             src/integration/FlashFrame.cpp
             src/integration/FlashFrameParser.cpp
+            src/integration/OtaSession.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
@@ -825,6 +826,7 @@ if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
                 src/integration/SerialFrameParser.h
                 src/integration/FlashFrame.h
                 src/integration/FlashFrameParser.h
+                src/integration/OtaSession.h
                 src/integration/EquipmentStateReading.h
     )
     target_link_libraries(objectsSerial
@@ -832,6 +834,10 @@ if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
             objectsIntegrationCore
             ${BOOST_TARGET}
             Threads::Threads
+        PRIVATE
+            # OtaSession's transition table. PRIVATE because the header hides
+            # the library behind a pimpl, so nothing above pays for it.
+            boost_sml_headers
     )
     target_compile_definitions(objectsSerial
         PUBLIC
