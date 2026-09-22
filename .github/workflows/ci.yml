@@ -758,6 +758,55 @@ jobs:
         ctest --output-on-failure \
           -R 'ImageClassifierTest|OnnxImageClassifierTest'
 
+    # The same two ML tests again, this time under ASan + UBSan. The
+    # `sanitizers` job never configures BUILD_ML_CLASSIFIER, so before this
+    # step the one part of the code that shares a process with a foreign
+    # allocator (ONNX Runtime, the source of ADR-0019's __libc_malloc crash)
+    # was the one part the sanitizers never saw. It runs here rather than in
+    # its own job because it needs the models and the ORT distribution the
+    # steps above already produced.
+    #
+    # Our code (the facade, the plugin module, the tests) is instrumented.
+    # The prebuilt ORT library is not, so ASan checks every access our code
+    # makes, including into buffers ORT hands back, but not ORT's internals.
+    # Same ASAN_OPTIONS / UBSAN_OPTIONS as the `sanitizers` job, including
+    # detect_leaks=0 for the reason documented there. No suppressions.
+    - name: Configure ML (Debug + sanitizers)
+      run: |
+        cmake -S . -B build/ml-sanitizers -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DENABLE_SANITIZERS=ON \
+          -DENABLE_COVERAGE=OFF \
+          -DBUILD_ML_CLASSIFIER=ON \
+          -DONNXRUNTIME_ROOT="$(pwd)/build/onnxruntime"
+
+    - name: Build ML targets (sanitizers)
+      run: |
+        cmake --build build/ml-sanitizers \
+          --target test_image_classifier test_onnx_image_classifier \
+          -- -j$(nproc)
+
+    # The ONNX test skips itself when the model is missing. A skipped
+    # gtest still exits 0. A skip here would mean the sanitizers checked
+    # nothing while the step stayed green, so the log is scanned and a skip
+    # fails the step.
+    - name: Run ML tests under sanitizers
+      working-directory: build/ml-sanitizers
+      env:
+        LD_LIBRARY_PATH: ${{ github.workspace }}/build/onnxruntime/lib
+        ASAN_OPTIONS: "halt_on_error=1:abort_on_error=1:detect_leaks=0:strict_string_checks=1:detect_stack_use_after_return=1"
+        UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+      run: |
+        set -o pipefail
+        ctest --output-on-failure --verbose \
+          -R 'ImageClassifierTest|OnnxImageClassifierTest' \
+          | tee ml-sanitizers.log
+        if grep -q '\[  SKIPPED \]' ml-sanitizers.log; then
+          echo "::error::an ML test skipped under the sanitizers, so nothing was checked"
+          exit 1
+        fi
+
   opcua-integration:
     name: OPC-UA Integration (open62541)
     runs-on: ubuntu-24.04

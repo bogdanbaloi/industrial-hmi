@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### The ML code under ASan + UBSan
+
+The `sanitizers` job never built `BUILD_ML_CLASSIFIER`, so the ONNX code,
+the one part of the process that shares it with a foreign allocator, was the
+one part ASan and UBSan never checked. Follow-up recorded in ADR-0019.
+
+#### Changed
+- The `ml-integration` job builds `test_image_classifier` and `test_onnx_image_classifier` a second time, Debug with `ENABLE_SANITIZERS=ON`. It runs them with the `sanitizers` job's `ASAN_OPTIONS` and `UBSAN_OPTIONS`. It reuses the models and the ONNX Runtime distribution the job already produced.
+- A test that skips under the sanitizers fails the step. The ONNX test skips itself when the model is missing. A skipped test would otherwise leave the step green with nothing checked.
+
 ### Serial transmit path (REQ-INTEGRATION-012)
 
 The serial backend can now talk back to the microcontroller. It is the first
