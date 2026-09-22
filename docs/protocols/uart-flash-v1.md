@@ -100,7 +100,7 @@ written by hand.
 | `0x04` | host to board | `COMMIT`   | empty                                          | Everything is sent. Verify it, then switch banks. |
 | `0x05` | host to board | `CONFIRM`  | empty                                          | The new image works, keep it. |
 | `0x06` | host to board | `ABORT`    | empty                                          | Cancel. Leave the running image alone. |
-| `0x81` | board to host | `INFO`     | version `u32`, active bank `u8`, state `u8`    | The answer to `INFO_REQ`. State `0` is `CONFIRMED`, `1` is `TRIAL`. |
+| `0x81` | board to host | `INFO`     | version `u32`, active bank `u8`, state `u8`    | The answer to `INFO_REQ`. Bank `1` or `2`, the numbers RM0351 uses. State `0` is `CONFIRMED`, `1` is `TRIAL`. |
 | `0x82` | board to host | `ACK`      | empty                                          | Done. The `SEQ` in the header says which frame. |
 | `0x83` | board to host | `NAK`      | error code `u8`                                | Refused. The code says why. |
 
@@ -112,6 +112,15 @@ the padding.
 The largest image is **522240 bytes**: one 512 KB bank minus its last 2 KB
 page, which holds the `CONFIRMED` record (section 9, item 4). A `BEGIN` above
 that is refused with `TOO_LARGE`.
+
+The active bank in `INFO` is `1` for bank 1 and `2` for bank 2, the numbering ST
+uses in RM0351, so a log line reads the same as the manual. The board reads
+it from `SYSCFG_MEMRMP.FB_MODE`, which the boot code sets from `BFB2`, so it
+names the bank really running. Pinned on 2026-09-22. As a check, the board
+answers the worked example `INFO_REQ` of section 3 (version 1, bank 1,
+`CONFIRMED`) with:
+
+    A5  81  01 00  06 00  01 00 00 00  01  00  F3 1C
 
 The image checksum is **CRC-32/ISO-HDLC**, the one zlib and Ethernet use:
 reflected polynomial `0xEDB88320` (`0x04C11DB7` unreflected), initial value
