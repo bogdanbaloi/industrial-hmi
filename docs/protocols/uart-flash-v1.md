@@ -1,7 +1,6 @@
 # UART flash protocol, version 1
 
-**Status: PROPOSED, not agreed.** Neither side writes code against this until
-firmware has answered on the board.
+**Status: AGREED on 2026-09-22.** One check is open, section 9 item 7.
 
 **Owners.** The protocol is a contract owned by both sides. industrial-hmi
 writes the host side, a C++ update agent on Linux. firmware writes the target
@@ -204,25 +203,52 @@ This is where an update chain is judged. A happy path proves little.
   image is never at risk, so restarting costs time only.
 - **One image, one board.**
 
-## 9. Open questions for firmware
+## 9. Answers from the target side
 
-These are firmware's decisions. The protocol only needs the answers.
+Asked on 2026-09-22, answered the same day. Hardware facts come from ST's
+CMSIS header `stm32l476xx.h`, ST's HAL driver source and AN4767.
 
-1. **Who rolls back an image that crashes before it can count?** The
-   confirmation window runs inside the new image. An image that faults at
-   startup never reaches that code. Worse, the current fault handler blinks a
-   code on the LED forever. A watchdog plus a boot counter is the usual answer.
-   How to build it is firmware's call.
-2. **The bank switch.** Proposed: the L476 dual-bank flash with the `BFB2`
-   option bit. Firmware to confirm, including that images are linked for
-   `0x08000000` and fit in 512 KB.
-3. **Where the `TRIAL` or `CONFIRMED` state survives a reset.**
-4. **The confirmation window.** Proposed: 30 seconds.
-5. **How the board receives.** Today the UART only transmits, see section 10.
-   Interrupt-driven reception is recommended, given the 4 MHz clock.
-6. **Does resetting the board keep the host's serial port open?** Assumed yes,
-   because the USB side belongs to the ST-Link chip, not to the target. Not
-   verified.
+1. **Who rolls back an image that crashes early: the independent watchdog.**
+   A hardware timer that resets the chip unless the program refreshes it.
+   Once started it cannot be stopped. In `TRIAL` the new image does not
+   refresh it until `CONFIRM` arrives. So a fault, a hang and a missing
+   `CONFIRM` all end in the same reset. A flag records "already tried once".
+   The second boot of an unconfirmed image rolls back. Limit: that check runs
+   in the new image's own early boot, so an image broken in its reset path is
+   not saved. Production ECUs add an immutable first-stage bootloader for
+   that. Out of scope for version 1.
+2. **The watchdog runs in `CONFIRMED` too.** Decided 2026-09-22. The fault
+   handler no longer blinks forever. It blinks until the watchdog resets the
+   board, about 32 seconds. A device that restarts after a fault is the
+   expected behaviour for an ECU.
+3. **The bank switch: `BFB2`, confirmed.** Two banks of 512 KB. Both images
+   are linked for `0x08000000`, because the active bank is remapped there. So
+   one binary, linked once. The linker region shrinks to 512 KB, so an image
+   that outgrows a bank fails at link time.
+4. **Where the state survives a reset: in flash, recorded the other way
+   round.** `CONFIRMED` is a positive record in the last 2 KB page of the
+   running bank, written only on `CONFIRM`. No record means unconfirmed. So a
+   power cut during a trial can never confirm an image by accident. The
+   "already tried once" flag may live in a backup register, because losing it
+   is the safe direction.
+5. **The confirmation window: about 30 seconds, not exactly.** The window is
+   the watchdog period, around 32 seconds. It varies with the internal clock.
+   The host must not depend on the exact value.
+6. **How the board receives: interrupt driven into a ring buffer.** The frame
+   parser and the update logic are pure code with host tests, including the
+   CRC-16 check value `0x29B1`. Flash is programmed 8 bytes at a time, which
+   matches the 8-byte rule in section 4.
+7. **Does a reset keep the host's serial port open: still unverified.** Very
+   likely, because USB belongs to the ST-Link chip. A one-minute test on the
+   real board settles it. Either way the host expects a stray byte after a
+   reset and resyncs on `0xA5`.
+
+**The one irreversible step.** Switching banks writes the chip's option
+bytes. One option byte value, read protection level 2, locks the chip
+forever. The target code changes `BFB2` only, with a masked
+read-modify-write. It checks that read protection is at level 0 before
+applying. The first real option byte write is done by hand, deliberately,
+never by a script.
 
 ## 10. What both codebases need first
 
