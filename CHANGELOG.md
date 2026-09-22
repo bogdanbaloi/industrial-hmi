@@ -17,6 +17,22 @@ one part ASan and UBSan never checked. Follow-up recorded in ADR-0019.
 - The `ml-integration` job builds `test_image_classifier` and `test_onnx_image_classifier` a second time, Debug with `ENABLE_SANITIZERS=ON`. It runs them with the `sanitizers` job's `ASAN_OPTIONS` and `UBSAN_OPTIONS`. It reuses the models and the ONNX Runtime distribution the job already produced.
 - A test that skips under the sanitizers fails the step. The ONNX test skips itself when the model is missing. A skipped test would otherwise leave the step green with nothing checked.
 
+### Serial transmit path (REQ-INTEGRATION-012)
+
+The serial backend can now talk back to the microcontroller. It is the first
+step of the OTA piece: the UART flash protocol
+(`docs/protocols/uart-flash-v1.md`) sends binary frames to the board, and
+until now the backend could only read. ADR-0032.
+
+#### Added
+- `SerialBackend::send(std::span<const std::byte>)`, callable from any thread. It copies the bytes, posts them onto the backend's `io_context` and returns. Bytes go out whole, in call order, with no framing and no line-ending translation. It returns false when the backend is not running.
+- A write queue with one `async_write` in flight at a time, chained from its own completion handler, because Boost.Asio allows only one outstanding write per stream.
+- Four `SerialBackendTest` cases over the existing PTY pair: the protocol's `INFO_REQ` frame arrives byte for byte, LF, CR, NUL and `0xFF` arrive untranslated, 200 back-to-back sends arrive in order. `send()` is refused before `start()` and after `stop()`.
+- `docs/adr/0032-serial-transmit-path.md`, `send()` on `SerialBackend` in `docs/uml/class-integration-backend.puml` and a new `docs/uml/sequence-serial-write.puml`.
+
+#### Changed
+- `SerialBackend` guards its `io_` state pointer with a mutex, so `send()` can read it while `start()` or `stop()` replaces it. The lock is never held during I/O. A failed `start()` now also discards any bytes a racing `send()` posted.
+
 ### Sign&Encrypt for the OPC-UA endpoints (REQ-INTEGRATION-011)
 
 The OPC-UA server and client get an opt-in `SignAndEncrypt` mode with the

@@ -113,6 +113,8 @@ class SerialBackend {
   name() = "Serial"
   boost::asio::serial_port async read loop
   feeds SerialFrameParser -> ReadingSink
+  +send(span<const byte>) : bool
+  write queue, one async_write in flight
 }
 
 interface TelemetryPublisher

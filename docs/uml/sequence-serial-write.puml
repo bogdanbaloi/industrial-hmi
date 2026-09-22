@@ -1,0 +1,61 @@
+@startuml sequence-serial-write
+' Sequence: bytes from a caller on any thread to the microcontroller's wire,
+' with the thread boundary marked. The transmit half of SerialBackend.
+'
+' Grounded in real source:
+'   - src/integration/SerialBackend.h/.cpp  (send, writeNext, ioMutex_)
+'   - SerialIo::writeQueue                 (std::deque, io_context thread only)
+'   - docs/adr/0032-serial-transmit-path.md
+'   - docs/protocols/uart-flash-v1.md      (the frames this path will carry)
+
+title Serial transmit - caller -> post -> write queue -> async_write chain -> MCU
+
+skinparam shadowing false
+
+box "Caller thread (e.g. the OTA agent)" #LightBlue
+  participant "Caller" as Caller
+  participant "SerialBackend\n::send" as Send
+end box
+
+box "io_context thread (jthread)" #LightYellow
+  participant "posted handler" as Posted
+  participant "SerialIo\n::writeQueue" as Queue
+  participant "SerialBackend\n::writeNext/handler" as Write
+  participant "boost::asio\nserial_port" as Port
+end box
+
+participant "Microcontroller\n(Nucleo, firmware)" as MCU
+
+Caller -> Send : send(bytes)
+Send -> Send : lock ioMutex_\n(guards the io_ pointer only)
+alt backend not running
+  Send --> Caller : false
+else running
+  Send -> Send : copy bytes into a vector
+  Send -> Posted : asio::post(context, handler)
+  Send --> Caller : true  (queued, not yet delivered)
+end
+
+Posted -> Queue : push_back(bytes)
+alt queue was empty (nothing in flight)
+  Posted -> Write : writeNext()
+end
+
+loop while the queue is not empty
+  Write -> Port : async_write(front of queue)
+  Port -> MCU : bytes over UART, unchanged
+  Port --> Write : handler(ec, bytes)\n(io_context dispatches; stack stays flat)
+  alt ec (port closed, device gone)
+    Write -> Queue : clear()  (never send a partial sequence later)
+  else ok
+    Write -> Queue : pop_front()
+  end
+end
+
+note across
+  Only one async_write is in flight per port, so frames never interleave.
+  The queue is touched only on the io_context thread: no lock around it.
+  Delivery is confirmed by the board's ACK in the flash protocol, not here.
+end note
+
+@enduml
