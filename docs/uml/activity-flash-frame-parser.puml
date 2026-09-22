@@ -1,0 +1,57 @@
+@startuml activity-flash-frame-parser
+' Activity: how FlashFrameParser::consume() splits one serial byte stream
+' into UART flash protocol frames and the telemetry text around them.
+'
+' Grounded in real source:
+'   - src/integration/FlashFrameParser.h/.cpp  (consume, buffer_, falseStarts_)
+'   - src/integration/FlashFrame.h/.cpp        (kFlashStartByte, kFlashMaxPayloadBytes,
+'                                               crc16CcittFalse)
+'   - docs/adr/0033-flash-frames-share-the-serial-link.md
+'   - docs/protocols/uart-flash-v1.md          (section 3, section 9 item 8: resync)
+
+title FlashFrameParser::consume - one stream, two kinds of traffic
+
+skinparam shadowing false
+
+start
+:work = held bytes + new chunk;
+while (bytes left at pos?) is (yes)
+  if (byte at pos is 0xA5?) then (no)
+    :append byte to **text**\n(telemetry, handed to SerialFrameParser);
+    :pos += 1;
+  else (yes)
+    if (6-byte header complete?) then (no)
+      :hold from pos, wait for next chunk;
+      break
+    endif
+    if (LEN > 260?) then (yes)
+      #Pink:false start: drop this 0xA5 only\nfalseStarts += 1\npos += 1;
+    else (no)
+      if (header + LEN + CRC complete?) then (no)
+        :hold from pos, wait for next chunk;
+        break
+      endif
+      if (CRC-16 matches?) then (no)
+        #Pink:false start: drop this 0xA5 only\nfalseStarts += 1\npos += 1;
+      else (yes)
+        #PaleGreen:emit **frame** {type, seq, payload};
+        :pos += whole frame;
+      endif
+    endif
+  endif
+endwhile (no)
+:keep bytes from pos as buffer_\n(at most one unfinished frame);
+stop
+
+note right
+  Resync never skips LEN bytes: a garbage LEN
+  can reach 65535 and would swallow the real
+  frames behind it. Scanning again from the next
+  byte finds them at once.
+
+  Text never contains 0xA5, so no mode switch is
+  needed. A frame is read by LEN, so its payload
+  may hold a newline or another 0xA5.
+end note
+
+@enduml

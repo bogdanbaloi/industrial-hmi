@@ -65,6 +65,7 @@ Each file has the following sections:
 | 0030 | [TLS for the HTTP/REST backend via cpp-httplib's SSL variant](0030-http-backend-tls-via-cpp-httplib.md) | Accepted |
 | 0031 | [OPC-UA Sign&Encrypt via open62541's OpenSSL plugin](0031-opcua-sign-and-encrypt-via-open62541-openssl.md) | Accepted |
 | 0032 | [Serial transmit path (posted writes, one in flight)](0032-serial-transmit-path.md) | Accepted |
+| 0033 | [Flash frames share the serial link with telemetry (split by start byte)](0033-flash-frames-share-the-serial-link.md) | Accepted |
 
 ## Adding a new ADR
 

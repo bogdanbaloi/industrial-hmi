@@ -816,11 +816,15 @@ if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
         PRIVATE
             src/integration/SerialBackend.cpp
             src/integration/SerialFrameParser.cpp
+            src/integration/FlashFrame.cpp
+            src/integration/FlashFrameParser.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
                 src/integration/SerialBackend.h
                 src/integration/SerialFrameParser.h
+                src/integration/FlashFrame.h
+                src/integration/FlashFrameParser.h
                 src/integration/EquipmentStateReading.h
     )
     target_link_libraries(objectsSerial

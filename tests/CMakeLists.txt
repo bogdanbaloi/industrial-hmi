@@ -426,6 +426,21 @@ target_link_libraries(test_serial_frame_parser PRIVATE
 add_test(NAME SerialFrameParserTest
          COMMAND test_serial_frame_parser)
 
+# Integration: FlashFrameParser. Splits the serial byte stream into UART
+# flash protocol frames and the telemetry text around them, plus the frame
+# encoder and CRC-16 (REQ-INTEGRATION-013). Pure stdlib like the text
+# parser, so it runs on every platform with no serial port.
+add_executable(test_flash_frame_parser
+    FlashFrameParserTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/FlashFrame.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/FlashFrameParser.cpp)
+target_link_libraries(test_flash_frame_parser PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+)
+add_test(NAME FlashFrameParserTest
+         COMMAND test_flash_frame_parser)
+
 # Integration: serial reading -> equipment-state command mapping (the
 # SerialBackend sink's vocabulary). Pure header-only logic, no serial port
 # and no boost, so it runs on every platform.
