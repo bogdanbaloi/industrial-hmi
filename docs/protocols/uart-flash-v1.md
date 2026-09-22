@@ -157,7 +157,7 @@ This is where an update chain is judged. A happy path proves little.
 | Power is lost during the transfer     | Same outcome. Only the empty bank was being written. The running bank is intact, the update simply restarts. |
 | The image arrives but is wrong        | `COMMIT` fails with `VERIFY_FAILED`. The board never switches banks. |
 | The new image boots but misbehaves    | No `CONFIRM` arrives, so the board rolls back. |
-| The new image crashes before it runs  | **Not solved by this protocol.** See open question 1 in section 9. |
+| The new image crashes before it runs  | The watchdog resets the board and the old image comes back. See section 9, item 1. |
 
 ## 7. Decisions, each with the option rejected
 
