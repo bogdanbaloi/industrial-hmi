@@ -116,6 +116,17 @@ class SerialBackend {
   +send(span<const byte>) : bool
   write queue, one async_write in flight
 }
+class FlashFrameParser {
+  +consume(span<const byte>) : FlashStreamOutput
+  +falseStarts() : size_t
+  splits 0xA5 frames from telemetry text
+}
+class FlashFrame {
+  type : uint8
+  seq : uint16
+  payload : vector<byte>
+}
+FlashFrameParser ..> FlashFrame : emits
 
 interface TelemetryPublisher
 interface TelemetrySubscriber

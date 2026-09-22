@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Flash protocol frames on the serial link (REQ-INTEGRATION-013)
+
+The host can now read the board's binary answers during an update, on the
+same wire as the telemetry text. The second step of the OTA piece, after the
+transmit path. ADR-0033.
+
+#### Added
+- `FlashFrame`, `encodeFlashFrame()` and `crc16CcittFalse()`: the UART flash protocol frame codec. The CRC reproduces the standard check value `0x29B1`. A payload over 260 bytes is refused.
+- `FlashFrameParser`: splits one serial byte stream into frames and the telemetry text around them. Split by the `0xA5` start byte with no mode switch. A frame is read by its `LEN`, so its payload may hold any byte. A bad CRC or an impossible `LEN` drops only the start byte and scanning resumes at the next byte. At most one unfinished frame is held.
+- `FlashFrameParserTest`, 10 cases, built on the protocol's own worked example and check value.
+- `docs/adr/0033-flash-frames-share-the-serial-link.md`, a new `docs/uml/activity-flash-frame-parser.puml` and both new classes in `docs/uml/class-integration-backend.puml`.
+
 ### The ML code under ASan + UBSan
 
 The `sanitizers` job never built `BUILD_ML_CLASSIFIER`, so the ONNX code,
