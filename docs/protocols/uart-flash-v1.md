@@ -1,6 +1,6 @@
 # UART flash protocol, version 1
 
-**Status: AGREED on 2026-09-22.** One check is open, section 9 item 7.
+**Status: AGREED on 2026-09-22.** No open checks.
 
 **Owners.** The protocol is a contract owned by both sides. industrial-hmi
 writes the host side, a C++ update agent on Linux. firmware writes the target
@@ -238,10 +238,16 @@ CMSIS header `stm32l476xx.h`, ST's HAL driver source and AN4767.
    parser and the update logic are pure code with host tests, including the
    CRC-16 check value `0x29B1`. Flash is programmed 8 bytes at a time, which
    matches the 8-byte rule in section 4.
-7. **Does a reset keep the host's serial port open: still unverified.** Very
-   likely, because USB belongs to the ST-Link chip. A one-minute test on the
-   real board settles it. Either way the host expects a stray byte after a
-   reset and resyncs on `0xA5`.
+7. **Does a reset keep the host's serial port open: yes, proven.** Tested on
+   the real board on 2026-09-22. Across four monitor sessions with resets,
+   the port was never lost and never needed a reconnect. The same test found
+   that every reset put one stray `0xFF` on the line (46 resets out of 46).
+   The cause was the order of two register writes in the TX pin setup, fixed
+   on the target side. After the fix: 0 stray bytes in at least 6 resets.
+8. **Resync, kept anyway.** Both sides use the same rule. On a CRC-16
+   failure, the receiver looks for the next `0xA5` starting from the byte
+   after the false start. It never skips `LEN` bytes, because a garbage
+   `LEN` can reach 65535 and swallow real frames behind it.
 
 **The one irreversible step.** Switching banks writes the chip's option
 bytes. One option byte value, read protection level 2, locks the chip
