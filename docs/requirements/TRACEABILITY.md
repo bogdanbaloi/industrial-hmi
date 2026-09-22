@@ -138,6 +138,7 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-011 | SHOULD | `src/integration/opcua/Open62541SecurityMaterial.cpp`, `src/integration/opcua/OpcUaSecurityOptions.h`, `src/integration/opcua/OpcUaSecurityReport.h`, `src/integration/opcua/Open62541Server.cpp`, `src/integration/opcua/Open62541Client.cpp`, `src/integration/opcua/OpcUaBackend.cpp`, `src/config/ConfigValidator.cpp`, `src/app/IntegrationBootstrap.cpp` | Open62541SecurityMaterialTest, Open62541ServerSecurityTest, OpcUaBackendTest, ConfigValidatorTest, IntegrationBootstrapTest | 0031 |
 | REQ-INTEGRATION-012 | SHOULD | `src/integration/SerialBackend.cpp::send` + `::writeNext` | SerialBackendTest | 0032 |
 | REQ-INTEGRATION-013 | SHOULD | `src/integration/FlashFrame.cpp`, `src/integration/FlashFrameParser.cpp` | FlashFrameParserTest | 0033 |
+| REQ-INTEGRATION-014 | SHOULD | `src/integration/SerialBackend.cpp::routeChunk` + `::start` + `::metricsSummary` | SerialBackendTest | 0033 |
 
 ## PERF
 

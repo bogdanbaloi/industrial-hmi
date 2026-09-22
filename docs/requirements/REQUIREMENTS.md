@@ -1403,6 +1403,29 @@ Needs: utest
 
 ---
 
+### REQ-INTEGRATION-014 (SHOULD) — Serial backend routes flash frames
+
+`req~integration-014~1`
+
+The serial backend (REQ-INTEGRATION-009) **shall** pass every received byte
+through the flash frame decoder (REQ-INTEGRATION-013) before the telemetry
+text parser. Each decoded frame **shall** reach an injected frame sink. The
+bytes outside frames **shall** reach the text parser unchanged, so telemetry
+keeps working while frames arrive on the same stream. Without a frame sink,
+frames **shall** be dropped, never read as text. `start()` **shall** reset
+both parsers, so a frame or line cut short by a previous `stop()` is never
+joined to new bytes. The number of rejected frame candidates **shall** be
+readable from any thread and **shall** appear in the backend's health
+summary once it is above zero.
+
+Verified by: SerialBackendTest.
+
+ADR: 0033.
+
+Needs: utest
+
+---
+
 ## PERF — Performance budgets
 
 ### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths

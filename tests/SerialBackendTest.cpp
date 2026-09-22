@@ -1,5 +1,6 @@
 // [utest->req~integration-009~1]
 // [utest->req~integration-012~1]
+// [utest->req~integration-014~1]
 // SerialBackend end-to-end over an emulated serial endpoint: a pseudo-
 // terminal (PTY) pair stands in for the microcontroller's virtual COM
 // port, so the async read loop is exercised with no real hardware.
@@ -11,7 +12,11 @@
 //
 // The transmit tests run the other direction: the backend sends, the test
 // reads what arrives on the master and compares it byte for byte.
+//
+// The routing tests write telemetry text and flash protocol frames mixed on
+// one stream, the way the board will. Each must reach its own sink.
 
+#include "src/integration/FlashFrame.h"
 #include "src/integration/SerialBackend.h"
 
 #include <gtest/gtest.h>
@@ -25,21 +30,36 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <mutex>
 #include <span>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
 namespace {
 
+using app::integration::encodeFlashFrame;
+using app::integration::FlashFrame;
 using app::integration::SerialBackend;
 using app::integration::SerialReading;
 
 constexpr unsigned kBaudRate = 115200;
 
+/// `ACK`, the board's answer code from section 4 of the flash protocol.
+constexpr std::uint8_t kAckType = 0x82;
+
+/// Telemetry lines as the board sends them (ADR-0029 format).
+constexpr std::string_view kTempLine     = "temp,23.5\n";
+constexpr std::string_view kHumidityLine = "humidity,60\n";
+
 /// How long a transmit test waits for bytes to reach the PTY master.
 constexpr int kReadTimeoutMs = 1000;
+
+/// Pause that lets the read loop take in bytes already written, before a
+/// test stops the backend on purpose.
+constexpr int kSettleMs = 50;
 
 /// The flash protocol's worked example, `INFO_REQ` with sequence number 1
 /// (docs/protocols/uart-flash-v1.md, section 3). A real frame the OTA
@@ -77,6 +97,13 @@ public:
 
     [[nodiscard]] bool ok() const { return !slavePath_.empty(); }
     [[nodiscard]] const std::string& slavePath() const { return slavePath_; }
+
+    /// Write bytes to the master, as the device would. Returns false on a
+    /// short or failed write, so the test can assert on it.
+    [[nodiscard]] bool writeAll(std::span<const std::byte> bytes) const {
+        return ::write(master_, bytes.data(), bytes.size()) ==
+               static_cast<ssize_t>(bytes.size());
+    }
 
     /// Read from the master until `count` bytes arrived or the timeout
     /// passed. Returns what arrived, so a short result shows in the
@@ -240,6 +267,161 @@ TEST(SerialBackendTest, SendIsRejectedWhenNotRunning) {
     backend.start();
     backend.stop();
     EXPECT_FALSE(backend.send(kInfoRequestFrame)) << "after stop()";
+}
+
+std::vector<std::byte> asBytes(std::string_view text) {
+    const auto view = std::as_bytes(std::span<const char>(text));
+    return {view.begin(), view.end()};
+}
+
+TEST(SerialBackendTest, FramesAndTelemetryOnOneStreamReachTheirOwnSinks) {
+    const PtyPair pty;
+    ASSERT_TRUE(pty.ok()) << "could not open a PTY pair";
+
+    std::mutex mutex;
+    std::vector<SerialReading> readings;
+    std::vector<FlashFrame> frames;
+    SerialBackend backend(
+        pty.slavePath(), kBaudRate,
+        [&](const SerialReading& reading) {
+            const std::lock_guard<std::mutex> lock(mutex);
+            readings.push_back(reading);
+        },
+        [&](const FlashFrame& frame) {
+            const std::lock_guard<std::mutex> lock(mutex);
+            frames.push_back(frame);
+        });
+    backend.start();
+
+    // Text, a frame whose payload holds a newline, then more text.
+    const FlashFrame ack{kAckType, 1, {std::byte{0x0A}}};
+    std::vector<std::byte> wire = asBytes(kTempLine);
+    const std::vector<std::byte> frameBytes = encodeFlashFrame(ack);
+    wire.insert(wire.end(), frameBytes.begin(), frameBytes.end());
+    const std::vector<std::byte> tail = asBytes(kHumidityLine);
+    wire.insert(wire.end(), tail.begin(), tail.end());
+    ASSERT_TRUE(pty.writeAll(wire));
+
+    const bool got = waitFor([&] {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return readings.size() >= 2 && !frames.empty();
+    });
+    backend.stop();
+
+    ASSERT_TRUE(got) << "sinks did not receive the readings and the frame";
+    const std::lock_guard<std::mutex> lock(mutex);
+    ASSERT_EQ(frames.size(), 1U);
+    EXPECT_EQ(frames[0], ack);
+    ASSERT_EQ(readings.size(), 2U) << "the frame's newline must not split text";
+    EXPECT_EQ(readings[0].sensorId, "temp");
+    EXPECT_EQ(readings[1].sensorId, "humidity");
+}
+
+TEST(SerialBackendTest, WithoutAFrameSinkFramesAreDroppedNotReadAsText) {
+    const PtyPair pty;
+    ASSERT_TRUE(pty.ok()) << "could not open a PTY pair";
+
+    std::mutex mutex;
+    std::vector<SerialReading> readings;
+    SerialBackend backend(pty.slavePath(), kBaudRate,
+                          [&](const SerialReading& reading) {
+                              const std::lock_guard<std::mutex> lock(mutex);
+                              readings.push_back(reading);
+                          });
+    backend.start();
+
+    std::vector<std::byte> wire = encodeFlashFrame(FlashFrame{kAckType, 2, {}});
+    const std::vector<std::byte> text = asBytes(kTempLine);
+    wire.insert(wire.end(), text.begin(), text.end());
+    ASSERT_TRUE(pty.writeAll(wire));
+
+    const bool got = waitFor([&] {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return !readings.empty();
+    });
+    backend.stop();
+
+    ASSERT_TRUE(got) << "the telemetry line after the frame never arrived";
+    const std::lock_guard<std::mutex> lock(mutex);
+    ASSERT_EQ(readings.size(), 1U) << "frame bytes leaked into the text path";
+    EXPECT_EQ(readings[0].sensorId, "temp");
+}
+
+TEST(SerialBackendTest, NoisyLinkShowsFalseStartsInTheHealthSummary) {
+    const PtyPair pty;
+    ASSERT_TRUE(pty.ok()) << "could not open a PTY pair";
+
+    std::mutex mutex;
+    std::vector<SerialReading> readings;
+    SerialBackend backend(pty.slavePath(), kBaudRate,
+                          [&](const SerialReading& reading) {
+                              const std::lock_guard<std::mutex> lock(mutex);
+                              readings.push_back(reading);
+                          });
+    backend.start();
+    const std::string quietSummary = backend.metricsSummary();
+
+    // A start byte followed by an impossible LEN of 65535: one false start.
+    std::vector<std::byte> wire{std::byte{0xA5}, std::byte{0x00},
+                                std::byte{0x00}, std::byte{0x00},
+                                std::byte{0xFF}, std::byte{0xFF}};
+    const std::vector<std::byte> text = asBytes(kTempLine);
+    wire.insert(wire.end(), text.begin(), text.end());
+    ASSERT_TRUE(pty.writeAll(wire));
+
+    const bool got = waitFor([&] {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return !readings.empty();
+    });
+    backend.stop();
+
+    ASSERT_TRUE(got) << "the telemetry line after the noise never arrived";
+    EXPECT_EQ(quietSummary.find("false starts"), std::string::npos)
+        << "a clean link must keep the summary terse";
+    EXPECT_EQ(backend.falseStarts(), 1U);
+    EXPECT_NE(backend.metricsSummary().find("1 false starts"), std::string::npos)
+        << backend.metricsSummary();
+}
+
+TEST(SerialBackendTest, RestartDoesNotGlueAnOldPartialFrameOntoNewBytes) {
+    const PtyPair pty;
+    ASSERT_TRUE(pty.ok()) << "could not open a PTY pair";
+
+    std::mutex mutex;
+    std::vector<FlashFrame> frames;
+    SerialBackend backend(
+        pty.slavePath(), kBaudRate, [](const SerialReading&) {},
+        [&](const FlashFrame& frame) {
+            const std::lock_guard<std::mutex> lock(mutex);
+            frames.push_back(frame);
+        });
+
+    // First session ends in the middle of a frame.
+    backend.start();
+    const std::vector<std::byte> cut =
+        encodeFlashFrame(FlashFrame{kAckType, 3, {}});
+    ASSERT_TRUE(pty.writeAll(std::span<const std::byte>(cut).first(3)));
+    // Give the read loop time to take in the half frame before stopping.
+    std::this_thread::sleep_for(std::chrono::milliseconds(kSettleMs));
+    backend.stop();
+
+    // Second session: a whole frame. With stale state the half frame would
+    // be read first and rejected, counting a false start.
+    backend.start();
+    const FlashFrame next{kAckType, 4, {}};
+    ASSERT_TRUE(pty.writeAll(encodeFlashFrame(next)));
+    const bool got = waitFor([&] {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return !frames.empty();
+    });
+    backend.stop();
+
+    ASSERT_TRUE(got) << "the frame of the second session never arrived";
+    const std::lock_guard<std::mutex> lock(mutex);
+    ASSERT_EQ(frames.size(), 1U);
+    EXPECT_EQ(frames[0], next);
+    EXPECT_EQ(backend.falseStarts(), 0U)
+        << "the half frame from before stop() was glued onto the new bytes";
 }
 
 }  // namespace

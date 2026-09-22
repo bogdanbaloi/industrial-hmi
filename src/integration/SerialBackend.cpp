@@ -14,7 +14,7 @@
 #include <deque>
 #include <format>
 #include <memory>
-#include <string_view>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -46,10 +46,11 @@ struct SerialIo {
 };
 
 SerialBackend::SerialBackend(std::string device, unsigned baudRate,
-                             ReadingSink sink)
+                             ReadingSink sink, FrameSink frameSink)
     : device_(std::move(device)),
       baudRate_(baudRate),
       sink_(std::move(sink)),
+      frameSink_(std::move(frameSink)),
       io_(std::make_unique<SerialIo>()) {}
 
 SerialBackend::~SerialBackend() {
@@ -62,6 +63,12 @@ void SerialBackend::start() {
     if (running_.exchange(true, std::memory_order_acq_rel)) {
         return;  // already running, idempotent
     }
+
+    // Fresh framing state, so a frame or a line cut short by the previous
+    // stop() is not glued onto the first bytes of this session. Safe here:
+    // the io_context thread is not running yet.
+    flashParser_ = FlashFrameParser{};
+    parser_      = SerialFrameParser{};
 
     // Open and configure the port synchronously so the caller learns about
     // a missing device, a permission error or a bad baud rate before
@@ -113,12 +120,30 @@ void SerialBackend::armRead() {
                 // error. Stop re-arming and let the io_context drain.
                 return;
             }
-            const std::string_view chunk(io_->buffer.data(), bytes);
-            for (const SerialReading& reading : parser_.consume(chunk)) {
-                sink_(reading);
-            }
+            routeChunk(std::as_bytes(
+                std::span<const char>(io_->buffer.data(), bytes)));
             armRead();  // re-arm: the read loop, flat on the stack
         });
+}
+
+void SerialBackend::routeChunk(std::span<const std::byte> chunk) {
+    // Frames first: the flash parser sees every byte and passes on what is
+    // not a frame. Text never contains 0xA5, so telemetry reaches the text
+    // parser byte for byte as before (ADR-0033).
+    const std::size_t falseStartsBefore = flashParser_.falseStarts();
+    FlashStreamOutput split = flashParser_.consume(chunk);
+    // Published for metricsSummary(), which runs on another thread. A
+    // running total across restarts: a noisy link stays visible after one.
+    falseStarts_.fetch_add(flashParser_.falseStarts() - falseStartsBefore,
+                           std::memory_order_relaxed);
+    if (frameSink_) {
+        for (const FlashFrame& frame : split.frames) {
+            frameSink_(frame);
+        }
+    }
+    for (const SerialReading& reading : parser_.consume(split.text)) {
+        sink_(reading);
+    }
 }
 
 bool SerialBackend::send(std::span<const std::byte> bytes) {
@@ -207,7 +232,14 @@ void SerialBackend::stopImpl() noexcept {
 }
 
 std::string SerialBackend::metricsSummary() const {
-    return std::format("{} @ {}", device_, baudRate_);
+    auto summary = std::format("{} @ {}", device_, baudRate_);
+    // Surface false starts only when there were some (a noisy or mismatched
+    // link), the same way ModbusBackend surfaces dropped samples. Hidden in
+    // the common case to keep the health tooltip terse.
+    if (const std::size_t noisy = falseStarts(); noisy > 0) {
+        summary += std::format(" | {} false starts", noisy);
+    }
+    return summary;
 }
 
 }  // namespace app::integration
