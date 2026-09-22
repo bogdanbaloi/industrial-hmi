@@ -139,6 +139,7 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-012 | SHOULD | `src/integration/SerialBackend.cpp::send` + `::writeNext` | SerialBackendTest | 0032 |
 | REQ-INTEGRATION-013 | SHOULD | `src/integration/FlashFrame.cpp`, `src/integration/FlashFrameParser.cpp` | FlashFrameParserTest | 0033 |
 | REQ-INTEGRATION-014 | SHOULD | `src/integration/SerialBackend.cpp::routeChunk` + `::start` + `::metricsSummary` | SerialBackendTest | 0033 |
+| REQ-INTEGRATION-015 | SHOULD | `src/integration/OtaSession.cpp` (Boost.SML transition table), `src/integration/FlashFrame.cpp::crc32IsoHdlc` | OtaSessionTest | 0034 |
 
 ## PERF
 

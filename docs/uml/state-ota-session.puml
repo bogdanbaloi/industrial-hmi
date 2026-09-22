@@ -1,0 +1,65 @@
+@startuml state-ota-session
+' State machine: one OTA update, as the host drives it.
+'
+' Grounded in real source:
+'   - src/integration/OtaSession.cpp  (the Boost.SML transition table)
+'   - src/integration/OtaSession.h    (OtaStage, OtaFailure)
+'   - docs/adr/0034-ota-session-as-a-state-machine.md
+'   - docs/protocols/uart-flash-v1.md (section 5 the steps, section 6 failures)
+'
+' Every arrow below is one row of that table, so the picture and the code
+' cannot drift apart without the table changing.
+
+title OTA update session - host side (OtaSession)
+
+skinparam shadowing false
+
+[*] --> Idle
+
+Idle --> Probing : start / INFO_REQ
+Idle --> Failed : start [image empty]
+
+Probing --> Done : INFO [target version, confirmed]\nnothing to do
+Probing --> Confirming : INFO [target version, on trial] / CONFIRM
+Probing --> Beginning : INFO [other version] / BEGIN(size, CRC32, version)
+
+Beginning --> Sending : ACK (bank erased) / DATA(offset 0)
+Sending --> Sending : ACK [more image left] / DATA(next offset)
+Sending --> Committing : ACK [all sent] / COMMIT
+Committing --> Rebooting : ACK (banks switched, board resets)
+Rebooting --> Rechecking : reboot wait elapsed / INFO_REQ
+Rechecking --> Confirming : INFO [target version] / CONFIRM
+Rechecking --> Failed : INFO [other version]\nWrongVersion
+Confirming --> Done : ACK
+
+state "any waiting state" as Waiting
+Waiting --> Waiting : NAK BAD_CRC [resends left] / same frame again
+Waiting --> Failed : NAK (any other code)\nBoardRefused
+Waiting --> Waiting : timeout [resends left] / same frame again
+Waiting --> Failed : timeout [budget spent]\nNoAnswer
+
+Done --> [*]
+Failed --> [*]
+
+note right of Waiting
+  Probing, Beginning, Sending, Committing,
+  Rechecking and Confirming each list these
+  four rows in the table, one per state, so
+  the table says exactly which states accept
+  which events.
+end note
+
+note bottom of Rebooting
+  Nothing is sent into a board that is
+  resetting. The wait is the only state with
+  no frame in flight.
+end note
+
+note bottom of Failed
+  An event no row accepts is a ProtocolError:
+  the table is the whole contract, so a frame
+  that does not belong here stops the session
+  instead of passing quietly.
+end note
+
+@enduml
