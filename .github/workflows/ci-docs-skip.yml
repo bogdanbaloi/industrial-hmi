@@ -56,6 +56,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: 'echo "Docs-only change: no code to sanitize."'
+  tsan:
+    name: ThreadSanitizer
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "Docs-only change: no code to race."'
   coverage:
     name: Test Coverage
     runs-on: ubuntu-latest
