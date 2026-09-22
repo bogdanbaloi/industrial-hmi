@@ -1,6 +1,7 @@
 # UART flash protocol, version 1
 
-**Status: AGREED on 2026-09-22.** No open checks.
+**Status: AGREED on 2026-09-22.** One open check: the worst-case bank erase
+time, which sets the host's wait after `BEGIN` (section 6, "Timeouts").
 
 **Owners.** The protocol is a contract owned by both sides. industrial-hmi
 writes the host side, a C++ update agent on Linux. firmware writes the target
@@ -108,6 +109,15 @@ programmed 8 bytes at a time. The last frame is padded with `0xFF`, the value of
 erased flash. The CRC32 announced in `BEGIN` covers the image size only, never
 the padding.
 
+The image checksum is **CRC-32/ISO-HDLC**, the one zlib and Ethernet use:
+reflected polynomial `0xEDB88320` (`0x04C11DB7` unreflected), initial value
+`0xFFFFFFFF`, input and output reflected, final XOR `0xFFFFFFFF`. Its check
+value over the ASCII string `123456789` is `0xCBF43926`. Pinned on
+2026-09-22, because several CRC-32s share the polynomial and differ only in
+reflection and final XOR. A mismatch would give a plausible number that
+matches nothing. `COMMIT` would then fail with `VERIFY_FAILED` on a perfect
+transfer. Both sides prove the variant by reproducing the check value.
+
 Error codes carried by `NAK`:
 
 | Code   | Name            | When |
@@ -153,11 +163,32 @@ This is where an update chain is judged. A happy path proves little.
 | ------------------------------------- | ---------------------- |
 | A frame is corrupted on the wire      | The board answers `NAK BAD_CRC`. The host resends the same frame. |
 | An `ACK` is lost                      | The host times out and resends. The board recognises the `SEQ`, does not write again, answers `ACK`. |
-| The host dies in the middle           | The board gives up after a silence timeout and returns to normal mode. The running image was never touched. |
+| The host dies in the middle           | The board gives up after 10 seconds of silence (see "Timeouts" below) and returns to normal mode. The running image was never touched. |
 | Power is lost during the transfer     | Same outcome. Only the empty bank was being written. The running bank is intact, the update simply restarts. |
 | The image arrives but is wrong        | `COMMIT` fails with `VERIFY_FAILED`. The board never switches banks. |
 | The new image boots but misbehaves    | No `CONFIRM` arrives, so the board rolls back. |
 | The new image crashes before it runs  | The watchdog resets the board and the old image comes back. See section 9, item 1. |
+
+### Timeouts
+
+Pinned on 2026-09-22. Each side waits only while it is waiting for the other
+one, never while it is busy itself.
+
+| Who waits | For what | Limit | Then |
+| --------- | -------- | ----- | ---- |
+| Board | the next frame, counted from its own last answer (`ACK`, `NAK` or `INFO`) | 10 s | Ends the session, back to normal mode. The host restarts from `BEGIN`. |
+| Host | the answer to `INFO_REQ`, `DATA`, `COMMIT`, `CONFIRM` or `ABORT` | 2 s | Resends the same frame with the same `SEQ`, at most 3 times, then gives up. |
+| Host | the answer to `BEGIN` | worst-case erase time plus 2 s | Same retry rule. The erase time is the one open check (see the status line). |
+
+Why "counted from the board's last answer": at `BEGIN` the board erases a
+whole bank before it answers. That time is the board's own work and must not
+count against the host. The board's clock starts only when it hands the turn
+back.
+
+Why the numbers fit together: a healthy host answers within milliseconds.
+Three resends of 2 s each take 6 s, still inside the board's 10 s, so a lost
+frame is recovered before the board gives up. A resend is harmless because
+the board recognises the `SEQ` and the offset (section 7, decision 4).
 
 ## 7. Decisions, each with the option rejected
 
