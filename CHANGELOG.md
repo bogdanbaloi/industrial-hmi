@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Serial backend routes flash frames (REQ-INTEGRATION-014)
+
+`SerialBackend` now puts the flash frame decoder in front of the telemetry
+parser, so frames and telemetry share the wire. The step that ADR-0033 left
+for later.
+
+#### Added
+- An optional `FrameSink` constructor argument. Each decoded frame reaches it on the io_context thread. Without one, frames are dropped and never read as text. Existing callers are unchanged.
+- `SerialBackend::falseStarts()`, readable from any thread. `metricsSummary()` appends `| N false starts` once it is above zero, the way `ModbusBackend` surfaces dropped samples.
+- Four `SerialBackendTest` cases over the PTY pair. Frames and telemetry mixed on one stream reach their own sinks, even when a frame payload holds a newline. Frames without a sink are dropped. A noisy link shows in the summary. A restart does not join an old partial frame to new bytes.
+- `docs/uml/sequence-serial-read.puml` shows the frame split before the text parser.
+
+#### Fixed
+- `start()` now resets the framing state. Before, a line or frame cut short by `stop()` stayed buffered and was joined to the first bytes after a restart. The telemetry parser had the same gap.
+
 ### Flash protocol frames on the serial link (REQ-INTEGRATION-013)
 
 The host can now read the board's binary answers during an update, on the

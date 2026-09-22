@@ -3,7 +3,8 @@
 ' GTK widget, with the thread boundary marked.
 '
 ' Grounded in real source:
-'   - src/integration/SerialBackend.h/.cpp  (armRead, async_read_some, handler, sink_)
+'   - src/integration/SerialBackend.h/.cpp  (armRead, routeChunk, sink_, frameSink_)
+'   - src/integration/FlashFrameParser.h    (consume -> frames + text, ADR-0033)
 '   - src/integration/SerialFrameParser.h   (consume -> vector<SerialReading>)
 '   - src/integration/EquipmentStateReading.h  (toEquipmentStateCommand)
 '   - src/app/IntegrationBootstrap.cpp  (registerSerialBackend sink -> setEquipmentEnabled)
@@ -19,7 +20,9 @@ participant "Microcontroller\n(Nucleo, firmware)" as MCU
 
 box "io_context thread (jthread)" #LightYellow
   participant "boost::asio\nserial_port" as Port
-  participant "SerialBackend\n::armRead/handler" as Backend
+  participant "SerialBackend\n::armRead/routeChunk" as Backend
+  participant "FlashFrameParser\n::consume" as Flash
+  participant "FrameSink\n(optional, OTA agent)" as FrameSink
   participant "SerialFrameParser\n::consume" as Parser
   participant "ReadingSink\n(std::function)" as Sink
   participant "ProductionModel" as Model
@@ -33,7 +36,14 @@ end box
 MCU -> Port : bytes over UART\n("equipment/0/state,on\\n")
 Backend -> Port : async_read_some(buffer)
 Port --> Backend : handler(ec, bytes)\n(io_context dispatches; stack stays flat)
-Backend -> Parser : consume(string_view(buffer, bytes))
+Backend -> Flash : consume(bytes)
+Flash --> Backend : frames (0xA5, read by LEN, CRC ok)\n+ text (every other byte, unchanged)
+opt frameSink_ set
+  loop for each frame
+    Backend -> FrameSink : frameSink_(frame)
+  end
+end
+Backend -> Parser : consume(text)
 Parser -> Parser : buffer bytes, split on '\\n',\nkeep trailing partial
 Parser --> Backend : vector<SerialReading>{sensorId, value}
 loop for each reading
@@ -54,6 +64,9 @@ Page -> Page : updateEquipmentCard(vm)\n-> GTK widget update
 note across
   Serial is a byte stream: a read may carry half a frame or several.
   The parser frames on '\\n' and holds the partial between reads.
+  Flash protocol frames are split off first, by their 0xA5 start byte,
+  so a frame's binary payload never reaches the text parser.
+  start() resets both parsers, so no partial survives a restart.
   Thread boundary: Glib::signal_idle (io_context -> GTK main thread).
 end note
 

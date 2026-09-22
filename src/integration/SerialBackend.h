@@ -1,5 +1,7 @@
 #pragma once
 
+#include "src/integration/FlashFrame.h"
+#include "src/integration/FlashFrameParser.h"
 #include "src/integration/IntegrationBackend.h"
 #include "src/integration/SerialFrameParser.h"
 
@@ -24,7 +26,10 @@ struct SerialIo;
 /// port. It reads `sensorId,value` telemetry and routes each decoded
 /// reading to an injected sink (REQ-INTEGRATION-009, ADR-0029). It also
 /// transmits raw bytes to the device through `send()`, the path the OTA
-/// flash protocol needs (REQ-INTEGRATION-012, ADR-0032).
+/// flash protocol needs (REQ-INTEGRATION-012, ADR-0032). Incoming bytes go
+/// through `FlashFrameParser` first: flash protocol frames reach an optional
+/// frame sink, every other byte continues to the telemetry text parser
+/// (REQ-INTEGRATION-014, ADR-0033).
 ///
 /// SOLID / threading:
 ///   * S -- owns the lifecycle of one serial link and nothing else. The
@@ -55,12 +60,21 @@ public:
     /// sensor-ingest helpers); the backend itself stays model-agnostic.
     using ReadingSink = std::function<void(const SerialReading&)>;
 
-    /// @param device    Serial port device name ("/dev/ttyACM0" on Linux,
-    ///                  "COM3" on Windows). Opened by `start()`.
-    /// @param baudRate  Line speed both ends agree on (e.g. 115200).
-    /// @param sink      Receives every decoded reading. Must be non-empty
-    ///                  and must outlive the backend.
-    SerialBackend(std::string device, unsigned baudRate, ReadingSink sink);
+    /// Called on the io_context thread for each flash protocol frame whose
+    /// CRC matched. The OTA agent is the intended consumer. Like the
+    /// reading sink, it must marshal to its own thread if it needs one.
+    using FrameSink = std::function<void(const FlashFrame&)>;
+
+    /// @param device     Serial port device name ("/dev/ttyACM0" on Linux,
+    ///                   "COM3" on Windows). Opened by `start()`.
+    /// @param baudRate   Line speed both ends agree on (e.g. 115200).
+    /// @param sink       Receives every decoded reading. Must be non-empty
+    ///                   and must outlive the backend.
+    /// @param frameSink  Receives every flash protocol frame. Optional: a
+    ///                   telemetry-only deployment leaves it empty and
+    ///                   frames are dropped, never mistaken for text.
+    SerialBackend(std::string device, unsigned baudRate, ReadingSink sink,
+                  FrameSink frameSink = {});
 
     ~SerialBackend() override;
 
@@ -79,8 +93,15 @@ public:
     [[nodiscard]] std::string name() const override { return "Serial"; }
 
     /// "/dev/ttyACM0 @ 115200" -- the device and baud, for the dashboard
-    /// health tooltip.
+    /// health tooltip. Appends "| N false starts" once the flash parser has
+    /// rejected any frame candidate, so a noisy link shows up there.
     [[nodiscard]] std::string metricsSummary() const override;
+
+    /// Flash protocol frame candidates rejected so far (bad CRC or
+    /// impossible `LEN`), summed across restarts. Callable from any thread.
+    [[nodiscard]] std::size_t falseStarts() const {
+        return falseStarts_.load(std::memory_order_relaxed);
+    }
 
     /// Queue bytes for transmission to the device. Callable from any
     /// thread. The bytes are copied, so the caller's buffer may go away
@@ -104,12 +125,17 @@ private:
     /// destructor cannot safely call a virtual).
     void stopImpl() noexcept;
 
-    /// Schedule the next `async_read_some`. Its completion handler feeds
-    /// the bytes to the parser, emits each reading to the sink, then calls
-    /// armRead() again. That re-arm is the read loop: it returns to the
+    /// Schedule the next `async_read_some`. Its completion handler hands
+    /// the bytes to `routeChunk()`, then calls armRead() again. That re-arm is the read loop: it returns to the
     /// io_context between reads, so the call chain never nests and the
     /// stack stays flat.
     void armRead();
+
+    /// Split one read chunk: frames go to the frame sink (or are dropped
+    /// when there is none), the text in between goes to the telemetry
+    /// parser and each reading to the reading sink. Runs only on the
+    /// io_context thread.
+    void routeChunk(std::span<const std::byte> chunk);
 
     /// Start `async_write` for the front of the write queue. Its handler
     /// pops that entry and calls writeNext() again while the queue is not
@@ -121,9 +147,15 @@ private:
     std::string device_;
     unsigned    baudRate_;
     ReadingSink sink_;
+    FrameSink   frameSink_;
 
-    /// Framing state. Touched only by the io_context thread.
+    /// Framing state. Touched only by the io_context thread. The flash
+    /// parser sees every byte first and hands the text on to `parser_`.
+    FlashFrameParser  flashParser_;
     SerialFrameParser parser_;
+    /// Copy of the flash parser's false-start count, published by the
+    /// io_context thread for readers on other threads.
+    std::atomic<std::size_t> falseStarts_{0};
 
     /// Opaque Boost.Asio state (io_context + serial_port + read buffer +
     /// write queue).

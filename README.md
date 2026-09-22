@@ -48,7 +48,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   running state, Performance from throughput / target UPH (clamped to
   100%), Quality from the average checkpoint pass rate. See
   REQ-DASHBOARD-008.
-- **Requirements traceability (OpenFastTrace)** -- <!--fig:adrs-->33<!--/fig--> ADRs + <!--fig:reqs-->91<!--/fig-->
+- **Requirements traceability (OpenFastTrace)** -- <!--fig:adrs-->33<!--/fig--> ADRs + <!--fig:reqs-->92<!--/fig-->
   functional requirements in `docs/requirements/REQUIREMENTS.md`,
   cross-checked on every PR against `// [utest->req~xxx~1]`
   coverage tags in source. Bidirectional matrix: every MUST/SHOULD
@@ -444,7 +444,7 @@ fuzzers/                libFuzzer harnesses on wire parsers (opt-in via BUILD_FU
 schemas/                JSON Schema spec for app-config.json (draft-07)
 ```
 
-**Size.** `src/` holds **<!--fig:loc-->28,845<!--/fig--> lines of C++ code across <!--fig:files-->319<!--/fig--> files**, counted
+**Size.** `src/` holds **<!--fig:loc-->28,875<!--/fig--> lines of C++ code across <!--fig:files-->319<!--/fig--> files**, counted
 with `cloc`, so blank lines and comments are excluded. CI recomputes both
 on every run and fails the build if they drift, so the figure here is checked,
 not trusted.

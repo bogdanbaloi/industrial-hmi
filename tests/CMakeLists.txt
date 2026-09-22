@@ -460,7 +460,9 @@ if(UNIX AND NOT APPLE)
     add_executable(test_serial_backend
         SerialBackendTest.cpp
         ${CMAKE_SOURCE_DIR}/src/integration/SerialBackend.cpp
-        ${CMAKE_SOURCE_DIR}/src/integration/SerialFrameParser.cpp)
+        ${CMAKE_SOURCE_DIR}/src/integration/SerialFrameParser.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/FlashFrame.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/FlashFrameParser.cpp)
     target_link_libraries(test_serial_backend PRIVATE
         ${TEST_COMMON_LIBS}
         tests_includes
