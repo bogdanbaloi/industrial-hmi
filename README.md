@@ -1173,7 +1173,9 @@ honour `k`, throw on `k <= 0`, stable name); 3 `OnnxImageClassifierTest`
 cases load the real INT8 model end-to-end (skip gracefully when the
 artifact is absent so the test binary stays runnable everywhere).
 The CI `ml-integration` job runs the Python pipeline + the C++ build
-+ the integration test on every PR.
++ the integration test on every PR, then runs the same tests again in a
+Debug build under ASan + UBSan. A test that skips there fails the step,
+so a missing model cannot turn the sanitizer run into a silent pass.
 
 **Phase 2 -- HMI integration.** The inference layer wires into the
 GTK front-end as a new Notebook tab:
