@@ -49,3 +49,19 @@ pieces the module needs (Image, Preprocessor, Labels) and links no ORT.
 - Two independent gates now stack. The compile-time `BUILD_ML_CLASSIFIER`
   decides existence. A missing module at runtime degrades open in the ADR-0007
   pattern: the inspection tab is skipped with a logged warning, never a crash.
+
+## Follow-up (2026-09-22): the ML code under the sanitizers
+
+The crash above was found with `gdb`, not by the sanitizers. They could
+not have found it. The `sanitizers` CI job never configured
+`BUILD_ML_CLASSIFIER`, so the ONNX code was not in the build it checked. That
+was true when the crash happened and until this follow-up.
+
+The `ml-integration` job now builds the two ML test targets a second time,
+Debug with ASan + UBSan. It runs them with the same options as the
+`sanitizers` job. Our side is instrumented: the facade, the plugin module and
+the tests. The prebuilt ORT library is not, so ASan checks every access our
+code makes, including into buffers ORT returns, but not ORT's own internals.
+A skipped test fails that step, because a skip would mean the sanitizers
+checked nothing while the job stayed green. No sanitizer is switched off and
+no suppression is added.
