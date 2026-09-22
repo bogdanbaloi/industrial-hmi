@@ -4,8 +4,11 @@
 #include "src/integration/SerialFrameParser.h"
 
 #include <atomic>
+#include <cstddef>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <span>
 #include <string>
 #include <thread>
 
@@ -17,9 +20,11 @@ namespace app::integration {
 /// declared cleanly, so the whole Asio surface lives in the .cpp.
 struct SerialIo;
 
-/// Inbound backend that reads `sensorId,value` telemetry from a serial
-/// port (a microcontroller on a USB virtual COM port) and routes each
-/// decoded reading to an injected sink. REQ-INTEGRATION-009, ADR-0029.
+/// Backend for a serial link to a microcontroller on a USB virtual COM
+/// port. It reads `sensorId,value` telemetry and routes each decoded
+/// reading to an injected sink (REQ-INTEGRATION-009, ADR-0029). It also
+/// transmits raw bytes to the device through `send()`, the path the OTA
+/// flash protocol needs (REQ-INTEGRATION-012, ADR-0032).
 ///
 /// SOLID / threading:
 ///   * S -- owns the lifecycle of one serial link and nothing else. The
@@ -37,6 +42,12 @@ struct SerialIo;
 ///     needed (single-threaded confinement). The sink is responsible for
 ///     marshalling onto the UI thread when it mutates the model, exactly
 ///     as the other inbound paths do.
+///   * `send()` is the one entry point callable from other threads. It
+///     posts the bytes onto the io_context, so the write queue is also
+///     confined to that thread. `ioMutex_` guards only the `io_` pointer,
+///     which start() and stop() replace.
+///   * I -- `send()` lives on this class, not on `IntegrationBackend`.
+///     The other backends have no raw byte channel to offer.
 class SerialBackend : public IntegrationBackend {
 public:
     /// Called on the io_context thread for each decoded reading. The
@@ -71,6 +82,23 @@ public:
     /// health tooltip.
     [[nodiscard]] std::string metricsSummary() const override;
 
+    /// Queue bytes for transmission to the device. Callable from any
+    /// thread. The bytes are copied, so the caller's buffer may go away
+    /// as soon as this returns. Writes go out one at a time, in the order
+    /// send() was called. The bytes are sent exactly as given: no
+    /// framing, no line-ending translation.
+    ///
+    /// Accepted is not delivered. Bytes still queued when stop() runs are
+    /// dropped. A failed write drops whatever was queued behind it.
+    /// A caller that needs delivery waits for the device's answer, which
+    /// is what the stop-and-wait flash protocol does.
+    ///
+    /// @param bytes  The bytes to send. An empty span is accepted and
+    ///               sends nothing.
+    /// @return true if the bytes were queued, false if the backend is not
+    ///         running.
+    [[nodiscard]] bool send(std::span<const std::byte> bytes);
+
 private:
     /// Non-virtual stop body shared by stop() and the destructor (a
     /// destructor cannot safely call a virtual).
@@ -83,6 +111,13 @@ private:
     /// stack stays flat.
     void armRead();
 
+    /// Start `async_write` for the front of the write queue. Its handler
+    /// pops that entry and calls writeNext() again while the queue is not
+    /// empty. Asio allows only one outstanding write per port, so this
+    /// chain is what keeps writes from interleaving. Runs only on the
+    /// io_context thread.
+    void writeNext();
+
     std::string device_;
     unsigned    baudRate_;
     ReadingSink sink_;
@@ -90,8 +125,13 @@ private:
     /// Framing state. Touched only by the io_context thread.
     SerialFrameParser parser_;
 
-    /// Opaque Boost.Asio state (io_context + serial_port + read buffer).
+    /// Opaque Boost.Asio state (io_context + serial_port + read buffer +
+    /// write queue).
     std::unique_ptr<SerialIo> io_;
+    /// Guards the `io_` pointer between send() on a caller's thread and
+    /// the replacement of `io_` in start() and stop(). Not held while any
+    /// I/O runs.
+    std::mutex                ioMutex_;
     std::jthread              thread_;
     std::atomic<bool>         running_{false};
 };
