@@ -1376,6 +1376,33 @@ Needs: utest
 
 ---
 
+### REQ-INTEGRATION-013 (SHOULD) — Flash protocol frames on the serial link
+
+`req~integration-013~1`
+
+The system **shall** encode and decode the frames of the UART flash protocol
+(`docs/protocols/uart-flash-v1.md`, section 3), with a CRC-16/CCITT-FALSE
+that reproduces the check value `0x29B1`. Encoding a payload longer than 260
+bytes **shall** be refused.
+
+The decoder **shall** split one serial byte stream into frames and the
+telemetry text around them, with no mode switch. A byte outside a frame
+**shall** be passed on as text, unchanged and in order. A frame **shall** be
+delimited by its `LEN` field, so its payload may contain any byte value. A
+candidate whose `LEN` exceeds 260 or whose CRC does not match **shall** be
+treated as a false start: only its start byte is dropped. Scanning **shall**
+resume at the next byte, never skipping `LEN` bytes. The decoder
+**shall** hold at most one unfinished frame and **shall** never throw on any
+input.
+
+Verified by: FlashFrameParserTest.
+
+ADR: 0033.
+
+Needs: utest
+
+---
+
 ## PERF — Performance budgets
 
 ### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths

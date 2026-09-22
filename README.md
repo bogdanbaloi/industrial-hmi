@@ -48,7 +48,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   running state, Performance from throughput / target UPH (clamped to
   100%), Quality from the average checkpoint pass rate. See
   REQ-DASHBOARD-008.
-- **Requirements traceability (OpenFastTrace)** -- <!--fig:adrs-->32<!--/fig--> ADRs + <!--fig:reqs-->90<!--/fig-->
+- **Requirements traceability (OpenFastTrace)** -- <!--fig:adrs-->33<!--/fig--> ADRs + <!--fig:reqs-->91<!--/fig-->
   functional requirements in `docs/requirements/REQUIREMENTS.md`,
   cross-checked on every PR against `// [utest->req~xxx~1]`
   coverage tags in source. Bidirectional matrix: every MUST/SHOULD
@@ -86,7 +86,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   one pass. The auditable spec lives in `schemas/app-config.schema.json`
   (JSON Schema draft-07). See REQ-CORE-005.
 - **67% test coverage** verified by gcovr in CI on every PR, across
-  11,112 instrumented lines and **<!--fig:ctest-->100<!--/fig--> ctest targets**: scenario-based
+  11,112 instrumented lines and **<!--fig:ctest-->101<!--/fig--> ctest targets**: scenario-based
   E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
   tests under real GTK via Xvfb, dialog dispatch via programmatic
   `response()`, plus integration tests that wire **real** components
@@ -444,12 +444,12 @@ fuzzers/                libFuzzer harnesses on wire parsers (opt-in via BUILD_FU
 schemas/                JSON Schema spec for app-config.json (draft-07)
 ```
 
-**Size.** `src/` holds **<!--fig:loc-->28,691<!--/fig--> lines of C++ code across <!--fig:files-->315<!--/fig--> files**, counted
+**Size.** `src/` holds **<!--fig:loc-->28,845<!--/fig--> lines of C++ code across <!--fig:files-->319<!--/fig--> files**, counted
 with `cloc`, so blank lines and comments are excluded. CI recomputes both
 on every run and fails the build if they drift, so the figure here is checked,
 not trusted.
 
-**Test count.** The **<!--fig:ctest-->100<!--/fig--> ctest targets** quoted
+**Test count.** The **<!--fig:ctest-->101<!--/fig--> ctest targets** quoted
 above are what a default `cmake -DBUILD_TESTS=ON` configure registers, counted
 with `ctest -N`. Counting `add_test` lines in CMake gives a different number.
 It is wrong in both directions: a `foreach` over the console scenarios turns
@@ -1215,7 +1215,7 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Integration | TCP line protocol (Boost.Asio) + MQTT 3.1.1 hand-rolled client (full duplex, no paho dep) + OPC-UA via open62541 |
 | Edge AI | MobileNetV2 INT8 ONNX (PyTorch export pipeline) + ONNX Runtime CPU EP, image decoding via stb_image |
 | i18n | GNU gettext, custom adapter (no glibmm i18n macros); one catalog serves all three front-ends (Qt routes `tr()` through a `QTranslator` -> gettext adapter) |
-| Testing | GoogleTest + gmock (<!--fig:ctest-->100<!--/fig--> ctest targets on a default configure) + google/benchmark (p50/p90/p99 hot-path microbenchmarks) + libFuzzer (wire-parser fuzz harnesses) |
+| Testing | GoogleTest + gmock (<!--fig:ctest-->101<!--/fig--> ctest targets on a default configure) + google/benchmark (p50/p90/p99 hot-path microbenchmarks) + libFuzzer (wire-parser fuzz harnesses) |
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |
