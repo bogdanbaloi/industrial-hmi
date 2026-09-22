@@ -135,6 +135,7 @@ requirements may be smoke-tested.
 | REQ-INTEGRATION-008 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/ProductionMetricsJson.cpp`, `src/mcp/tools/ProductionMetricsTool.cpp` | HttpBackendTest, ProductionMetricsJsonTest | 0025 |
 | REQ-INTEGRATION-009 | SHOULD | `src/integration/SerialFrameParser.cpp`, `src/integration/SerialBackend.cpp`, `src/integration/EquipmentStateReading.h`, `src/app/IntegrationBootstrap.cpp` | SerialFrameParserTest, EquipmentStateReadingTest, SerialBackendTest | 0029 |
 | REQ-INTEGRATION-010 | SHOULD | `src/integration/HttpBackend.cpp`, `src/integration/HttpTlsMaterial.cpp`, `src/integration/HttpTlsOptions.h`, `src/config/ConfigValidator.cpp`, `src/app/IntegrationBootstrap.cpp` | HttpTlsMaterialTest, HttpBackendTlsTest, ConfigValidatorTest, IntegrationBootstrapTest | 0030 |
+| REQ-INTEGRATION-011 | SHOULD | `src/integration/opcua/Open62541SecurityMaterial.cpp`, `src/integration/opcua/OpcUaSecurityOptions.h`, `src/integration/opcua/OpcUaSecurityReport.h`, `src/integration/opcua/Open62541Server.cpp`, `src/integration/opcua/Open62541Client.cpp`, `src/integration/opcua/OpcUaBackend.cpp`, `src/config/ConfigValidator.cpp`, `src/app/IntegrationBootstrap.cpp` | Open62541SecurityMaterialTest, Open62541ServerSecurityTest, OpcUaBackendTest, ConfigValidatorTest, IntegrationBootstrapTest | 0031 |
 
 ## PERF
 

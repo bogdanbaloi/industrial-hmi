@@ -63,6 +63,7 @@ Each file has the following sections:
 | 0028 | [MISRA-C++-aligned coding guidelines via clang-tidy](0028-misra-aligned-coding-guidelines.md) | Accepted |
 | 0029 | [Serial telemetry ingest (line-framed protocol, asio transport)](0029-serial-telemetry-ingest.md) | Accepted |
 | 0030 | [TLS for the HTTP/REST backend via cpp-httplib's SSL variant](0030-http-backend-tls-via-cpp-httplib.md) | Accepted |
+| 0031 | [OPC-UA Sign&Encrypt via open62541's OpenSSL plugin](0031-opcua-sign-and-encrypt-via-open62541-openssl.md) | Accepted |
 
 ## Adding a new ADR
 

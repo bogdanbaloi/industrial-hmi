@@ -324,6 +324,21 @@ public:
     [[nodiscard]] bool isOpcUaIngestBridgeEnabled() const;
     [[nodiscard]] std::string getOpcUaIngestBridgeTopicPrefix() const;
 
+    // OPC-UA Sign&Encrypt (REQ-INTEGRATION-011, ADR-0031). Server and client
+    // read separate subtrees because OPC-UA binds a certificate to the
+    // applicationUri of the application presenting it, and the two endpoints
+    // advertise different URIs. Sharing one key pair would make the server
+    // and the client indistinguishable on the wire.
+
+    [[nodiscard]] bool isOpcUaServerSecurityEnabled() const;
+    [[nodiscard]] std::string getOpcUaServerSecurityCertPath() const;
+    [[nodiscard]] std::string getOpcUaServerSecurityPrivateKeyPath() const;
+    [[nodiscard]] std::string getOpcUaServerSecurityTrustListDir() const;
+    [[nodiscard]] bool isOpcUaClientSecurityEnabled() const;
+    [[nodiscard]] std::string getOpcUaClientSecurityCertPath() const;
+    [[nodiscard]] std::string getOpcUaClientSecurityPrivateKeyPath() const;
+    [[nodiscard]] std::string getOpcUaClientSecurityTrustListDir() const;
+
     // Template Support
 
     /**

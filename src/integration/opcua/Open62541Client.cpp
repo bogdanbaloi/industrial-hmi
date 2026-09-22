@@ -1,6 +1,7 @@
 #include "src/integration/opcua/Open62541Client.h"
 
 #include "src/core/LoggerBase.h"
+#include "src/integration/opcua/Open62541SecurityMaterial.h"
 
 // open62541 is a C library; its types collide with anything that
 // pulls Windows headers. Include it after our own non-Windows
@@ -32,6 +33,29 @@ constexpr std::uint32_t kIteratePollTimeoutMs = 0;
 /// All Factory nodes live under ns=1; standard root references live
 /// under ns=0 and are addressed via UA_NS0ID constants.
 constexpr std::uint16_t kApplicationNamespace = 1U;
+
+/// The one security policy this project offers (ADR-0031). open62541 v1.5.4
+/// exports a constant for the `None` policy URI only, so the Basic256Sha256
+/// URI is spelled here. Pinning it on the client config is what makes the
+/// client DEMAND that policy rather than accept whatever the server offers
+/// first: a client that negotiates downward would hide exactly the
+/// misconfiguration this feature exists to surface.
+constexpr const char* kBasic256Sha256PolicyUri =
+    "http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256";
+
+/// The security mode reported by `metricsSummary()`. Named because it is the
+/// operator's only evidence of what the client's wire actually speaks, and
+/// because the same two words appear in the server's summary.
+namespace security_mode {
+constexpr const char* kNone           = "none";
+constexpr const char* kSignAndEncrypt = "sign+encrypt";
+}  // namespace security_mode
+
+/// open62541 takes the client's revocation list as its own argument. ADR-0031
+/// ships none, for the same reason the server does not: the trust list is a
+/// flat directory of peer certificates with no CRL story.
+constexpr const UA_ByteString* kNoRevocationList     = nullptr;
+constexpr std::size_t          kNoRevocationListSize = 0;
 
 /// Parsed browse path: slash-separated string -> N qualified names,
 /// each tagged with the application namespace. Owns the segment
@@ -114,12 +138,30 @@ struct Open62541Client::Impl {
     /// Server-assigned subscription identifier returned by
     /// `Subscriptions_create`. 0 means "no subscription armed yet".
     UA_UInt32     subscriptionId  = 0;
+
+    /// Certificate material for the opt-in SignAndEncrypt mode. Null when
+    /// security is off. Held here, inside the pimpl, so the public header
+    /// stays free of `UA_ByteString` (ADR-0031).
+    ///
+    /// Owned by the CLIENT rather than by one connect attempt: open62541
+    /// keeps pointers into these buffers for the life of the config, and
+    /// `start()` can be retried after a failed connect.
+    std::unique_ptr<Open62541SecurityMaterial> security;
 };
 
 Open62541Client::Open62541Client(Config config, core::Logger& logger)
     : config_(std::move(config)),
       logger_(logger),
-      impl_(std::make_unique<Impl>()) {}
+      impl_(std::make_unique<Impl>()) {
+    // Same rule as the server: the material is proven at construction, so a
+    // client pointed at an unreadable certificate fails at startup with a
+    // config key in the message, not on the first reconnect attempt hours
+    // later (ADR-0031).
+    if (config_.security.enabled) {
+        impl_->security = std::make_unique<Open62541SecurityMaterial>(
+            config_.security);
+    }
+}
 
 Open62541Client::~Open62541Client() {
     stopImpl();
@@ -197,10 +239,15 @@ bool Open62541Client::isRunning() const {
 }
 
 std::string Open62541Client::metricsSummary() const {
+    // The mode comes from the material that actually loaded, not from the
+    // `enabled` flag, so the operator reads what the wire does rather than
+    // what the config asked for.
     return std::format(
-        "endpoint {} | {} monitored",
+        "endpoint {} | {} monitored | security {}",
         config_.endpointUrl,
-        monitoredItemCount_.load(std::memory_order_acquire));
+        monitoredItemCount_.load(std::memory_order_acquire),
+        impl_->security != nullptr ? security_mode::kSignAndEncrypt
+                                   : security_mode::kNone);
 }
 
 integration::BackendState
@@ -227,10 +274,44 @@ void Open62541Client::connectSync() {
             "Open62541Client: UA_Client_new returned null");
     }
     UA_ClientConfig* clientConfig = UA_Client_getConfig(impl_->client);
-    UA_StatusCode rc = UA_ClientConfig_setDefault(clientConfig);
+
+    UA_StatusCode rc = UA_STATUSCODE_GOOD;
+    if (impl_->security != nullptr) {
+        rc = UA_ClientConfig_setDefaultEncryption(
+            clientConfig,
+            impl_->security->certificate(), impl_->security->privateKey(),
+            impl_->security->trustList(), impl_->security->trustListSize(),
+            kNoRevocationList, kNoRevocationListSize);
+        if (rc == UA_STATUSCODE_GOOD) {
+            // setDefaultEncryption loads the policies but leaves the choice
+            // open. Pinning both halves here is what turns "can speak
+            // Basic256Sha256" into "will speak nothing else": without it the
+            // client would happily accept a Sign-only or plaintext endpoint
+            // from a server that was supposed to be encrypted.
+            clientConfig->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
+            UA_String_clear(&clientConfig->securityPolicyUri);
+            clientConfig->securityPolicyUri =
+                UA_STRING_ALLOC(kBasic256Sha256PolicyUri);
+
+            // Load-bearing only on the secured path, which is why it is set
+            // here and not in the plaintext branch. OPC-UA requires the
+            // advertised applicationUri to match the URI inside the
+            // certificate being presented, and open62541 enforces it: a
+            // mismatch is BadCertificateUriInvalid at connect time, not a
+            // warning.
+            UA_ApplicationDescription* description =
+                &clientConfig->clientDescription;
+            UA_String_clear(&description->applicationUri);
+            description->applicationUri =
+                UA_STRING_ALLOC(config_.applicationUri.c_str());
+        }
+    } else {
+        rc = UA_ClientConfig_setDefault(clientConfig);
+    }
     if (rc != UA_STATUSCODE_GOOD) {
         throw std::runtime_error(std::format(
-            "Open62541Client: setDefault failed: {}",
+            "Open62541Client: {} failed: {}",
+            impl_->security != nullptr ? "setDefaultEncryption" : "setDefault",
             UA_StatusCode_name(rc)));
     }
 

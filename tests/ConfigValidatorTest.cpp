@@ -193,6 +193,84 @@ TEST_F(ConfigValidatorTest, IgnoresIncompleteHttpTlsWhenTlsDisabled) {
                       << (r.errors.empty() ? "<none>" : r.errors.front());
 }
 
+// [utest->req~integration-011~1]
+// Sign&Encrypt for the OPC-UA endpoints: the validator's share of
+// REQ-INTEGRATION-011 is the SHAPE of network.opcua.*.security (which paths
+// the operator's own settings oblige them to supply). Whether those files
+// hold readable DER is Open62541SecurityMaterial's job, covered by
+// Open62541SecurityMaterialTest. The validator links neither open62541 nor
+// OpenSSL, because it compiles into every build.
+
+TEST_F(ConfigValidatorTest, RejectsOpcUaServerSecurityWithoutCertPath) {
+    writeFile(tmpPath_, wrap(R"(  "network": { "opcua": { "enabled": true, "server": { "security": { "enabled": true, "private_key_path": "server-key.der", "trust_list_dir": "trustlist" } } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_FALSE(r.ok);
+    ASSERT_FALSE(r.errors.empty());
+    EXPECT_NE(r.errors.front().find("network.opcua.server.security.cert_path"),
+              std::string::npos);
+}
+
+TEST_F(ConfigValidatorTest, RejectsOpcUaServerSecurityWithoutTrustListDir) {
+    writeFile(tmpPath_, wrap(R"(  "network": { "opcua": { "enabled": true, "server": { "security": { "enabled": true, "cert_path": "server.der", "private_key_path": "server-key.der" } } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_FALSE(r.ok);
+    ASSERT_FALSE(r.errors.empty());
+    EXPECT_NE(
+        r.errors.front().find("network.opcua.server.security.trust_list_dir"),
+        std::string::npos);
+}
+
+TEST_F(ConfigValidatorTest, RejectsOpcUaClientSecurityUnderItsOwnSubtree) {
+    // The two endpoints have identical option shapes. An error that named the
+    // server subtree here would send the operator to the wrong half of the
+    // file, so the subtree in the message is part of the contract.
+    writeFile(tmpPath_, wrap(R"(  "network": { "opcua": { "enabled": true, "client": { "enabled": true, "security": { "enabled": true, "cert_path": "client.der", "trust_list_dir": "trustlist" } } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_FALSE(r.ok);
+    ASSERT_FALSE(r.errors.empty());
+    EXPECT_NE(
+        r.errors.front().find(
+            "network.opcua.client.security.private_key_path"),
+        std::string::npos);
+}
+
+TEST_F(ConfigValidatorTest, AcceptsOpcUaSecurityFullyConfigured) {
+    writeFile(tmpPath_, wrap(R"(  "network": { "opcua": { "enabled": true, "server": { "security": { "enabled": true, "cert_path": "server.der", "private_key_path": "server-key.der", "trust_list_dir": "trustlist" } } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_TRUE(r.ok) << "first error: "
+                      << (r.errors.empty() ? "<none>" : r.errors.front());
+}
+
+TEST_F(ConfigValidatorTest, IgnoresIncompleteOpcUaSecurityWhenSecurityDisabled) {
+    // Leftover security keys with security.enabled=false must not block
+    // startup, the same posture the HTTP TLS block takes.
+    writeFile(tmpPath_, wrap(R"(  "network": { "opcua": { "enabled": true, "server": { "security": { "enabled": false, "cert_path": "server.der" } } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_TRUE(r.ok) << "first error: "
+                      << (r.errors.empty() ? "<none>" : r.errors.front());
+}
+
+TEST_F(ConfigValidatorTest, IgnoresOpcUaSecurityWhenTheBackendIsDisabled) {
+    // A security block under a backend that never starts describes an
+    // endpoint that never listens. Refusing to boot over it would be noise.
+    writeFile(tmpPath_, wrap(R"(  "network": { "opcua": { "enabled": false, "server": { "security": { "enabled": true } } } })"));
+    ASSERT_TRUE(ConfigManager::instance().initialize(tmpPath_.string()));
+
+    auto r = ConfigValidator::validate(ConfigManager::instance());
+    EXPECT_TRUE(r.ok) << "first error: "
+                      << (r.errors.empty() ? "<none>" : r.errors.front());
+}
+
 TEST_F(ConfigValidatorTest, CollectsAllViolations) {
     // Multiple unrelated bad values -- assert the validator returns
     // every one. Operators get one round-trip instead of a fix-and-retry

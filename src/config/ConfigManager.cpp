@@ -662,6 +662,39 @@ bool ConfigManager::isOpcUaIngestBridgeEnabled() const {
     return getValue("network.opcua.client.ingest_bridge.enabled",
                     "false") == "true";
 }
+bool ConfigManager::isOpcUaServerSecurityEnabled() const {
+    return getValue("network.opcua.server.security.enabled", "false") ==
+           "true";
+}
+std::string ConfigManager::getOpcUaServerSecurityCertPath() const {
+    return getValue("network.opcua.server.security.cert_path",
+                    defaults::kOpcUaServerSecurityCertPath);
+}
+std::string ConfigManager::getOpcUaServerSecurityPrivateKeyPath() const {
+    return getValue("network.opcua.server.security.private_key_path",
+                    defaults::kOpcUaServerSecurityPrivateKeyPath);
+}
+std::string ConfigManager::getOpcUaServerSecurityTrustListDir() const {
+    return getValue("network.opcua.server.security.trust_list_dir",
+                    defaults::kOpcUaServerSecurityTrustListDir);
+}
+bool ConfigManager::isOpcUaClientSecurityEnabled() const {
+    return getValue("network.opcua.client.security.enabled", "false") ==
+           "true";
+}
+std::string ConfigManager::getOpcUaClientSecurityCertPath() const {
+    return getValue("network.opcua.client.security.cert_path",
+                    defaults::kOpcUaClientSecurityCertPath);
+}
+std::string ConfigManager::getOpcUaClientSecurityPrivateKeyPath() const {
+    return getValue("network.opcua.client.security.private_key_path",
+                    defaults::kOpcUaClientSecurityPrivateKeyPath);
+}
+std::string ConfigManager::getOpcUaClientSecurityTrustListDir() const {
+    return getValue("network.opcua.client.security.trust_list_dir",
+                    defaults::kOpcUaClientSecurityTrustListDir);
+}
+
 std::string ConfigManager::getOpcUaIngestBridgeTopicPrefix() const {
     return getValue("network.opcua.client.ingest_bridge.topic_prefix",
                     defaults::kOpcUaClientIngestPrefix);

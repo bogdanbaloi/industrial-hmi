@@ -18,6 +18,7 @@
 #  include "src/integration/opcua/OpcUaBackend.h"
 #  include "src/integration/opcua/OpcUaConfig.h"
 #  include "src/integration/opcua/OpcUaIngestBridge.h"
+#  include "src/integration/opcua/OpcUaSecurityOptions.h"
 #  include "src/integration/opcua/Open62541Client.h"
 #  include "src/integration/opcua/Open62541Server.h"
 #endif
@@ -45,6 +46,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 
 namespace app::integration {
@@ -103,8 +105,37 @@ void registerMqttBackend(
 }
 
 #ifdef INDUSTRIAL_HMI_HAS_OPCUA_BACKEND
+// Build the Sign&Encrypt material for one OPC-UA endpoint from config
+// (REQ-INTEGRATION-011, ADR-0031). This is the one place config meets the
+// security options: the endpoints take the four values, not a ConfigManager,
+// so `objectsOpcUa` keeps its config-free shape.
+//
+// `configKeyPrefix` is carried along deliberately. The server and the client
+// have identical option shapes under different subtrees, so a startup failure
+// has to name WHICH subtree the operator must edit.
+app::integration::opcua::OpcUaSecurityOptions opcUaSecurityOptions(
+        bool enabled,
+        std::string configKeyPrefix,
+        std::string certPath,
+        std::string privateKeyPath,
+        std::string trustListDir) {
+    app::integration::opcua::OpcUaSecurityOptions options;
+    options.enabled         = enabled;
+    options.configKeyPrefix = std::move(configKeyPrefix);
+    options.certPath        = std::move(certPath);
+    options.privateKeyPath  = std::move(privateKeyPath);
+    options.trustListDir    = std::move(trustListDir);
+    return options;
+}
+
 // Build + register the OPC-UA server backend. The command sink is owned via
 // an out-param because the node map holds a reference to it.
+//
+// Constructing the server is what validates the security material, and it
+// happens HERE rather than in IntegrationManager::startAll(), which
+// deliberately swallows a per-backend exception so one failed backend cannot
+// keep the rest down. A certificate the operator asked for and cannot have is
+// the opposite case: it must reach the top-level handler in main().
 void registerOpcUaBackend(
         app::integration::IntegrationManager& integration,
         app::config::ConfigManager& config,
@@ -116,6 +147,12 @@ void registerOpcUaBackend(
         static_cast<std::uint16_t>(config.getOpcUaServerPort());
     opcuaConfig.applicationUri = config.getOpcUaApplicationUri();
     opcuaConfig.applicationName = config.getOpcUaApplicationName();
+    opcuaConfig.security = opcUaSecurityOptions(
+        config.isOpcUaServerSecurityEnabled(),
+        "network.opcua.server.security",
+        config.getOpcUaServerSecurityCertPath(),
+        config.getOpcUaServerSecurityPrivateKeyPath(),
+        config.getOpcUaServerSecurityTrustListDir());
 
     auto opcuaServer =
         std::make_unique<app::integration::opcua::Open62541Server>(
@@ -160,6 +197,12 @@ void registerOpcUaClient(
     clientConfig.endpointUrl     = config.getOpcUaClientEndpoint();
     clientConfig.applicationUri  = config.getOpcUaClientApplicationUri();
     clientConfig.applicationName = config.getOpcUaClientApplicationName();
+    clientConfig.security = opcUaSecurityOptions(
+        config.isOpcUaClientSecurityEnabled(),
+        "network.opcua.client.security",
+        config.getOpcUaClientSecurityCertPath(),
+        config.getOpcUaClientSecurityPrivateKeyPath(),
+        config.getOpcUaClientSecurityTrustListDir());
     auto client =
         std::make_unique<app::integration::opcua::Open62541Client>(
             std::move(clientConfig), logger);

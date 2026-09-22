@@ -1309,6 +1309,48 @@ Needs: utest
 
 ---
 
+### REQ-INTEGRATION-011 (SHOULD) — Sign&Encrypt for the OPC-UA endpoints
+
+`req~integration-011~1`
+
+The OPC-UA server and client (REQ-INTEGRATION-004) **shall** support an
+opt-in `SignAndEncrypt` mode, configured under
+`network.opcua.server.security` and `network.opcua.client.security`
+(`enabled`, `cert_path`, `private_key_path`, `trust_list_dir`), built on
+open62541's own OpenSSL plugin (`UA_ENABLE_ENCRYPTION=OPENSSL`). The two
+endpoints **shall** read separate subtrees, because OPC-UA binds a
+certificate to the `applicationUri` of the application presenting it and the
+two advertise different URIs.
+
+When `network.opcua.server.security.enabled` is true, the server **shall**
+offer exactly one endpoint, `Basic256Sha256` with
+`UA_MessageSecurityMode_SignAndEncrypt`, and **shall not** offer
+`SecurityPolicy#None`, so a plaintext client is refused rather than served.
+The client **shall** pin the same policy and mode rather than negotiating
+down to whatever the peer offers first.
+
+The DER certificate, private key and trust-list directory **shall** be loaded
+and proven in the SERVER and CLIENT constructors, before any `UA_Server` or
+`UA_Client` exists. A missing, unreadable or empty file **shall** produce a
+structured, fatal startup error (`TlsMaterialError`) naming the config key,
+the path and the reason, rather than starting the endpoint in plaintext. An
+existing but empty trust-list directory **shall** load without error, because
+it is a deployment state rather than a misconfiguration.
+
+Scope in this version is the two OPC-UA endpoints only. It is not a PKI:
+there is no issuer list, no revocation list and no rotation (a restart picks
+up new material). The other backends are unchanged and remain
+stunnel-documented.
+
+Verified by: Open62541SecurityMaterialTest, Open62541ServerSecurityTest,
+OpcUaBackendTest, ConfigValidatorTest, IntegrationBootstrapTest.
+
+ADR: 0030, 0031.
+
+Needs: utest
+
+---
+
 ## PERF — Performance budgets
 
 ### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths

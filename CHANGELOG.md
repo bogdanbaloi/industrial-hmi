@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Sign&Encrypt for the OPC-UA endpoints (REQ-INTEGRATION-011)
+
+The OPC-UA server and client get an opt-in `SignAndEncrypt` mode with the
+`Basic256Sha256` policy, built on open62541's own OpenSSL plugin. A secured
+server offers exactly one endpoint and no `SecurityPolicy#None`, so a
+plaintext client is refused rather than quietly served. Follows ADR-0030's
+TLS work with the one protocol that carries a security model in its own
+specification instead of borrowing TLS. ADR-0031.
+
+#### Added
+- `network.opcua.server.security.*` and `network.opcua.client.security.*` config blocks (enabled/cert_path/private_key_path/trust_list_dir), validated for shape by ConfigValidator and mirrored in `schemas/app-config.schema.json`. Separate subtrees because OPC-UA binds a certificate to the `applicationUri` presenting it, and the two endpoints advertise different URIs.
+- `OpcUaSecurityOptions` / `Open62541SecurityMaterial`: DER certificate, key and trust-list load, run once in the server and client constructors, before any `UA_Server` or `UA_Client` exists. Reuses `TlsMaterialError`, so a bad certificate is the same fatal startup error a bad HTTP cert already was, never a silent drop to plaintext.
+- `OpcUaSecurityReport`: an orthogonal interface for the negotiated mode, which is what `OpcUaServer`'s own contract already prescribed for encryption. `OpcUaBackend` probes it and folds `security sign+encrypt` into the metrics summary, so a server without a security story stays untouched.
+- `tests/fixtures/opcua-security/`: committed self-signed DER application certificates with the `subjectAltName` URIs the endpoints advertise, plus the `openssl` commands that produced them, so the tests need no generation step in CI.
+- `docs/adr/0031-opcua-sign-and-encrypt-via-open62541-openssl.md`, with both new classes added to `docs/uml/class-integration-backend.puml`.
+
+#### Changed
+- `UA_ENABLE_ENCRYPTION=OPENSSL` on the vendored open62541 build, plus an idempotent `find_package(OpenSSL)` inside the `BUILD_OPCUA_BACKEND` block, because that backend can be on while the HTTP backend is off. It is an open62541 build option reusing the OpenSSL ADR-0030 already introduced, not a new dependency.
+- The secured server builds its config with `UA_ServerConfig_setDefaultWithSecureSecurityPolicies` and then reduces the endpoint list to the single `Basic256Sha256` SignAndEncrypt entry. Without the reduction open62541 would still offer `Sign` and the AES policies on a port the operator configured as encrypted.
+- The secured client pins both the policy and the message security mode rather than accepting whatever the peer offers first, and advertises the `applicationUri` its certificate carries.
+
 ### TLS for the HTTP/REST backend (REQ-INTEGRATION-010)
 
 The read-only HTTP/REST backend (REQ-INTEGRATION-007) gets an opt-in native

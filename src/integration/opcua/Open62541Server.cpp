@@ -2,6 +2,7 @@
 
 #include "src/core/LoggerBase.h"
 #include "src/integration/opcua/OpcUaCommandSink.h"
+#include "src/integration/opcua/Open62541SecurityMaterial.h"
 
 // open62541 ships as a single amalgamated header. Suppress warnings
 // from the C source -- our project treats them as errors but the
@@ -21,6 +22,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -31,6 +33,78 @@ namespace {
 // open62541's run loop wants a polling timeout in milliseconds. 100ms
 // keeps stop() responsive without burning CPU on an empty server.
 constexpr std::uint16_t kIterateTimeoutMs = 100;
+
+// The security mode reported by securityModeName(), the metrics summary and
+// the start() log line. Named rather than inline literals because each one is
+// emitted from more than one place, and because it is the operator's only
+// evidence of what the port actually speaks (ADR-0031).
+namespace security_mode {
+inline constexpr std::string_view kNone          = "none";
+inline constexpr std::string_view kSignAndEncrypt = "sign+encrypt";
+}  // namespace security_mode
+
+// open62541 leaves the issuer list and the revocation list as separate
+// arguments. ADR-0031 ships neither: the trust list is a flat directory of
+// peer certificates, with no CA chain and no CRL story. Named so the call
+// site reads as a decision instead of as four bare zeros.
+inline constexpr const UA_ByteString* kNoIssuerList     = nullptr;
+inline constexpr std::size_t          kNoIssuerListSize = 0;
+inline constexpr const UA_ByteString* kNoRevocationList     = nullptr;
+inline constexpr std::size_t          kNoRevocationListSize = 0;
+
+// The one security policy this project offers (ADR-0031). open62541 v1.5.4
+// exports a constant for the `None` policy URI only, so the Basic256Sha256
+// URI has to be spelled here. It is safe to spell precisely because it is
+// never trusted blind: `UA_ServerConfig_addEndpoint` looks the string up in
+// the policy list the library itself built and returns BadInvalidArgument
+// when it does not match, so a typo produces a server that refuses to start
+// rather than one that quietly offers no secure endpoint.
+inline constexpr const char* kBasic256Sha256PolicyUri =
+    "http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256";
+
+/// Build the server config for the opt-in SignAndEncrypt mode and reduce its
+/// endpoint list to exactly one entry: `Basic256Sha256` with
+/// `UA_MessageSecurityMode_SignAndEncrypt`.
+///
+/// The reduction is the point of this helper.
+/// `UA_ServerConfig_setDefaultWithSecureSecurityPolicies` already excludes
+/// `SecurityPolicy#None`, but it then offers every remaining policy in BOTH
+/// `Sign` and `SignAndEncrypt`. Leaving that list as-is would mean an
+/// endpoint the operator configured as encrypted still accepting a
+/// sign-only client, which is the quiet downgrade ADR-0031 refuses. Clearing
+/// and re-adding is how open62541's own `addAllSecureEndpoints` builds the
+/// list, so this walks a supported path rather than a private one.
+UA_StatusCode applySignAndEncrypt(UA_ServerConfig* serverConfig,
+                                  std::uint16_t port,
+                                  const Open62541SecurityMaterial& material) {
+    const UA_StatusCode rc =
+        UA_ServerConfig_setDefaultWithSecureSecurityPolicies(
+            serverConfig, port,
+            &material.certificate(), &material.privateKey(),
+            material.trustList(), material.trustListSize(),
+            kNoIssuerList, kNoIssuerListSize,
+            kNoRevocationList, kNoRevocationListSize);
+    if (rc != UA_STATUSCODE_GOOD) {
+        return rc;
+    }
+
+    for (std::size_t i = 0; i < serverConfig->endpointsSize; ++i) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        UA_EndpointDescription_clear(&serverConfig->endpoints[i]);
+    }
+    UA_free(serverConfig->endpoints);
+    serverConfig->endpoints     = nullptr;
+    serverConfig->endpointsSize = 0;
+
+    // The lookup string is only compared against the policy list; the
+    // endpoint that gets built copies the URI out of the policy open62541
+    // owns. So this allocation lives exactly as long as the call.
+    UA_String policyUri = UA_STRING_ALLOC(kBasic256Sha256PolicyUri);
+    const UA_StatusCode endpointRc = UA_ServerConfig_addEndpoint(
+        serverConfig, policyUri, UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
+    UA_String_clear(&policyUri);
+    return endpointRc;
+}
 
 /// Build a fully-qualified browse path from a slash-separated string,
 /// rooted at the Objects folder. open62541 wants an array of qualified
@@ -135,12 +209,34 @@ struct Open62541Server::Impl {
     /// `unique_ptr` so the entry address is stable across pushes.
     std::vector<std::unique_ptr<Open62541ServerCallbackContext>>
         callbackContexts;
+
+    /// Certificate material for the opt-in SignAndEncrypt mode. Null when
+    /// security is off, which is what keeps the plaintext path byte-for-byte
+    /// what it was. Held HERE, inside the pimpl, so `Open62541Server.h` stays
+    /// free of `UA_ByteString` even though `Open62541SecurityMaterial` cannot
+    /// hide it (ADR-0031).
+    ///
+    /// Lifetime matters: open62541 keeps pointers into these buffers for as
+    /// long as the config lives, so the material must outlive every
+    /// start/stop cycle. Tying it to the SERVER rather than to `start()` is
+    /// what guarantees that.
+    std::unique_ptr<Open62541SecurityMaterial> security;
 };
 
 Open62541Server::Open62541Server(OpcUaConfig config, core::Logger& logger)
     : config_(std::move(config)),
       logger_(logger),
-      impl_(std::make_unique<Impl>()) {}
+      impl_(std::make_unique<Impl>()) {
+    // Proving the material is the LAST thing the constructor does and the
+    // FIRST thing that can fail. A deployment pointed at a certificate it
+    // cannot read never reaches start(), so it never binds a port, and the
+    // operator gets a startup error naming the config key instead of a
+    // server that listens and refuses every handshake (ADR-0031).
+    if (config_.security.enabled) {
+        impl_->security = std::make_unique<Open62541SecurityMaterial>(
+            config_.security);
+    }
+}
 
 Open62541Server::~Open62541Server() {
     stop();
@@ -156,14 +252,25 @@ void Open62541Server::start() {
     }
 
     UA_ServerConfig* serverConfig = UA_Server_getConfig(impl_->server);
-    UA_StatusCode rc = UA_ServerConfig_setMinimal(
-        serverConfig, config_.port, /*certificate=*/nullptr);
+
+    // Two config shapes, one decision point. Without security this is
+    // byte-for-byte the plaintext server that shipped before
+    // REQ-INTEGRATION-011; with it, the endpoint list holds exactly one
+    // entry and `SecurityPolicy#None` is not among them.
+    const bool secured = impl_->security != nullptr;
+    UA_StatusCode rc =
+        secured ? applySignAndEncrypt(serverConfig, config_.port,
+                                      *impl_->security)
+                : UA_ServerConfig_setMinimal(serverConfig, config_.port,
+                                             /*certificate=*/nullptr);
     if (rc != UA_STATUSCODE_GOOD) {
         UA_Server_delete(impl_->server);
         impl_->server = nullptr;
         throw std::runtime_error(
-            std::string("Open62541Server: setMinimal failed: ") +
-            UA_StatusCode_name(rc));
+            std::string("Open62541Server: ") +
+            (secured ? "setDefaultWithSecureSecurityPolicies"
+                     : "setMinimal") +
+            " failed: " + UA_StatusCode_name(rc));
     }
 
     // Set application URI + name from config so clients can identify
@@ -189,8 +296,9 @@ void Open62541Server::start() {
     running_.store(true, std::memory_order_release);
     thread_ = std::jthread([this]() { runIterateLoop(); });
 
-    logger_.info("OPC-UA server listening on opc.tcp://localhost:{}{}",
-                 boundPort(), config_.endpointPath);
+    logger_.info("OPC-UA server listening on opc.tcp://localhost:{}{}, "
+                 "security {}",
+                 boundPort(), config_.endpointPath, securityModeName());
 }
 
 void Open62541Server::stop() noexcept {
@@ -224,6 +332,15 @@ std::size_t Open62541Server::connectedSessions() const noexcept {
     // with the channel count, which is exposed.
     UA_ServerStatistics stats = UA_Server_getStatistics(impl_->server);
     return static_cast<std::size_t>(stats.scs.currentChannelCount);
+}
+
+std::string_view Open62541Server::securityModeName() const noexcept {
+    // Derived from the material that was actually loaded, not from the
+    // `enabled` flag that asked for it. The two can only differ if the
+    // constructor threw, in which case there is no object to ask -- which is
+    // exactly the property that makes this answer trustworthy.
+    return impl_->security != nullptr ? security_mode::kSignAndEncrypt
+                                      : security_mode::kNone;
 }
 
 std::uint16_t Open62541Server::boundPort() const noexcept {

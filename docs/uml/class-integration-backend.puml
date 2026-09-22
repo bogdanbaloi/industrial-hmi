@@ -10,6 +10,8 @@
 '   - src/integration/HttpTlsMaterial.h / HttpTlsOptions.h
 '   - src/integration/modbus/ModbusBackend.h
 '   - src/integration/opcua/OpcUaBackend.h
+'   - src/integration/opcua/Open62541SecurityMaterial.h
+'   - src/integration/opcua/OpcUaSecurityOptions.h / OpcUaSecurityReport.h
 ' Signatures copied verbatim from those headers.
 
 title IntegrationBackend - interface + concretes (Dependency Inversion)
@@ -79,6 +81,33 @@ class ModbusBackend {
 class OpcUaBackend {
   name() = "OPC-UA"
   composes server + nodeMap
+  metricsSummary() probes OpcUaSecurityReport
+}
+
+interface OpcUaSecurityReport {
+  +securityModeName() : string_view
+}
+
+class Open62541Server {
+  +start() / +stop() noexcept
+  +boundPort() : uint16_t
+  +securityModeName() : string_view
+}
+
+class OpcUaSecurityOptions <<value>> {
+  +enabled : bool
+  +certPath : string
+  +privateKeyPath : string
+  +trustListDir : string
+  +configKeyPrefix : string
+}
+
+class Open62541SecurityMaterial {
+  +Open62541SecurityMaterial(OpcUaSecurityOptions)
+  +certificate() : const UA_ByteString&
+  +privateKey() : const UA_ByteString&
+  +trustList() : const UA_ByteString*
+  +trustListSize() : size_t
 }
 class SerialBackend {
   name() = "Serial"
@@ -102,11 +131,34 @@ TelemetrySubscriber <|.. MqttClient
 HttpBackend o--> "0..1" HttpTlsMaterial : proven at construction
 HttpTlsMaterial *--> HttpTlsOptions : holds the paths it verified
 
+OpcUaSecurityReport <|.. Open62541Server
+OpcUaBackend o--> "1" Open62541Server : owns via OpcUaServer
+OpcUaBackend ..> OpcUaSecurityReport : dynamic_cast probe\n(optional capability)
+Open62541Server o--> "0..1" Open62541SecurityMaterial : proven in the constructor
+Open62541SecurityMaterial *--> OpcUaSecurityOptions : holds the paths it loaded
+
 note right of HttpTlsMaterial
   ADR-0030: the cert / key (/ client CA) are
   loaded and checked BEFORE any port is bound.
   A failure is a fatal core::TlsMaterialError,
   never a silent fallback to plaintext.
+end note
+
+note right of Open62541SecurityMaterial
+  ADR-0031: DER material for Basic256Sha256
+  SignAndEncrypt, loaded in the CONSTRUCTOR so a
+  bad certificate throws before any UA_Server
+  exists. Same fatal core::TlsMaterialError.
+  The one opcua type that does NOT hide open62541:
+  UA_ByteString is its whole public surface.
+end note
+
+note bottom of OpcUaSecurityReport
+  ISP: OpcUaServer keeps itself to what a node map
+  and a command sink need, so encryption gets its
+  own interface. A server with no security story
+  implements nothing extra, and MockOpcUaServer
+  stays unchanged.
 end note
 
 note bottom of IntegrationManager

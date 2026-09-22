@@ -281,9 +281,23 @@
     "opcua": {
       "enabled": true,
       "port": 4840,
+      "server": {
+        "security": {
+          "enabled": false,
+          "cert_path": "",
+          "private_key_path": "",
+          "trust_list_dir": ""
+        }
+      },
       "client": {
         "enabled": false,
         "endpoint": "opc.tcp://127.0.0.1:4840",
+        "security": {
+          "enabled": false,
+          "cert_path": "",
+          "private_key_path": "",
+          "trust_list_dir": ""
+        },
         "ingest_bridge": {
           "enabled": false,
           "topic_prefix": "Factory"

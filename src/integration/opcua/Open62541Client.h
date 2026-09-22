@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/integration/opcua/OpcUaClient.h"
+#include "src/integration/opcua/OpcUaSecurityOptions.h"
 #include "src/integration/IntegrationBackend.h"
 
 #include <atomic>
@@ -78,6 +79,14 @@ public:
         /// subscription on the server (milliseconds). Server may
         /// negotiate down.
         double publishingIntervalMs{kDefaultOpcUaClientPublishingIntervalMs};
+        /// Certificate material for the opt-in `SignAndEncrypt` mode
+        /// (REQ-INTEGRATION-011, ADR-0031). Disabled by default, so an
+        /// existing deployment keeps dialling `SecurityPolicy#None`. The
+        /// client needs its OWN certificate, key and trust list: the
+        /// `applicationUri` it advertises differs from the server's, and
+        /// OPC-UA requires the certificate to carry the URI of the
+        /// application presenting it.
+        OpcUaSecurityOptions security;
     };
 
     /// Tag for the typed callback the open62541 data-change handler
