@@ -444,7 +444,7 @@ fuzzers/                libFuzzer harnesses on wire parsers (opt-in via BUILD_FU
 schemas/                JSON Schema spec for app-config.json (draft-07)
 ```
 
-**Size.** `src/` holds **<!--fig:loc-->28,844<!--/fig--> lines of C++ code across <!--fig:files-->319<!--/fig--> files**, counted
+**Size.** `src/` holds **<!--fig:loc-->28,845<!--/fig--> lines of C++ code across <!--fig:files-->319<!--/fig--> files**, counted
 with `cloc`, so blank lines and comments are excluded. CI recomputes both
 on every run and fails the build if they drift, so the figure here is checked,
 not trusted.
