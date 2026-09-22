@@ -1351,6 +1351,31 @@ Needs: utest
 
 ---
 
+### REQ-INTEGRATION-012 (SHOULD) — Serial transmit path
+
+`req~integration-012~1`
+
+The serial backend (REQ-INTEGRATION-009) **shall** transmit raw bytes to the
+device through `SerialBackend::send()`, callable from any thread. It **shall**
+copy the bytes before returning, send them exactly as given with no framing
+and no line-ending translation. It **shall** deliver the bytes of successive
+calls whole and in call order. It **shall** refuse bytes, returning false, when the
+backend is not running. Bytes still queued when the backend stops **shall**
+be dropped rather than sent after a later restart. The telemetry read path of
+REQ-INTEGRATION-009 **shall** be unchanged.
+
+This is the transport the UART flash protocol
+(`docs/protocols/uart-flash-v1.md`) needs. Receiving the device's binary
+answers is not part of this requirement.
+
+Verified by: SerialBackendTest.
+
+ADR: 0032.
+
+Needs: utest
+
+---
+
 ## PERF — Performance budgets
 
 ### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths
