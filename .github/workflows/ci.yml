@@ -52,7 +52,7 @@ jobs:
           libgtkmm-4.0-dev libsqlite3-dev libsodium-dev libboost-dev \
           libssl-dev \
           libgtest-dev libgmock-dev \
-          xvfb
+          xvfb cloc
 
     - name: Configure
       run: cmake --preset release -DBUILD_TESTS=ON
@@ -63,6 +63,13 @@ jobs:
     - name: Test
       working-directory: build/release
       run: xvfb-run ctest --output-on-failure --no-tests=error
+
+    # The README publishes counts: ADRs, requirements, ctest targets, lines of
+    # code, files. This recomputes each one from the tree and fails on drift,
+    # so a PR that adds an ADR or a test cannot leave the published figure
+    # stale. It runs here because the test count needs this configured build.
+    - name: README figures
+      run: scripts/readme-figures.sh --check build/release
 
     - name: Verify
       run: test -f build/release/industrial-hmi

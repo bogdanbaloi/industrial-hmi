@@ -154,7 +154,7 @@ master polling external PLCs; tested via the
 ### `OpcUa` (open62541 wrapper) -- optional
 
 `open62541` is pulled via CMake `FetchContent` only when
-`-DENABLE_OPCUA=ON`. `OpcUaBackend` registers a server node tree
+`-DBUILD_OPCUA_BACKEND=ON`. `OpcUaBackend` registers a server node tree
 derived from `FactoryNodeMap` (equipment status, quality
 checkpoints, work unit state) and writes values as the model
 changes. `OpcUaIngestBridge` reads back operator commands written
@@ -457,7 +457,7 @@ function-code encode / decode, master-side request-response,
 poll loop dispatch into the ingest bridge.
 
 `tests/OpcUaBackend*Test.cpp` -- end-to-end against an in-process
-open62541 server (gated behind `-DENABLE_OPCUA=ON`).
+open62541 server (gated behind `-DBUILD_OPCUA_BACKEND=ON`).
 
 `tests/SensorIngestBridgeTest.cpp` + `tests/ProductionTelemetryBridgeTest.cpp`
 -- validation + dispatch through to the model.
