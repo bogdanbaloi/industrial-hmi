@@ -28,6 +28,15 @@ on:
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
+# One run per branch. Pushing again to a pull request, or pressing "Update
+# branch", cancels the run that is already going: it was started against
+# bytes nobody will merge, and it competes for the same runners as the new
+# one. Runs on main are never cancelled, because their result is the record
+# of what the default branch does.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   BUILD_TYPE: Release
   # Opt into Node.js 24 for all JavaScript-based actions (upload-artifact,
@@ -168,6 +177,10 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v5
+      with:
+        # Full history: the pull-request scope below diffs against the
+        # merge base, which a shallow clone does not have.
+        fetch-depth: 0
 
     - name: Install Dependencies
       run: |
@@ -217,7 +230,51 @@ jobs:
     - name: Pre-build Qt autogen headers
       run: cmake --build build/tidy --target objectsQt_autogen -- -j$(nproc)
 
+    # A pull request usually touches two or three files, and analysing all
+    # of src/ takes tens of minutes, which is the slowest gate on every
+    # review. So a pull request analyses only the sources it changed, and
+    # every push to main still analyses the whole tree.
+    #
+    # The exception, deliberate: a changed HEADER can break any translation
+    # unit that includes it, and clang-tidy only ever analyses .cpp files.
+    # A header change therefore falls back to the whole tree.
+    - name: Choose the sources to analyse
+      id: tidy-scope
+      run: |
+        set -euo pipefail
+        scope=full
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          base="origin/${{ github.base_ref }}"
+          changed="$(git diff --name-only "$(git merge-base "$base" HEAD)" HEAD -- src || true)"
+          if printf '%s\n' "$changed" | grep -qE '\.(h|hpp|inl)$'; then
+            echo "A header changed, analysing the whole tree."
+          else
+            scope=changed
+            printf '%s\n' "$changed" | grep -E '\.cpp$' > tidy-files.txt || true
+            echo "Changed sources:"
+            cat tidy-files.txt
+          fi
+        fi
+        echo "scope=$scope" >> "$GITHUB_OUTPUT"
+
+    - name: Run clang-tidy on the changed sources
+      if: steps.tidy-scope.outputs.scope == 'changed'
+      run: |
+        set -o pipefail
+        if [ ! -s tidy-files.txt ]; then
+          echo "No source under src/ changed, nothing to analyse." \
+            | tee clang-tidy-report.txt
+          exit 0
+        fi
+        # Same flags as the full run below, see the comment there.
+        xargs -a tidy-files.txt clang-tidy \
+          -p build/tidy \
+          -quiet \
+          -header-filter='src/.*' \
+          2>&1 | tee clang-tidy-report.txt
+
     - name: Run clang-tidy on src/
+      if: steps.tidy-scope.outputs.scope == 'full'
       run: |
         # -quiet suppresses progress lines so only diagnostics remain.
         # -header-filter='src/.*' is a substring-style filter that catches
