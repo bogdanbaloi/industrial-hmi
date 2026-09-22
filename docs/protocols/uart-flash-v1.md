@@ -82,8 +82,9 @@ The host asks the board what it is running, as message number 1:
     A5  01  01 00  00 00  E9 CD
 
 `A5` starts the frame. `01` is `INFO_REQ`. `01 00` is `SEQ` 1. `00 00` says
-there is no payload. `E9 CD` is the checksum. The board confirms with the same
-number:
+there is no payload. `E9 CD` is the checksum. The board answers `INFO_REQ`
+with an `INFO` frame (section 4). An `ACK` for a frame with `SEQ` 1, the answer
+to `DATA`, `COMMIT` or `CONFIRM`, looks like this:
 
     A5  82  01 00  00 00  EB 01
 
@@ -109,6 +110,10 @@ programmed 8 bytes at a time. The last frame is padded with `0xFF`, the value of
 erased flash. The CRC32 announced in `BEGIN` covers the image size only, never
 the padding.
 
+The largest image is **522240 bytes**: one 512 KB bank minus its last 2 KB
+page, which holds the `CONFIRMED` record (section 9, item 4). A `BEGIN` above
+that is refused with `TOO_LARGE`.
+
 The image checksum is **CRC-32/ISO-HDLC**, the one zlib and Ethernet use:
 reflected polynomial `0xEDB88320` (`0x04C11DB7` unreflected), initial value
 `0xFFFFFFFF`, input and output reflected, final XOR `0xFFFFFFFF`. Its check
@@ -128,6 +133,11 @@ Error codes carried by `NAK`:
 | `0x04` | `BAD_OFFSET`    | The offset leaves a gap or points outside the image. |
 | `0x05` | `FLASH_ERROR`   | Erasing or programming the flash failed. |
 | `0x06` | `VERIFY_FAILED` | At `COMMIT`, the CRC32 of the flash does not match the one from `BEGIN`. |
+| `0x07` | `BAD_MESSAGE`   | The frame arrived intact but its content is malformed: an unknown `TYPE`, a payload of the wrong length for its type, a `BEGIN` announcing zero bytes, or `DATA` whose image bytes are empty or not a multiple of 8. Added on 2026-09-22. |
+
+The board checks every message in a fixed order: shape first (`BAD_MESSAGE`),
+then whether it is allowed now (`BAD_STATE`), then its content (the specific
+code). So a `NAK` always names the first thing that is wrong.
 
 ## 5. One update, step by step
 
@@ -161,11 +171,14 @@ This is where an update chain is judged. A happy path proves little.
 
 | What happens                          | What the protocol does |
 | ------------------------------------- | ---------------------- |
-| A frame is corrupted on the wire      | The board answers `NAK BAD_CRC`. The host resends the same frame. |
+| A frame is corrupted on the wire      | Inside a session the board answers `NAK BAD_CRC` and the host resends the same frame. Outside a session the board stays silent: a corrupted frame there is almost always line noise. A `NAK` would put binary bytes into the telemetry for nothing. The host's own 2 s timeout covers it. |
+| A message arrives malformed           | The board answers `NAK BAD_MESSAGE`. Resending the same bytes cannot help, so the host reports a bug instead of retrying. |
 | An `ACK` is lost                      | The host times out and resends. The board recognises the `SEQ`, does not write again, answers `ACK`. |
 | The host dies in the middle           | The board gives up after 10 seconds of silence (see "Timeouts" below) and returns to normal mode. The running image was never touched. |
 | Power is lost during the transfer     | Same outcome. Only the empty bank was being written. The running bank is intact, the update simply restarts. |
 | The image arrives but is wrong        | `COMMIT` fails with `VERIFY_FAILED`. The board never switches banks. |
+| Flash fails, or the image fails its check | `FLASH_ERROR` and `VERIFY_FAILED` end the session. The board returns to normal mode and the host restarts from `BEGIN` (no resume, section 8). |
+| A `BEGIN` arrives during a session    | The session starts over: the board erases the empty bank again. |
 | The new image boots but misbehaves    | No `CONFIRM` arrives, so the board rolls back. |
 | The new image crashes before it runs  | The watchdog resets the board and the old image comes back. See section 9, item 1. |
 
