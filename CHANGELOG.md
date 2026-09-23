@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The per-alarm Acknowledge button drew a grey missing-image square on Windows. It asked for `emblem-ok-symbolic`, which the Adwaita build shipped with MSYS2 does not carry, so the one control an operator uses on every alarm had no icon. Now `object-select-symbolic`, which the theme does carry.
+
 ### OTA update session (REQ-INTEGRATION-015)
 
 The part of the OTA piece that decides: it runs a whole update over the UART

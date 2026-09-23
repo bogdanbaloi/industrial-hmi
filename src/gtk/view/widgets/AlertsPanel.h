@@ -354,7 +354,11 @@ private:
             // (RtnUnack) is fully resolved and moves to history. The
             // operator can't make a transient fault vanish unseen.
             auto* ack = Gtk::make_managed<Gtk::Button>();
-            ack->set_icon_name("emblem-ok-symbolic");
+            // "object-select" and not "emblem-ok": the latter is absent
+            // from the Adwaita build shipped on Windows, so GTK drew the
+            // missing-image square on the one control an operator needs
+            // most.
+            ack->set_icon_name("object-select-symbolic");
             ack->set_has_frame(false);
             ack->set_valign(Gtk::Align::CENTER);
             ack->add_css_class("alert-dismiss");
