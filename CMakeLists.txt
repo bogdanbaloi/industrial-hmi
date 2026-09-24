@@ -808,8 +808,12 @@ endif()
 # boost::asio::serial_port async read loop feeding SerialFrameParser, mapping
 # equipment/<n>/state readings to the model via EquipmentStateReading. Built
 # when enabled OR under BUILD_TESTS so its tests compile without enabling the
-# host binaries -- the same gating objectsHttp uses. No Winsock: serial_port
-# uses the OS serial API, not sockets.
+# host binaries -- the same gating objectsHttp uses. Winsock: serial_port
+# itself uses the OS serial API and not sockets, but OtaAgent.cpp owns an
+# Asio io_context, and Asio's Windows io_context is the IOCP one -- its
+# winsock_init calls WSAStartup / WSACleanup from the context's constructor
+# and destructor. So this library needs ws2_32 for a reason that has nothing
+# to do with serial, the same way objectsModel does for DatabaseManager.
 if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
     add_library(objectsSerial OBJECT)
     target_sources(objectsSerial
@@ -819,6 +823,7 @@ if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
             src/integration/FlashFrame.cpp
             src/integration/FlashFrameParser.cpp
             src/integration/OtaSession.cpp
+            src/integration/OtaAgent.cpp
         PUBLIC
             FILE_SET HEADERS
             FILES
@@ -827,6 +832,7 @@ if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
                 src/integration/FlashFrame.h
                 src/integration/FlashFrameParser.h
                 src/integration/OtaSession.h
+                src/integration/OtaAgent.h
                 src/integration/EquipmentStateReading.h
     )
     target_link_libraries(objectsSerial
@@ -839,6 +845,16 @@ if(BUILD_SERIAL_BACKEND OR BUILD_TESTS)
             # the library behind a pimpl, so nothing above pays for it.
             boost_sml_headers
     )
+    if(WIN32)
+        # PUBLIC and carried by the library itself, the rule objectsModel /
+        # objectsTcp / objectsMqtt / objectsHttp already follow: object-library
+        # link edges do not propagate through an object library, so the next
+        # Windows target that links objectsSerial would otherwise fail on
+        # unresolved WSAStartup with nothing in the file explaining why.
+        # mswsock comes along for the same reason it does on the others.
+        target_link_libraries(objectsSerial PUBLIC ws2_32 mswsock)
+    endif()
+
     target_compile_definitions(objectsSerial
         PUBLIC
             INDUSTRIAL_HMI_HAS_SERIAL_BACKEND=1

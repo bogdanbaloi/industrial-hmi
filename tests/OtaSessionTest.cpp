@@ -283,6 +283,36 @@ TEST(OtaSessionTest, ABoardOnTrialWithTheRightImageIsOnlyConfirmed) {
     EXPECT_EQ(session.stage(), OtaStage::Done);
 }
 
+TEST(OtaSessionTest, ConfirmRefusedWithFlashErrorAfterTrial) {
+    // The hand-reflashed board: it already runs the target version on trial,
+    // so the session sends CONFIRM and nothing else, and the board refuses to
+    // keep it. FLASH_ERROR is not BAD_CRC, so the same bytes would be refused
+    // the same way and the session stops instead of resending. The existing
+    // FLASH_ERROR case stops at COMMIT; this one is at CONFIRM, the other end
+    // of the conversation.
+    OtaSession session(makeImage(kImageBytes), kNewVersion);
+    auto now = OtaSession::Clock::now();
+
+    const auto first = decode(session.start(now));
+    ASSERT_TRUE(first.has_value());
+    const auto info = decode(infoFor(*first, kNewVersion, kStateTrial));
+    ASSERT_TRUE(info.has_value());
+
+    const auto confirm = decode(session.onFrame(*info, now));
+    ASSERT_TRUE(confirm.has_value());
+    ASSERT_EQ(confirm->type, kConfirm);
+
+    const auto nak = decode(nakFor(*confirm, kNakFlashError));
+    ASSERT_TRUE(nak.has_value());
+    EXPECT_TRUE(session.onFrame(*nak, now).empty())
+        << "a refusal is not resent";
+
+    EXPECT_EQ(session.stage(), OtaStage::Failed);
+    EXPECT_EQ(session.failure(), OtaFailure::BoardRefused);
+    EXPECT_EQ(session.nakCode(), kNakFlashError);
+    EXPECT_NE(session.failureText().find("refused"), std::string::npos);
+}
+
 TEST(OtaSessionTest, ALostAnswerIsResentWithTheSameBytes) {
     OtaSession session(makeImage(kImageBytes), kNewVersion);
     auto now = OtaSession::Clock::now();

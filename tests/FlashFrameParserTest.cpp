@@ -163,6 +163,57 @@ TEST(FlashFrameParserTest, StrayStartByteBeforeTextLosesOnlyItself) {
     EXPECT_EQ(parser.falseStarts(), 1U);
 }
 
+TEST(FlashFrameParserTest, AnAckTruncatedByOneByteIsABadFrameNotAShortOne) {
+    // Measured on the board, not invented. Firmware's first bank-switch build
+    // answered COMMIT and reset itself immediately to switch banks, so the
+    // last CRC byte was still in the shift register when the line went down:
+    // it waited for the data register to free up (TXE) rather than for the
+    // line to go idle (TC). The host saw seven bytes of an eight-byte ACK,
+    // and an update that had actually succeeded arrived as a corrupt answer,
+    // followed by a retry of an update that had already happened.
+    //
+    // Fixed on their side. Kept here because one byte short is exactly the
+    // shape a board resetting too early makes, and the rule that matters is
+    // that the frame behind it still survives.
+    constexpr std::uint16_t kCommitSeq = 0x0024;
+    const FlashFrame        ack{kAck, kCommitSeq, {}};
+
+    // The bytes they captured, byte for byte, after the fix.
+    EXPECT_EQ(encodeFlashFrame(ack),
+              bytes({0xA5, 0x82, 0x24, 0x00, 0x00, 0x00, 0xE0, 0x8A}))
+        << "the encoder no longer agrees with what the board put on the wire";
+
+    // And what arrived before it: the same frame, one byte short.
+    const auto truncated = bytes({0xA5, 0x82, 0x24, 0x00, 0x00, 0x00, 0xE0});
+
+    FlashFrameParser parser;
+    // On its own it is an unfinished frame, so the parser holds it and says
+    // nothing. That is what made the host sit out its whole answer budget --
+    // 4013 ms on their capture -- instead of reporting anything.
+    const auto held = parser.consume(truncated);
+    EXPECT_TRUE(held.frames.empty());
+    EXPECT_TRUE(held.text.empty()) << "frame bytes must not leak into text";
+    EXPECT_EQ(parser.falseStarts(), 0U) << "nothing is wrong with it yet";
+
+    // Then the next real frame arrives behind it. Now the held bytes plus the
+    // new start byte make up a full-length frame with the wrong CRC, which is
+    // the point: it is rejected as a BAD frame, not accepted as a short one,
+    // and the resync finds the good frame behind it.
+    const FlashFrame next{kAck, kCommitSeq + 1, {}};
+    const auto       out = parser.consume(encodeFlashFrame(next));
+    ASSERT_EQ(out.frames.size(), 1U);
+    EXPECT_EQ(out.frames[0], next)
+        << "the truncated ACK swallowed the frame behind it";
+    EXPECT_EQ(parser.falseStarts(), 1U)
+        << "a frame one byte short must be counted as a bad frame";
+
+    // The six bytes left over from the truncated frame come out as telemetry
+    // text. That is the byte-by-byte resync rule doing its job, the same as
+    // for a bad CRC or an impossible LEN: noise on the text stream is the
+    // price of never skipping past a real frame.
+    EXPECT_EQ(out.text.size(), 6U);
+}
+
 TEST(FlashFrameParserTest, UnfinishedFrameIsHeldUntilTheRestArrives) {
     const FlashFrame ack{kAck, 8, {}};
     const std::vector<std::byte> wire = encodeFlashFrame(ack);

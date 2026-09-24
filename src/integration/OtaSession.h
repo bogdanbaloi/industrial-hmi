@@ -36,6 +36,26 @@ enum class OtaFailure {
     WrongVersion    ///< After the update the board runs another version.
 };
 
+/// The timeouts pinned in the spec's "Timeouts" table
+/// (`docs/protocols/uart-flash-v1.md`). Named rather than written into the
+/// `Timing` defaults below, because clang-tidy reads a bare 2025 in a
+/// member initializer as a magic number and is right to: the figure means
+/// nothing without the sentence beside it.
+///
+/// Namespace scope and not class scope: `Timing`'s default member
+/// initializers need them already complete at that point.
+
+/// Every answer except the one to `BEGIN`.
+inline constexpr std::chrono::milliseconds kOtaAnswerTimeout{2000};
+/// `BEGIN` alone: the same two seconds plus the worst-case bank erase of
+/// 24.59 ms, rounded up to the next whole millisecond.
+inline constexpr std::chrono::milliseconds kOtaBeginAnswerTimeout{2025};
+/// After `COMMIT` the board resets into the new image, so it cannot answer
+/// at once. Nothing is sent until this has passed.
+inline constexpr std::chrono::milliseconds kOtaRebootWait{500};
+/// Resends of the same frame before an update gives up with `NoAnswer`.
+inline constexpr int kOtaResendBudget = 3;
+
 /// Drives one update of one board, as pure logic: it performs no I/O, owns
 /// no thread and reads no clock. The caller feeds it events and sends the
 /// bytes it hands back. REQ-INTEGRATION-015, ADR-0034.
@@ -68,13 +88,13 @@ public:
     /// defaults are the numbers pinned in the spec's "Timeouts" table.
     struct Timing {
         /// Any answer except the one to `BEGIN`.
-        Duration answer{2000};
+        Duration answer{kOtaAnswerTimeout};
         /// `BEGIN`: the same 2 s plus the worst-case bank erase, 24.59 ms.
-        Duration beginAnswer{2025};
+        Duration beginAnswer{kOtaBeginAnswerTimeout};
         /// After `COMMIT` the board resets, so it cannot answer at once.
-        Duration reboot{500};
+        Duration reboot{kOtaRebootWait};
         /// Resends of the same frame before giving up.
-        int resends{3};
+        int resends{kOtaResendBudget};
     };
 
     /// @param image    The firmware image, exactly as it must end up in

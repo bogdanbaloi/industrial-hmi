@@ -10,6 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - The per-alarm Acknowledge button drew a grey missing-image square on Windows. It asked for `emblem-ok-symbolic`, which the Adwaita build shipped with MSYS2 does not carry, so the one control an operator uses on every alarm had no icon. Now `object-select-symbolic`, which the theme does carry.
 
+### OTA agent: the session on a real link (REQ-INTEGRATION-016)
+
+The piece that owns the pair. `OtaSession` decides but touches nothing
+(ADR-0034) and `SerialBackend` moves bytes but decides nothing (ADR-0032,
+ADR-0033); `OtaAgent` runs one against the other. ADR-0035.
+
+#### Added
+- `OtaAgent`: bytes out through an injected `SendFn` (which `SerialBackend::send` fits), decoded frames in through the sink it hands the transport, and the session's clock ticked on the agent's own thread. The caller starts it and reads progress; it never drives the session.
+- The session is confined, not locked: the agent owns its own `io_context` and one `jthread`, separate from the transport's, and every call into `OtaSession` happens there. That is why the session could stay thread-unsafe on purpose.
+- `frameSink()` hands out a callback holding a `std::weak_ptr` to the agent's state. A frame decoded on the transport's thread after the agent is destroyed is dropped instead of reaching freed state, which is the one failure in this chain that would be reached from a driver's read thread.
+- `OtaProgress`, a snapshot readable from any thread under a small mutex: stage, named failure and its sentence, `NAK` code, bytes acknowledged against image size, and whether the board was already up to date. A UI polls it and never touches the session.
+- `OtaProgress::transportFailed`, latched the instant `SendFn` says the link is gone. Reported beside the session rather than pushed into it, so it does not wait on the resend budget and does not put I/O awareness back into the pure-logic class.
+- `start()` and `stop()` are idempotent and safe from any thread, and the destructor stops. `SerialBackend`'s shutdown idiom, empty catch and all.
+- `stop()` returns only once the agent thread has really stopped, for every caller and not just the first: the shutdown lock is held across the join rather than around the latch, and `start()` makes the thread under it. A caller may tear down whatever `send` captured as soon as `stop()` returns, so a second caller leaving early would hand it a live thread sitting inside that send function. A `stop()` from inside the `DoneFn` is the one exception, since it already runs on that thread.
+- `OtaAgentTest`, 10 cases: the first frame, an answer advancing the stage, a whole update reaching `Done` with `onDone` fired exactly once, the hand-reflashed board refusing `CONFIRM` with `FLASH_ERROR`, a dead link reported without waiting for a timeout, `stop()` from two threads at once, a `stop()` that has to wait out a send another thread is already joining on, the destructor not hanging, a frame arriving after destruction, and `progress()` polled concurrently.
+- `docs/adr/0035-ota-agent-thread-confinement.md` and `docs/uml/sequence-ota-agent.puml`, which marks all three threads and the weak_ptr seam between them.
+- `FlashFrameParserTest.AnAckTruncatedByOneByteIsABadFrameNotAShortOne` (REQ-INTEGRATION-013), from a real capture rather than an invented case. A board that resets to switch banks immediately after answering leaves the last CRC byte in the shift register, so a successful `COMMIT` reaches the host as seven bytes of an eight-byte `ACK`: a succeeded update reported as a corrupt answer, then a retry of an update that already happened. The parser already handled it correctly -- held while alone, rejected as a bad frame once the next frame arrives behind it, with that frame still decoding -- and now says so under test.
+
+#### Fixed
+- `OtaSession::Timing`'s three timeout defaults were bare numbers, and 2025 in particular means nothing without the sentence beside it. They are now `kOtaAnswerTimeout`, `kOtaBeginAnswerTimeout` and `kOtaRebootWait` at namespace scope, with the resend budget named alongside them. They were written in #189 and broke nothing there, but clang-tidy reads a header through whichever translation unit includes it: the moment `OtaAgent.cpp` arrived and pulled in `OtaSession.h`, three `readability-magic-numbers` diagnostics became CI errors on a header this branch never edited.
+- On Windows, a target that compiles `OtaAgent.cpp` needs `ws2_32`. The agent opens no socket, but Asio's Windows `io_context` is the IOCP one and its `winsock_init` calls `WSAStartup` from the context's constructor. The `objectsSerial` comment claiming serial needs no Winsock was true of `serial_port` and not of `io_context`, so the library now carries `PUBLIC ws2_32 mswsock` itself, the rule `objectsModel`, `objectsTcp`, `objectsMqtt` and `objectsHttp` already follow. Without it the next Windows target to link it would have failed on unresolved `WSAStartup` with nothing in the file explaining why.
+
 ### OTA update session (REQ-INTEGRATION-015)
 
 The part of the OTA piece that decides: it runs a whole update over the UART
