@@ -67,6 +67,7 @@ Each file has the following sections:
 | 0032 | [Serial transmit path (posted writes, one in flight)](0032-serial-transmit-path.md) | Accepted |
 | 0033 | [Flash frames share the serial link with telemetry (split by start byte)](0033-flash-frames-share-the-serial-link.md) | Accepted |
 | 0034 | [The OTA update session is a Boost.SML state machine with no I/O](0034-ota-session-as-a-state-machine.md) | Accepted |
+| 0035 | [OtaAgent confines OtaSession to one thread with a weak-referenced frame sink](0035-ota-agent-thread-confinement.md) | Accepted |
 
 ## Adding a new ADR
 

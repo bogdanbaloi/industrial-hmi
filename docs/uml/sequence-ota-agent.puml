@@ -1,0 +1,109 @@
+@startuml sequence-ota-agent
+' Sequence: one firmware update, from OtaAgent::start() to onDone, with the
+' three threads that take part marked. REQ-INTEGRATION-016, ADR-0035.
+'
+' Grounded in real source:
+'   - src/integration/OtaAgent.h/.cpp   (start, frameSink, progress, Impl)
+'   - src/integration/OtaSession.h/.cpp (start / onFrame / onTick, ADR-0034)
+'   - src/integration/SerialBackend.h   (send + FrameSink, ADR-0032/0033)
+'   - src/integration/FlashFrameParser.h (bytes -> frames, on the backend thread)
+'   - docs/protocols/uart-flash-v1.md   (section 5, the order of the messages)
+
+title OTA update - OtaAgent owns the session, the clock and the link
+
+skinparam shadowing false
+
+actor "Caller\n(bootstrap / UI)" as Caller
+
+box "caller's thread" #LightGray
+  participant "OtaAgent\n(thin forwarders)" as Agent
+end box
+
+box "agent thread (jthread + io_context)" #LightYellow
+  participant "OtaAgent::Impl\nbeginUpdate / onTick / onFrame" as Impl
+  participant "OtaSession\n(Boost.SML table)" as Session
+end box
+
+box "transport thread (SerialBackend's io_context)" #LightBlue
+  participant "SerialBackend\n::send / routeChunk" as Backend
+  participant "FlashFrameParser" as Parser
+end box
+
+participant "Board\n(Nucleo bootloader)" as Board
+
+== wiring, before anything runs ==
+Caller -> Agent : OtaAgent(send, image, version, timing, onDone)
+Caller -> Agent : frameSink()
+Agent --> Caller : std::function holding a **weak_ptr<Impl>**
+Caller -> Backend : SerialBackend(device, baud, readingSink, **that sink**)
+
+== start ==
+Caller -> Agent : start()
+Agent -> Impl : post(beginUpdate) then launch the jthread
+note over Agent: returns at once; the caller\nnever drives the session
+Impl -> Session : start(now)
+Session --> Impl : INFO_REQ bytes
+Impl -> Backend : send(bytes)   (the injected SendFn)
+Backend -> Board : bytes over UART
+Impl -> Impl : publishProgress()  (under progressMutex)
+Impl -> Impl : scheduleTick()  (steady_timer, weak_ptr handler)
+
+== each answer ==
+Board -> Backend : reply bytes
+Backend -> Parser : consume(bytes)
+Parser --> Backend : FlashFrame (0xA5, read by LEN, CRC ok)
+Backend -> Agent : frameSink(frame)
+note right of Agent
+  Runs on the transport thread.
+  lock() the weak_ptr: expired means
+  the agent is gone, drop the frame.
+end note
+Agent -> Impl : post(onFrame(frame))  (crosses to the agent thread)
+Impl -> Session : onFrame(frame, now)
+Session --> Impl : the next frame's bytes, or nothing
+Impl -> Backend : send(bytes)
+Impl -> Impl : publishProgress()
+
+== the clock ==
+loop every 5 ms while the update runs
+  Impl -> Session : onTick(now)
+  Session --> Impl : a resend if an answer is late,\nor the next step if a wait elapsed
+  opt something to send
+    Impl -> Backend : send(bytes)
+  end
+  Impl -> Impl : publishProgress() ; scheduleTick()
+end
+
+== a link that died ==
+Impl -> Backend : send(bytes)
+Backend --> Impl : **false** (not running)
+Impl -> Impl : transportFailed = true, published at once
+note over Impl
+  Reported beside the session, never into it:
+  ADR-0034 kept OtaSession I/O-free. The session
+  keeps ticking its own resend budget out and
+  reaches its own terminal state on its own.
+end note
+
+== the end ==
+Session --> Impl : stage() == Done (or Failed)
+Impl -> Impl : fireDoneIfTerminal()  (once, ever)
+Impl -> Caller : onDone(progress)   ' on the agent thread
+note over Impl: the tick is not re-armed,\nso the io_context drains
+
+== reading it from anywhere ==
+Caller -> Agent : progress()
+Agent --> Caller : a copy of OtaProgress,\ntaken under progressMutex
+
+== shutdown ==
+Caller -> Agent : stop()  /  ~OtaAgent()
+Agent -> Impl : context.stop() then join  (idempotent, noexcept)
+
+note across
+  Three threads, one rule: OtaSession is touched only on the agent thread.
+  The frame sink does nothing but lock a weak_ptr and post across, so a frame
+  that arrives after the agent is destroyed is dropped, not delivered to freed
+  state. progress() is a copy under a mutex, so a UI never reaches the session.
+end note
+
+@enduml

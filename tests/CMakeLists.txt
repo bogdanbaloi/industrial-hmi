@@ -456,6 +456,35 @@ target_link_libraries(test_ota_session PRIVATE
 )
 add_test(NAME OtaSessionTest COMMAND test_ota_session)
 
+# Integration: OtaAgent. The piece that owns one OtaSession and a real link
+# (REQ-INTEGRATION-016). Compiles the sources directly, like test_ota_session,
+# and adds Boost.Asio + Threads for the agent's own io_context and thread.
+# The test plays the board through the injected SendFn, so it needs no port
+# and runs on every platform.
+add_executable(test_ota_agent
+    OtaAgentTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/OtaAgent.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/OtaSession.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/FlashFrame.cpp
+    ${CMAKE_SOURCE_DIR}/src/integration/FlashFrameParser.cpp)
+target_link_libraries(test_ota_agent PRIVATE
+    ${TEST_COMMON_LIBS}
+    tests_includes
+    ${BOOST_TARGET}
+    boost_sml_headers   # OtaSession's transition table, compiled in directly
+    Threads::Threads
+)
+if(WIN32)
+    # The agent opens no socket, but it owns an io_context, and Asio's
+    # Windows io_context is the IOCP one: its winsock_init calls
+    # WSAStartup / WSACleanup from the context's own constructor and
+    # destructor. So a target that compiles OtaAgent.cpp needs Winsock
+    # even though nothing in it is a socket. mswsock comes along for the
+    # same reason it does on the other Asio test targets.
+    target_link_libraries(test_ota_agent PRIVATE ws2_32 mswsock)
+endif()
+add_test(NAME OtaAgentTest COMMAND test_ota_agent)
+
 # Integration: serial reading -> equipment-state command mapping (the
 # SerialBackend sink's vocabulary). Pure header-only logic, no serial port
 # and no boost, so it runs on every platform.

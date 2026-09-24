@@ -1466,6 +1466,35 @@ Needs: utest
 
 ---
 
+### REQ-INTEGRATION-016 (SHOULD) — OTA agent drives a session over a real serial link
+
+`req~integration-016~1`
+
+The system **shall** run one `OtaSession` (REQ-INTEGRATION-015) against a real
+transport: it **shall** send every byte the session returns through an injected
+send function, feed every decoded flash frame (REQ-INTEGRATION-013) to the
+session as an event, and tick the session's clock on its own thread without the
+caller driving it by hand. `start()` and `stop()` **shall** be idempotent and
+safe to call from any thread, and `stop()` **shall** return only once the
+agent's thread has stopped, for every caller and not only the first, so that
+what the send function captured may be torn down as soon as it returns; the
+destructor **shall** stop. The frame-receiving
+callback handed to the transport **shall** hold a weak reference to the agent's
+state, so a frame arriving after the agent is destroyed is dropped rather than
+reaching freed state. A snapshot of progress **shall** be readable from any
+thread without touching the session directly. When the send function reports the
+link is gone, the system **shall** report that promptly through the snapshot,
+distinct from and not dependent on the session's own no-answer timeout budget
+elapsing.
+
+Verified by: OtaAgentTest.
+
+ADR: 0032, 0033, 0034, 0035.
+
+Needs: utest
+
+---
+
 ## PERF — Performance budgets
 
 ### REQ-PERF-001 (SHOULD) — Reproducible microbenchmarks on hot paths

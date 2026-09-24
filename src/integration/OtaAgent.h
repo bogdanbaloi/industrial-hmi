@@ -73,6 +73,12 @@ public:
 
     /// Stop ticking and join the thread. Idempotent, safe from the
     /// destructor, safe to call while an update is in flight.
+    ///
+    /// It returns only once the agent thread has stopped, for every caller
+    /// and not only the first: whatever `send` captured may be torn down as
+    /// soon as it returns. The one exception is a call made from inside the
+    /// `DoneFn`, which already runs on that thread: it ends the run and
+    /// returns without joining itself.
     void stop() noexcept;
 
     /// The sink to hand to `SerialBackend`'s constructor. It may be called
