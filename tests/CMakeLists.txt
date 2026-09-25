@@ -516,6 +516,32 @@ if(UNIX AND NOT APPLE)
     add_test(NAME SerialBackendTest COMMAND test_serial_backend)
 endif()
 
+# Integration: the OTA chain end to end, agent plus real transport over a
+# PTY pair (REQ-INTEGRATION-016). OtaAgentTest drives a whole update through
+# an injected SendFn, so the seam between the agent and SerialBackend was
+# the one thing nothing exercised. Here the bytes cross a file descriptor.
+# Same POSIX gate as test_serial_backend, and no Winsock line: unlike
+# test_ota_agent this target never builds on Windows at all.
+if(UNIX AND NOT APPLE)
+    add_executable(test_ota_agent_serial_integration
+        OtaAgentSerialIntegrationTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/OtaAgent.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/OtaSession.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/SerialBackend.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/SerialFrameParser.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/FlashFrame.cpp
+        ${CMAKE_SOURCE_DIR}/src/integration/FlashFrameParser.cpp)
+    target_link_libraries(test_ota_agent_serial_integration PRIVATE
+        ${TEST_COMMON_LIBS}
+        tests_includes
+        ${BOOST_TARGET}
+        boost_sml_headers   # OtaSession's transition table, compiled in directly
+        Threads::Threads
+    )
+    add_test(NAME OtaAgentSerialIntegrationTest
+             COMMAND test_ota_agent_serial_integration)
+endif()
+
 # Integration: PrimaryToSecondaryBridge -- in-process bridge that mirrors
 # equipment supply levels from a master ProductionModel to a slave.
 # Tested with two MockProductionModel instances; no I/O, no threads.

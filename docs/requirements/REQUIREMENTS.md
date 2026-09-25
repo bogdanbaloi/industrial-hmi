@@ -1487,7 +1487,7 @@ link is gone, the system **shall** report that promptly through the snapshot,
 distinct from and not dependent on the session's own no-answer timeout budget
 elapsing.
 
-Verified by: OtaAgentTest.
+Verified by: OtaAgentTest, OtaAgentSerialIntegrationTest.
 
 ADR: 0032, 0033, 0034, 0035.
 
