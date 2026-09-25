@@ -63,7 +63,7 @@ The numbers in brackets are sizes in bytes.
 | `SEQ`     | 2        | message number         | Lets the board recognise a frame that was sent twice. Lets an `ACK` say which frame it confirms. |
 | `LEN`     | 2        | payload length         | Tells the receiver where the payload ends and the checksum starts. |
 | `PAYLOAD` | 0 to 260 | the content            | For `DATA`, a 4-byte offset followed by up to 256 bytes of the image. |
-| `CRC16`   | 2        | checksum               | Computed over every byte between `A5` and itself. A mismatch means a bit flipped on the wire. |
+| `CRC16`   | 2        | checksum               | Computed over `TYPE`, `SEQ`, `LEN` plus `PAYLOAD`, which is every byte between `A5` and the checksum itself. A mismatch means a bit flipped on the wire. |
 
 Numbers wider than one byte are **little-endian**: the low byte goes first, so
 `SEQ` 1 is `01 00`. The Cortex-M4 and x86 both store numbers that way, so
