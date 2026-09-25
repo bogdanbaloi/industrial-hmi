@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE.
 
 ---
 
-Note: This repository contains anonymized code from a professional industrial
-control system project. Client-specific details, branding, and proprietary
-algorithms have been removed while preserving architectural patterns and
-implementation techniques for portfolio purposes.
+Note: This project was written from scratch for portfolio purposes. It is
+informed by the author's professional experience with industrial control
+systems. It reuses architectural patterns and implementation techniques
+rather than code, client details or branding from that work.
