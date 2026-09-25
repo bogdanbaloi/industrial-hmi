@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- The two committed callgrind baselines carried the absolute build path of the machine that produced them, 29 lines across both files, which named a local account plus a directory layout that has nothing to do with the project. The symbol lines now read `[build/wsl-release/industrial-hmi-console]`, which is the part that carries meaning. Found by auditing the whole public history rather than the working tree, after the repository was forked: a fork keeps what it took, so deleting a file today removes nothing from the copy.
 - The per-alarm Acknowledge button drew a grey missing-image square on Windows. It asked for `emblem-ok-symbolic`, which the Adwaita build shipped with MSYS2 does not carry, so the one control an operator uses on every alarm had no icon. Now `object-select-symbolic`, which the theme does carry.
 
 ### OTA agent: the session on a real link (REQ-INTEGRATION-016)
