@@ -74,6 +74,28 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   inside budget", this answers "where does the whole program spend
   its time", which is why ADR-0016 keeps both rather than choosing.
   See REQ-PERF-002.
+- **The same lock-free queue written twice, in C++ and in Rust** --
+  `app::core::SpscQueue` is a header-only single-producer
+  single-consumer ring on the Modbus ingest hot path: capacity a power
+  of two so index-to-slot is a mask rather than a modulo, one slot
+  reserved to tell full from empty, and `head_` plus `tail_` each
+  `alignas(64)` on their own cache line to kill false sharing
+  (ADR-0018). `rust/spsc/` is the same algorithm and the same Lamport
+  acquire/release ordering in Rust, which moves the
+  one-producer-one-consumer contract out of a comment and into the type
+  system (ADR-0026). It is exposed to C++ over a C ABI with its own
+  header and an FFI test that links both sides (ADR-0027), and it
+  carries its own `REQUIREMENTS.md` rather than borrowing this one.
+  Two languages solving one problem is a comparison you can actually
+  hold up, which is why it exists.
+- **MISRA-C++-aligned rather than MISRA-certified, and the difference
+  is written down** -- `docs/coding-guidelines.md` maps the MISRA C++
+  intent areas onto the clang-tidy checks already enforcing them, and
+  records every MISRA-relevant check that is disabled as a documented
+  deviation with its reason. That is MISRA's own mechanism, since
+  compliance is defined as conformance plus a record of deviations.
+  Claiming certified compliance without a certification body would be
+  the other thing. See ADR-0028.
 - **Adversarial-input safety on wire parsers (libFuzzer)** -- under
   `fuzzers/`, three harnesses (`fuzz_modbus_decode`,
   `fuzz_mqtt_publish`, `fuzz_mqtt_remaining_length`) drive arbitrary
@@ -505,6 +527,11 @@ cmake/                  FindOnnxRuntime.cmake
 tests/                  GoogleTest suites (count in the Testing section)
 benchmarks/             google/benchmark p50/p90/p99 harnesses (opt-in via BUILD_BENCHMARKS=ON)
 fuzzers/                libFuzzer harnesses on wire parsers (opt-in via BUILD_FUZZERS=ON)
+rust/
+  spsc/                 Lock-free SPSC ring in Rust, the C++ one ported
+                        (ADR-0026). Its own README plus REQUIREMENTS.
+    include/            hmi_spsc.h, the C ABI surface (ADR-0027)
+    ffi-test/           Links both sides and runs them against each other
 schemas/                JSON Schema spec for app-config.json (draft-07)
 ```
 
@@ -758,9 +785,11 @@ cmake --build build/debug
 cd build/debug && xvfb-run ctest --output-on-failure
 ```
 
-On Linux all 80 targets are green; on Windows MSYS2 we run the same
-suite minus a few view-layer tests that need a live `Gtk::Application`
-context (skipped via runtime check, not silenced).
+On Linux every target is green, the count being the one quoted at the
+top of this file rather than a second number kept by hand here. On
+Windows MSYS2 the same suite runs minus a few view-layer tests that need
+a live `Gtk::Application` context, plus the two that need a POSIX
+pseudo-terminal, all skipped via a runtime check rather than silenced.
 
 ### Selected test binaries
 
