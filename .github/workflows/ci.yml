@@ -110,7 +110,14 @@ jobs:
 
     steps:
     - name: Setup MSYS2
-      uses: msys2/setup-msys2@v2
+      # Pinned to a release rather than the moving @v2 tag. On 2026-09-27
+      # v2.33.0 shipped a refreshed package snapshot whose glib2 2.90 emits a
+      # ...Class typedef from G_DECLARE_FINAL_TYPE that collides with the
+      # hand-written alias in glibmm-2.68 2.86, and no fixed glibmm exists yet.
+      # The whole Windows build stopped compiling within hours of the tag
+      # moving, on a pull request that changed only documentation. v2.32.0 is
+      # the release the last green full matrix ran on.
+      uses: msys2/setup-msys2@v2.32.0
       with:
         msystem: CLANG64
         # Pinned to the action's base snapshot (no rolling -Syuu). A bleeding
