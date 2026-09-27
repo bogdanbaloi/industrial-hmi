@@ -86,6 +86,12 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   system (ADR-0026). It is exposed to C++ over a C ABI with its own
   header and an FFI test that links both sides (ADR-0027), and it
   carries its own `REQUIREMENTS.md` rather than borrowing this one.
+  Its own CI workflow runs three jobs: clippy with `deny(clippy::all)`
+  plus the tests, a **loom** model test that explores thread
+  interleavings exhaustively rather than hoping a race shows up, and
+  **Miri** for undefined behaviour in the unsafe blocks. For a
+  lock-free structure those two are the verification that counts, and a
+  test suite alone would not be evidence of anything.
   Two languages solving one problem is a comparison you can actually
   hold up, which is why it exists.
 - **MISRA-C++-aligned rather than MISRA-certified, and the difference
@@ -287,6 +293,23 @@ printf '%s\n' \
 Point an MCP client (e.g. Claude Desktop) at the binary to let an agent query
 live alarms and history. Design record in ADR-0023, requirement REQ-ARCH-018.
 
+### The whole thing talking to simulated equipment (Docker)
+
+One command brings up the demo the rest of this file describes:
+
+```bash
+docker compose up
+```
+
+`docker-compose.yml` starts an eclipse-mosquitto broker, a Modbus slave
+simulator, an MQTT sensor publisher and the HMI itself on one network, so
+the integration story runs against moving data rather than against a
+description of it. The stack uses its own configuration override,
+`docker/app-config.docker.json`, so it needs none of the setup above.
+
+Seeded credentials on first launch: `operator / operpass`,
+`maint / maintpass`, `admin / adminpass`. See `BUILD.md`.
+
 ### Client scripts (Python)
 
 The [`examples/`](examples/) directory ships a Python script per
@@ -311,6 +334,25 @@ up `modbus_slave_simulator.py` and the Modbus pill flips Connecting
 
 See [BUILD.md](BUILD.md) for full instructions, packaging, and i18n
 catalog regeneration.
+
+### The other documents in here
+
+This file is the tour. These are the ones it does not replace, listed
+because four of them had no link from anywhere, and a document nobody
+can find is a document nobody reads.
+
+| File | What it is for |
+| --- | --- |
+| [`BUILD.md`](BUILD.md) | Every build option, the Docker stack, the seeded credentials |
+| [`LINUX_BUILD.md`](LINUX_BUILD.md) | Ubuntu quick start, dependencies included |
+| [`WINDOWS_BUILD.md`](WINDOWS_BUILD.md) | MSYS2 CLANG64 quick start |
+| [`SECURITY.md`](SECURITY.md) | The security policy, and how to report something |
+| [`CHANGELOG.md`](CHANGELOG.md) | What changed and why, per piece, with the reasoning kept |
+| [`docs/coding-guidelines.md`](docs/coding-guidelines.md) | The MISRA C++ mapping plus every documented deviation |
+| [`docs/adr/README.md`](docs/adr/README.md) | The decisions, including the ones that rejected something |
+| [`docs/requirements/REQUIREMENTS.md`](docs/requirements/REQUIREMENTS.md) | Requirements plus the traceability matrix |
+| [`docs/protocols/uart-flash-v1.md`](docs/protocols/uart-flash-v1.md) | The OTA wire protocol, agreed with the firmware side |
+| [`rust/spsc/README.md`](rust/spsc/README.md) | The Rust port, with its own requirements beside it |
 
 ## Architecture
 
@@ -527,6 +569,10 @@ cmake/                  FindOnnxRuntime.cmake
 tests/                  GoogleTest suites (count in the Testing section)
 benchmarks/             google/benchmark p50/p90/p99 harnesses (opt-in via BUILD_BENCHMARKS=ON)
 fuzzers/                libFuzzer harnesses on wire parsers (opt-in via BUILD_FUZZERS=ON)
+docker-compose.yml      mosquitto + a Modbus slave sim + an MQTT sensor
+                        sim + the HMI, one command, moving data
+docker/                 The compose stack's own config override plus the
+                        mosquitto configuration
 rust/
   spsc/                 Lock-free SPSC ring in Rust, the C++ one ported
                         (ADR-0026). Its own README plus REQUIREMENTS.
