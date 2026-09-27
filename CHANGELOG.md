@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- The Windows MSYS2 build stopped compiling, and nothing in this repository had changed. `msys2/setup-msys2@v2` is a moving tag: v2.33.0 shipped on 2026-09-27 with a refreshed package snapshot whose glib2 2.90 emits a `...Class` typedef from `G_DECLARE_FINAL_TYPE` that collides with the hand-written alias in glibmm-2.68 2.86, and MSYS2 carries no fixed glibmm yet. The action is pinned to v2.32.0, the release the last green full matrix ran on. An unpinned action is an unpinned dependency.
 - The two committed callgrind baselines carried the absolute build path of the machine that produced them, 29 lines across both files, which named a local account plus a directory layout that has nothing to do with the project. The symbol lines now read `[build/wsl-release/industrial-hmi-console]`, which is the part that carries meaning. Found by auditing the whole public history rather than the working tree, after the repository was forked: a fork keeps what it took, so deleting a file today removes nothing from the copy.
 - The per-alarm Acknowledge button drew a grey missing-image square on Windows. It asked for `emblem-ok-symbolic`, which the Adwaita build shipped with MSYS2 does not carry, so the one control an operator uses on every alarm had no icon. Now `object-select-symbolic`, which the theme does carry.
 
