@@ -65,6 +65,15 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   (e.g. `AlertCenter::snapshot` at N=1000 active alarms: ~195us p50,
   leaving 99% of a 100ms render budget). See REQ-PERF-001 + ADR-0016.
   Build with `-DBUILD_BENCHMARKS=ON`.
+- **Whole-program profile with a committed baseline** -- a callgrind
+  capture over a synthetic operator workload, with the top-50
+  functions by cost committed under `scripts/perf/` so a release can
+  be diffed against the one before it rather than re-measured from
+  memory. `capture-callgrind.sh` produces it, `diff-baseline.sh`
+  compares two. The microbenchmarks above answer "is this hot path
+  inside budget", this answers "where does the whole program spend
+  its time", which is why ADR-0016 keeps both rather than choosing.
+  See REQ-PERF-002.
 - **Adversarial-input safety on wire parsers (libFuzzer)** -- under
   `fuzzers/`, three harnesses (`fuzz_modbus_decode`,
   `fuzz_mqtt_publish`, `fuzz_mqtt_remaining_length`) drive arbitrary
@@ -94,9 +103,10 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   recipe load -> SQLite -> model) instead of mocks. Auth + presenter +
   integration backends sit between 70% and 100%; GUI dialogs sit at 0%
   by design (exercised via Xvfb smoke tests instead).
-- **Every module ships as a standalone library** -- 9 README.md
+- **Every module ships as a standalone library** -- 13 README.md
   files under `src/` (auth / integration / presenter / historian /
-  ml / gtk-view / model / core / config), each with API surface,
+  ml / gtk-view / model / core / config / mcp / qt / console / app),
+  each with API surface,
   SOLID-per-interface rationale, threading model, and an
   embedding-in-another-project guide. Drop the auth core into a Qt
   app, the integration backends into a CLI daemon, the historian
@@ -132,6 +142,20 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
 - **11 UI languages** via gettext, runtime switch (no restart) -- the
   page tree is rebuilt so every `_()` and every `translatable="yes"`
   re-resolves against the new catalog.
+- **OTA firmware update over the same wire as the telemetry** --
+  new firmware reaches a board over the serial cable that already
+  carries its readings, split by start byte so one link does both
+  (ADR-0033). The update is a Boost.SML state machine that performs
+  no I/O at all, so the whole protocol is testable with no port and
+  no board (ADR-0034), and an agent owns one session against a real
+  link: its own thread confining the session, a weak-referenced
+  frame sink so a frame decoded after the agent is gone is dropped
+  rather than reaching freed state, and a dead link reported beside
+  the session rather than pushed into it (ADR-0035). Proved end to
+  end over a real serial link in `OtaAgentSerialIntegrationTest`.
+  **Honest scope: the host side is built and proved, no board has
+  been flashed through it yet.** See REQ-INTEGRATION-013/015/016 and
+  `docs/protocols/uart-flash-v1.md`.
 - **Bidirectional industrial integration on every protocol that
   supports it** -- MQTT carries outbound telemetry and inbound sensor
   traffic on one socket (publish + subscribe bridges). OPC-UA runs
@@ -329,9 +353,12 @@ you're evaluating the codebase:
 - **[`src/auth/`](src/auth/README.md)** -- Authentication, RBAC,
   audit trail (Argon2id, three-role permission model, SQLite audit
   log with CSV export).
-- **[`src/integration/`](src/integration/README.md)** -- Four
-  network backends (TCP, MQTT 3.1.1, Modbus TCP, OPC-UA) +
-  telemetry bridges + serializers.
+- **[`src/integration/`](src/integration/README.md)** -- Six
+  network backends (TCP, MQTT 3.1.1, Modbus TCP, OPC-UA, HTTP with
+  native TLS, serial) behind one narrow interface, telemetry
+  bridges, serializers, plus the OTA update chain: the UART flash
+  frame codec, the session state machine and the agent that drives
+  one update over a real link.
 - **[`src/presenter/`](src/presenter/README.md)** -- MVP backbone,
   ViewObserver pattern, RBAC integration, six concrete presenters.
 - **[`src/historian/`](src/historian/README.md)** -- Time-series
@@ -350,6 +377,21 @@ you're evaluating the codebase:
   exceptions, i18n mechanism, TimeFormat).
 - **[`src/config/`](src/config/README.md)** -- JSON config policy
   + compiled defaults + applyI18n pattern.
+- **[`src/mcp/`](src/mcp/README.md)** -- Model Context Protocol
+  server over stdio, so an LLM agent can ask the running system
+  about alarms, history and production instead of being handed a
+  copy of the data. Three read tools plus one command tool that is
+  off by default and, when off, neither advertised nor callable
+  (ADR-0024).
+- **[`src/qt/`](src/qt/README.md)** -- Qt 6 Widgets front-end over
+  the same presenters as GTK. It exists to prove the view layer is
+  replaceable rather than to be a second product.
+- **[`src/console/`](src/console/README.md)** -- Headless front-end.
+  It links ZERO gtkmm symbols, which is the structural proof that
+  the ViewObserver seam is real rather than a diagram.
+- **[`src/app/`](src/app/README.md)** -- Composition root. The one
+  place the layers are wired together, and the only file that is
+  allowed to know about all of them.
 
 ### Project layout
 
@@ -378,7 +420,8 @@ src/
     AlertCenter         Severity-routed alert bus
     ViewObserver        Empty-default callback interface
 
-  app/                  GTK Application bootstrap (separated from core)
+  app/                  Composition root: IntegrationBootstrap owns the
+                        manager plus every object a backend needs kept alive
     Application         Adopts Bootstrap, runs Gtk::Application
 
   gtk/view/             GTK4 UI layer
@@ -390,6 +433,13 @@ src/
     widgets/            QualityGauge, TrendChart, AlertsPanel, LiveClock
 
   console/              Headless front-end (no gtkmm)
+  qt/                   Qt 6 Widgets front-end (BUILD_QT_FRONTEND=ON),
+                        same presenters, 24 view classes plus 14 .ui
+    view/               Pages, dialogs, theming, gettext translator
+  mcp/                  Model Context Protocol server over stdio
+                        (BUILD_MCP_SERVER=ON), an LLM agent consumer
+    tools/              3 read tools plus equipment_command, the write
+                        one, off by default and then not even advertised
     ConsoleView         ViewObserver impl + jthread stdin reader
     InitConsole         Composition root for the console binary
 
@@ -404,6 +454,20 @@ src/
     MqttClient          MQTT client (full duplex on one socket, no paho)
     ProductionTelemetryBridge   Manufacturing -> MQTT outbound bridge
     SensorIngestBridge          MQTT -> Manufacturing inbound bridge
+    HttpBackend         REST read routes over cpp-httplib, native TLS
+                        (BUILD_HTTP_BACKEND=ON), ADR-0030
+    SerialBackend       UART telemetry ingest plus the flash transmit
+                        path (BUILD_SERIAL_BACKEND=ON), ADR-0029/0032
+    FlashFrame / FlashFrameParser   UART flash protocol v1 codec, CRC-16
+                        CCITT-FALSE framing shared with telemetry on one
+                        wire, split by start byte (ADR-0033)
+    OtaSession          The whole update as a Boost.SML state machine
+                        with no I/O: it decides, it touches nothing
+                        (ADR-0034)
+    OtaAgent            Owns one session against a real link. Its own
+                        io_context plus one thread, a weak-referenced
+                        frame sink, a dead link reported beside the
+                        session rather than pushed into it (ADR-0035)
     opcua/              OPC-UA (BUILD_OPCUA_BACKEND=ON), open62541-backed
     modbus/             Modbus primary (BUILD_MODBUS_BACKEND=ON, default),
                         hand-rolled MBAP framing over Boost.Asio. Reader

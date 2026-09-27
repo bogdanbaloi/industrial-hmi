@@ -290,6 +290,75 @@ open62541 with `UA_ENABLE_ENCRYPTION=OPENSSL`.
 
 ---
 
+### `SerialBackend` (Boost.Asio serial_port) -- optional
+
+`BUILD_SERIAL_BACKEND=ON`, OFF by default. UART telemetry ingest, mapping
+`equipment/<n>/state` readings onto the production model (REQ-INTEGRATION-009,
+ADR-0029). It also carries the transmit path the OTA chain needs: posted
+writes with one in flight (ADR-0032).
+
+One wire carries two kinds of traffic. Telemetry is line-based text, flash
+frames start with `0xA5`, and the backend splits them by that start byte and
+routes each to its own sink (ADR-0033). A frame that fails its CRC is counted
+as a false start and the parser resyncs from the next byte, never skipping
+`LEN`, because skipping it would swallow the frame behind a corrupted one.
+
+## OTA update chain
+
+Sending new firmware to a board over the same serial cable that carries its
+telemetry. The protocol is agreed with the firmware side and lives in
+`docs/protocols/uart-flash-v1.md`.
+
+It is split into three pieces on purpose, and the split is the design.
+
+### `FlashFrame` + `FlashFrameParser` -- the codec
+
+UART flash protocol v1 framing: `0xA5` start byte, type, sequence, length,
+payload, CRC-16/CCITT-FALSE over `TYPE`, `SEQ`, `LEN` plus `PAYLOAD`. The
+parser holds an unfinished frame until the rest arrives, and treats a frame
+that is one byte short as a BAD frame rather than a short one, which is
+exactly what a board that resets immediately after answering produces
+(REQ-INTEGRATION-013, ADR-0033).
+
+### `OtaSession` -- the decision, with no I/O
+
+The whole update as a Boost.SML transition table: probe, begin, send data,
+commit, wait out the reboot, recheck the version, confirm. It performs no I/O,
+owns no thread and reads no clock. Every call returns the bytes to send now,
+or an empty vector when there is nothing to do (REQ-INTEGRATION-015,
+ADR-0034).
+
+Keeping it I/O-free is what makes the whole protocol testable with no port and
+no board, which is why there is no `linkDown` event in it.
+
+### `OtaAgent` -- the pair, against a real link
+
+Owns one `OtaSession` and a real transport (REQ-INTEGRATION-016, ADR-0035):
+
+- **The session is confined rather than locked.** The agent owns its own
+  `io_context` plus one `jthread`, separate from the transport's, and every
+  call into the session happens on that thread. That is why the session can
+  stay a class with no lock in it.
+- **`frameSink()` hands out a callback holding a `weak_ptr`.** A frame decoded
+  on the transport's thread after the agent is gone is dropped rather than
+  reaching freed state, which is the one failure in this chain reachable from
+  a driver's read thread.
+- **A dead link is reported beside the session, not through it.**
+  `OtaProgress::transportFailed` latches the instant the send function says
+  no, so it does not wait out a resend budget and no I/O awareness goes back
+  into the pure-logic class.
+- **`stop()` returns only once the agent thread has really stopped**, for
+  every caller rather than only the first, because a caller may tear down what
+  the send function captured as soon as it returns.
+
+Proved end to end over a real serial link in `OtaAgentSerialIntegrationTest`: a
+real `SerialBackend` on a pseudo-terminal with the board played on the other
+end, nothing injected between the pieces.
+
+**Honest scope.** The host side is built and proved over a real link. No board
+has been flashed through this host yet: the agent is not wired into the
+application, and that is the next piece.
+
 ## Bridges -- where wire meets model
 
 The bridges are the only place coupling between transport + business
