@@ -8,6 +8,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
 + Presenter core.
 
 [![CI](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml)
+[![Rust](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/rust.yml)
 ![Coverage](https://img.shields.io/badge/coverage-67%25-green)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows-lightgrey)
@@ -122,8 +123,9 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   raises a distinct `ConfigInvalidError` listing every violation in
   one pass. The auditable spec lives in `schemas/app-config.schema.json`
   (JSON Schema draft-07). See REQ-CORE-005.
-- **67% test coverage** verified by gcovr in CI on every PR, across
-  11,112 instrumented lines and **<!--fig:ctest-->104<!--/fig--> ctest targets**: scenario-based
+- **Test coverage measured rather than asserted**, by gcovr on every
+  PR, the figure being the one on the badge above and the live number
+  in each run's summary. Across **<!--fig:ctest-->104<!--/fig--> ctest targets**: scenario-based
   E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
   tests under real GTK via Xvfb, dialog dispatch via programmatic
   `response()`, plus integration tests that wire **real** components
@@ -595,6 +597,29 @@ one call into several, while option gates (`BUILD_OPCUA_BACKEND`,
 configure. Only a configure knows the real number, so that is the one CI
 checks.
 
+### Diagrams
+
+Twelve PlantUML sources under [`docs/uml/`](docs/uml/), kept beside the
+code they describe rather than in a wiki that drifts. GitHub does not
+render `.puml` inline, so open one in any PlantUML viewer or paste it
+into `plantuml.com`.
+
+| Diagram | What it shows |
+| --- | --- |
+| [`component-overview.puml`](docs/uml/component-overview.puml) | One core, four consumers: GTK, Qt, console and the MCP server, all through `ViewObserver` |
+| [`component-integration-layer.puml`](docs/uml/component-integration-layer.puml) | The manager, the bridges, and the SPSC seam between threads. **Stale:** it draws Modbus plus MQTT only, so TCP, OPC-UA, HTTP, serial and the whole OTA chain are missing from it |
+| [`class-integration-backend.puml`](docs/uml/class-integration-backend.puml) | `IntegrationBackend` with its concretes, dependency inversion in one picture |
+| [`sequence-modbus-read.puml`](docs/uml/sequence-modbus-read.puml) | A live reading: poll thread, SPSC queue, drain, presenter, GTK |
+| [`sequence-serial-read.puml`](docs/uml/sequence-serial-read.puml) | MCU to UART to the asio read loop to the parser to the model |
+| [`sequence-serial-write.puml`](docs/uml/sequence-serial-write.puml) | The transmit side: post, write queue, the `async_write` chain |
+| [`activity-flash-frame-parser.puml`](docs/uml/activity-flash-frame-parser.puml) | One stream carrying two kinds of traffic, split by start byte |
+| [`state-ota-session.puml`](docs/uml/state-ota-session.puml) | The OTA update as the host decides it, the Boost.SML table |
+| [`sequence-ota-agent.puml`](docs/uml/sequence-ota-agent.puml) | The agent owning the session, the clock and the link, with all three threads marked |
+| [`state-system-fsm.puml`](docs/uml/state-system-fsm.puml) | The SystemState machine, transition table plus the safe-state path |
+| [`sequence-alarm-lifecycle.puml`](docs/uml/sequence-alarm-lifecycle.puml) | Fault to AlertCenter to observers, audit and the alert panel |
+| [`mcp-tool-call.puml`](docs/uml/mcp-tool-call.puml) | JSON-RPC over stdio to a tool to a JSON result, including the gated write |
+
+
 ## Extensibility -- how to add X
 
 Every extension point below is **localised to one or two files**.
@@ -788,10 +813,11 @@ REQ-ARCH-016 and ADR-0020.
 ## Test Strategy
 
 Coverage is measured by **gcovr** on the Ubuntu CI job and posted at
-the top of every PR's Actions run. Currently **67% across 11,112
-instrumented lines** (auth, presenter, and integration backends sit
-between 70% and 100%; GUI dialogs sit at 0% by design -- they're
-exercised via Xvfb-backed smoke tests instead), achieved by combining
+the top of every PR's Actions run, which is where the current number
+lives rather than in this paragraph. Auth, presenter and the
+integration backends sit between 70% and 100%, while GUI dialogs sit at
+0% by design, exercised through Xvfb-backed smoke tests instead. The
+shape of it comes from combining
 several testing styles instead of one monoculture:
 
 | Category | What it covers | Examples |
@@ -859,7 +885,7 @@ commands into `industrial-hmi-console` and diffs stdout against a
 (`tests/scenarios/run-scenario.cmake`) strips logger timestamp lines
 so only structural events participate in the byte-exact comparison.
 
-## Three front-ends, one core
+## Three front-ends plus a machine consumer, one core
 
 ```bash
 # GTK desktop binary
@@ -870,12 +896,16 @@ so only structural events participate in the byte-exact comparison.
 
 # Opt-in Qt6 desktop binary (-DBUILD_QT_FRONTEND=ON) -- same core again
 ./build/release/industrial-hmi-qt
+
+# Opt-in MCP server (-DBUILD_MCP_SERVER=ON) -- the fourth consumer, and
+# the one with no widgets at all, which is what makes it the useful test
+./build/release/industrial-hmi-mcp
 ```
 
-All three binaries share `main.cpp` via an `#ifdef` switch
-(`CONSOLE_MODE` / `QT_FRONTEND_MODE` / default GTK) and link the same
-Model + Presenter + Bootstrap libraries. The console and Qt binaries
-link **zero gtkmm**:
+All four binaries share `src/main.cpp` via one `#ifdef` switch
+(`CONSOLE_MODE` / `QT_FRONTEND_MODE` / `MCP_MODE` / default GTK) and link
+the same Model + Presenter + Bootstrap libraries. The console, Qt and
+MCP binaries all link **zero gtkmm**:
 
 ```bash
 # Linux
@@ -1171,6 +1201,51 @@ side, `Open62541ClientIntegrationTest` validates monitored-item
 dispatch + the subscribe-before-start / subscribe-after-start /
 lifecycle state matrix.
 
+### Modbus backend (primary, on by default)
+
+The only backend that is ON without a CMake flag, because a Modbus TCP
+primary is the most common thing an HMI has to be. Hand-rolled MBAP
+framing over Boost.Asio rather than libmodbus, for the same reason the
+MQTT client is hand-rolled: the wire format is the part worth owning.
+
+A `ModbusReader` interface with a concrete TCP client behind it, a
+register map, an ingest bridge, and a `jthread` poll loop. The strategy
+seam is what lets the poll loop tests run against a `FakeModbusReader`
+in memory, with no socket open anywhere.
+
+It is also the only path that needed a lock-free queue: readings cross
+from the poll thread to the model thread through `app::core::SpscQueue`
+(ADR-0018), which is the C++ original the Rust port mirrors.
+
+### HTTP backend with native TLS (opt-in)
+
+`BUILD_HTTP_BACKEND=ON`. Five read-only routes over cpp-httplib
+(ADR-0025), so a reporting tool, an ERP or an audit model can pull the
+same figures the dashboard shows. No route changes anything: it is a
+read surface by construction rather than by permission.
+
+TLS is native rather than behind a proxy (REQ-INTEGRATION-010,
+ADR-0030), with the client's own certificates, because "put nginx in
+front of it" is not an answer a factory network always allows.
+
+### Serial backend and the OTA chain (opt-in)
+
+`BUILD_SERIAL_BACKEND=ON`. UART telemetry ingest (ADR-0029), and the
+same wire carries firmware going the other way. Telemetry is line-based
+text, flash frames start with `0xA5`, and the backend splits them by
+that start byte (ADR-0033).
+
+The OTA chain above it is three pieces on purpose: a frame codec, a
+session that decides everything while performing no I/O at all
+(ADR-0034), and an agent that owns one session against a real link
+(ADR-0035). Keeping the session I/O-free is what makes the whole
+protocol testable with no port and no board.
+
+**Honest scope:** the host side is built and proved end to end over a
+real serial link. No board has been flashed through it yet. See
+`docs/protocols/uart-flash-v1.md`, agreed with the firmware side.
+
+
 ## Time-series Historian
 
 Optional persistent storage for the scalar telemetry the model
@@ -1358,7 +1433,13 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |
-| Static Analysis | clang-tidy (strict) + cppcheck |
+| Static Analysis | clang-tidy (strict) + cppcheck, mapped to MISRA C++ intent areas with every deviation documented (ADR-0028) |
+| Second language | Rust for the SPSC ring (ADR-0026), exposed to C++ over a C ABI (ADR-0027), with loom plus Miri in its own CI |
+| Containers | Docker Compose brings up mosquitto, a Modbus slave sim, an MQTT sensor sim and the HMI on one network |
+| Profiling | google/benchmark p50/p90/p99 on hot paths, plus a whole-program callgrind baseline committed for diffing |
+| Fuzzing | libFuzzer on the wire parsers under ASan and UBSan |
+| Traceability | OpenFastTrace, every MUST and SHOULD tied to a test, gated in CI |
+| Runtime safety | ASan, UBSan, ThreadSanitizer and Valgrind Memcheck, all gated per pull request |
 
 ## Palettes and Layouts
 
