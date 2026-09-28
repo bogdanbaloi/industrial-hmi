@@ -859,7 +859,7 @@ commands into `industrial-hmi-console` and diffs stdout against a
 (`tests/scenarios/run-scenario.cmake`) strips logger timestamp lines
 so only structural events participate in the byte-exact comparison.
 
-## Three front-ends, one core
+## Three front-ends plus a machine consumer, one core
 
 ```bash
 # GTK desktop binary
@@ -870,12 +870,16 @@ so only structural events participate in the byte-exact comparison.
 
 # Opt-in Qt6 desktop binary (-DBUILD_QT_FRONTEND=ON) -- same core again
 ./build/release/industrial-hmi-qt
+
+# Opt-in MCP server (-DBUILD_MCP_SERVER=ON) -- the fourth consumer, and
+# the one with no widgets at all, which is what makes it the useful test
+./build/release/industrial-hmi-mcp
 ```
 
-All three binaries share `main.cpp` via an `#ifdef` switch
-(`CONSOLE_MODE` / `QT_FRONTEND_MODE` / default GTK) and link the same
-Model + Presenter + Bootstrap libraries. The console and Qt binaries
-link **zero gtkmm**:
+All four binaries share `src/main.cpp` via one `#ifdef` switch
+(`CONSOLE_MODE` / `QT_FRONTEND_MODE` / `MCP_MODE` / default GTK) and link
+the same Model + Presenter + Bootstrap libraries. The console, Qt and
+MCP binaries all link **zero gtkmm**:
 
 ```bash
 # Linux
@@ -1171,6 +1175,51 @@ side, `Open62541ClientIntegrationTest` validates monitored-item
 dispatch + the subscribe-before-start / subscribe-after-start /
 lifecycle state matrix.
 
+### Modbus backend (primary, on by default)
+
+The only backend that is ON without a CMake flag, because a Modbus TCP
+primary is the most common thing an HMI has to be. Hand-rolled MBAP
+framing over Boost.Asio rather than libmodbus, for the same reason the
+MQTT client is hand-rolled: the wire format is the part worth owning.
+
+A `ModbusReader` interface with a concrete TCP client behind it, a
+register map, an ingest bridge, and a `jthread` poll loop. The strategy
+seam is what lets the poll loop tests run against a `FakeModbusReader`
+in memory, with no socket open anywhere.
+
+It is also the only path that needed a lock-free queue: readings cross
+from the poll thread to the model thread through `app::core::SpscQueue`
+(ADR-0018), which is the C++ original the Rust port mirrors.
+
+### HTTP backend with native TLS (opt-in)
+
+`BUILD_HTTP_BACKEND=ON`. Five read-only routes over cpp-httplib
+(ADR-0025), so a reporting tool, an ERP or an audit model can pull the
+same figures the dashboard shows. No route changes anything: it is a
+read surface by construction rather than by permission.
+
+TLS is native rather than behind a proxy (REQ-INTEGRATION-010,
+ADR-0030), with the client's own certificates, because "put nginx in
+front of it" is not an answer a factory network always allows.
+
+### Serial backend and the OTA chain (opt-in)
+
+`BUILD_SERIAL_BACKEND=ON`. UART telemetry ingest (ADR-0029), and the
+same wire carries firmware going the other way. Telemetry is line-based
+text, flash frames start with `0xA5`, and the backend splits them by
+that start byte (ADR-0033).
+
+The OTA chain above it is three pieces on purpose: a frame codec, a
+session that decides everything while performing no I/O at all
+(ADR-0034), and an agent that owns one session against a real link
+(ADR-0035). Keeping the session I/O-free is what makes the whole
+protocol testable with no port and no board.
+
+**Honest scope:** the host side is built and proved end to end over a
+real serial link. No board has been flashed through it yet. See
+`docs/protocols/uart-flash-v1.md`, agreed with the firmware side.
+
+
 ## Time-series Historian
 
 Optional persistent storage for the scalar telemetry the model
@@ -1358,7 +1407,13 @@ GoogleTest cases pin the success / failure / cancellation paths.
 | Build | CMake 3.20+ with presets, Ninja generator |
 | CI/CD | GitHub Actions (Ubuntu 24.04 + Windows MSYS2 CLANG64) |
 | Coverage | gcovr (HTML + text + step-summary on every PR) |
-| Static Analysis | clang-tidy (strict) + cppcheck |
+| Static Analysis | clang-tidy (strict) + cppcheck, mapped to MISRA C++ intent areas with every deviation documented (ADR-0028) |
+| Second language | Rust for the SPSC ring (ADR-0026), exposed to C++ over a C ABI (ADR-0027), with loom plus Miri in its own CI |
+| Containers | Docker Compose brings up mosquitto, a Modbus slave sim, an MQTT sensor sim and the HMI on one network |
+| Profiling | google/benchmark p50/p90/p99 on hot paths, plus a whole-program callgrind baseline committed for diffing |
+| Fuzzing | libFuzzer on the wire parsers under ASan and UBSan |
+| Traceability | OpenFastTrace, every MUST and SHOULD tied to a test, gated in CI |
+| Runtime safety | ASan, UBSan, ThreadSanitizer and Valgrind Memcheck, all gated per pull request |
 
 ## Palettes and Layouts
 
