@@ -595,6 +595,29 @@ one call into several, while option gates (`BUILD_OPCUA_BACKEND`,
 configure. Only a configure knows the real number, so that is the one CI
 checks.
 
+### Diagrams
+
+Twelve PlantUML sources under [`docs/uml/`](docs/uml/), kept beside the
+code they describe rather than in a wiki that drifts. GitHub does not
+render `.puml` inline, so open one in any PlantUML viewer or paste it
+into `plantuml.com`.
+
+| Diagram | What it shows |
+| --- | --- |
+| [`component-overview.puml`](docs/uml/component-overview.puml) | One core, four consumers: GTK, Qt, console and the MCP server, all through `ViewObserver` |
+| [`component-integration-layer.puml`](docs/uml/component-integration-layer.puml) | The manager, the bridges, and the SPSC seam between threads. **Stale:** it draws Modbus plus MQTT only, so TCP, OPC-UA, HTTP, serial and the whole OTA chain are missing from it |
+| [`class-integration-backend.puml`](docs/uml/class-integration-backend.puml) | `IntegrationBackend` with its concretes, dependency inversion in one picture |
+| [`sequence-modbus-read.puml`](docs/uml/sequence-modbus-read.puml) | A live reading: poll thread, SPSC queue, drain, presenter, GTK |
+| [`sequence-serial-read.puml`](docs/uml/sequence-serial-read.puml) | MCU to UART to the asio read loop to the parser to the model |
+| [`sequence-serial-write.puml`](docs/uml/sequence-serial-write.puml) | The transmit side: post, write queue, the `async_write` chain |
+| [`activity-flash-frame-parser.puml`](docs/uml/activity-flash-frame-parser.puml) | One stream carrying two kinds of traffic, split by start byte |
+| [`state-ota-session.puml`](docs/uml/state-ota-session.puml) | The OTA update as the host decides it, the Boost.SML table |
+| [`sequence-ota-agent.puml`](docs/uml/sequence-ota-agent.puml) | The agent owning the session, the clock and the link, with all three threads marked |
+| [`state-system-fsm.puml`](docs/uml/state-system-fsm.puml) | The SystemState machine, transition table plus the safe-state path |
+| [`sequence-alarm-lifecycle.puml`](docs/uml/sequence-alarm-lifecycle.puml) | Fault to AlertCenter to observers, audit and the alert panel |
+| [`mcp-tool-call.puml`](docs/uml/mcp-tool-call.puml) | JSON-RPC over stdio to a tool to a JSON result, including the gated write |
+
+
 ## Extensibility -- how to add X
 
 Every extension point below is **localised to one or two files**.
