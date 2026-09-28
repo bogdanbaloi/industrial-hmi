@@ -8,6 +8,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
 + Presenter core.
 
 [![CI](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/ci.yml)
+[![Rust](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/bogdanbaloi/industrial-hmi/actions/workflows/rust.yml)
 ![Coverage](https://img.shields.io/badge/coverage-67%25-green)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows-lightgrey)
@@ -122,8 +123,9 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   raises a distinct `ConfigInvalidError` listing every violation in
   one pass. The auditable spec lives in `schemas/app-config.schema.json`
   (JSON Schema draft-07). See REQ-CORE-005.
-- **67% test coverage** verified by gcovr in CI on every PR, across
-  11,112 instrumented lines and **<!--fig:ctest-->104<!--/fig--> ctest targets**: scenario-based
+- **Test coverage measured rather than asserted**, by gcovr on every
+  PR, the figure being the one on the badge above and the live number
+  in each run's summary. Across **<!--fig:ctest-->104<!--/fig--> ctest targets**: scenario-based
   E2E, async presenter tests with `Glib::MainLoop` pump, view-layer
   tests under real GTK via Xvfb, dialog dispatch via programmatic
   `response()`, plus integration tests that wire **real** components
@@ -811,10 +813,11 @@ REQ-ARCH-016 and ADR-0020.
 ## Test Strategy
 
 Coverage is measured by **gcovr** on the Ubuntu CI job and posted at
-the top of every PR's Actions run. Currently **67% across 11,112
-instrumented lines** (auth, presenter, and integration backends sit
-between 70% and 100%; GUI dialogs sit at 0% by design -- they're
-exercised via Xvfb-backed smoke tests instead), achieved by combining
+the top of every PR's Actions run, which is where the current number
+lives rather than in this paragraph. Auth, presenter and the
+integration backends sit between 70% and 100%, while GUI dialogs sit at
+0% by design, exercised through Xvfb-backed smoke tests instead. The
+shape of it comes from combining
 several testing styles instead of one monoculture:
 
 | Category | What it covers | Examples |
