@@ -76,6 +76,24 @@ public:
         session_ = &session;
     }
 
+    /// @brief Wire only the authorization context, with no audit sink.
+    ///
+    /// Authorisation and auditing are separate concerns that setAudit()
+    /// happened to couple, because it takes both and is the only setter of
+    /// either. A deployment whose audit database will not open still has an
+    /// authenticated agent and must still be role-checked: losing the audit
+    /// ROW is a documented downgrade, losing the GATE is not (ADR-0036).
+    void setSession(app::auth::Session& session) { session_ = &session; }
+
+    /// @brief Whether any authorisation context is wired at all.
+    ///
+    /// checkRole() passes a null session through on purpose, so an
+    /// auth-disabled build behaves unchanged. A caller that must never run an
+    /// ungated write asks this first instead of assuming the wiring happened.
+    [[nodiscard]] bool hasSession() const noexcept {
+        return session_ != nullptr;
+    }
+
     /// Signal carrying the raw system-state int (0=IDLE, 1=RUNNING,
     /// 2=ERROR, 3=CALIBRATION). MainWindow uses this to drive the
     /// sidebar SystemStatusBadge without implementing ViewObserver.

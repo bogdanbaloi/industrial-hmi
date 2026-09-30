@@ -154,6 +154,58 @@ TEST_F(EquipmentCommandToolTest, MaintenanceRoleResetSucceeds) {
     EXPECT_EQ(auditRows("SUCCESS"), 1U);
 }
 
+// The case the test below does NOT reach, reported by the pfa workstream on
+// 2026-09-30 and confirmed against main at 148fab0.
+//
+// `NoSessionWiredIsInternalRefusal` passes because the TOOL's session carries
+// no user. The real deployment fails differently: the agent session is fully
+// populated, so `currentUser()` hands back `mcp-agent`, while the PRESENTER
+// never received a session at all. McpInitRoot only calls `setAudit`, which
+// wires audit AND session together, inside `if (auditLogger_->initialize())`.
+// When the audit database cannot be opened the intent was to lose the audit
+// ROW. What was also lost was the role check, because
+// `DashboardPresenter::checkRole` passes a null session through by design.
+//
+// The result on main: an OPERATOR agent asking for `reset` has the reset
+// PERFORMED, is answered `Unauthorized`, and leaves no audit row. The action
+// happens, the reply denies it, nothing records it.
+TEST_F(EquipmentCommandToolTest, UnwiredPresenterStillRefusesAnUnauthorisedWrite) {
+    // Exactly what McpInitRoot does when the audit database fails to open:
+    // the agent is logged in, `setAudit` is never called.
+    User agent;
+    agent.username = "mcp-agent";
+    agent.role     = Role::Operator;
+    session_.setUser(agent);
+    ASSERT_TRUE(session_.currentUser().has_value());
+
+    // Reset needs Maintenance. Losing the audit sink must not lose the gate.
+    EXPECT_CALL(model_, resetSystem()).Times(0);
+
+    auto result = runEquipmentCommand(*presenter_, session_,
+                                      EquipmentCommand::ResetRestart);
+    ASSERT_TRUE(result.isErr());
+    EXPECT_EQ(result.error(), McpErrorCode::Unauthorized);
+}
+
+// The other half of the same guard: refusing an unwired presenter must not
+// become a refusal of everything. A permitted action still has to run, because
+// the documented behaviour of a failed audit open is "writes without a
+// persisted audit row" rather than "no writes".
+TEST_F(EquipmentCommandToolTest, SessionWiredWithoutAuditStillPerformsAllowedWork) {
+    presenter_->setSession(session_);  // session only, no audit sink
+    User agent;
+    agent.username = "mcp-agent";
+    agent.role     = Role::Operator;
+    session_.setUser(agent);
+
+    EXPECT_CALL(model_, startProduction()).Times(1);
+
+    auto result = runEquipmentCommand(*presenter_, session_,
+                                      EquipmentCommand::Start);
+    ASSERT_TRUE(result.isOk());
+    EXPECT_EQ(result.unwrap().at("status"), "accepted");
+}
+
 // The security catch (ADR-0024): if the agent session carries no authenticated
 // user -- an internal wiring fault, e.g. setAudit never called so the
 // presenter's own gate would pass a null session through and run an ungated

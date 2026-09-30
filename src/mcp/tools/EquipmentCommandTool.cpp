@@ -144,6 +144,16 @@ runEquipmentCommand(DashboardPresenter& presenter, const auth::Session& session,
         return Res{app::core::Err, McpErrorCode::Unauthorized};
     }
 
+    // The other half of the same guard. The check above proves that THIS
+    // session carries an agent. It says nothing about the presenter's own
+    // session pointer, which is a different pointer set from a different
+    // place. If that one is absent the presenter's gate passes everything
+    // through, so routing the call would perform an ungated write and then
+    // answer Unauthorized. Refuse rather than trust the wiring (ADR-0036).
+    if (!presenter.hasSession()) {
+        return Res{app::core::Err, McpErrorCode::Unauthorized};
+    }
+
     // Route through the same handler a human button calls. With an authenticated
     // agent session guaranteed above, the presenter's own checkRole audits the
     // attempt (SUCCESS when permitted, FAILURE otherwise) and performs or no-ops

@@ -49,7 +49,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   running state, Performance from throughput / target UPH (clamped to
   100%), Quality from the average checkpoint pass rate. See
   REQ-DASHBOARD-008.
-- **Requirements traceability (OpenFastTrace)** -- <!--fig:adrs-->35<!--/fig--> ADRs + <!--fig:reqs-->94<!--/fig-->
+- **Requirements traceability (OpenFastTrace)** -- <!--fig:adrs-->36<!--/fig--> ADRs + <!--fig:reqs-->94<!--/fig-->
   functional requirements in `docs/requirements/REQUIREMENTS.md`,
   cross-checked on every PR against `// [utest->req~xxx~1]`
   coverage tags in source. Bidirectional matrix: every MUST/SHOULD
@@ -583,7 +583,7 @@ rust/
 schemas/                JSON Schema spec for app-config.json (draft-07)
 ```
 
-**Size.** `src/` holds **<!--fig:loc-->29,631<!--/fig--> lines of C++ code across <!--fig:files-->323<!--/fig--> files**, counted
+**Size.** `src/` holds **<!--fig:loc-->29,639<!--/fig--> lines of C++ code across <!--fig:files-->323<!--/fig--> files**, counted
 with `cloc`, so blank lines and comments are excluded. CI recomputes both
 on every run and fails the build if they drift, so the figure here is checked,
 not trusted.
@@ -599,7 +599,7 @@ checks.
 
 ### Diagrams
 
-Twelve PlantUML sources under [`docs/uml/`](docs/uml/), kept beside the
+Thirteen PlantUML sources under [`docs/uml/`](docs/uml/), kept beside the
 code they describe rather than in a wiki that drifts. GitHub does not
 render `.puml` inline, so open one in any PlantUML viewer or paste it
 into `plantuml.com`.
@@ -617,7 +617,8 @@ into `plantuml.com`.
 | [`sequence-ota-agent.puml`](docs/uml/sequence-ota-agent.puml) | The agent owning the session, the clock and the link, with all three threads marked |
 | [`state-system-fsm.puml`](docs/uml/state-system-fsm.puml) | The SystemState machine, transition table plus the safe-state path |
 | [`sequence-alarm-lifecycle.puml`](docs/uml/sequence-alarm-lifecycle.puml) | Fault to AlertCenter to observers, audit and the alert panel |
-| [`mcp-tool-call.puml`](docs/uml/mcp-tool-call.puml) | JSON-RPC over stdio to a tool to a JSON result, including the gated write |
+| [`mcp-tool-call.puml`](docs/uml/mcp-tool-call.puml) | JSON-RPC over stdio to a read-only tool to a JSON result |
+| [`sequence-mcp-write-gate.puml`](docs/uml/sequence-mcp-write-gate.puml) | The one path where an agent changes the line, and the two gates it passes first (ADR-0036) |
 
 
 ## Extensibility -- how to add X

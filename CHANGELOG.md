@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **MCP write path: authorisation no longer depends on the audit database
+  opening** (REQ-ARCH-019, ADR-0036). `DashboardPresenter::setAudit` wired the
+  audit sink and the authorisation session together, and `McpInitRoot` called it
+  only on a successful audit open, so a database that would not open silently
+  removed the role gate as well as the audit row. An OPERATOR agent could have a
+  `reset` performed, be answered `Unauthorized`, and leave no trace. Found by the
+  `pfa` workstream from a source read, reproduced here by a test that fails
+  without the fix. `setSession` now wires authorisation on its own and runs
+  unconditionally, and `EquipmentCommandTool` refuses before routing the call
+  when `presenter.hasSession()` is false.
+
+### Fixed
 - The Rust crate had a CI workflow with no badge, so the one place a visitor looks first said nothing about the second language. It has one now, beside the C++ pipeline, both linking through to their runs. And the coverage figure lived in three places by hand, with the instrumented line count in two of them, none of which any gate recomputes: the badge carries it once now, while both prose mentions point at the per-run summary where the live number actually is. Three copies of a number nobody recomputes is three chances to be wrong.
 - Twelve PlantUML diagrams live under `docs/uml/`, 937 lines of them, and the README referenced none. They were reachable only by listing the directory, and GitHub does not render `.puml` inline, so in practice nobody saw them. There is an index now, one line each. One of the twelve is marked stale in that index rather than quietly linked: `component-integration-layer.puml` draws Modbus plus MQTT only, so TCP, OPC-UA, HTTP, serial and the OTA chain are missing from it. It is not fixed here because no PlantUML renderer is available on this machine, and a diagram edit that cannot be rendered cannot be verified.
 - A section by section README audit, rather than a keyword sweep, and it caught two contradictions the earlier passes could not see. The Highlights said four consumers while a section further down was titled `Three front-ends, one core` and never mentioned the MCP server, and the sentence under it named three `#ifdef` branches when `src/main.cpp` carries four, `MCP_MODE` included. The Integration Layer documented three of the six backends: Modbus, which is the only one ON by default, plus HTTP with native TLS and serial with the OTA chain above it, all had no subsection at all. The Tech Stack table stopped at static analysis, so Rust, Docker, profiling, fuzzing, traceability and the sanitizer set were absent from the one table a reader scans first.
