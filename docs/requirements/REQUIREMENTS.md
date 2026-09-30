@@ -467,12 +467,15 @@ own explicit authorization pre-check and return a structured
 ungated write (ADR-0024).
 
 Verified by: EquipmentCommandToolTest (descriptor / argument parsing / the
-authorization pre-check, including the null-session internal refusal and the
-audited role rejection); McpProtocolTest (routing + write-tool absence when
-disabled); McpServerStdioTest (the stdio request/response loop).
+authorization pre-check, including the null-session internal refusal, the
+audited role rejection, the refusal when the presenter carries no session
+because the audit sink failed to open, and the permitted write that still runs
+in that state); McpProtocolTest (routing + write-tool absence when disabled);
+McpServerStdioTest (the stdio request/response loop).
 
 ADR: 0001 (MVP boundaries), 0006 (RBAC + audit), 0014 (Result at boundaries),
-0023 (MCP server), 0024 (agent identity for writes).
+0023 (MCP server), 0024 (agent identity for writes), 0036 (authorisation does
+not depend on the audit sink).
 
 Needs: utest
 

@@ -138,6 +138,13 @@ int McpInitRoot::run(std::ostream& output) {
         auditLogger_ =
             std::make_unique<auth::SqliteAuditLogger>(std::move(auditCfg));
         auditLogger_->setLogger(logger);
+
+        // Wired unconditionally, BEFORE the audit sink is opened. Whether the
+        // audit database opens is a separate question from whether the agent
+        // is role-checked, and coupling them meant a failed open silently
+        // removed the role gate as well as the audit row (ADR-0036).
+        dashboardPresenter_->setSession(*agentSession_);
+
         if (auditLogger_->initialize()) {
             dashboardPresenter_->setAudit(*auditLogger_, *agentSession_);
         } else {

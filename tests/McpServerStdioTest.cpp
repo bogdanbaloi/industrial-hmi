@@ -64,6 +64,12 @@ struct ServerFixture {
         agent.username = "mcp-agent";
         agent.role     = role;
         session.setUser(agent);
+        // The presenter needs the SAME session, which is what McpInitRoot now
+        // does unconditionally (ADR-0036). Without it the presenter's own gate
+        // would pass a null session through, and the write tool refuses that
+        // rather than performing an ungated write. Safe in the body: members
+        // are declared presenter, session, server, so both exist by here.
+        presenter.setSession(session);
     }
     AlertCenter                                         alerts;
     EmptyHistoryReader                                  reader;

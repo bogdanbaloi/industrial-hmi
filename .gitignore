@@ -47,3 +47,6 @@ scripts/ml/benchmark-results.json
 **/__pycache__/
 *.pyc
 .venv/
+
+# Out-of-source build dirs for the other toolchains (build/ is above).
+build-*/

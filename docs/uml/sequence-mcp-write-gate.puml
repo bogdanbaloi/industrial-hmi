@@ -1,0 +1,84 @@
+@startuml sequence-mcp-write-gate
+' Sequence: the MCP write path and its two authorisation gates, after ADR-0036.
+'
+' The read path is drawn in mcp-tool-call.puml. This one exists because the
+' write path is the only place an agent changes the line, so its gates are
+' worth a picture of their own.
+'
+' Grounded in real source:
+'   - src/mcp/McpInitRoot.cpp   (agentSession_ + setSession unconditional,
+'                                setAudit only when initialize() succeeds)
+'   - src/mcp/tools/EquipmentCommandTool.cpp
+'                               (currentUser gate, hasSession gate, invoke,
+'                                allowed() re-check to shape the reply)
+'   - src/presenter/DashboardPresenter.h   (setSession / setAudit / hasSession)
+'   - src/presenter/DashboardPresenter.cpp (checkRole + emitAudit)
+
+title MCP equipment_command - two gates before the model moves
+
+skinparam shadowing false
+
+participant "LLM agent" as Agent
+participant "EquipmentCommandTool\n::runEquipmentCommand" as Tool
+participant "DashboardPresenter" as Presenter
+participant "AuditLogger\n(may be absent)" as Audit
+participant "ProductionModel" as Model
+
+== wiring, at boot (McpInitRoot) ==
+note over Presenter
+  setSession(agentSession) runs ALWAYS.
+  setAudit(auditLogger, agentSession) runs
+  only when the audit database opened.
+  Before ADR-0036 the session came only from
+  setAudit, so a failed open removed the gate.
+end note
+
+== gate 1: is there an agent at all ==
+Agent -> Tool : equipment_command { command: "reset" }
+Tool -> Tool : session.currentUser()
+alt no authenticated agent
+    Tool --> Agent : Unauthorized\n(refused BEFORE touching the presenter)
+end
+
+== gate 2: is the presenter's own gate wired ==
+Tool -> Presenter : hasSession()
+alt session pointer absent
+    note right of Tool
+      checkRole() passes a null session through
+      by design, so routing the call here would
+      perform an ungated write. Refuse instead
+      of trusting the wiring (ADR-0036).
+    end note
+    Tool --> Agent : Unauthorized\n(model untouched)
+end
+
+== the call, through the same handler a human button uses ==
+Tool -> Presenter : onResetRestartClicked()
+Presenter -> Presenter : checkRole(audit_, session_, canResetSystem)
+alt role not permitted
+    Presenter -> Audit : emitAudit(..., FAILURE)
+    note right of Audit : no-op when the sink is absent
+    Presenter --> Tool : void (silent no-op)
+else role permitted
+    Presenter -> Audit : emitAudit(..., SUCCESS)
+    Presenter -> Model : resetSystem()
+    Presenter --> Tool : void
+end
+
+== the reply is shaped by re-evaluating the same predicate ==
+Tool -> Tool : mapping.allowed(agent->role)
+alt not permitted
+    Tool --> Agent : Unauthorized\n(the refusal above is already audited)
+else permitted
+    Tool --> Agent : { command, status: "accepted" }
+end
+
+note over Tool, Model
+  The presenter's gate returns void, so the tool cannot
+  read its verdict. That is why the predicate is evaluated
+  twice: once inside the presenter to act and audit, once
+  in the tool to turn a silent no-op into a structured
+  JSON-RPC error instead of a misleading success.
+end note
+
+@enduml
