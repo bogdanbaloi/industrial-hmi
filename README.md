@@ -49,7 +49,7 @@ plus an opt-in MCP server that lets an LLM agent drive the same tested Model
   running state, Performance from throughput / target UPH (clamped to
   100%), Quality from the average checkpoint pass rate. See
   REQ-DASHBOARD-008.
-- **Requirements traceability (OpenFastTrace)** -- <!--fig:adrs-->36<!--/fig--> ADRs + <!--fig:reqs-->94<!--/fig-->
+- **Requirements traceability (OpenFastTrace)** -- <!--fig:adrs-->37<!--/fig--> ADRs + <!--fig:reqs-->94<!--/fig-->
   functional requirements in `docs/requirements/REQUIREMENTS.md`,
   cross-checked on every PR against `// [utest->req~xxx~1]`
   coverage tags in source. Bidirectional matrix: every MUST/SHOULD
