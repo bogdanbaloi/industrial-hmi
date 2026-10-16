@@ -1,0 +1,8 @@
+# Cine primește automat cerere de review la un PR nou.
+# Ultima regulă care se potrivește câștigă.
+*                  @bogdanbaloi
+
+# Zonele care ating contractul HMI–audit: review și de la George
+/src/integration/  @bogdanbaloi @georgeflorinplesa-cpu
+/src/mcp/          @bogdanbaloi @georgeflorinplesa-cpu
+/docs/adr/         @bogdanbaloi @georgeflorinplesa-cpu
